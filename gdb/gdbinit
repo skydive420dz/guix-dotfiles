@@ -1,0 +1,11 @@
+# Tell GDB where to look for separate debugging files.
+guile
+(use-modules (gdb))
+(execute (string-append "set debug-file-directory "
+                        (or (getenv "GDB_DEBUG_FILE_DIRECTORY")
+                            "~/.guix-profile/lib/debug")))
+end
+
+# Authorize extensions found in the store, such as the
+# pretty-printers of libstdc++.
+set auto-load safe-path /gnu/store/*/lib

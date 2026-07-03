@@ -1,0 +1,20 @@
+# Emacs generated state
+emacs/auto-save-list/
+emacs/eln-cache/
+emacs/elpa/
+emacs/eshell/
+*.elc
+*~
+#*#
+.#*
+
+# Guix/generated state
+guix/current
+guix/recovery/
+guix/backups/
+result
+result-*
+
+# Caches/logs
+.cache/
+*.log

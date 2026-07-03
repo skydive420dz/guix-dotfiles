@@ -1,0 +1,19 @@
+#+title: guix-dotfiles
+
+Source of truth for the guixpc experiment machine.
+
+* Layout
+- guix/ :: channels, system config, machine notes
+- emacs/ :: Emacs and EXWM config
+- shell/ :: shell startup files
+- kitty/ :: terminal config when present
+- scripts/ :: personal helpers
+
+* Apply
+System changes use:
+
+#+begin_src sh
+gsr
+#+end_src
+
+Most dotfile edits apply by reloading the affected app. Guix rebuilds are only needed after changing the Guix system declaration.

@@ -1,0 +1,71 @@
+#+title: guixpc todo
+#+created: 2026-07-03
+
+* TODO Machine setup first
+:PROPERTIES:
+:created: 2026-07-03
+:END:
+Before kernel optimization, finish basic machine setup and stability.
+
+- Confirm Wi-Fi survives reboot.
+- Confirm sleep policy remains disabled.
+- Add basic terminal utilities if missing, such as ncurses for clear/reset.
+- Decide base desktop/session direction.
+- Clean and repaste the machine after shutdown.
+
+* TODO Hardware inventory for custom kernel
+:PROPERTIES:
+:created: 2026-07-03
+:END:
+Collect hardware facts after the base machine setup is stable. Do not start a custom kernel before this inventory exists.
+
+Commands to capture:
+
+#+begin_src sh
+mkdir -p ~/.config/guix/machines/guixpc
+
+{
+  echo "===== uname ====="
+  uname -a
+
+  echo
+  echo "===== guix describe ====="
+  guix describe
+
+  echo
+  echo "===== lspci -nnk ====="
+  lspci -nnk
+
+  echo
+  echo "===== lsusb ====="
+  lsusb
+
+  echo
+  echo "===== lsmod ====="
+  lsmod
+
+  echo
+  echo "===== network sysfs ====="
+  find /sys/class/net -maxdepth 2 -type l -print
+
+  echo
+  echo "===== drm sysfs ====="
+  find /sys/class/drm -maxdepth 2 -type l -print
+
+  echo
+  echo "===== firmware/kernel messages ====="
+  dmesg | grep -Ei 'firmware|wifi|wlan|bluetooth|amdgpu|nvme|ahci|usb|realtek|mediatek|intel'
+} > ~/.config/guix/machines/guixpc/hardware-inventory.txt
+#+end_src
+
+* TODO Custom kernel plan
+:PROPERTIES:
+:created: 2026-07-03
+:END:
+Only after hardware inventory is reviewed:
+
+- Identify required boot, storage, and filesystem modules.
+- Identify exact Realtek Wi-Fi chipset, driver, and firmware.
+- Identify AMD graphics path and firmware needs.
+- Decide whether to pin a known-good kernel or track Nonguix linux.
+- Build custom kernel as a separate generation, keeping the generic Nonguix generation as rollback.
