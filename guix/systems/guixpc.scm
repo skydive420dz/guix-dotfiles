@@ -58,6 +58,8 @@
 			  (specification->package "odt2txt")
 			  (specification->package "jq")
 			  (specification->package "emacs-evil")
+			  (specification->package "emacs-projectile")
+			  (specification->package "emacs-counsel-projectile")
 			  (specification->package "emacs-evil-collection")
 			  (specification->package "emacs-magit")
 			  (specification->package "emacs-helpful")
