@@ -33,3 +33,4 @@ export EDITOR='emacsclient -t -a "emacs -nw"'
 export VISUAL='emacsclient -c -a emacs'
 export PAGER='less'
 alias gsr="sudo \$HOME/.config/guix/current/bin/guix system reconfigure \$HOME/.config/guix/systems/guixpc.scm --substitute-urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'"
+alias ghr="\$HOME/.config/guix/current/bin/guix home reconfigure \$HOME/.config/guix/home.scm --substitute-urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'"

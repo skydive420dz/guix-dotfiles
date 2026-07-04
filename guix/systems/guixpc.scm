@@ -11,7 +11,7 @@
 ;; used in this configuration.
 (use-modules (gnu)
              (nonguix transformations))
-(use-service-modules cups desktop networking ssh xorg)
+(use-service-modules cups desktop networking ssh sound xorg)
 
 ((nonguix-transformation-guix)
  ((nonguix-transformation-linux)
@@ -39,11 +39,17 @@
   ;; under their own account: use 'guix search KEYWORD' to search
   ;; for packages and 'guix install PACKAGE' to install a package.
   (packages (append (list (specification->package "curl")
+                          (specification->package "fastfetch-minimal")
+                          (specification->package "btop")
                           (specification->package "emacs")
                           (specification->package "emacs-exwm")
-                          (specification->package
-                           "emacs-desktop-environment")
+                          (specification->package "emacs-desktop-environment")
                           (specification->package "git")
+			  (specification->package "bluez")
+			  (specification->package "blueman")
+			  (specification->package "bzmenu")
+			  (specification->package "pipemixer")
+			  (specification->package "pamixer")
 			  (specification->package "ranger")
 			  (specification->package "kitty")
 			  (specification->package "ungoogled-chromium")
@@ -57,6 +63,10 @@
 			  (specification->package "unzip")
 			  (specification->package "odt2txt")
 			  (specification->package "jq")
+			  (specification->package "emacs-rainbow-delimiters")
+			  (specification->package "emacs-visual-fill-column")
+			  (specification->package "emacs-org")
+			  (specification->package "emacs-org-bullets")
 			  (specification->package "emacs-evil")
 			  (specification->package "emacs-projectile")
 			  (specification->package "emacs-counsel-projectile")
@@ -81,6 +91,7 @@
 			  (specification->package "emacs-all-the-icons")
   			  (specification->package "emacs-all-the-icons-dired")
 			  (specification->package "emacs-all-the-icons-ibuffer")
+			  (specification->package "xwallpaper")
 			  (specification->package "xrandr"))
                     %base-packages))
 
@@ -93,12 +104,14 @@
                   ;; To configure OpenSSH, pass an 'openssh-configuration'
                   ;; record as a second argument to 'service' below.
                   (service openssh-service-type)
+                  (service bluetooth-service-type)
                   (set-xorg-configuration
                    (xorg-configuration (keyboard-layout keyboard-layout))))
 
             ;; This is the default list of services we
             ;; are appending to.
             %desktop-services)
+    (delete pulseaudio-service-type)
     (elogind-service-type
      config => (elogind-configuration
                 (inherit config)
