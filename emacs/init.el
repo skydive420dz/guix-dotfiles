@@ -7,34 +7,19 @@
 
 (menu-bar-mode -1) ; disable menu bar
 
+(global-set-key (kbd "C-c e") #'eshell) ; launch eshell
+(global-set-key (kbd "C-c t") #'term) ; launch term
+
 (setq visible-bell t) ; setup visual bell
+
 
 (set-face-attribute 'default nil :family "Iosevka Term" :height 120) ; setup font face
 (set-fontset-font t 'symbol "Symbols Nerd Font Mono" nil 'append)
 
 (load-theme 'modus-vivendi) ; setup theme
 
-;; Initialize package sources
-(require 'package)
-
-(setq package-archives
-      '(("melpa" . "https://melpa.org/packages/")
-        ("org" . "https://orgmode.org/elpa/")
-	("elpa" . "https://elpa.gnu.org/packages/")))
-
-(package-initialize)
-
-(unless package-archive-contents
-  (package-refresh-contents))
-
-;; Bootstrap use-package when it is missing
-(unless (package-installed-p 'use-package)
-  (package-install 'use-package))
-
+;; Emacs packages are installed by Guix. This file only wires behavior.
 (require 'use-package)
-(setq use-package-always-ensure t)
-
-(use-package command-log-mode)
 
 (use-package ivy
   :diminish
@@ -56,5 +41,4 @@
   (ivy-mode 1))
 
 (use-package doom-modeline
-  :ensure t
   :init (doom-modeline-mode 1))
