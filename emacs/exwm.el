@@ -10,4 +10,4 @@
 		    (lambda ()
 		      (interactive)
 		      (start-process-shell-command
-		       "browser" nil "ungoogled-chromium")))
+		       "browser" nil "chromium")))
