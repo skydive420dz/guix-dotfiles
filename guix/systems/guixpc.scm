@@ -45,6 +45,7 @@
                            "emacs-desktop-environment")
                           (specification->package "git")
 			  (specification->package "kitty")
+			  (specification->package "ungoogled-chromium")
 			  (specification->package "emacs-magit")
 			  (specification->package "emacs-use-package")
 			  (specification->package "emacs-diminish")
