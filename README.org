@@ -189,12 +189,18 @@ The live EXWM session should report EXWM as loaded:
 emacsclient --eval "(list :server t :daemon (daemonp) :user-init user-init-file :exwm-loaded (featurep (quote exwm)) :server-running (server-running-p))"
 #+end_src
 
-Batch-load the editor config without starting an EXWM session:
+Validate the editor config with the same Guix profile assumptions used by the
+live session:
 
 #+begin_src sh
 cd ~/Projects/guix-dotfiles
-emacs --batch --eval "(progn (load-file \"emacs/init.el\") (message \"sk init batch loaded\"))"
+scripts/emacs-check
 #+end_src
+
+Do not use plain =emacs --batch= from SSH as the canonical check. Noninteractive
+SSH may start with a minimal =PATH= and no =EMACSLOADPATH=, which can produce
+false package warnings even when the live EXWM Emacs session can load the same
+Guix-provided packages.
 
 ** Current ownership
 

@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+
+repo="${1:-$HOME/Projects/guix-dotfiles}"
+repo="$(cd "$repo" && pwd)"
+
+export PATH="$HOME/.guix-home/profile/bin:/run/privileged/bin:$HOME/.config/guix/current/bin:$HOME/.guix-profile/bin:/run/current-system/profile/bin:/run/current-system/profile/sbin:$PATH"
+export EMACSLOADPATH="${EMACSLOADPATH:-/run/current-system/profile/share/emacs/site-lisp:}"
+
+cd "$repo"
+
+if emacsclient --eval "(progn (load-file \"$repo/emacs/init.el\") :init-ok)" >/dev/null 2>&1
+then
+    printf '%s\n' 'live init: ok'
+else
+    printf '%s\n' 'live init: skipped or failed; checking batch'
+fi
+
+emacs --batch --eval '(progn (load-file "emacs/init.el") (message "batch init: ok"))'
