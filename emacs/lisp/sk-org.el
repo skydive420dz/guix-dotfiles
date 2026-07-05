@@ -1,5 +1,8 @@
 ;;; sk-org.el --- Org basics -*- lexical-binding: t; -*-
 
+;; Doom-style local leader maps:
+;; These maps keep Org's large command surface grouped under SPC m in Org
+;; buffers, with matching maps for Org Agenda where the commands differ.
 (defvar sk/org-localleader-map (make-sparse-keymap)
   "Org mode commands under the Doom-style local leader.")
 
@@ -58,6 +61,9 @@
   '("emacs-lisp" "sh" "bash" "nix" "lua" "qml" "rust" "c" "python" "haskell" "json" "yaml" "glsl")
   "Languages offered when inserting Org source blocks.")
 
+;; Buffer setup:
+;; Org gets writing-oriented wrapping/indentation while source/code/table faces
+;; stay fixed-pitch so code blocks remain readable.
 (defun sk/org-mode-setup ()
   "Enable the default editing setup for Org buffers."
   (org-indent-mode)
@@ -126,6 +132,9 @@
           visual-fill-column-center-text t)
     (visual-fill-column-mode 1)))
 
+;; Org local leader bindings:
+;; This mirrors the Doom-style "major-mode leader" surface without depending on
+;; Doom.  The keymaps above keep the command groups navigable in which-key.
 (define-key sk/org-localleader-map (kbd "#") #'org-update-statistics-cookies)
 (define-key sk/org-localleader-map (kbd "'") #'org-edit-special)
 (define-key sk/org-localleader-map (kbd "*") #'org-ctrl-c-star)
@@ -269,6 +278,8 @@
 (define-key sk/org-agenda-priority-map (kbd "p") #'org-agenda-priority)
 (define-key sk/org-agenda-priority-map (kbd "u") #'org-agenda-priority-up)
 
+;; which-key labels:
+;; These labels make the nested SPC m maps readable without changing bindings.
 (with-eval-after-load 'which-key
   (which-key-add-key-based-replacements
     "SPC m" "org"
@@ -296,6 +307,9 @@
     "SPC m t" "todo"
     "SPC m x" "checkbox"))
 
+;; Core Org behavior:
+;; This owns visual defaults, source-block editing, Babel languages, habit
+;; support, tempo templates, and Org-specific Evil navigation.
 (use-package org
   :ensure nil
   :mode ("\\.org\\'" . org-mode)
@@ -371,6 +385,8 @@
     (with-eval-after-load 'evil
       (evil-define-key '(normal motion) org-agenda-mode-map (kbd "SPC m") sk/org-agenda-localleader-map))))
 
+;; Heading bullets:
+;; Keep the existing org-bullets package instead of switching marker packages.
 (use-package org-bullets
   :after org
   :hook (org-mode . org-bullets-mode)
