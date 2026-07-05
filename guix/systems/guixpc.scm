@@ -115,6 +115,8 @@
 			  (specification->package "lua-language-server")
 			  (specification->package "python")
 			  (specification->package "python-lsp-server")
+			  (specification->package "shellcheck")
+			  (specification->package "shfmt")
 			  (specification->package "emacs-all-the-icons-ibuffer")
 			  (specification->package "xwallpaper")
 			  (specification->package "xrandr"))

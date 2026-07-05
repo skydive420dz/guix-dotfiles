@@ -25,6 +25,7 @@
 (require 'sk-lisp)
 (require 'sk-lua)
 (require 'sk-python)
+(require 'sk-shell)
 (require 'sk-keys)
 
 ;;; Org and notes
