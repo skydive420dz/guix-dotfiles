@@ -49,6 +49,7 @@
     "hk" '(helpful-key :which-key "key")
 
     "w"  '(:ignore t :which-key "windows")
+    "wf" '(sk/toggle-window-full-frame :which-key "full frame")
     "wu" '(winner-undo :which-key "undo layout")
     "wr" '(winner-redo :which-key "redo layout")
 
