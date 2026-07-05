@@ -2,6 +2,83 @@
 
 Source of truth for the guixpc experiment machine.
 
+* Hardware baseline
+
+These facts are live-verified from firmware, DMI, PCI, and EFI output. Keep this
+section current when hardware changes so the machine does not need to be
+rediscovered from scratch.
+
+** Identity
+
+#+begin_src text
+System vendor:   Lenovo
+Machine model:   90J0000PUS
+Product line:    ideacentre 510A-15ARR
+Motherboard:     Lenovo 36EE
+Board version:   SDK0J40700 WIN 3258123335809
+BIOS vendor:     LENOVO
+BIOS version:    O3TKT34A
+BIOS date:       2018-06-01
+#+end_src
+
+** Core hardware
+
+#+begin_src text
+CPU:       AMD Ryzen 3 2200G with Radeon Vega Graphics
+GPU:       AMD Raven Ridge / Radeon Vega iGPU
+Ethernet:  Realtek RTL8111/8168/8211/8411 PCIe Gigabit
+Wi-Fi:     Intel Wi-Fi 6 AX200
+Bluetooth: Intel AX200 Bluetooth USB device
+Audio:     AMD HDMI/DP audio + AMD HD audio
+Storage:   Samsung SSD 860 EVO 250GB SATA
+#+end_src
+
+** Memory
+
+#+begin_src text
+Slots:      2 DDR4 DIMM slots
+Current:    2x4 GB Samsung DDR4-2667 1.2V non-ECC UDIMM
+Maximum:    32 GB
+Best target: 2x16 GB DDR4-2666/3200 1.2V non-ECC UDIMM
+#+end_src
+
+Use plain JEDEC-compatible desktop UDIMM memory. Avoid SO-DIMM, ECC,
+registered/buffered memory, DDR5, and XMP-only kits.
+
+** Expansion
+
+#+begin_src text
+J10:   PCI Express x16 physical, x8 electrical, available, short length
+J3701: M.2 WLAN/BT PCIe x1, in use by Intel AX200
+U3700: M.2 PCIe x1, available
+#+end_src
+
+The GPU slot exists, but this is still an OEM Lenovo board with a 180W PSU. Any
+GPU should be low-profile, short, slot-powered, and should not require 6-pin or
+8-pin PCIe power. RAM is the highest-value upgrade for this machine.
+
+** EFI and Secure Boot
+
+#+begin_src text
+UEFI boot:      yes
+Secure Boot:    disabled
+SetupMode:      enabled
+Platform keys:  PK/KEK/db/dbx not enrolled
+Primary entry:  Boot0001 Guix -> \EFI\GUIX\GRUBX64.EFI
+Fallback entry: Boot0009 UEFI OS -> \EFI\BOOT\BOOTX64.EFI
+#+end_src
+
+Current EFI files:
+
+#+begin_src text
+/boot/efi/efi/Guix/grubx64.efi
+/boot/efi/efi/boot/bootx64.efi
+/boot/efi/efi/boot/bootia32.efi
+#+end_src
+
+Do not enable Secure Boot until there is a deliberate signing workflow. Guix
+currently boots through unsigned GRUB EFI.
+
 * Ownership
 
 This repo owns the human-edited configuration. Generated state stays outside the
@@ -143,7 +220,23 @@ These paths are not source configuration:
 ~/.emacs.d/url/
 ~/.config/guix/backups/
 ~/.config/guix/recovery/
+~/.config/chromium/
+~/.config/pulse/
+~/.config/fish/fish_variables
+~/.config/alsa/
+~/.config/fontconfig/
+~/.config/shepherd/
 #+end_src
 
 They may be useful for recovery or runtime behavior, but they should not become
 the place where new config is written.
+
+The following files currently exist as accepted local application state, not as
+core system ownership:
+
+#+begin_src text
+~/.config/btop/btop.conf
+~/.config/nano/nanorc
+#+end_src
+
+Promote these into the repo only if they become deliberate configuration.
