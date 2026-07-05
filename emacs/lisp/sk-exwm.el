@@ -187,8 +187,8 @@
 
 (defun sk/exwm-reload ()
   (interactive)
-  (load-file "~/.emacs.d/lisp/sk-window-policy.el")
-  (load-file "~/.emacs.d/lisp/sk-exwm.el")
+  (load "sk-window-policy" nil t)
+  (load "sk-exwm" nil t)
   (sk/exwm-start)
   (message "EXWM config reloaded"))
 
