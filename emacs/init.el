@@ -16,6 +16,7 @@
 
 (require 'sk-core)
 (require 'sk-ui)
+(require 'sk-dashboard)
 (require 'sk-completion)
 (require 'sk-evil)
 (require 'sk-project)
