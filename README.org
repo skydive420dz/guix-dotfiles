@@ -221,6 +221,16 @@ emacs/lisp/sk-notes.el
 Emacs packages are provided by Guix in =guix/systems/guixpc.scm=. Emacs Lisp
 files wire behavior; they should not install packages themselves.
 
+** EXWM keys
+
+#+begin_src text
+s-RET                 open kitty
+s-w                   open Chromium
+s-r                   reload EXWM config
+XF86AudioRaiseVolume  raise default sink volume through wpctl
+XF86AudioLowerVolume  lower default sink volume through wpctl
+#+end_src
+
 ** Future extraction candidates
 
 Keep the current config working first. When it becomes worth splitting, these
