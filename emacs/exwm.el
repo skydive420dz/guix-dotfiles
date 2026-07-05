@@ -1,6 +1,8 @@
 (require 'exwm)
 (require 'subr-x)
 
+(setq exwm-workspace-number 5)
+
 (autoload 'counsel-linux-apps-list "counsel")
 
 (defun sk/exwm-launch-app ()
@@ -61,6 +63,75 @@
      (replace-regexp-in-string "__SK_PERCENT__" "%" clean t t))))
 
 (exwm-input-set-key (kbd "s-SPC") #'sk/exwm-launch-app)
+
+(defun sk/exwm-switch-buffer ()
+  (interactive)
+  (if (fboundp 'counsel-switch-buffer)
+      (counsel-switch-buffer)
+    (call-interactively #'switch-to-buffer)))
+
+(defun sk/exwm-close-current ()
+  (interactive)
+  (if (derived-mode-p 'exwm-mode)
+      (kill-current-buffer)
+    (delete-window)))
+
+(defun sk/exwm-toggle-fullscreen ()
+  (interactive)
+  (if (derived-mode-p 'exwm-mode)
+      (exwm-layout-toggle-fullscreen)
+    (message "Fullscreen toggle is only available in EXWM app buffers")))
+
+(defun sk/exwm-workspace-index (number)
+  (1- number))
+
+(defun sk/exwm-switch-workspace (number)
+  (exwm-workspace-switch-create (sk/exwm-workspace-index number)))
+
+(defun sk/exwm-move-window-to-workspace (number)
+  (let ((id (exwm--buffer->id (window-buffer))))
+    (unless id
+      (user-error "Current buffer is not an EXWM window"))
+    (exwm-workspace-switch-create (sk/exwm-workspace-index number))
+    (exwm-workspace-move-window (sk/exwm-workspace-index number) id)))
+
+(defun sk/exwm-switch-workspace-1 () (interactive) (sk/exwm-switch-workspace 1))
+(defun sk/exwm-switch-workspace-2 () (interactive) (sk/exwm-switch-workspace 2))
+(defun sk/exwm-switch-workspace-3 () (interactive) (sk/exwm-switch-workspace 3))
+(defun sk/exwm-switch-workspace-4 () (interactive) (sk/exwm-switch-workspace 4))
+(defun sk/exwm-switch-workspace-5 () (interactive) (sk/exwm-switch-workspace 5))
+
+(defun sk/exwm-move-window-to-workspace-1 () (interactive) (sk/exwm-move-window-to-workspace 1))
+(defun sk/exwm-move-window-to-workspace-2 () (interactive) (sk/exwm-move-window-to-workspace 2))
+(defun sk/exwm-move-window-to-workspace-3 () (interactive) (sk/exwm-move-window-to-workspace 3))
+(defun sk/exwm-move-window-to-workspace-4 () (interactive) (sk/exwm-move-window-to-workspace 4))
+(defun sk/exwm-move-window-to-workspace-5 () (interactive) (sk/exwm-move-window-to-workspace 5))
+
+(exwm-input-set-key (kbd "s-h") #'windmove-left)
+(exwm-input-set-key (kbd "s-j") #'windmove-down)
+(exwm-input-set-key (kbd "s-k") #'windmove-up)
+(exwm-input-set-key (kbd "s-l") #'windmove-right)
+
+(exwm-input-set-key (kbd "s-H") #'windmove-swap-states-left)
+(exwm-input-set-key (kbd "s-J") #'windmove-swap-states-down)
+(exwm-input-set-key (kbd "s-K") #'windmove-swap-states-up)
+(exwm-input-set-key (kbd "s-L") #'windmove-swap-states-right)
+
+(exwm-input-set-key (kbd "s-q") #'sk/exwm-close-current)
+(exwm-input-set-key (kbd "s-b") #'sk/exwm-switch-buffer)
+(exwm-input-set-key (kbd "s-f") #'sk/exwm-toggle-fullscreen)
+
+(exwm-input-set-key (kbd "s-1") #'sk/exwm-switch-workspace-1)
+(exwm-input-set-key (kbd "s-2") #'sk/exwm-switch-workspace-2)
+(exwm-input-set-key (kbd "s-3") #'sk/exwm-switch-workspace-3)
+(exwm-input-set-key (kbd "s-4") #'sk/exwm-switch-workspace-4)
+(exwm-input-set-key (kbd "s-5") #'sk/exwm-switch-workspace-5)
+
+(exwm-input-set-key (kbd "s-!") #'sk/exwm-move-window-to-workspace-1)
+(exwm-input-set-key (kbd "s-@") #'sk/exwm-move-window-to-workspace-2)
+(exwm-input-set-key (kbd "s-#") #'sk/exwm-move-window-to-workspace-3)
+(exwm-input-set-key (kbd "s-$") #'sk/exwm-move-window-to-workspace-4)
+(exwm-input-set-key (kbd "s-%") #'sk/exwm-move-window-to-workspace-5)
 
 (defun sk/set-keyboard-repeat ()
   (interactive)

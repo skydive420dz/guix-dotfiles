@@ -228,9 +228,20 @@ s-SPC                 open app launcher from desktop entries
 s-RET                 open kitty
 s-w                   open Chromium
 s-r                   reload EXWM config
+s-h / s-j / s-k / s-l focus window left/down/up/right
+s-H / s-J / s-K / s-L move current window left/down/up/right
+s-q                   close current EXWM app window; delete Emacs window otherwise
+s-b                   switch buffer
+s-f                   toggle fullscreen for current EXWM app window
+s-1 .. s-5            switch/create EXWM workspace 1 through 5
+s-! s-@ s-# s-$ s-%   move current EXWM app window to workspace 1 through 5
 XF86AudioRaiseVolume  raise default sink volume through wpctl
 XF86AudioLowerVolume  lower default sink volume through wpctl
 #+end_src
+
+Workspace numbers are user-facing and one-based. EXWM internally uses zero-based
+workspace indexes, so =s-1= maps to EXWM workspace index 0, =s-2= maps to index
+1, and so on.
 
 ** EXWM app launcher
 
