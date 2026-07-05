@@ -25,6 +25,10 @@
   (kernel-arguments
    (cons* "modprobe.blacklist=pcspkr"
           %default-kernel-arguments))
+  
+  (keyboard-layout
+   (keyboard-layout "us"
+                  #:options '("caps:escape")))
 
   ;; The list of user accounts ('root' is implicit).
   (users (cons* (user-account
@@ -42,12 +46,12 @@
   ;; under their own account: use 'guix search KEYWORD' to search
   ;; for packages and 'guix install PACKAGE' to install a package.
   (packages (append (list (specification->package "curl")
-                          (specification->package "fastfetch-minimal")
-                          (specification->package "btop")
-                          (specification->package "emacs")
-                          (specification->package "emacs-exwm")
-                          (specification->package "emacs-desktop-environment")
-                          (specification->package "git")
+              (specification->package "fastfetch-minimal")
+              (specification->package "btop")
+              (specification->package "emacs")
+              (specification->package "emacs-exwm")
+              (specification->package "emacs-desktop-environment")
+              (specification->package "git")
 			  (specification->package "bluez")
 			  (specification->package "blueman")
 			  (specification->package "bzmenu")
@@ -86,9 +90,9 @@
 			  (specification->package "emacs-diminish")
 			  (specification->package "emacs-ivy")
 			  (specification->package "emacs-doom-modeline")
-                          (specification->package "ncurses")
-                          (specification->package "ripgrep")
-                          (specification->package "vim")
+              (specification->package "ncurses")
+              (specification->package "ripgrep")
+              (specification->package "vim")
 			  (specification->package "font-iosevka-term")
 			  (specification->package "font-nerd-symbols")
 			  (specification->package "font-google-noto-emoji")
