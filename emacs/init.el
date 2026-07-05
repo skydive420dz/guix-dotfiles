@@ -22,7 +22,17 @@
 
 ;;; Editing defaults
 
+(delete-selection-mode 1)
+(save-place-mode 1)
+(global-auto-revert-mode 1)
+(show-paren-mode 1)
+(setq show-paren-delay 0)
+(setq-default indent-tabs-mode nil)
+(setq-default tab-width 4)
+(setq require-final-newline t)
+
 (setq visible-bell t) ; setup visual bell
+(electric-pair-mode 1) ; automatically insert matching parens, brackets, and quotes
 
 (use-package rainbow-delimiters
   :hook (prog-mode . rainbow-delimiters-mode))
