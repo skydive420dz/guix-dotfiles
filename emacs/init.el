@@ -168,6 +168,26 @@
   :config
   (evil-collection-init))
 
+;;; Window management
+
+(winner-mode 1
+
+;;; File state
+
+(defvar sk/cache-directory
+  (expand-file-name "emacs/" (or (getenv "XDG_CACHE_HOME") "~/.cache/"))
+  "Directory for generated Emacs state.")
+
+(make-directory sk/cache-directory t)
+
+(setq backup-directory-alist
+      `(("." . ,(expand-file-name "backups/" sk/cache-directory)))
+      auto-save-file-name-transforms
+      `((".*" ,(expand-file-name "auto-save/" sk/cache-directory) t))
+      auto-save-list-file-prefix
+      (expand-file-name "auto-save-list/.saves-" sk/cache-directory)
+      create-lockfiles nil)
+             
 ;;; Projects and Git
 
 (use-package projectile
