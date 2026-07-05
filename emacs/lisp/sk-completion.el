@@ -22,7 +22,12 @@
   :init (which-key-mode)
   :diminish which-key-mode
   :config
-  (setq which-key-idle-delay 1))
+  (setq which-key-idle-delay 0.35
+        which-key-idle-secondary-delay 0.35
+        which-key-popup-type 'side-window
+        which-key-side-window-location 'bottom
+        which-key-side-window-max-height 0.25
+        which-key-sort-order #'which-key-key-order-alpha))
 
 (use-package ivy-rich
   :after ivy

@@ -1,7 +1,7 @@
 ;;; sk-keys.el --- Global and leader keys -*- lexical-binding: t; -*-
 
-(global-set-key (kbd "C-c e") #'eshell)
-(global-set-key (kbd "C-c t") #'term)
+(global-set-key (kbd "C-c e") #'sk/window-open-eshell)
+(global-set-key (kbd "C-c t") #'sk/window-open-term)
 
 (use-package general
   :config
@@ -11,11 +11,11 @@
     :global-prefix "C-SPC")
 
   (rune/leader-keys
-    "."  '(counsel-find-file :which-key "find file")
-    ","  '(counsel-ibuffer :which-key "buffers")
+    "."  '(counsel-fzf :which-key "fuzzy file")
+    ","  '(sk/window-open-ibuffer :which-key "buffers")
 
     "b"  '(:ignore t :which-key "buffers")
-    "bb" '(counsel-ibuffer :which-key "buffers")
+    "bb" '(sk/window-open-ibuffer :which-key "buffers")
     "bk" '(sk/kill-current-buffer :which-key "kill")
 
     "f"  '(:ignore t :which-key "files")
@@ -25,7 +25,7 @@
 
     "p"  '(:ignore t :which-key "projects")
     "pp" '(projectile-switch-project :which-key "switch")
-    "pf" '(projectile-find-file :which-key "find file")
+    "pf" '(counsel-projectile-find-file :which-key "find file")
     "ps" '(projectile-ripgrep :which-key "ripgrep")
     "pc" '(projectile-compile-project :which-key "compile")
 
@@ -49,14 +49,15 @@
     "hk" '(helpful-key :which-key "key")
 
     "w"  '(:ignore t :which-key "windows")
-    "wf" '(sk/toggle-window-full-frame :which-key "full frame")
+    "wf" '(sk/window-toggle-full-frame :which-key "full frame")
     "wu" '(winner-undo :which-key "undo layout")
     "wr" '(winner-redo :which-key "redo layout")
 
     "o"  '(:ignore t :which-key "open")
-    "od" '(dired :which-key "dired")
-    "oe" '(eshell :which-key "eshell")
-    "ot" '(term :which-key "term")
+    "od" '(sk/window-open-dired :which-key "dired")
+    "oe" '(sk/window-open-eshell :which-key "eshell")
+    "ot" '(sk/window-open-treemacs :which-key "treemacs")
+    "ov" '(sk/window-open-vterm :which-key "vterm")
 
     "t"  '(:ignore t :which-key "toggles")
     "tt" '(counsel-load-theme :which-key "choose theme")))

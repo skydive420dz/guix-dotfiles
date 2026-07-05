@@ -1,4 +1,5 @@
 (require 'exwm)
+(require 'sk-window-policy)
 (require 'subr-x)
 
 (setq exwm-workspace-number 5)
@@ -17,6 +18,7 @@
   (let* ((desktop-id (cdr desktop-shortcut))
          (launcher (or (executable-find "gtk-launch")
                        (executable-find "gtk4-launch"))))
+    (sk/exwm-prepare-stack-placement)
     (if launcher
         (call-process launcher nil 0 nil desktop-id)
       (sk/exwm-launch-desktop-entry-direct desktop-id))))
@@ -71,7 +73,11 @@
 (defun sk/exwm-close-current ()
   (interactive)
   (if (derived-mode-p 'exwm-mode)
-      (kill-current-buffer)
+      (let ((window (selected-window)))
+        (kill-current-buffer)
+        (when (and (window-live-p window)
+                   (not (one-window-p t)))
+          (delete-window window)))
     (delete-window)))
 
 (defun sk/exwm-toggle-fullscreen ()
@@ -80,6 +86,40 @@
       (exwm-layout-toggle-fullscreen)
     (message "Fullscreen toggle is only available in EXWM app buffers")))
 
+(defvar sk/exwm-pending-stack-window nil
+  "Window that should receive the next managed EXWM buffer.")
+
+(defvar sk/exwm-pending-stack-timer nil
+  "Timer used to clear stale pending EXWM stack placement.")
+
+(defun sk/exwm-clear-pending-stack-window ()
+  "Clear stale pending EXWM stack placement."
+  (when sk/exwm-pending-stack-timer
+    (cancel-timer sk/exwm-pending-stack-timer)
+    (setq sk/exwm-pending-stack-timer nil))
+  (setq sk/exwm-pending-stack-window nil)
+  (remove-hook 'exwm-manage-finish-hook #'sk/exwm-place-managed-window-in-stack))
+
+(defun sk/exwm-place-managed-window-in-stack ()
+  "Place the newly managed EXWM buffer into the pending stack window."
+  (when sk/exwm-pending-stack-window
+    (let ((window sk/exwm-pending-stack-window)
+          (buffer (current-buffer)))
+      (sk/exwm-clear-pending-stack-window)
+      (when (and (window-live-p window)
+                 (buffer-live-p buffer))
+        (sk/window-clear-side-state window)
+        (set-window-buffer window buffer)
+        (select-window window)))))
+
+(defun sk/exwm-prepare-stack-placement ()
+  "Prepare the next managed EXWM buffer to appear in the stack."
+  (sk/exwm-clear-pending-stack-window)
+  (setq sk/exwm-pending-stack-window (sk/window-new-stack-window))
+  (add-hook 'exwm-manage-finish-hook #'sk/exwm-place-managed-window-in-stack)
+  (setq sk/exwm-pending-stack-timer
+        (run-at-time 8 nil #'sk/exwm-clear-pending-stack-window)))
+
 (defun sk/exwm-workspace-index (number)
   (1- number))
 
@@ -87,11 +127,21 @@
   (exwm-workspace-switch-create (sk/exwm-workspace-index number)))
 
 (defun sk/exwm-move-window-to-workspace (number)
-  (let ((id (exwm--buffer->id (window-buffer))))
+  (let* ((id (exwm--buffer->id (window-buffer)))
+         (buffer (current-buffer))
+         (target-index (sk/exwm-workspace-index number))
+         (target-frame (nth target-index exwm-workspace--list))
+         (target-buffers (and target-frame
+                              (delq buffer (sk/window-buffer-list target-frame))))
+         (target-master (car target-buffers))
+         (target-stack (append (cdr target-buffers) (list buffer))))
     (unless id
       (user-error "Current buffer is not an EXWM window"))
-    (exwm-workspace-switch-create (sk/exwm-workspace-index number))
-    (exwm-workspace-move-window (sk/exwm-workspace-index number) id)))
+    (exwm-workspace-move-window target-index id)
+    (exwm-workspace-switch-create target-index)
+    (if target-master
+        (sk/window-display-master-stack target-master target-stack)
+      (sk/window-display-master-stack buffer nil))))
 
 (defun sk/exwm-switch-workspace-1 () (interactive) (sk/exwm-switch-workspace 1))
 (defun sk/exwm-switch-workspace-2 () (interactive) (sk/exwm-switch-workspace 2))
@@ -123,17 +173,23 @@
 
 (defun sk/exwm-launch-kitty ()
   (interactive)
-  (start-process-shell-command "kitty" nil "kitty")
-  (message "Launching kitty"))
+  (unless (executable-find "kitty")
+    (user-error "kitty is not available"))
+  (sk/exwm-prepare-stack-placement)
+  (start-process "kitty" nil "kitty")
+  (message "Launching kitty in stack"))
 
 (defun sk/exwm-launch-browser ()
   (interactive)
+  (sk/exwm-prepare-stack-placement)
   (start-process-shell-command "browser" nil "chromium")
   (message "Launching chromium"))
 
 (defun sk/exwm-reload ()
   (interactive)
-  (load-file "~/.emacs.d/exwm.el")
+  (load-file "~/.emacs.d/lisp/sk-window-policy.el")
+  (load-file "~/.emacs.d/lisp/sk-exwm.el")
+  (sk/exwm-start)
   (message "EXWM config reloaded"))
 
 (defun sk/exwm-update-title ()
@@ -157,6 +213,8 @@
   (exwm-input-set-key (kbd "s-q") #'sk/exwm-close-current)
   (exwm-input-set-key (kbd "s-b") #'sk/exwm-switch-buffer)
   (exwm-input-set-key (kbd "s-f") #'sk/exwm-toggle-fullscreen)
+  (exwm-input-set-key (kbd "s-m") #'sk/window-promote-to-master)
+  (exwm-input-set-key (kbd "s-M") #'sk/window-normalize-master-stack)
   (exwm-input-set-key (kbd "s-1") #'sk/exwm-switch-workspace-1)
   (exwm-input-set-key (kbd "s-2") #'sk/exwm-switch-workspace-2)
   (exwm-input-set-key (kbd "s-3") #'sk/exwm-switch-workspace-3)

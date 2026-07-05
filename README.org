@@ -274,6 +274,95 @@ Workspace numbers are user-facing and one-based. EXWM internally uses zero-based
 workspace indexes, so =s-1= maps to EXWM workspace index 0, =s-2= maps to index
 1, and so on.
 
+** Emacs window policy
+
+Window behavior is intentionally owned by the shared Emacs window policy, not by
+each package independently.
+
+#+begin_src text
+emacs/lisp/sk-window-policy.el
+  Owns master/stack layout, side panels, transient panels, full-frame toggles,
+  stale side-window cleanup, and helper command wrappers.
+
+emacs/lisp/sk-exwm.el
+  Owns EXWM startup, external app launch, workspaces, and global =s-*= keys.
+  It delegates layout decisions to =sk-window-policy.el=.
+
+emacs/lisp/sk-keys.el
+  Owns user-facing keybindings. Commands that affect layout should call the
+  policy wrappers instead of raw package commands.
+#+end_src
+
+The intended layout contract:
+
+#+begin_src text
+Master/main area:
+  normal files and selected results open here
+
+Left persistent panel:
+  Treemacs project tree
+
+Right utility panel:
+  Dired
+  Ibuffer
+  Magit status
+  Xref/reference results
+  Help/Helpful/Eldoc
+  Eshell
+  Vterm
+
+Bottom transient panel:
+  Which-Key
+  Warnings / Compile logs
+#+end_src
+
+The =SPC o= menu should stay compact and predictable:
+
+#+begin_src text
+SPC o d  Dired, right utility panel
+SPC o e  Eshell, right utility panel
+SPC o t  Treemacs project tree, left persistent panel
+SPC o v  Vterm, right utility panel
+#+end_src
+
+=term= is still available through =M-x term=, but the leader binding is reserved
+for Treemacs. Vterm is the preferred terminal buffer once it is available on
+this machine.
+
+File-opening commands are intentionally split by interaction style:
+
+#+begin_src text
+SPC o d  Dired panel for visual browsing and file operations
+SPC f f  Counsel find-file for path-based opening
+SPC .    Counsel FZF for fast fuzzy opening
+SPC p f  Counsel Projectile find-file for project fuzzy opening
+#+end_src
+
+Selector/helper commands should keep their helper panel open and open selected
+content in the master/main area:
+
+#+begin_src text
+Dired RET:
+  open selected file in master/main window
+  keep Dired panel open
+
+Ibuffer RET:
+  open selected buffer in master/main window
+  keep Ibuffer panel open
+
+Xref RET:
+  jump selected result in master/main window
+  keep Xref results panel open
+
+Treemacs RET:
+  open selected file/location in master/main window
+  keep Treemacs panel open
+#+end_src
+
+Do not override Magit internals without a specific reason. Magit has a large
+surface of transient and action buffers; start by controlling where Magit opens,
+then only adjust internal actions if the actual behavior is wrong.
+
 ** EXWM app launcher
 
 =s-SPC= opens a Counsel/Ivy app launcher from installed desktop entries.
