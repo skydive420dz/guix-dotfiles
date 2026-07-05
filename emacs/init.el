@@ -9,6 +9,37 @@
 
 (menu-bar-mode -1) ; disable menu bar
 
+;;; Generated state
+
+(defvar sk/cache-directory
+  (expand-file-name "emacs/" (or (getenv "XDG_CACHE_HOME") "~/.cache/"))
+  "Directory for generated Emacs state.")
+
+(make-directory sk/cache-directory t)
+(dolist (directory '("backups" "auto-save" "auto-save-list"))
+  (make-directory (expand-file-name directory sk/cache-directory) t))
+
+;;; History
+
+(setq recentf-save-file
+      (expand-file-name "recentf" sk/cache-directory)
+      savehist-file
+      (expand-file-name "savehist" sk/cache-directory)
+      save-place-file
+      (expand-file-name "saveplace" sk/cache-directory))
+
+(recentf-mode 1)
+(savehist-mode 1)
+(save-place-mode 1)
+
+(setq backup-directory-alist
+      `(("." . ,(expand-file-name "backups/" sk/cache-directory)))
+      auto-save-file-name-transforms
+      `((".*" ,(expand-file-name "auto-save/" sk/cache-directory) t))
+      auto-save-list-file-prefix
+      (expand-file-name "auto-save-list/.saves-" sk/cache-directory)
+      create-lockfiles nil)
+
 ;;; Global entry points
 
 (global-set-key (kbd "C-c e") #'eshell) ; launch eshell
@@ -170,23 +201,8 @@
 
 ;;; Window management
 
-(winner-mode 1
+(winner-mode 1)
 
-;;; File state
-
-(defvar sk/cache-directory
-  (expand-file-name "emacs/" (or (getenv "XDG_CACHE_HOME") "~/.cache/"))
-  "Directory for generated Emacs state.")
-
-(make-directory sk/cache-directory t)
-
-(setq backup-directory-alist
-      `(("." . ,(expand-file-name "backups/" sk/cache-directory)))
-      auto-save-file-name-transforms
-      `((".*" ,(expand-file-name "auto-save/" sk/cache-directory) t))
-      auto-save-list-file-prefix
-      (expand-file-name "auto-save-list/.saves-" sk/cache-directory)
-      create-lockfiles nil)
              
 ;;; Projects and Git
 

@@ -224,11 +224,71 @@ files wire behavior; they should not install packages themselves.
 ** EXWM keys
 
 #+begin_src text
+s-SPC                 open app launcher from desktop entries
 s-RET                 open kitty
 s-w                   open Chromium
 s-r                   reload EXWM config
 XF86AudioRaiseVolume  raise default sink volume through wpctl
 XF86AudioLowerVolume  lower default sink volume through wpctl
+#+end_src
+
+** EXWM app launcher
+
+=s-SPC= opens a Counsel/Ivy app launcher from installed desktop entries.
+
+The first implementation tried to delegate launching to =gtk-launch=, matching
+what =counsel-linux-app= does upstream. On this Guix system neither
+=gtk-launch= nor =gtk4-launch= is present in the active profile, so the local
+launcher keeps those as optional fast paths and otherwise launches directly from
+the selected =.desktop= file:
+
+1. resolve the selected desktop id, for example =blueman-manager.desktop=
+2. find the desktop file under the application directories
+3. read the =Exec== field from the =[Desktop Entry]= section
+4. remove desktop-entry field codes such as =%U=, =%F=, and =%i=
+5. launch the command asynchronously with Emacs =start-process=
+
+Terminal desktop entries are launched through =kitty -- ...=. This keeps GUI
+app launching usable without adding another standalone launcher while preserving
+the documented desktop-entry model.
+
+Reference points:
+
+- Desktop Entry Specification, =Exec= field codes:
+  https://specifications.freedesktop.org/desktop-entry-spec/latest/exec-variables.html
+- Emacs asynchronous process launch:
+  https://www.gnu.org/software/emacs/manual/html_node/elisp/Asynchronous-Processes.html
+
+Bluetooth Manager can be tested through the launcher by selecting
+=Bluetooth Manager=, or directly with:
+
+#+begin_src sh
+blueman-manager
+#+end_src
+
+If Blueman opens with icon warnings, that is a GTK/icon-theme issue, not the
+app launcher path.
+
+** Keyboard repeat
+
+Keyboard repeat is intentionally aligned with the MSI profile:
+
+#+begin_src text
+delay: 210 ms
+rate:  67 repeats/sec requested
+#+end_src
+
+EXWM applies this with:
+
+#+begin_src sh
+xset r rate 210 67
+#+end_src
+
+=xset= may report the rate as =71= because Xorg rounds the interval internally;
+the requested value remains =67=. Validate the live setting with:
+
+#+begin_src sh
+xset q | grep "auto repeat delay"
 #+end_src
 
 ** Future extraction candidates

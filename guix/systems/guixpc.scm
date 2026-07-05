@@ -19,17 +19,16 @@
   (operating-system
   (locale "en_US.utf8")
   (timezone "America/New_York")
-  (keyboard-layout (keyboard-layout "us"))
+  (keyboard-layout
+   (keyboard-layout "us"
+    #:options '("caps:escape")))
+
   (host-name "guixpc")
 
   (kernel-arguments
    (cons* "modprobe.blacklist=pcspkr"
           %default-kernel-arguments))
   
-  (keyboard-layout
-   (keyboard-layout "us"
-                  #:options '("caps:escape")))
-
   ;; The list of user accounts ('root' is implicit).
   (users (cons* (user-account
                   (name "skydive420dz")
@@ -51,6 +50,8 @@
               (specification->package "emacs")
               (specification->package "emacs-exwm")
               (specification->package "emacs-desktop-environment")
+              (specification->package "xset")
+              (specification->package "fzf")
               (specification->package "git")
 			  (specification->package "bluez")
 			  (specification->package "blueman")
