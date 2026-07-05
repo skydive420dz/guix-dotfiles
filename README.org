@@ -264,11 +264,16 @@ s-H / s-J / s-K / s-L move current window left/down/up/right
 s-q                   close current EXWM app window; delete Emacs window otherwise
 s-b                   switch buffer
 s-f                   toggle fullscreen for current EXWM app window
+s-m                   promote selected window to master
+s-M                   normalize visible windows into master/stack layout
 s-1 .. s-5            switch/create EXWM workspace 1 through 5
 s-! s-@ s-# s-$ s-%   move current EXWM app window to workspace 1 through 5
 XF86AudioRaiseVolume  raise default sink volume through wpctl
 XF86AudioLowerVolume  lower default sink volume through wpctl
 #+end_src
+
+=s-h= uses the normal left-window focus path first. If normal windmove cannot
+see a left target and Treemacs is open, it falls back to selecting Treemacs.
 
 Workspace numbers are user-facing and one-based. EXWM internally uses zero-based
 workspace indexes, so =s-1= maps to EXWM workspace index 0, =s-2= maps to index
@@ -354,7 +359,7 @@ Xref RET:
   jump selected result in master/main window
   keep Xref results panel open
 
-Treemacs RET:
+Treemacs RET / l:
   open selected file/location in master/main window
   keep Treemacs panel open
 #+end_src
@@ -362,6 +367,9 @@ Treemacs RET:
 Do not override Magit internals without a specific reason. Magit has a large
 surface of transient and action buffers; start by controlling where Magit opens,
 then only adjust internal actions if the actual behavior is wrong.
+
+With Evil collection active, Magit refresh is =g r=. Plain =g= is an Evil
+prefix and will show the available =g= commands through Which-Key.
 
 ** EXWM app launcher
 
