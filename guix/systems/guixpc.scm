@@ -10,6 +10,7 @@
 ;; Indicate which modules to import to access the variables
 ;; used in this configuration.
 (use-modules (gnu)
+             (guix gexp)
              (nonguix transformations))
 (use-service-modules cups desktop networking ssh sound xorg)
 
@@ -32,6 +33,8 @@
                   (group "users")
 
                   (home-directory "/home/skydive420dz")
+                  (shell (file-append (specification->package "fish")
+                                      "/bin/fish"))
                   (supplementary-groups '("wheel" "netdev" "audio" "video")))
                 %base-user-accounts))
 
@@ -50,6 +53,7 @@
 			  (specification->package "bzmenu")
 			  (specification->package "pipemixer")
 			  (specification->package "pamixer")
+			  (specification->package "fish")
 			  (specification->package "ranger")
 			  (specification->package "kitty")
 			  (specification->package "ungoogled-chromium")

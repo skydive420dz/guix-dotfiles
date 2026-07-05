@@ -44,6 +44,7 @@ Owns:
 - user-level service profile
 - session services such as DBus, PipeWire, WirePlumber, PipeWire-Pulse
 - live symlinks from selected dotfiles back into this repo
+- Fish interactive configuration and native prompt
 
 Apply with:
 
@@ -81,6 +82,11 @@ changes.
 
 Guix Home recreates the live app symlinks to these files during =ghr=. It does
 not replace them with store snapshots, so normal repo edits remain live.
+
+Fish is configured through Guix Home because it is the account login shell. The
+prompt is native Fish, not Starship. Fastfetch is used as an interactive shell
+greeter, so it appears in kitty or any other terminal that starts an interactive
+Fish shell.
 
 * Apply
 
