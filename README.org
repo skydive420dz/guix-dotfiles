@@ -206,7 +206,7 @@ Guix-provided packages.
 
 #+begin_src text
 emacs/init.el
-  Package bootstrap, window history, and module loading.
+  Package bootstrap and module loading.
 
 emacs/exwm.el
   Thin entrypoint for the EXWM session. Adds the local Lisp directory to
@@ -243,7 +243,7 @@ emacs/lisp/sk-lsp.el
 
 emacs/lisp/sk-core.el
   Generated state/cache, history files, backups/autosaves, server startup,
-  editing defaults, and rainbow delimiters.
+  editing defaults, rainbow delimiters, and window history.
 
 emacs/lisp/sk-keys.el
   Global entry keys and leader key root.

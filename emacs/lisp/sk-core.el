@@ -45,6 +45,8 @@
 (use-package rainbow-delimiters
   :hook (prog-mode . rainbow-delimiters-mode))
 
+(winner-mode 1)
+
 (provide 'sk-core)
 
 ;;; sk-core.el ends here

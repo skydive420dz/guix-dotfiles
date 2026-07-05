@@ -22,10 +22,6 @@
 (require 'sk-lsp)
 (require 'sk-keys)
 
-;;; Window management
-
-(winner-mode 1)
-
 ;;; Org and notes
 
 (require 'sk-org)
