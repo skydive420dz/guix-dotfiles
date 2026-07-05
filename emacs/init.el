@@ -26,6 +26,7 @@
 (require 'sk-lua)
 (require 'sk-python)
 (require 'sk-shell)
+(require 'sk-json)
 (require 'sk-keys)
 
 ;;; Org and notes

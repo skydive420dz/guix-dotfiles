@@ -86,6 +86,7 @@
 			  (specification->package "emacs-geiser-guile")
 			  (specification->package "emacs-sly")
 			  (specification->package "emacs-lua-mode")
+			  (specification->package "emacs-json-mode")
 			  (specification->package "emacs-org")
 			  (specification->package "emacs-org-bullets")
 			  (specification->package "emacs-evil")
