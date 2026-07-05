@@ -15,30 +15,12 @@
 (add-to-list 'load-path sk/lisp-directory)
 
 (require 'sk-core)
-
-;;; Global entry points
-
-(global-set-key (kbd "C-c e") #'eshell) ; launch eshell
-(global-set-key (kbd "C-c t") #'term) ; launch term
-
 (require 'sk-ui)
 (require 'sk-completion)
 (require 'sk-evil)
 (require 'sk-project)
 (require 'sk-lsp)
-
-;;; Leader keys
-
-(use-package general
-  :config
-  (general-create-definer rune/leader-keys
-    :keymaps '(normal insert visual emacs)
-    :prefix "SPC"
-    :global-prefix "C-SPC")
-
-  (rune/leader-keys
-    "t"  '(:ignore t :which-key "toggles")
-    "tt" '(counsel-load-theme :which-key "choose theme")))
+(require 'sk-keys)
 
 ;;; Window management
 
