@@ -2,18 +2,133 @@
 
 Source of truth for the guixpc experiment machine.
 
-* Layout
-- guix/ :: channels, system config, machine notes
-- emacs/ :: Emacs and EXWM config
-- shell/ :: shell startup files
-- kitty/ :: terminal config when present
-- scripts/ :: personal helpers
+* Ownership
 
-* Apply
-System changes use:
+This repo owns the human-edited configuration. Generated state stays outside the
+repo and should not be edited directly.
+
+** System layer
+
+File:
+
+#+begin_src text
+guix/systems/guixpc.scm
+#+end_src
+
+Owns:
+
+- kernel and boot arguments
+- bootloader
+- filesystems
+- users and groups
+- system packages
+- system services such as SSH, Bluetooth, Xorg, elogind
+
+Apply with:
 
 #+begin_src sh
 gsr
 #+end_src
 
-Most dotfile edits apply by reloading the affected app. Guix rebuilds are only needed after changing the Guix system declaration.
+** Home layer
+
+File:
+
+#+begin_src text
+guix/home/guixpc.scm
+#+end_src
+
+Owns:
+
+- user-level Guix Home services
+- user-level service profile
+- session services such as DBus, PipeWire, WirePlumber, PipeWire-Pulse
+
+Apply with:
+
+#+begin_src sh
+ghr
+#+end_src
+
+Current live pointer:
+
+#+begin_src text
+~/.config/guix/home.scm -> ~/Projects/guix-dotfiles/guix/home/guixpc.scm
+~/.guix-home             -> generated Guix Home profile in /gnu/store
+#+end_src
+
+Do not edit =~/.guix-home= directly.
+
+** Application config
+
+Files:
+
+#+begin_src text
+emacs/
+kitty/
+ranger/
+gdb/
+guile/
+shell/
+x11/
+assets/
+#+end_src
+
+Owns normal dotfile behavior. Most changes here apply by reloading the affected
+program. A Guix rebuild is only needed when a package or service declaration
+changes.
+
+* Apply
+
+Use the smallest command that matches the changed layer.
+
+System changes:
+
+#+begin_src sh
+gsr
+#+end_src
+
+Home service changes:
+
+#+begin_src sh
+ghr
+#+end_src
+
+Both layers changed:
+
+#+begin_src sh
+gsr
+ghr
+#+end_src
+
+Regular application config changes usually need only a program reload.
+
+* Live symlinks
+
+The important live files are symlinks back into this repo:
+
+#+begin_src text
+~/.config/guix/channels.scm       -> guix/channels.scm
+~/.config/guix/home.scm           -> guix/home/guixpc.scm
+~/.config/guix/systems/guixpc.scm -> guix/systems/guixpc.scm
+~/.emacs.d/init.el                -> emacs/init.el
+~/.emacs.d/exwm.el                -> emacs/exwm.el
+#+end_src
+
+* Generated or local state
+
+These paths are not source configuration:
+
+#+begin_src text
+~/.guix-home
+~/.emacs.d/auto-save-list/
+~/.emacs.d/eln-cache/
+~/.emacs.d/eshell/
+~/.emacs.d/transient/
+~/.emacs.d/url/
+~/.config/guix/backups/
+~/.config/guix/recovery/
+#+end_src
+
+They may be useful for recovery or runtime behavior, but they should not become
+the place where new config is written.
