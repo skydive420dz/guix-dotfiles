@@ -22,6 +22,7 @@
 (require 'sk-evil)
 (require 'sk-project)
 (require 'sk-lsp)
+(require 'sk-lisp)
 (require 'sk-keys)
 
 ;;; Org and notes
