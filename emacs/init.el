@@ -54,7 +54,6 @@
 ;;; Editing defaults
 
 (delete-selection-mode 1)
-(save-place-mode 1)
 (global-auto-revert-mode 1)
 (show-paren-mode 1)
 (setq show-paren-delay 0)
@@ -203,7 +202,6 @@
 
 (winner-mode 1)
 
-             
 ;;; Projects and Git
 
 (use-package projectile
@@ -242,22 +240,3 @@
 
 (require 'sk-org)
 (require 'sk-notes)
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(package-selected-packages
-   '(all-the-icons-dired all-the-icons-ibuffer async breadcrumb
-			 counsel-projectile desktop-environment
-			 diminish doom-modeline evil-collection exwm
-			 general helpful ivy-rich list-utils loop
-			 magit memoize org-bullets pkg-info
-			 rainbow-delimiters shut-up use-package
-			 visual-fill-column which-key)))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
