@@ -200,9 +200,21 @@
             (if (and exwm-title (not (string-empty-p exwm-title))) ": " "")
             (or exwm-title "")))))
 
+(defun sk/exwm-focus-left ()
+  "Focus the window to the left, falling back to Treemacs.
+Treemacs is a left side window, so plain `windmove-left' does not always see it
+from regular EXWM/Emacs windows."
+  (interactive)
+  (if-let ((window (windmove-find-other-window 'left nil (selected-window))))
+      (select-window window)
+    (if-let ((treemacs-window (and (fboundp 'treemacs-get-local-window)
+                                   (treemacs-get-local-window))))
+        (select-window treemacs-window)
+      (user-error "No window left from selected window"))))
+
 (defun sk/exwm-bind-keys ()
   (exwm-input-set-key (kbd "s-SPC") #'sk/exwm-launch-app)
-  (exwm-input-set-key (kbd "s-h") #'windmove-left)
+  (exwm-input-set-key (kbd "s-h") #'sk/exwm-focus-left)
   (exwm-input-set-key (kbd "s-j") #'windmove-down)
   (exwm-input-set-key (kbd "s-k") #'windmove-up)
   (exwm-input-set-key (kbd "s-l") #'windmove-right)

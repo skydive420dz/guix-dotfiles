@@ -263,6 +263,17 @@ Directories continue replacing the Dired panel buffer."
     (select-window (sk/window-main-window))
     (xref--show-location (xref-item-location xref) t)))
 
+(defun sk/window-treemacs-RET-action ()
+  "Open Treemacs file nodes in the main window.
+Directories and non-file nodes keep Treemacs' default RET behavior."
+  (interactive)
+  (require 'treemacs)
+  (let* ((button (treemacs-current-button))
+         (path (and button (treemacs-button-get button :path))))
+    (if (and (stringp path) (file-regular-p path))
+        (sk/window-open-file-in-main path)
+      (treemacs-RET-action))))
+
 (with-eval-after-load 'dired
   (define-key dired-mode-map (kbd "RET") #'sk/window-dired-open))
 
@@ -276,7 +287,10 @@ Directories continue replacing the Dired panel buffer."
   (setq treemacs-position 'left
         treemacs-width 35
         treemacs-is-never-other-window t
-        treemacs-width-is-initially-locked t))
+        treemacs-width-is-initially-locked t)
+  (define-key treemacs-mode-map (kbd "RET") #'sk/window-treemacs-RET-action)
+  (define-key treemacs-mode-map [return] #'sk/window-treemacs-RET-action)
+  (define-key treemacs-mode-map (kbd "l") #'sk/window-treemacs-RET-action))
 
 (defun sk/window-normalize-full-frame-window ()
   "Clear side-window parameters from the selected full-frame window."
