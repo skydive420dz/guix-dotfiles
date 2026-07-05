@@ -75,6 +75,8 @@
 			  (specification->package "emacs-rainbow-delimiters")
 			  (specification->package "emacs-visual-fill-column")
 			  (specification->package "emacs-lsp-mode")
+			  (specification->package "emacs-lsp-ivy")
+			  (specification->package "emacs-lsp-treemacs")
 			  (specification->package "emacs-org")
 			  (specification->package "emacs-org-bullets")
 			  (specification->package "emacs-evil")
