@@ -9,7 +9,7 @@ export EMACSLOADPATH="${EMACSLOADPATH:-/run/current-system/profile/share/emacs/s
 
 cd "$repo"
 
-if emacsclient --eval "(progn (load-file \"$repo/emacs/init.el\") :init-ok)" >/dev/null 2>&1
+if timeout 5 emacsclient --eval "(progn (load-file \"$repo/emacs/init.el\") :init-ok)" >/dev/null 2>&1
 then
     printf '%s\n' 'live init: ok'
 else

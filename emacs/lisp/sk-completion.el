@@ -1,5 +1,9 @@
 ;;; sk-completion.el --- Completion, help, and discovery -*- lexical-binding: t; -*-
 
+;; Minibuffer completion:
+;; Ivy/Counsel own command selection, file finding, buffer switching, and search
+;; prompts.  This is separate from in-buffer code completion, which Company owns
+;; in sk-lsp.el.
 (use-package ivy
   :diminish
   :bind (("C-s" . swiper)
@@ -29,11 +33,21 @@
         which-key-side-window-max-height 0.25
         which-key-sort-order #'which-key-key-order-alpha))
 
+;; Snippet engine:
+;; lsp-mode advertises snippet-capable completions by default.  Yasnippet is the
+;; provider that expands those snippets when a language server returns them.
+(use-package yasnippet
+  :if (locate-library "yasnippet")
+  :config
+  (yas-global-mode 1))
+
+;; Better minibuffer annotations for Ivy results.
 (use-package ivy-rich
   :after ivy
   :config
   (ivy-rich-mode 1))
 
+;; Counsel supplies Ivy-backed replacements for common Emacs commands.
 (use-package counsel
   :bind (("M-x" . counsel-M-x)
          ("C-x b" . counsel-ibuffer)
@@ -41,6 +55,7 @@
          :map minibuffer-local-map
          ("C-r" . counsel-minibuffer-history)))
 
+;; Helpful is the richer documentation UI for Emacs Lisp symbols and keys.
 (use-package helpful
   :custom
   (counsel-describe-function-function #'helpful-callable)
