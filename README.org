@@ -160,10 +160,10 @@ changes.
 Guix Home recreates the live app symlinks to these files during =ghr=. It does
 not replace them with store snapshots, so normal repo edits remain live.
 
-Fish is configured through Guix Home because it is the account login shell. The
-prompt is native Fish, not Starship. Fastfetch is used as an interactive shell
-greeter, so it appears in kitty or any other terminal that starts an interactive
-Fish shell.
+Fish behavior lives in =shell/config.fish= and is installed through Guix Home
+because Fish is the account login shell. Run =ghr= after editing it. The prompt
+is native Fish, not Starship. Fastfetch is used as an interactive shell greeter,
+so it appears in kitty or any other terminal that starts an interactive Fish shell.
 
 * Emacs and EXWM baseline
 
