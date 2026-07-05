@@ -206,8 +206,8 @@ Guix-provided packages.
 
 #+begin_src text
 emacs/init.el
-  Editor defaults, completion, modeline, Evil, project tools, Magit, Org/notes
-  module loading.
+  Editor defaults, completion, Evil, project tools, Magit, Org/notes module
+  loading.
 
 emacs/exwm.el
   Thin entrypoint for the EXWM session. Adds the local Lisp directory to
@@ -226,6 +226,9 @@ emacs/lisp/sk-notes.el
 emacs/lisp/sk-exwm.el
   EXWM session behavior: wallpaper, launch keys, app launcher, window/workspace
   controls, browser key, volume keys, keyboard repeat, and EXWM startup.
+
+emacs/lisp/sk-ui.el
+  Frame chrome, line-number policy, font/theme setup, and modeline setup.
 #+end_src
 
 Emacs packages are provided by Guix in =guix/systems/guixpc.scm=. Emacs Lisp
@@ -318,7 +321,6 @@ Keep the current config working first. When it becomes worth splitting, these
 are the likely modules:
 
 #+begin_src text
-sk-ui.el          frame defaults, fonts, theme, modeline, line-number policy
 sk-completion.el  Ivy/Counsel/Helpful/Which-Key setup
 sk-evil.el        Evil and Evil Collection setup
 sk-project.el     Projectile and Magit setup

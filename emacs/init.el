@@ -1,14 +1,3 @@
-;;; Startup and frame defaults
-
-(setq inhibit-startup-message t)
-
-(scroll-bar-mode -1) ; hides the scrollbar
-(tool-bar-mode -1) ; disable the toolbar
-(tooltip-mode -1) ; disable tooltips
-(set-fringe-mode 10) ; gives some breathing room
-
-(menu-bar-mode -1) ; disable menu bar
-
 ;;; Generated state
 
 (defvar sk/cache-directory
@@ -67,23 +56,6 @@
 (use-package rainbow-delimiters
   :hook (prog-mode . rainbow-delimiters-mode))
 
-(column-number-mode)
-(global-display-line-numbers-mode t)
-
-;; Disable line numbers for some modes.
-(dolist (mode '(org-mode-hook
-                term-mode-hook
-                shell-mode-hook
-                eshell-mode-hook))
-  (add-hook mode (lambda () (display-line-numbers-mode 0))))
-
-;;; Fonts and theme
-
-(set-face-attribute 'default nil :family "Iosevka Term" :height 120) ; setup font face
-(set-fontset-font t 'symbol "Symbols Nerd Font Mono" nil 'append)
-
-(load-theme 'modus-vivendi-tinted) ; setup theme
-
 ;;; Package setup
 
 ;; Emacs packages are installed by Guix. This file only wires behavior.
@@ -99,6 +71,8 @@
   "Directory for personal Emacs modules.")
 
 (add-to-list 'load-path sk/lisp-directory)
+
+(require 'sk-ui)
 
 ;;; Completion and minibuffer
 
@@ -120,12 +94,6 @@
   
   :config
   (ivy-mode 1))
-
-;;; Modeline
-
-(use-package doom-modeline
-  :config
-  (doom-modeline-mode 1))
 
 ;;; Discoverability
 
