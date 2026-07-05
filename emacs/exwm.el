@@ -21,6 +21,22 @@
                       (start-process-shell-command
                        "browser" nil "chromium")))
 
+(defun sk/volume-raise ()
+  (interactive)
+  (start-process "wpctl-volume-up" nil
+		 "wpctl" "set volume" "-l" "1.0"
+		 "@DEFAULT_AUDIO_SINK@" "5%+"))
+
+(defun sk/volume-lower ()
+  (interactive)
+  (start-process "wpctl-volume-down" nil
+		 "wpctl" "set volume"
+		 "@DEFAULT_AUDIO_SINK@" "5%-"))
+
+(exwm-input-set-key (kbd "<XF86AudioRaiseVolume>") #'sk/volume-raise)
+(exwm-input-set-key (kbd "<XF86AudioLowerVolume>") #'sk/volume-lower)
+
+
 (sk/set-wallpaper)
 
 (exwm-wm-mode)
