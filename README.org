@@ -165,6 +165,78 @@ prompt is native Fish, not Starship. Fastfetch is used as an interactive shell
 greeter, so it appears in kitty or any other terminal that starts an interactive
 Fish shell.
 
+* Emacs and EXWM baseline
+
+This machine uses Emacs as both editor and X window manager.
+
+** Startup path
+
+#+begin_src text
+Display manager / X session
+-> Guix emacs-exwm wrapper
+-> ~/.exwm
+-> emacs/exwm-loader.el
+-> ~/.emacs.d/exwm.el
+-> emacs/exwm.el
+
+Regular Emacs init:
+~/.emacs.d/init.el -> emacs/init.el
+#+end_src
+
+The live EXWM session should report EXWM as loaded:
+
+#+begin_src sh
+emacsclient --eval "(list :server t :daemon (daemonp) :user-init user-init-file :exwm-loaded (featurep (quote exwm)) :server-running (server-running-p))"
+#+end_src
+
+Batch-load the editor config without starting an EXWM session:
+
+#+begin_src sh
+cd ~/Projects/guix-dotfiles
+emacs --batch --eval "(progn (load-file \"emacs/init.el\") (message \"sk init batch loaded\"))"
+#+end_src
+
+** Current ownership
+
+#+begin_src text
+emacs/init.el
+  Editor defaults, completion, modeline, Evil, project tools, Magit, Org/notes
+  module loading.
+
+emacs/exwm.el
+  EXWM session behavior: wallpaper, launch keys, browser key, volume keys, and
+  EXWM startup.
+
+emacs/exwm-loader.el
+  Minimal bridge from the Guix EXWM wrapper to the tracked EXWM config.
+
+emacs/lisp/sk-org.el
+  Org setup, Org keymaps, source-block helpers, agenda integration.
+
+emacs/lisp/sk-notes.el
+  Personal notes, daily/weekly/project/topic files, capture targets, agenda
+  refresh helpers.
+#+end_src
+
+Emacs packages are provided by Guix in =guix/systems/guixpc.scm=. Emacs Lisp
+files wire behavior; they should not install packages themselves.
+
+** Future extraction candidates
+
+Keep the current config working first. When it becomes worth splitting, these
+are the likely modules:
+
+#+begin_src text
+sk-ui.el          frame defaults, fonts, theme, modeline, line-number policy
+sk-completion.el  Ivy/Counsel/Helpful/Which-Key setup
+sk-evil.el        Evil and Evil Collection setup
+sk-project.el     Projectile and Magit setup
+sk-exwm.el        EXWM wallpaper, launchers, volume keys, workspace behavior
+#+end_src
+
+Do not split files just for neatness. Move code into =sk-*= modules when it
+reduces confusion or gives a clear ownership boundary.
+
 * Apply
 
 Use the smallest command that matches the changed layer.
