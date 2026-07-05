@@ -206,7 +206,7 @@ Guix-provided packages.
 
 #+begin_src text
 emacs/init.el
-  Editor defaults, Org/notes module loading, and language-server setup.
+  Editor defaults and Org/notes module loading.
 
 emacs/exwm.el
   Thin entrypoint for the EXWM session. Adds the local Lisp directory to
@@ -237,6 +237,9 @@ emacs/lisp/sk-evil.el
 
 emacs/lisp/sk-project.el
   Projectile, Counsel Projectile, and Magit setup.
+
+emacs/lisp/sk-lsp.el
+  LSP mode, LSP Ivy, and LSP Treemacs setup.
 #+end_src
 
 Emacs packages are provided by Guix in =guix/systems/guixpc.scm=. Emacs Lisp
