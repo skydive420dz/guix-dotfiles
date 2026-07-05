@@ -43,6 +43,7 @@ Owns:
 - user-level Guix Home services
 - user-level service profile
 - session services such as DBus, PipeWire, WirePlumber, PipeWire-Pulse
+- live symlinks from selected dotfiles back into this repo
 
 Apply with:
 
@@ -77,6 +78,9 @@ assets/
 Owns normal dotfile behavior. Most changes here apply by reloading the affected
 program. A Guix rebuild is only needed when a package or service declaration
 changes.
+
+Guix Home recreates the live app symlinks to these files during =ghr=. It does
+not replace them with store snapshots, so normal repo edits remain live.
 
 * Apply
 
@@ -114,6 +118,11 @@ The important live files are symlinks back into this repo:
 ~/.emacs.d/init.el                -> emacs/init.el
 ~/.emacs.d/exwm.el                -> emacs/exwm.el
 #+end_src
+
+The app and shell symlinks are managed by =guix/home/guixpc.scm=. The Guix
+entrypoint symlinks under =~/.config/guix= are bootstrap links and intentionally
+stay outside the Guix Home activation service so =gsr= and =ghr= always read the
+editable repo files.
 
 * Generated or local state
 
