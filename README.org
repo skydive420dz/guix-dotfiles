@@ -206,7 +206,7 @@ Guix-provided packages.
 
 #+begin_src text
 emacs/init.el
-  Editor defaults, project tools, Magit, Org/notes module loading.
+  Editor defaults, Org/notes module loading, and language-server setup.
 
 emacs/exwm.el
   Thin entrypoint for the EXWM session. Adds the local Lisp directory to
@@ -234,6 +234,9 @@ emacs/lisp/sk-completion.el
 
 emacs/lisp/sk-evil.el
   Evil and Evil Collection setup.
+
+emacs/lisp/sk-project.el
+  Projectile, Counsel Projectile, and Magit setup.
 #+end_src
 
 Emacs packages are provided by Guix in =guix/systems/guixpc.scm=. Emacs Lisp
@@ -319,18 +322,6 @@ the requested value remains =67=. Validate the live setting with:
 #+begin_src sh
 xset q | grep "auto repeat delay"
 #+end_src
-
-** Future extraction candidates
-
-Keep the current config working first. When it becomes worth splitting, these
-are the likely modules:
-
-#+begin_src text
-sk-project.el     Projectile and Magit setup
-#+end_src
-
-Do not split files just for neatness. Move code into =sk-*= modules when it
-reduces confusion or gives a clear ownership boundary.
 
 * Apply
 
