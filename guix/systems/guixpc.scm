@@ -118,6 +118,7 @@
 			  (specification->package "python-lsp-server")
 			  (specification->package "shellcheck")
 			  (specification->package "shfmt")
+			  (specification->package "clang")
 			  (specification->package "emacs-all-the-icons-ibuffer")
 			  (specification->package "xwallpaper")
 			  (specification->package "xrandr"))
