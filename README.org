@@ -252,6 +252,84 @@ emacs/lisp/sk-keys.el
 Emacs packages are provided by Guix in =guix/systems/guixpc.scm=. Emacs Lisp
 files wire behavior; they should not install packages themselves.
 
+** Emacs language acceptance
+
+Language support is split by backend. LSP-backed languages use =lsp-mode=,
+Company, LSP UI, and =SPC c x= through the LSP diagnostics path. Non-LSP
+languages use their native Emacs package plus Flycheck or REPL tooling where
+appropriate. =SPC c x= dispatches by backend: LSP diagnostics for LSP buffers,
+Flycheck errors for non-LSP buffers.
+
+#+begin_src text
+Lua
+  Mode:        lua-mode
+  Backend:     lsp-mode + lua-language-server
+  Diagnostics: LSP/Flycheck path
+  Notes:       LSP-backed language model baseline.
+
+Python
+  Mode:        python-mode
+  Backend:     lsp-mode + python-lsp-server / pylsp
+  Diagnostics: LSP/Flycheck path
+  Notes:       Pyright is not required for the current baseline.
+
+Shell
+  Mode:        sh-mode
+  Backend:     Flycheck sh-bash + shellcheck
+  Diagnostics: Flycheck path
+  Notes:       shfmt is installed for formatting, but no format-on-save policy.
+
+JSON
+  Mode:        json-mode when available; built-in js-json-mode fallback
+  Backend:     Flycheck json-jq
+  Diagnostics: Flycheck path
+  Notes:       jq is preferred over Flycheck's python checker because this Guix
+               profile exposes python3, while that checker looks for python.
+
+Org
+  Mode:        org-mode
+  Backend:     Org native features
+  Diagnostics: none
+  Notes:       Owns notes, capture, agenda, source block helpers, and editing UI.
+
+C
+  Mode:        c-mode
+  Backend:     lsp-mode + clangd from the clang package
+  Diagnostics: LSP/Flycheck path
+  Notes:       clang-format is installed, but no format-on-save policy.
+
+Emacs Lisp
+  Mode:        emacs-lisp-mode
+  Backend:     Emacs native Eldoc/help/eval/navigation
+  Diagnostics: none currently
+  Notes:       Not LSP-backed.
+
+Scheme / Guile
+  Mode:        scheme-mode
+  Backend:     Geiser + Geiser Guile
+  Diagnostics: Geiser/native interaction
+  Notes:       Guile is installed system-wide.
+
+Common Lisp
+  Mode:        lisp-mode for .lisp, .cl, and .asd
+  Backend:     SLY + SBCL when SLY is started
+  Diagnostics: SLY/native interaction
+  Notes:       File opening is owned by lisp-mode; SLY is the REPL/tooling layer.
+#+end_src
+
+Acceptance probes should check actual buffer state, not just package presence:
+
+#+begin_src text
+major mode
+backend mode or REPL integration
+completion frontend when applicable
+diagnostics path when applicable
+formatter availability when intentionally installed
+#+end_src
+
+Do not mark a language complete because a package exists. The buffer has to open
+in the intended mode and the selected diagnostics/completion path has to work.
+
 ** EXWM keys
 
 #+begin_src text
