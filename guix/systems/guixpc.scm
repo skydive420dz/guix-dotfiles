@@ -27,6 +27,7 @@
 
   (kernel-arguments
    (cons* "modprobe.blacklist=pcspkr"
+          "video=HDMI-A-1:3440x1440@60"
           %default-kernel-arguments))
   
   ;; The list of user accounts ('root' is implicit).
@@ -51,7 +52,6 @@
               (specification->package "emacs-exwm")
               (specification->package "emacs-desktop-environment")
               (specification->package "xset")
-              (specification->package "xinit")
               (specification->package "fzf")
               (specification->package "git")
 			  (specification->package "bluez")
@@ -135,7 +135,9 @@
                   ;; record as a second argument to 'service' below.
                   (service openssh-service-type)
                   (service bluetooth-service-type)
-                  (set-xorg-configuration
+                  (service xorg-server-service-type
+                   (xorg-configuration (keyboard-layout keyboard-layout)))
+                  (service startx-command-service-type
                    (xorg-configuration (keyboard-layout keyboard-layout))))
 
             ;; This is the default list of services we
@@ -162,6 +164,9 @@
   (bootloader (bootloader-configuration
                 (bootloader grub-efi-bootloader)
                 (targets (list "/boot/efi"))
+                (theme (grub-theme
+                        (resolution '(3440 . 1440))
+                        (gfxmode '("3440x1440" "2560x1440" "1920x1080" "auto"))))
                 (keyboard-layout keyboard-layout)))
   (swap-devices (list (swap-space
                         (target (uuid

@@ -26,7 +26,8 @@ function __sk_start_exwm_from_tty
     command -q startx
     or return
 
-    exec startx >/dev/null 2>&1
+    mkdir -p "$HOME/.cache"
+    exec startx >"$HOME/.cache/sk-exwm-startx.log" 2>&1
 end
 
 __sk_start_exwm_from_tty
