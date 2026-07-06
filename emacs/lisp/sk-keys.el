@@ -42,9 +42,10 @@
     "cd" '(sk/code-definition :which-key "definition")
     "cD" '(sk/code-references :which-key "references")
     "ci" '(sk/code-implementation :which-key "implementation")
+    "cj" '(sk/code-type-definition :which-key "jump type")
     "cl" '(lsp :which-key "start lsp")
     "cs" '(lsp-ivy-workspace-symbol :which-key "symbols")
-    "ct" '(sk/code-type-definition :which-key "type definition")
+    "ct" '(sk/code-symbols :which-key "symbol tree")
     "cx" '(sk/code-diagnostics :which-key "diagnostics")
 
     "h"  '(:ignore t :which-key "help")

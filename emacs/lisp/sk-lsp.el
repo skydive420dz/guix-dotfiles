@@ -104,6 +104,14 @@
       (lsp-find-type-definition)
     (user-error "Type definition lookup requires an active LSP buffer")))
 
+(defun sk/code-symbols ()
+  "Open the LSP document symbol tree for the current buffer."
+  (interactive)
+  (if (and (bound-and-true-p lsp-mode)
+           (fboundp 'lsp-treemacs-symbols))
+      (lsp-treemacs-symbols)
+    (user-error "Symbol tree requires an active LSP buffer")))
+
 (defun sk/code-diagnostics ()
   "Open diagnostics for the current buffer.
 
