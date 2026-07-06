@@ -11,7 +11,7 @@
     :global-prefix "C-SPC")
 
   (rune/leader-keys
-    "."  '(counsel-fzf :which-key "fuzzy file")
+    "."  '(sk/window-counsel-fzf :which-key "fuzzy file")
     ","  '(sk/window-open-ibuffer :which-key "buffers")
 
     "b"  '(:ignore t :which-key "buffers")
@@ -19,13 +19,13 @@
     "bk" '(sk/kill-current-buffer :which-key "kill")
 
     "f"  '(:ignore t :which-key "files")
-    "ff" '(counsel-find-file :which-key "find")
+    "ff" '(sk/window-counsel-find-file :which-key "find")
     "fr" '(recentf-open-files :which-key "recent")
     "fs" '(save-buffer :which-key "save")
 
     "p"  '(:ignore t :which-key "projects")
     "pp" '(projectile-switch-project :which-key "switch")
-    "pf" '(counsel-projectile-find-file :which-key "find file")
+    "pf" '(sk/window-counsel-projectile-find-file :which-key "find file")
     "ps" '(projectile-ripgrep :which-key "ripgrep")
     "pc" '(projectile-compile-project :which-key "compile")
 

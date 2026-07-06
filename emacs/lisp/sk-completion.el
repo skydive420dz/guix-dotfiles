@@ -45,6 +45,18 @@
 (use-package ivy-rich
   :after ivy
   :config
+  (ivy-rich-set-columns
+   'counsel-M-x
+   '((counsel-M-x-transformer (:width 36))
+     (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))
+  (ivy-rich-set-columns
+   'counsel-describe-function
+   '((counsel-describe-function-transformer (:width 36))
+     (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))
+  (ivy-rich-set-columns
+   'counsel-describe-variable
+   '((counsel-describe-variable-transformer (:width 36))
+     (ivy-rich-counsel-variable-docstring (:face font-lock-doc-face))))
   (ivy-rich-mode 1))
 
 ;; Counsel supplies Ivy-backed replacements for common Emacs commands.

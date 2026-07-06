@@ -11,6 +11,11 @@
   (company-minimum-prefix-length 1)
   (company-selection-wrap-around t)
   (company-tooltip-align-annotations t)
+  (company-backends
+   '((company-capf company-yasnippet)
+     company-files
+     company-keywords
+     company-dabbrev-code))
   :bind (:map company-active-map
               ("C-j" . company-select-next)
               ("C-k" . company-select-previous)
@@ -22,7 +27,8 @@
 ;; for LSP buffers, and non-LSP modes can use their own Flycheck checkers.
 (use-package flycheck
   :if (locate-library "flycheck")
-  :hook (lsp-mode . flycheck-mode))
+  :hook ((after-init . global-flycheck-mode)
+         (lsp-mode . flycheck-mode)))
 
 ;; LSP client:
 ;; This is the shared backend for external language servers.  Root guessing is
@@ -37,7 +43,11 @@
         lsp-completion-show-detail t
         lsp-completion-show-kind t
         lsp-completion-use-last-result t
-        lsp-diagnostics-provider :auto)
+        lsp-diagnostics-provider :auto
+        lsp-headerline-breadcrumb-enable t
+        lsp-headerline-breadcrumb-icons-enable t
+        lsp-headerline-breadcrumb-enable-diagnostics t
+        lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
   :hook (lsp-mode . lsp-enable-which-key-integration))
 
 ;; LSP visual layer:

@@ -24,6 +24,10 @@ Real side windows are dedicated with the value `side' and are left alone."
   "Return non-nil when WINDOW is available for master/stack layout."
   (not (window-parameter window 'window-side)))
 
+(defun sk/window-side-window-p (&optional window)
+  "Return non-nil when WINDOW is a helper side window."
+  (window-parameter (or window (selected-window)) 'window-side))
+
 (defun sk/window-list (&optional frame)
   "Return regular, non-side windows on FRAME."
   (let (windows)
@@ -115,6 +119,33 @@ Select the target window when SELECT is non-nil."
 (defun sk/window-open-file-in-main (file)
   "Open FILE in the main editing window."
   (sk/window-display-in-main (find-file-noselect file) t))
+
+(defun sk/window-call-command-from-main-when-side (command)
+  "Call COMMAND from the main window when currently in a side window.
+The current `default-directory' is preserved so helper panels still provide the
+expected starting location for file prompts."
+  (let ((directory default-directory))
+    (if (sk/window-side-window-p)
+        (progn
+          (select-window (sk/window-main-window))
+          (let ((default-directory directory))
+            (call-interactively command)))
+      (call-interactively command))))
+
+(defun sk/window-counsel-find-file ()
+  "Run `counsel-find-file' without opening targets inside helper windows."
+  (interactive)
+  (sk/window-call-command-from-main-when-side #'counsel-find-file))
+
+(defun sk/window-counsel-fzf ()
+  "Run `counsel-fzf' without opening targets inside helper windows."
+  (interactive)
+  (sk/window-call-command-from-main-when-side #'counsel-fzf))
+
+(defun sk/window-counsel-projectile-find-file ()
+  "Run `counsel-projectile-find-file' without opening targets in helpers."
+  (interactive)
+  (sk/window-call-command-from-main-when-side #'counsel-projectile-find-file))
 
 (defun sk/window-promote-to-master ()
   "Swap the selected regular window with the current master window."
@@ -263,6 +294,17 @@ Directories continue replacing the Dired panel buffer."
     (select-window (sk/window-main-window))
     (xref--show-location (xref-item-location xref) t)))
 
+(defun sk/window-flycheck-error-list-goto-error (&optional pos)
+  "Visit the Flycheck error at POS in the main window."
+  (interactive)
+  (require 'flycheck)
+  (let ((error (tabulated-list-get-id pos)))
+    (unless error
+      (user-error "No Flycheck error at point"))
+    (select-window (sk/window-main-window))
+    (flycheck-jump-to-error error)
+    (run-hooks 'flycheck-error-list-after-jump-hook)))
+
 (defun sk/window-treemacs-RET-action ()
   "Open Treemacs file nodes in the main window.
 Directories and non-file nodes keep Treemacs' default RET behavior."
@@ -282,6 +324,9 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
 
 (with-eval-after-load 'xref
   (define-key xref--xref-buffer-mode-map (kbd "RET") #'sk/window-xref-goto-xref))
+
+(with-eval-after-load 'flycheck
+  (define-key flycheck-error-list-mode-map (kbd "RET") #'sk/window-flycheck-error-list-goto-error))
 
 (with-eval-after-load 'treemacs
   (setq treemacs-position 'left
