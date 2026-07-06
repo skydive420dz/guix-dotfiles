@@ -141,6 +141,12 @@
             ;; are appending to.
             %desktop-services)
     (delete pulseaudio-service-type)
+    (gdm-service-type
+     config => (gdm-configuration
+                (inherit config)
+                (auto-login? #t)
+                (default-user "skydive420dz")
+                (auto-suspend? #f)))
     (elogind-service-type
      config => (elogind-configuration
                 (inherit config)

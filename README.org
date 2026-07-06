@@ -183,6 +183,10 @@ Regular Emacs init:
 ~/.emacs.d/init.el -> emacs/init.el
 #+end_src
 
+GDM owns graphical login. =guix/systems/guixpc.scm= enables automatic login for
+=skydive420dz= and disables GDM pre-login suspend so a killed EXWM session does
+not leave the machine waiting at a sleeping login screen.
+
 The live EXWM session should report EXWM as loaded:
 
 #+begin_src sh
