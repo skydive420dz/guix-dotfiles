@@ -40,7 +40,7 @@
     "c"  '(:ignore t :which-key "code")
     "cl" '(lsp :which-key "start lsp")
     "cs" '(lsp-ivy-workspace-symbol :which-key "symbols")
-    "cx" '(lsp-treemacs-errors-list :which-key "diagnostics")
+    "cx" '(sk/code-diagnostics :which-key "diagnostics")
 
     "h"  '(:ignore t :which-key "help")
     "h." '(helpful-at-point :which-key "at point")

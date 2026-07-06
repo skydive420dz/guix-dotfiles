@@ -64,6 +64,23 @@
 (use-package lsp-treemacs
   :commands lsp-treemacs-errors-list)
 
+(defun sk/code-diagnostics ()
+  "Open diagnostics for the current buffer.
+
+Prefer the LSP diagnostics UI when the current buffer is LSP-backed.  Fall back
+to Flycheck's error list for non-LSP buffers such as JSON and shell scripts."
+  (interactive)
+  (cond
+   ((and (bound-and-true-p lsp-mode)
+         (fboundp 'lsp-treemacs-errors-list))
+    (lsp-treemacs-errors-list))
+   ((and (bound-and-true-p flycheck-mode)
+         (fboundp 'flycheck-list-errors))
+    (flycheck-buffer)
+    (flycheck-list-errors))
+   (t
+    (user-error "No diagnostics backend is active in this buffer"))))
+
 (provide 'sk-lsp)
 
 ;;; sk-lsp.el ends here
