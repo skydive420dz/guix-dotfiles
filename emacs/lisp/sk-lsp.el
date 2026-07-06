@@ -64,6 +64,46 @@
 (use-package lsp-treemacs
   :commands lsp-treemacs-errors-list)
 
+(defun sk/code-action ()
+  "Run a code action for the current LSP buffer."
+  (interactive)
+  (if (and (bound-and-true-p lsp-mode)
+           (fboundp 'lsp-execute-code-action))
+      (lsp-execute-code-action)
+    (user-error "Code actions require an active LSP buffer")))
+
+(defun sk/code-definition ()
+  "Jump to the definition at point."
+  (interactive)
+  (let ((symbol (thing-at-point 'symbol t)))
+    (if symbol
+        (xref-find-definitions symbol)
+      (user-error "No symbol at point"))))
+
+(defun sk/code-references ()
+  "Show references for the symbol at point."
+  (interactive)
+  (let ((symbol (thing-at-point 'symbol t)))
+    (if symbol
+        (xref-find-references symbol)
+      (user-error "No symbol at point"))))
+
+(defun sk/code-implementation ()
+  "Jump to implementation for the current LSP symbol."
+  (interactive)
+  (if (and (bound-and-true-p lsp-mode)
+           (fboundp 'lsp-find-implementation))
+      (lsp-find-implementation)
+    (user-error "Implementation lookup requires an active LSP buffer")))
+
+(defun sk/code-type-definition ()
+  "Jump to type definition for the current LSP symbol."
+  (interactive)
+  (if (and (bound-and-true-p lsp-mode)
+           (fboundp 'lsp-find-type-definition))
+      (lsp-find-type-definition)
+    (user-error "Type definition lookup requires an active LSP buffer")))
+
 (defun sk/code-diagnostics ()
   "Open diagnostics for the current buffer.
 

@@ -38,8 +38,13 @@
     "sp" '(counsel-projectile-rg :which-key "project")
 
     "c"  '(:ignore t :which-key "code")
+    "ca" '(sk/code-action :which-key "action")
+    "cd" '(sk/code-definition :which-key "definition")
+    "cD" '(sk/code-references :which-key "references")
+    "ci" '(sk/code-implementation :which-key "implementation")
     "cl" '(lsp :which-key "start lsp")
     "cs" '(lsp-ivy-workspace-symbol :which-key "symbols")
+    "ct" '(sk/code-type-definition :which-key "type definition")
     "cx" '(sk/code-diagnostics :which-key "diagnostics")
 
     "h"  '(:ignore t :which-key "help")
