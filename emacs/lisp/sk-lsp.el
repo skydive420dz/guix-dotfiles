@@ -77,6 +77,11 @@ to Flycheck's error list for non-LSP buffers such as JSON and shell scripts."
    ((and (bound-and-true-p flycheck-mode)
          (fboundp 'flycheck-list-errors))
     (flycheck-buffer)
+    (let ((deadline (+ (float-time) 2)))
+      (while (and (< (float-time) deadline)
+                  (boundp 'flycheck-is-checking)
+                  flycheck-is-checking)
+        (accept-process-output nil 0.05)))
     (flycheck-list-errors))
    (t
     (user-error "No diagnostics backend is active in this buffer"))))
