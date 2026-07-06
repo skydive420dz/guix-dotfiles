@@ -3,6 +3,34 @@ set -gx EDITOR "emacsclient -t -a 'emacs -nw'"
 set -gx VISUAL "emacsclient -n -a emacs"
 set -gx PAGER less
 
+function __sk_start_exwm_from_tty
+    status is-login
+    or return
+
+    status is-interactive
+    or return
+
+    test -z "$SSH_CONNECTION"
+    or return
+
+    test -z "$DISPLAY"
+    or return
+
+    test -z "$WAYLAND_DISPLAY"
+    or return
+
+    set -l current_tty (tty 2>/dev/null)
+    test "$current_tty" = "/dev/tty1"
+    or return
+
+    command -q startx
+    or return
+
+    exec startx >/dev/null 2>&1
+end
+
+__sk_start_exwm_from_tty
+
 function __sk_shell_greeter
     status is-interactive
     or return

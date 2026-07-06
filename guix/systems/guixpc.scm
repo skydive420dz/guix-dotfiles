@@ -51,6 +51,7 @@
               (specification->package "emacs-exwm")
               (specification->package "emacs-desktop-environment")
               (specification->package "xset")
+              (specification->package "xinit")
               (specification->package "fzf")
               (specification->package "git")
 			  (specification->package "bluez")
@@ -140,13 +141,17 @@
             ;; This is the default list of services we
             ;; are appending to.
             %desktop-services)
+    (delete gdm-service-type)
     (delete pulseaudio-service-type)
-    (gdm-service-type
-     config => (gdm-configuration
-                (inherit config)
-                (auto-login? #t)
-                (default-user "skydive420dz")
-                (auto-suspend? #f)))
+    (mingetty-service-type
+     config => (if (string=? (mingetty-configuration-tty config) "tty1")
+                   (mingetty-configuration
+                    (inherit config)
+                    (auto-login "skydive420dz")
+                    (clear-on-logout? #t)
+                    (print-issue #f)
+                    (print-hostname #f))
+                   config))
     (elogind-service-type
      config => (elogind-configuration
                 (inherit config)

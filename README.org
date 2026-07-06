@@ -172,8 +172,13 @@ This machine uses Emacs as both editor and X window manager.
 ** Startup path
 
 #+begin_src text
-Display manager / X session
--> Guix emacs-exwm wrapper
+tty1 mingetty autologin
+-> Fish login shell
+-> shell/config.fish guard
+-> startx
+-> ~/.xinitrc
+-> shell/xinitrc
+-> exwm
 -> ~/.exwm
 -> emacs/exwm-loader.el
 -> ~/.emacs.d/exwm.el
@@ -183,9 +188,10 @@ Regular Emacs init:
 ~/.emacs.d/init.el -> emacs/init.el
 #+end_src
 
-GDM owns graphical login. =guix/systems/guixpc.scm= enables automatic login for
-=skydive420dz= and disables GDM pre-login suspend so a killed EXWM session does
-not leave the machine waiting at a sleeping login screen.
+There is no graphical display manager in the intended path.  The system config
+removes GDM, tty1 autologins as =skydive420dz=, and Fish starts EXWM only for
+the local interactive tty1 login shell.  SSH shells are excluded by the Fish
+guard.
 
 The live EXWM session should report EXWM as loaded:
 
