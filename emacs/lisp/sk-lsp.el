@@ -21,7 +21,8 @@
 ;; Flycheck renders errors/warnings.  lsp-mode can publish diagnostics into it
 ;; for LSP buffers, and non-LSP modes can use their own Flycheck checkers.
 (use-package flycheck
-  :if (locate-library "flycheck"))
+  :if (locate-library "flycheck")
+  :hook (lsp-mode . flycheck-mode))
 
 ;; LSP client:
 ;; This is the shared backend for external language servers.  Root guessing is
@@ -45,6 +46,7 @@
 (use-package lsp-ui
   :if (locate-library "lsp-ui")
   :commands lsp-ui-mode
+  :hook (lsp-mode . lsp-ui-mode)
   :custom
   (lsp-ui-doc-enable t)
   (lsp-ui-doc-show-with-cursor t)
