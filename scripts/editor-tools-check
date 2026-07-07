@@ -1,0 +1,30 @@
+#!/bin/sh
+set -eu
+
+missing=0
+
+check() {
+    if command -v "$1" >/dev/null 2>&1; then
+        printf 'ok      %s\n' "$1"
+    else
+        printf 'missing %s\n' "$1"
+        missing=1
+    fi
+}
+
+check clang
+check clang-format
+check make
+check gdb
+check pkg-config
+check python3
+check pip3
+check lua
+check lua-language-server
+check shellcheck
+check shfmt
+check jq
+check guile
+check sbcl
+
+exit "$missing"

@@ -1,0 +1,14 @@
+{
+  "name": "guixpc",
+  "languages": [
+    "c",
+    "shell",
+    "json",
+    "elisp",
+    "scheme",
+    "common-lisp"
+  ],
+  "formatting": {
+    "manual": true
+  }
+}
