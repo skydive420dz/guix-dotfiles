@@ -33,7 +33,7 @@ is accepted so the repo records intent, not only implementation commits.
 
 ** Next
 
-- [ ] Extend =scripts/emacs-check= with batch probes for mode detection,
+- [X] Extend =scripts/emacs-check= with batch probes for mode detection,
   keybindings, and formatting dispatch.
 - [ ] Decide Python formatter policy: =black=, =ruff format=, or no formatter yet.
 - [ ] Decide Lua formatter policy: =stylua= or no formatter yet.

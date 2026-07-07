@@ -16,4 +16,102 @@ else
     printf '%s\n' 'live init: skipped or failed; checking batch'
 fi
 
-emacs --batch --eval '(progn (load-file "emacs/init.el") (message "batch init: ok"))'
+probe="$(mktemp "${TMPDIR:-/tmp}/sk-emacs-check.XXXXXX.el")"
+trap 'rm -f "$probe"' EXIT HUP INT TERM
+
+cat > "$probe" <<'ELISP'
+(load-file "emacs/init.el")
+
+(defvar sk/check-failures nil)
+
+(defun sk/check-pass (label)
+  (message "ok: %s" label))
+
+(defun sk/check-fail (label actual expected)
+  (push label sk/check-failures)
+  (message "fail: %s expected %S got %S" label expected actual))
+
+(defun sk/check-equal (label actual expected)
+  (if (equal actual expected)
+      (sk/check-pass label)
+    (sk/check-fail label actual expected)))
+
+(defun sk/check-true (label value)
+  (if value
+      (sk/check-pass label)
+    (sk/check-fail label value t)))
+
+(defun sk/check-key (key expected)
+  (sk/check-equal
+   (format "key %s" key)
+   (lookup-key evil-normal-state-map (kbd key))
+   expected))
+
+(defun sk/check-file-mode (path expected)
+  (with-temp-buffer
+    (setq buffer-file-name (expand-file-name path default-directory))
+    (delay-mode-hooks
+      (set-auto-mode))
+    (sk/check-true
+     (format "mode %s" path)
+     (if (listp expected)
+         (memq major-mode expected)
+       (eq major-mode expected)))))
+
+(defun sk/check-format-c ()
+  (with-temp-buffer
+    (insert "int main(){return 0;}\n")
+    (c-mode)
+    (sk/format-buffer)
+    (string-match-p "int main()" (buffer-string))))
+
+(defun sk/check-format-sh ()
+  (with-temp-buffer
+    (insert "if true; then\necho ok\nfi\n")
+    (sh-mode)
+    (sk/format-buffer)
+    (string-match-p "  echo ok" (buffer-string))))
+
+(defun sk/check-format-json ()
+  (with-temp-buffer
+    (insert "{\"b\":1,\"a\":[2,3]}\n")
+    (if (fboundp 'json-mode)
+        (json-mode)
+      (js-json-mode))
+    (sk/format-buffer)
+    (string-match-p "\n  \"b\"" (buffer-string))))
+
+(defun sk/check-format-elisp ()
+  (with-temp-buffer
+    (insert "(progn\n(message \"x\"))\n")
+    (emacs-lisp-mode)
+    (sk/format-buffer)
+    (string-match-p "  (message" (buffer-string))))
+
+(sk/check-true "batch init" (featurep 'sk-keys))
+
+(sk/check-key "SPC c f" 'sk/format-buffer)
+(sk/check-key "SPC ," 'counsel-switch-buffer)
+(sk/check-key "SPC b b" 'counsel-ibuffer)
+(sk/check-key "SPC b i" 'sk/window-open-ibuffer)
+(sk/check-key "SPC b k" 'sk/kill-current-buffer)
+(sk/check-key "SPC b K" 'sk/kill-ordinary-buffers-and-dashboard)
+
+(sk/check-file-mode "fixtures/c/hello.c" 'c-mode)
+(sk/check-file-mode "fixtures/shell/sample.sh" 'sh-mode)
+(sk/check-file-mode "fixtures/json/sample.json" '(json-mode js-json-mode))
+(sk/check-file-mode "fixtures/elisp/sample.el" 'emacs-lisp-mode)
+(sk/check-file-mode "fixtures/scheme/sample.scm" 'scheme-mode)
+(sk/check-file-mode "fixtures/common-lisp/sample.lisp" 'lisp-mode)
+
+(sk/check-true "format c" (sk/check-format-c))
+(sk/check-true "format shell" (sk/check-format-sh))
+(sk/check-true "format json" (sk/check-format-json))
+(sk/check-true "format elisp" (sk/check-format-elisp))
+
+(if sk/check-failures
+    (error "emacs-check failed: %S" (reverse sk/check-failures))
+  (message "batch probes: ok"))
+ELISP
+
+emacs --batch -l "$probe"
