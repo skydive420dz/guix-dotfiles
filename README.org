@@ -2,6 +2,43 @@
 
 Source of truth for the guixpc experiment machine.
 
+* Current progress
+
+This section tracks the active stabilization pass. Keep it current when a slice
+is accepted so the repo records intent, not only implementation commits.
+
+** Completed
+
+- [X] Slice 0: Runtime sanity
+  Confirmed the live EXWM/Emacs path, clean repo state, active Guix
+  system/home generations, and SSH-side validation limits.
+- [X] Slice 1: Full audit
+  Inventoried package ownership, active language modes, LSP-backed and non-LSP
+  paths, diagnostics, completion, =SPC c= commands, and helper/window behavior.
+- [X] Slice 2: Completion and diagnostics polish
+  Standardized Company/LSP completion behavior, Flycheck activation, LSP
+  breadcrumbs, and Ivy/Counsel command and buffer matching.
+- [X] Slice 3: Helper and window behavior
+  Standardized helper panels, main-window result opening, buffer switching, and
+  Ibuffer behavior without changing Magit internals.
+- [X] Slice 4: Dev/practice toolchain
+  Added the missing declared tools for C, Lua, shell, JSON, Scheme, Common Lisp,
+  and Python practice workflows.
+- [X] Slice 5: Formatting contract
+  Added manual =SPC c f= formatting for C, shell, JSON, and native indentation
+  for Lisp-family and Org buffers. No format-on-save policy was added.
+- [X] Slice 6: Fixtures and tool probes
+  Added tracked fixtures plus =scripts/editor-tools-check= for reproducible
+  tool availability checks.
+
+** Next
+
+- [ ] Extend =scripts/emacs-check= with batch probes for mode detection,
+  keybindings, and formatting dispatch.
+- [ ] Decide Python formatter policy: =black=, =ruff format=, or no formatter yet.
+- [ ] Decide Lua formatter policy: =stylua= or no formatter yet.
+- [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
+
 * Hardware baseline
 
 These facts are live-verified from firmware, DMI, PCI, and EFI output. Keep this
