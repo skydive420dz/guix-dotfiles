@@ -26,7 +26,7 @@ is accepted so the repo records intent, not only implementation commits.
   and Python practice workflows.
 - [X] Slice 5: Formatting contract
   Added manual =SPC c f= formatting for C, shell, JSON, and native indentation
-  for Lisp-family and Org buffers. No format-on-save policy was added.
+  for Lua, Lisp-family, and Org buffers. No format-on-save policy was added.
 - [X] Slice 6: Fixtures and tool probes
   Added tracked fixtures plus =scripts/editor-tools-check= for reproducible
   tool availability checks.
@@ -36,7 +36,7 @@ is accepted so the repo records intent, not only implementation commits.
 - [X] Extend =scripts/emacs-check= with batch probes for mode detection,
   keybindings, and formatting dispatch.
 - [X] Decide Python formatter policy: =ruff format=.
-- [ ] Decide Lua formatter policy: =stylua= or no formatter yet.
+- [X] Decide Lua formatter policy: native indentation; no =stylua= for now.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 
 * Hardware baseline
@@ -312,7 +312,10 @@ Lua
   Mode:        lua-mode
   Backend:     lsp-mode + lua-language-server
   Diagnostics: LSP/Flycheck path
-  Notes:       LSP-backed language model baseline.
+  Formatter:   native Emacs indentation through =SPC c f=
+  Notes:       LSP-backed language model baseline. Stylua is intentionally not
+               installed because it is not packaged in the current Guix channel
+               and would require local Rust crate packaging.
 
 Python
   Mode:        python-mode
@@ -374,6 +377,15 @@ backend mode or REPL integration
 completion frontend when applicable
 diagnostics path when applicable
 formatter availability when intentionally installed
+#+end_src
+
+Formatter decisions are intentionally conservative:
+
+#+begin_src text
+Python: ruff format, installed as a Guix system package.
+Lua:    native Emacs indentation only. Stylua is the preferred external
+        formatter in principle, but it is not packaged in the current Guix
+        channel and local Rust crate packaging is out of scope for this setup.
 #+end_src
 
 Do not mark a language complete because a package exists. The buffer has to open

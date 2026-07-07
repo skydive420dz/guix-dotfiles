@@ -5,7 +5,9 @@
 (use-package lua-mode
   :if (locate-library "lua-mode")
   :mode "\\.lua\\'"
-  :hook (lua-mode . lsp-deferred))
+  :hook (lua-mode . lsp-deferred)
+  :custom
+  (lua-indent-level 2))
 
 ;; Server-specific settings only.  Keep shared completion/docs/diagnostics in
 ;; sk-lsp.el so Lua follows the same global LSP behavior as Python.

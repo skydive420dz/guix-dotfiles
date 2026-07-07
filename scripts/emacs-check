@@ -88,6 +88,14 @@ cat > "$probe" <<'ELISP'
     (sk/format-buffer)
     (string-match-p "def add(left, right):" (buffer-string))))
 
+(defun sk/check-format-lua ()
+  (with-temp-buffer
+    (insert "local function add(left, right)\nreturn left + right\nend\n")
+    (lua-mode)
+    (sk/format-buffer)
+    (string-match-p
+     "\n  return left" (buffer-string))))
+
 (defun sk/check-format-elisp ()
   (with-temp-buffer
     (insert "(progn\n(message \"x\"))\n")
@@ -109,6 +117,7 @@ cat > "$probe" <<'ELISP'
 (sk/check-file-mode "fixtures/json/sample.json" '(json-mode js-json-mode))
 (sk/check-file-mode "fixtures/python/sample.py" 'python-mode)
 (sk/check-file-mode "fixtures/elisp/sample.el" 'emacs-lisp-mode)
+(sk/check-file-mode "fixtures/lua/sample.lua" 'lua-mode)
 (sk/check-file-mode "fixtures/scheme/sample.scm" 'scheme-mode)
 (sk/check-file-mode "fixtures/common-lisp/sample.lisp" 'lisp-mode)
 
@@ -116,6 +125,7 @@ cat > "$probe" <<'ELISP'
 (sk/check-true "format shell" (sk/check-format-sh))
 (sk/check-true "format json" (sk/check-format-json))
 (sk/check-true "format python" (sk/check-format-python))
+(sk/check-true "format lua" (sk/check-format-lua))
 (sk/check-true "format elisp" (sk/check-format-elisp))
 
 (if sk/check-failures

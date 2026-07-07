@@ -58,6 +58,8 @@
       (sk/format--external "jq" "."))
      ((derived-mode-p 'python-mode 'python-ts-mode)
       (sk/format--external "ruff" "format" "-"))
+     ((derived-mode-p 'lua-mode)
+      (sk/format--indent-buffer))
      ((derived-mode-p 'emacs-lisp-mode 'lisp-interaction-mode
                       'scheme-mode 'lisp-mode 'common-lisp-mode
                       'org-mode)
