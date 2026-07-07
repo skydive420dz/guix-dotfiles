@@ -35,7 +35,7 @@ is accepted so the repo records intent, not only implementation commits.
 
 - [X] Extend =scripts/emacs-check= with batch probes for mode detection,
   keybindings, and formatting dispatch.
-- [ ] Decide Python formatter policy: =black=, =ruff format=, or no formatter yet.
+- [X] Decide Python formatter policy: =ruff format=.
 - [ ] Decide Lua formatter policy: =stylua= or no formatter yet.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 
@@ -318,7 +318,9 @@ Python
   Mode:        python-mode
   Backend:     lsp-mode + python-lsp-server / pylsp
   Diagnostics: LSP/Flycheck path
-  Notes:       Pyright is not required for the current baseline.
+  Formatter:   ruff format through =SPC c f=
+  Notes:       Pyright is not required for the current baseline. Formatting is
+               manual only; there is no format-on-save policy.
 
 Shell
   Mode:        sh-mode

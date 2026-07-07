@@ -56,6 +56,8 @@
       (sk/format--external "shfmt" "-i" "2"))
      ((derived-mode-p 'json-mode 'json-ts-mode 'js-json-mode)
       (sk/format--external "jq" "."))
+     ((derived-mode-p 'python-mode 'python-ts-mode)
+      (sk/format--external "ruff" "format" "-"))
      ((derived-mode-p 'emacs-lisp-mode 'lisp-interaction-mode
                       'scheme-mode 'lisp-mode 'common-lisp-mode
                       'org-mode)

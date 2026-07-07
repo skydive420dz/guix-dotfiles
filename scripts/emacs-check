@@ -81,6 +81,13 @@ cat > "$probe" <<'ELISP'
     (sk/format-buffer)
     (string-match-p "\n  \"b\"" (buffer-string))))
 
+(defun sk/check-format-python ()
+  (with-temp-buffer
+    (insert "def add(left,right):\n    return left+right\n")
+    (python-mode)
+    (sk/format-buffer)
+    (string-match-p "def add(left, right):" (buffer-string))))
+
 (defun sk/check-format-elisp ()
   (with-temp-buffer
     (insert "(progn\n(message \"x\"))\n")
@@ -100,6 +107,7 @@ cat > "$probe" <<'ELISP'
 (sk/check-file-mode "fixtures/c/hello.c" 'c-mode)
 (sk/check-file-mode "fixtures/shell/sample.sh" 'sh-mode)
 (sk/check-file-mode "fixtures/json/sample.json" '(json-mode js-json-mode))
+(sk/check-file-mode "fixtures/python/sample.py" 'python-mode)
 (sk/check-file-mode "fixtures/elisp/sample.el" 'emacs-lisp-mode)
 (sk/check-file-mode "fixtures/scheme/sample.scm" 'scheme-mode)
 (sk/check-file-mode "fixtures/common-lisp/sample.lisp" 'lisp-mode)
@@ -107,6 +115,7 @@ cat > "$probe" <<'ELISP'
 (sk/check-true "format c" (sk/check-format-c))
 (sk/check-true "format shell" (sk/check-format-sh))
 (sk/check-true "format json" (sk/check-format-json))
+(sk/check-true "format python" (sk/check-format-python))
 (sk/check-true "format elisp" (sk/check-format-elisp))
 
 (if sk/check-failures

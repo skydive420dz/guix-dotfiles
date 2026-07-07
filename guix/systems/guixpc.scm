@@ -118,6 +118,7 @@
 			  (specification->package "lua-language-server")
 			  (specification->package "python")
 			  (specification->package "python-lsp-server")
+			  (specification->package "ruff")
 			  (specification->package "shellcheck")
 			  (specification->package "shfmt")
 			  (specification->package "clang")

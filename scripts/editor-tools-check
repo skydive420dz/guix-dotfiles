@@ -19,6 +19,7 @@ check gdb
 check pkg-config
 check python3
 check pip3
+check ruff
 check lua
 check lua-language-server
 check shellcheck
