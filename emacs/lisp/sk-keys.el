@@ -12,11 +12,13 @@
 
   (rune/leader-keys
     "."  '(sk/window-counsel-fzf :which-key "fuzzy file")
-    ","  '(sk/window-open-ibuffer :which-key "buffers")
+    ","  '(counsel-switch-buffer :which-key "switch buffer")
 
     "b"  '(:ignore t :which-key "buffers")
-    "bb" '(sk/window-open-ibuffer :which-key "buffers")
+    "bb" '(counsel-ibuffer :which-key "buffer prompt")
+    "bi" '(sk/window-open-ibuffer :which-key "ibuffer panel")
     "bk" '(sk/kill-current-buffer :which-key "kill")
+    "bK" '(sk/kill-ordinary-buffers-and-dashboard :which-key "kill all")
 
     "f"  '(:ignore t :which-key "files")
     "ff" '(sk/window-counsel-find-file :which-key "find")

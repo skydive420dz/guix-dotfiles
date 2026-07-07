@@ -125,6 +125,15 @@
   (kill-buffer (current-buffer))
   (sk/show-dashboard-if-no-ordinary-buffers))
 
+(defun sk/kill-ordinary-buffers-and-dashboard ()
+  "Kill ordinary work buffers and return the frame to the Sky home buffer."
+  (interactive)
+  (dolist (buffer (buffer-list))
+    (when (sk/ordinary-buffer-p buffer)
+      (kill-buffer buffer)))
+  (delete-other-windows)
+  (sk/dashboard))
+
 (setq initial-buffer-choice #'sk/dashboard-buffer)
 
 (when-let ((buffer (get-buffer sk/dashboard-buffer-name)))

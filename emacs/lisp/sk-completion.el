@@ -20,6 +20,15 @@
          ("C-k" . ivy-previous-line)
          ("C-d" . ivy-reverse-i-search-kill))
   :config
+  ;; Ivy defaults `counsel-M-x' to an initial "^", which makes command
+  ;; discovery prefix-only.  M-x should find commands containing the text typed.
+  (setq ivy-initial-inputs-alist
+        (assq-delete-all 'counsel-M-x ivy-initial-inputs-alist))
+  (setq ivy-re-builders-alist
+        '((counsel-M-x . ivy--regex-ignore-order)
+          (counsel-switch-buffer . ivy--regex-ignore-order)
+          (counsel-ibuffer . ivy--regex-ignore-order)
+          (t . ivy--regex-plus)))
   (ivy-mode 1))
 
 (use-package which-key

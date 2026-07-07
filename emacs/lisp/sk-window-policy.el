@@ -216,10 +216,7 @@ With PROMPT, ask for a directory."
 (defun sk/window-open-ibuffer ()
   "Open Ibuffer in the utility side window."
   (interactive)
-  (ibuffer nil "*Ibuffer*" nil t)
-  (when-let* ((buffer (get-buffer "*Ibuffer*"))
-              (window (sk/window-display-right buffer)))
-    (select-window window)))
+  (ibuffer t "*Ibuffer*"))
 
 (defun sk/window-open-eshell ()
   "Open Eshell in the utility side window."
@@ -384,7 +381,8 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
          (reusable-frames . nil)
          (inhibit-switch-frame . t)
          (window-parameters . ((no-delete-other-windows . t))))
-        ((or (derived-mode . ibuffer-mode)
+        ((or "\\*Ibuffer\\*"
+             (derived-mode . ibuffer-mode)
              (derived-mode . dired-mode)
              (derived-mode . xref--xref-buffer-mode)
              (derived-mode . magit-mode)
