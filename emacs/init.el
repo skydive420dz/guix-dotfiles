@@ -28,6 +28,7 @@
 (require 'sk-shell)
 (require 'sk-json)
 (require 'sk-c)
+(require 'sk-format)
 (require 'sk-keys)
 
 ;;; Org and notes

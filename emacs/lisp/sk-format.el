@@ -1,0 +1,68 @@
+;;; sk-format.el --- Manual formatting contract -*- lexical-binding: t; -*-
+
+;; Formatting is explicit: no format-on-save, no language server formatting by
+;; default.  External tools are owned by Guix; this file only routes commands.
+
+(require 'subr-x)
+
+(defun sk/format--replace-buffer (buffer)
+  "Replace current buffer contents with BUFFER contents, preserving point roughly."
+  (let ((line (line-number-at-pos))
+        (column (current-column)))
+    (erase-buffer)
+    (insert-buffer-substring buffer)
+    (goto-char (point-min))
+    (forward-line (1- line))
+    (move-to-column column)))
+
+(defun sk/format--external (program &rest args)
+  "Format current buffer by piping it through PROGRAM with ARGS."
+  (unless (executable-find program)
+    (user-error "Formatter not found: %s" program))
+  (let ((output (generate-new-buffer " *sk-format-output*"))
+        (error-file (make-temp-file "sk-format-error-"))
+        exit-code)
+    (unwind-protect
+        (progn
+          (setq exit-code
+                (apply #'call-process-region
+                       (point-min) (point-max)
+                       program nil (list output error-file) nil args))
+          (if (zerop exit-code)
+              (sk/format--replace-buffer output)
+            (user-error "%s failed: %s"
+                        program
+                        (string-trim
+                         (with-temp-buffer
+                           (insert-file-contents error-file)
+                           (buffer-string))))))
+      (when (buffer-live-p output)
+        (kill-buffer output))
+      (when (file-exists-p error-file)
+        (delete-file error-file)))))
+
+(defun sk/format--indent-buffer ()
+  "Indent the current buffer using Emacs' native indentation."
+  (indent-region (point-min) (point-max)))
+
+(defun sk/format-buffer ()
+  "Format the current buffer according to the manual formatting contract."
+  (interactive)
+  (save-excursion
+    (cond
+     ((derived-mode-p 'c-mode 'c-ts-mode 'c++-mode 'c++-ts-mode)
+      (sk/format--external "clang-format"))
+     ((derived-mode-p 'sh-mode)
+      (sk/format--external "shfmt" "-i" "2"))
+     ((derived-mode-p 'json-mode 'json-ts-mode 'js-json-mode)
+      (sk/format--external "jq" "."))
+     ((derived-mode-p 'emacs-lisp-mode 'lisp-interaction-mode
+                      'scheme-mode 'lisp-mode 'common-lisp-mode
+                      'org-mode)
+      (sk/format--indent-buffer))
+     (t
+      (user-error "No formatter configured for %s" major-mode)))))
+
+(provide 'sk-format)
+
+;;; sk-format.el ends here

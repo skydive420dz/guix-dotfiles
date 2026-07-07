@@ -43,6 +43,7 @@
     "ca" '(sk/code-action :which-key "action")
     "cd" '(sk/code-definition :which-key "definition")
     "cD" '(sk/code-references :which-key "references")
+    "cf" '(sk/format-buffer :which-key "format")
     "ci" '(sk/code-implementation :which-key "implementation")
     "cj" '(sk/code-type-definition :which-key "jump type")
     "cl" '(lsp :which-key "start lsp")
