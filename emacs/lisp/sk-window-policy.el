@@ -325,6 +325,26 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
 (with-eval-after-load 'flycheck
   (define-key flycheck-error-list-mode-map (kbd "RET") #'sk/window-flycheck-error-list-goto-error))
 
+(with-eval-after-load 'evil
+  ;; Evil/Evil Collection maps can shadow helper-local RET bindings.  Keep the
+  ;; active selection command aligned with the helper window policy.
+  (with-eval-after-load 'dired
+    (evil-define-key* '(normal motion) dired-mode-map
+      (kbd "RET") #'sk/window-dired-open
+      [return] #'sk/window-dired-open))
+  (with-eval-after-load 'ibuffer
+    (evil-define-key* '(normal motion) ibuffer-mode-map
+      (kbd "RET") #'sk/window-ibuffer-visit-buffer
+      [return] #'sk/window-ibuffer-visit-buffer))
+  (with-eval-after-load 'xref
+    (evil-define-key* '(normal motion) xref--xref-buffer-mode-map
+      (kbd "RET") #'sk/window-xref-goto-xref
+      [return] #'sk/window-xref-goto-xref))
+  (with-eval-after-load 'flycheck
+    (evil-define-key* '(normal motion) flycheck-error-list-mode-map
+      (kbd "RET") #'sk/window-flycheck-error-list-goto-error
+      [return] #'sk/window-flycheck-error-list-goto-error)))
+
 (with-eval-after-load 'treemacs
   (setq treemacs-position 'left
         treemacs-width 35
@@ -332,7 +352,13 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
         treemacs-width-is-initially-locked t)
   (define-key treemacs-mode-map (kbd "RET") #'sk/window-treemacs-RET-action)
   (define-key treemacs-mode-map [return] #'sk/window-treemacs-RET-action)
-  (define-key treemacs-mode-map (kbd "l") #'sk/window-treemacs-RET-action))
+  (define-key treemacs-mode-map (kbd "l") #'sk/window-treemacs-RET-action)
+  (with-eval-after-load 'evil
+    ;; Evil normal-state maps shadow Treemacs' local map in terminal frames.
+    (evil-define-key* '(normal motion) treemacs-mode-map
+      (kbd "RET") #'sk/window-treemacs-RET-action
+      [return] #'sk/window-treemacs-RET-action
+      (kbd "l") #'sk/window-treemacs-RET-action)))
 
 (defun sk/window-normalize-full-frame-window ()
   "Clear side-window parameters from the selected full-frame window."

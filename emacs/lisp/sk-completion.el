@@ -74,7 +74,12 @@
          ("C-x b" . counsel-ibuffer)
          ("C-x C-f" . counsel-find-file)
          :map minibuffer-local-map
-         ("C-r" . counsel-minibuffer-history)))
+         ("C-r" . counsel-minibuffer-history))
+  :config
+  ;; Counsel installs its own "^" default after Ivy loads.  Remove it here so
+  ;; M-x remains contains/ignore-order search instead of prefix-only search.
+  (setq ivy-initial-inputs-alist
+        (assq-delete-all 'counsel-M-x ivy-initial-inputs-alist)))
 
 ;; Helpful is the richer documentation UI for Emacs Lisp symbols and keys.
 (use-package helpful

@@ -18,29 +18,43 @@
                 eshell-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
-(set-face-attribute 'default nil :family "Iosevka Term" :height 120)
-(set-fontset-font t 'symbol "Symbols Nerd Font Mono" nil 'append)
+(defconst sk/icon-font-fallbacks
+  '("Symbols Nerd Font Mono"
+    "Noto Color Emoji"
+    "Font Awesome"
+    "Material Icons")
+  "GUI font fallbacks used for icon and symbol glyphs.
+Terminal clients use the terminal emulator's font configuration instead.")
+
+(defun sk/font-available-p (font)
+  "Return non-nil when FONT is available to the current graphical frame."
+  (and (display-graphic-p)
+       (find-font (font-spec :name font))))
+
+(defun sk/setup-fonts ()
+  "Set the default editing font and GUI icon font fallbacks."
+  (set-face-attribute 'default nil :family "Iosevka Term" :height 120)
+  (when (display-graphic-p)
+    (dolist (font sk/icon-font-fallbacks)
+      (when (sk/font-available-p font)
+        (set-fontset-font t 'symbol font nil 'append)))))
+
+(sk/setup-fonts)
 
 (load-theme 'modus-vivendi-tinted)
 
 (use-package all-the-icons
+  :if (locate-library "all-the-icons"))
 
 (use-package all-the-icons-dired
+  :if (and (locate-library "all-the-icons")
+           (locate-library "all-the-icons-dired"))
   :hook (dired-mode . all-the-icons-dired-mode))
 
 (use-package all-the-icons-ibuffer
+  :if (and (locate-library "all-the-icons")
+           (locate-library "all-the-icons-ibuffer"))
   :hook (ibuffer-mode . all-the-icons-ibuffer-mode))
-
-(use-package all-the-icons-ivy
-  :after ivy
-  :config
-  (all-the-icons-ivy-setup))
-
-(use-package all-the-icons-ivy-rich
-  :after (ivy-rich all-the-icons-ivy)
-  :init
-  (all-the-icons-ivy-rich-mode 1))
-
 
 (use-package doom-modeline
   :config
