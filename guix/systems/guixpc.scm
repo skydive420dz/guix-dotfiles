@@ -128,6 +128,7 @@
 			  (specification->package "pkg-config")
 			  (specification->package "emacs-all-the-icons-ibuffer")
 			  (specification->package "xwallpaper")
+			  (specification->package "picom")
 			  (specification->package "xrandr"))
                     %base-packages))
 

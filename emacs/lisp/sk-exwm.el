@@ -161,8 +161,22 @@
     (start-process "xset-repeat" nil
                    "xset" "r" "rate" "210" "67")))
 
+(defvar sk/picom-opacity-rule "85:class_g = \"Emacs\""
+  "Picom opacity rule for Emacs frame transparency.")
+
+(defun sk/start-picom ()
+  "Start the session compositor with the managed EXWM opacity rule."
+  (interactive)
+  (when (executable-find "picom")
+    (when (executable-find "pkill")
+      (call-process "pkill" nil nil nil "-x" "picom"))
+    (start-process "picom" nil
+                   "picom"
+                   "--backend" "glx"
+                   "--opacity-rule" sk/picom-opacity-rule)))
+
 (defvar sk/wallpaper-file
-  (expand-file-name "~/Projects/guix-dotfiles/assets/wallpapers/sky.png"))
+  (expand-file-name "~/Projects/guix-dotfiles/assets/wallpapers/waifu-cyberpunk.png"))
 
 (defun sk/set-wallpaper ()
   (interactive)
@@ -261,6 +275,7 @@ from regular EXWM/Emacs windows."
   (sk/exwm-bind-keys)
   (sk/set-wallpaper)
   (sk/set-keyboard-repeat)
+  (sk/start-picom)
   (exwm-wm-mode))
 
 (provide 'sk-exwm)
