@@ -84,6 +84,29 @@
       (lsp-execute-code-action)
     (user-error "Code actions require an active LSP buffer")))
 
+(defun sk/code-docs ()
+  "Show documentation for the symbol at point when the backend provides it."
+  (interactive)
+  (cond
+   ((and (bound-and-true-p lsp-mode)
+         (fboundp 'lsp-ui-doc-show))
+    (lsp-ui-doc-show))
+   ((and (bound-and-true-p lsp-mode)
+         (fboundp 'lsp-describe-thing-at-point))
+    (lsp-describe-thing-at-point))
+   ((fboundp 'eldoc-print-current-symbol-info)
+    (eldoc-print-current-symbol-info))
+   (t
+    (user-error "No documentation backend is active in this buffer"))))
+
+(defun sk/code-rename ()
+  "Rename the symbol at point through the active LSP backend."
+  (interactive)
+  (if (and (bound-and-true-p lsp-mode)
+           (fboundp 'lsp-rename))
+      (call-interactively #'lsp-rename)
+    (user-error "Rename requires an active LSP buffer")))
+
 (defun sk/code-definition ()
   "Jump to the definition at point."
   (interactive)

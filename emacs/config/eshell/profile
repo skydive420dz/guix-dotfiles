@@ -1,0 +1,3 @@
+setenv EDITOR emacsclient
+setenv VISUAL emacsclient
+setenv PAGER less

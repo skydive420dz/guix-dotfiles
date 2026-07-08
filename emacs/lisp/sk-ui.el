@@ -9,14 +9,33 @@
 (menu-bar-mode -1)
 
 (column-number-mode)
-(global-display-line-numbers-mode t)
 
-(dolist (mode '(org-mode-hook
+(setq display-line-numbers-type 'relative)
+
+(defun sk/enable-line-numbers ()
+  "Enable line numbers in the current buffer."
+  (display-line-numbers-mode 1))
+
+(defun sk/disable-line-numbers ()
+  "Disable line numbers in the current buffer."
+  (display-line-numbers-mode -1))
+
+(global-display-line-numbers-mode -1)
+(add-hook 'prog-mode-hook #'sk/enable-line-numbers)
+(add-hook 'conf-mode-hook #'sk/enable-line-numbers)
+
+(dolist (hook '(org-mode-hook
+                dired-mode-hook
+                ibuffer-mode-hook
+                help-mode-hook
+                helpful-mode-hook
+                special-mode-hook
+                compilation-mode-hook
                 term-mode-hook
                 vterm-mode-hook
                 shell-mode-hook
                 eshell-mode-hook))
-  (add-hook mode (lambda () (display-line-numbers-mode 0))))
+  (add-hook hook #'sk/disable-line-numbers))
 
 (defconst sk/icon-font-fallbacks
   '("Symbols Nerd Font Mono"

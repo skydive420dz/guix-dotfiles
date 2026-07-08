@@ -184,6 +184,154 @@ expected starting location for file prompts."
             (select-window next-window)))))
     (select-window (sk/window-master))))
 
+(defun sk/window-split-right-and-focus ()
+  "Split the selected regular window to the right and focus the new window."
+  (interactive)
+  (let ((window (split-window-right)))
+    (sk/window-clear-side-state window)
+    (select-window window)))
+
+(defun sk/window-split-below-and-focus ()
+  "Split the selected regular window below and focus the new window."
+  (interactive)
+  (let ((window (split-window-below)))
+    (sk/window-clear-side-state window)
+    (select-window window)))
+
+(defun sk/window-next ()
+  "Move to the next window."
+  (interactive)
+  (other-window 1))
+
+(defun sk/window-previous ()
+  "Move to the previous window."
+  (interactive)
+  (other-window -1))
+
+(defun sk/window-overlap-size (start-a end-a start-b end-b)
+  "Return the overlap size between ranges START-A END-A and START-B END-B."
+  (max 0 (- (min end-a end-b) (max start-a start-b))))
+
+(defun sk/window-rank-less-p (left right)
+  "Return non-nil when rank list LEFT is better than rank list RIGHT."
+  (catch 'done
+    (while (and left right)
+      (cond
+       ((< (car left) (car right))
+        (throw 'done t))
+       ((> (car left) (car right))
+        (throw 'done nil)))
+      (setq left (cdr left)
+            right (cdr right)))
+    nil))
+
+(defun sk/window-direction-rank (direction selected candidate)
+  "Return CANDIDATE rank moving from SELECTED in DIRECTION, or nil."
+  (let* ((selected-edges (window-edges selected))
+         (candidate-edges (window-edges candidate))
+         (selected-left (nth 0 selected-edges))
+         (selected-top (nth 1 selected-edges))
+         (selected-right (nth 2 selected-edges))
+         (selected-bottom (nth 3 selected-edges))
+         (candidate-left (nth 0 candidate-edges))
+         (candidate-top (nth 1 candidate-edges))
+         (candidate-right (nth 2 candidate-edges))
+         (candidate-bottom (nth 3 candidate-edges))
+         (selected-x (/ (+ selected-left selected-right) 2.0))
+         (selected-y (/ (+ selected-top selected-bottom) 2.0))
+         (candidate-x (/ (+ candidate-left candidate-right) 2.0))
+         (candidate-y (/ (+ candidate-top candidate-bottom) 2.0)))
+    (pcase direction
+      ('left
+       (when (<= candidate-right selected-left)
+         (list (- selected-left candidate-right)
+               (- (sk/window-overlap-size selected-top selected-bottom
+                                          candidate-top candidate-bottom))
+               (abs (- selected-y candidate-y))
+               (abs (- selected-x candidate-x)))))
+      ('right
+       (when (>= candidate-left selected-right)
+         (list (- candidate-left selected-right)
+               (- (sk/window-overlap-size selected-top selected-bottom
+                                          candidate-top candidate-bottom))
+               (abs (- selected-y candidate-y))
+               (abs (- selected-x candidate-x)))))
+      ('up
+       (when (<= candidate-bottom selected-top)
+         (list (- selected-top candidate-bottom)
+               (- (sk/window-overlap-size selected-left selected-right
+                                          candidate-left candidate-right))
+               (abs (- selected-x candidate-x))
+               (abs (- selected-y candidate-y)))))
+      ('down
+       (when (>= candidate-top selected-bottom)
+         (list (- candidate-top selected-bottom)
+               (- (sk/window-overlap-size selected-left selected-right
+                                          candidate-left candidate-right))
+               (abs (- selected-x candidate-x))
+               (abs (- selected-y candidate-y))))))))
+
+(defun sk/window-select-direction (direction)
+  "Select the nearest visible window in DIRECTION.
+Unlike raw `windmove', this includes side/helper windows such as Treemacs,
+Dired, Help, Eshell, and diagnostic panels."
+  (interactive)
+  (let* ((selected (selected-window))
+         (candidates
+          (delq nil
+                (mapcar (lambda (window)
+                          (unless (eq window selected)
+                            (when-let ((rank (sk/window-direction-rank
+                                               direction selected window)))
+                              (cons rank window))))
+                        (window-list nil 'no-minibuf)))))
+    (if candidates
+        (select-window
+         (cdr (car (sort candidates
+                         (lambda (left right)
+                           (sk/window-rank-less-p (car left) (car right)))))))
+      (user-error "No window to the %s" direction))))
+
+(defun sk/window-left ()
+  "Select the nearest visible window to the left."
+  (interactive)
+  (sk/window-select-direction 'left))
+
+(defun sk/window-down ()
+  "Select the nearest visible window below."
+  (interactive)
+  (sk/window-select-direction 'down))
+
+(defun sk/window-up ()
+  "Select the nearest visible window above."
+  (interactive)
+  (sk/window-select-direction 'up))
+
+(defun sk/window-right ()
+  "Select the nearest visible window to the right."
+  (interactive)
+  (sk/window-select-direction 'right))
+
+(defun sk/window-resize-left ()
+  "Shrink the selected window horizontally."
+  (interactive)
+  (shrink-window-horizontally 5))
+
+(defun sk/window-resize-right ()
+  "Enlarge the selected window horizontally."
+  (interactive)
+  (enlarge-window-horizontally 5))
+
+(defun sk/window-resize-down ()
+  "Shrink the selected window vertically."
+  (interactive)
+  (shrink-window 3))
+
+(defun sk/window-resize-up ()
+  "Enlarge the selected window vertically."
+  (interactive)
+  (enlarge-window 3))
+
 (defun sk/window-display-right (buffer &optional width slot)
   "Display BUFFER in a right utility side window."
   (display-buffer-in-side-window
