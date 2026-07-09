@@ -180,7 +180,8 @@
 
 (when (and (fboundp 'native-comp-available-p)
            (native-comp-available-p))
-  (setq native-comp-async-report-warnings-errors 'silent
+  (setq native-comp-jit-compilation t
+        native-comp-async-report-warnings-errors 'silent
         native-comp-speed 2))
 
 (provide 'sk-core)
