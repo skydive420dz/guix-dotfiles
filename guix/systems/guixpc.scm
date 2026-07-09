@@ -161,6 +161,13 @@
                     (print-issue #f)
                     (print-hostname #f))
                    config))
+
+    (guix-service-type
+     config => (guix-configuration
+                (inherit config)
+                (extra-options '("--cores=4"
+                                 "--max-jobs=1"))))
+
     (elogind-service-type
      config => (elogind-configuration
                 (inherit config)

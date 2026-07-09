@@ -178,6 +178,11 @@
     (load (expand-file-name file sk/lisp-directory) nil 'nomessage))
   (message "GuixPC Emacs config reloaded"))
 
+(when (and (fboundp 'native-comp-available-p)
+           (native-comp-available-p))
+  (setq native-comp-async-report-warnings-errors 'silent
+        native-comp-speed 2))
+
 (provide 'sk-core)
 
 ;;; sk-core.el ends here

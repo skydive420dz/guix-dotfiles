@@ -73,10 +73,13 @@ Storage:   Samsung SSD 860 EVO 250GB SATA
 ** Memory
 
 #+begin_src text
-Slots:      2 DDR4 DIMM slots
-Current:    2x4 GB Samsung DDR4-2667 1.2V non-ECC UDIMM
-Maximum:    32 GB
-Best target: 2x16 GB DDR4-2666/3200 1.2V non-ECC UDIMM
+Slots:        2 DDR4 DIMM slots
+Current:      2x16 GB Timetec TIMETEC-U16G-2666
+Linux view:   31.1G online memory, about 30 GiB reported by free(1)
+Maximum:      32 GB
+Target state: reached
+DIMM details: DDR4-2667, 1.2V, non-ECC, unbuffered, dual-rank
+Configured:   2667 MT/s in both slots
 #+end_src
 
 Use plain JEDEC-compatible desktop UDIMM memory. Avoid SO-DIMM, ECC,
@@ -92,7 +95,9 @@ U3700: M.2 PCIe x1, available
 
 The GPU slot exists, but this is still an OEM Lenovo board with a 180W PSU. Any
 GPU should be low-profile, short, slot-powered, and should not require 6-pin or
-8-pin PCIe power. RAM is the highest-value upgrade for this machine.
+8-pin PCIe power. The RAM upgrade target has been reached; future hardware
+upgrades should prioritize stability, power budget, and low-profile physical
+fit.
 
 ** EFI and Secure Boot
 
@@ -522,6 +527,91 @@ then only adjust internal actions if the actual behavior is wrong.
 
 With Evil collection active, Magit refresh is =g r=. Plain =g= is an Evil
 prefix and will show the available =g= commands through Which-Key.
+
+** Future project: Lisp-native user environment
+
+Long-term direction: make GuixPC a practical Lisp-centered workstation where the
+daily user experience is owned by Emacs/EXWM, Emacs Lisp, and Guile instead of a
+collection of separate GTK/Qt desktop tools.
+
+This does not mean replacing the kernel, drivers, browser, or core daemons. The
+intended boundary is:
+
+#+begin_src text
+Core system:
+  Linux-libre or selected nonguix kernel
+  Guix / Shepherd
+  Xorg / EXWM
+  D-Bus
+  NetworkManager
+  PipeWire / WirePlumber
+  BlueZ
+
+Native user environment:
+  Emacs / EXWM
+  Emacs Lisp UI panels
+  Guile system helpers where appropriate
+  Org/Dired/Eshell/Vterm/Treemacs/Magit as primary workflow surfaces
+
+External exception:
+  browser
+  unavoidable hardware/vendor tools
+#+end_src
+
+The goal is to reduce daily dependence on standalone desktop applications, not
+to remove every non-Lisp binary from the system closure. Chromium, Emacs builds,
+Xorg, graphics/audio/network services, and hardware support will still pull
+normal system libraries.
+
+Candidate native panels:
+
+#+begin_src text
+sk-network.el
+  D-Bus frontend for NetworkManager.
+  Start read-only: current connection, devices, Wi-Fi enabled state.
+  Later: list access points, connect saved profiles, reconnect, toggle Wi-Fi.
+
+sk-bluetooth.el
+  D-Bus frontend for BlueZ.
+  Start read-only: controller power, paired devices, connected devices.
+  Later: connect/disconnect/trust/pair flows where practical.
+
+sk-audio.el
+  Emacs UI for PipeWire/WirePlumber state.
+  Start with wpctl-backed status/actions if the native API path is too heavy.
+  Later: richer device/profile/session handling.
+
+sk-system.el
+  GuixPC control panel for =gsr=, =ghr=, generations, channels, and service
+  status.
+
+sk-launcher.el
+  Native app/action launcher that can replace more standalone menu behavior.
+
+sk-dashboard.el
+  Keep growing the Emacs home/dashboard into the machine status surface.
+#+end_src
+
+Implementation rule:
+
+#+begin_src text
+Prefer real APIs first:
+  D-Bus for NetworkManager and BlueZ.
+  Guix/Shepherd interfaces for system state.
+
+Allow CLI backends when the API path is not mature yet:
+  wpctl for audio is acceptable as a first backend.
+  Avoid fragile text parsing when a structured API exists.
+#+end_src
+
+First milestone:
+
+#+begin_src text
+1. Build a read-only =sk-network.el= panel.
+2. Show current Wi-Fi/Ethernet state and active connection.
+3. Bind it under =SPC o n= only after the UI shape is accepted.
+4. Do not replace existing network tooling until the panel is proven useful.
+#+end_src
 
 ** EXWM app launcher
 
