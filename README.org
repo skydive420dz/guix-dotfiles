@@ -38,6 +38,9 @@ is accepted so the repo records intent, not only implementation commits.
 - [X] Decide Python formatter policy: =ruff format=.
 - [X] Decide Lua formatter policy: native indentation; no =stylua= for now.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
+- [ ] Treat a custom kernel as a future experiment only after hardware
+  inventory and rollback criteria are documented. The current stable baseline is
+  the Nonguix kernel with the hardware modules already proven on this machine.
 
 * Hardware baseline
 

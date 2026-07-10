@@ -1,17 +1,19 @@
 #+title: guixpc todo
 #+created: 2026-07-03
 
-* TODO Machine setup first
+* DONE Machine setup first
 :PROPERTIES:
 :created: 2026-07-03
+:completed: 2026-07-10
 :END:
-Before kernel optimization, finish basic machine setup and stability.
+Basic machine setup is stable enough to stop blocking normal polishing work.
+Keep kernel optimization behind the separate hardware inventory task.
 
-- Confirm Wi-Fi survives reboot.
-- Confirm sleep policy remains disabled.
-- Add basic terminal utilities if missing, such as ncurses for clear/reset.
-- Decide base desktop/session direction.
-- Clean and repaste the machine after shutdown.
+- [X] Confirm Wi-Fi survives reboot.
+- [X] Confirm sleep policy remains disabled.
+- [X] Add basic terminal utilities if missing, such as ncurses for clear/reset.
+- [X] Decide base desktop/session direction: Emacs/EXWM.
+- [X] Clean and repaste the machine after shutdown.
 
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:

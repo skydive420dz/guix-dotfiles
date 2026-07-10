@@ -15,8 +15,8 @@
 
 ;; Tool ownership:
 ;; Flycheck runs the shell syntax checker first, then chains warnings to
-;; shellcheck.  shfmt is installed system-wide for the future formatting
-;; contract, but this file does not bind formatting keys yet.
+;; shellcheck.  Manual formatting is owned by sk-format.el, which dispatches
+;; shell buffers to shfmt through SPC c f.
 (with-eval-after-load 'flycheck
   (setq flycheck-sh-shellcheck-executable "shellcheck"))
 
