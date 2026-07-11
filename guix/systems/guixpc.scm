@@ -63,6 +63,7 @@
 			  (specification->package "ranger")
 			  (specification->package "kitty")
 			  (specification->package "ungoogled-chromium")
+			  (specification->package "xdg-utils")
 			  (specification->package "file")
 			  (specification->package "bat")
 			  (specification->package "chafa")

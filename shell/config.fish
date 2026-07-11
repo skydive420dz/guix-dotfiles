@@ -1,6 +1,7 @@
 set -g fish_greeting
 set -gx EDITOR "emacsclient -t -a 'emacs -nw'"
 set -gx VISUAL "emacsclient -n -a emacs"
+set -gx BROWSER chromium
 set -gx PAGER less
 
 function __sk_start_exwm_from_tty

@@ -1,6 +1,7 @@
 ;;; sk-core.el --- Core Emacs state and editing defaults -*- lexical-binding: t; -*-
 
 (require 'project)
+(require 'browse-url)
 
 (defvar sk/cache-directory
   (expand-file-name "emacs/" (or (getenv "XDG_CACHE_HOME") "~/.cache/"))
@@ -36,6 +37,9 @@
       font-lock-maximum-decoration t
       read-process-output-max (* 1024 1024)
       require-final-newline t)
+
+(setq browse-url-browser-function #'browse-url-generic
+      browse-url-generic-program "chromium")
 
 (fset #'yes-or-no-p #'y-or-n-p)
 

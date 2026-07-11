@@ -404,7 +404,7 @@ in the intended mode and the selected diagnostics/completion path has to work.
 #+begin_src text
 s-SPC                 open app launcher from desktop entries
 s-RET                 open kitty
-s-w                   open Chromium
+s-w                   open Ungoogled Chromium through the chromium executable
 s-r                   reload EXWM config
 s-h / s-j / s-k / s-l focus window left/down/up/right
 s-H / s-J / s-K / s-L move current window left/down/up/right
@@ -565,6 +565,17 @@ The goal is to reduce daily dependence on standalone desktop applications, not
 to remove every non-Lisp binary from the system closure. Chromium, Emacs builds,
 Xorg, graphics/audio/network services, and hardware support will still pull
 normal system libraries.
+
+Browser baseline:
+
+#+begin_src text
+Primary browser: Ungoogled Chromium
+Executable:      chromium
+Shell default:   BROWSER=chromium
+Emacs links:     browse-url-generic -> chromium
+Desktop helper:  xdg-utils is installed for xdg-open/xdg-settings
+Text helper:     EWW remains available through Emacs for simple pages/docs
+#+end_src
 
 Browser note:
 
