@@ -31,8 +31,8 @@
       (expand-file-name "auto-save-list/.saves-" sk/cache-directory)
       create-lockfiles nil)
 
-(setq ring-bell-function 'ignore
-      visible-bell nil
+(setq ring-bell-function nil
+      visible-bell t
       use-dialog-box nil
       confirm-kill-emacs #'y-or-n-p
       font-lock-maximum-decoration t
