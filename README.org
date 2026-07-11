@@ -381,6 +381,30 @@ Common Lisp
                SLY is started manually with =M-x sly=; file open does not auto-start a REPL.
 #+end_src
 
+Lisp-family editing has a shared leader surface over the native backend for
+each dialect:
+
+#+begin_src text
+SPC l r  start or switch REPL
+SPC l b  evaluate buffer
+SPC l d  evaluate defun / top-level form
+SPC l e  evaluate last sexp
+SPC l k  show docs at point
+#+end_src
+
+These are wrappers over existing commands, not replacements for native Emacs
+keys:
+
+#+begin_src text
+Elisp:        native eval/help commands; works in cold buffers
+Scheme:       Geiser commands; richer docs/completion after Guile REPL starts
+Common Lisp:  SLY commands; richer docs/completion after SBCL/SLY connects
+#+end_src
+
+Cold Lisp files should provide mode detection, indentation, basic syntax, and
+the correct command surface. Rich semantic completion/docs are REPL-backed for
+Scheme and Common Lisp.
+
 Acceptance probes should check actual buffer state, not just package presence:
 
 #+begin_src text

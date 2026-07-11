@@ -103,6 +103,21 @@ cat > "$probe" <<'ELISP'
     (sk/format-buffer)
     (string-match-p "  (message" (buffer-string))))
 
+(defun sk/check-lisp-dialect (mode expected)
+  (with-temp-buffer
+    (funcall mode)
+    (sk/check-equal
+     (format "lisp dialect %s" mode)
+     (sk/lisp--dialect)
+     expected)))
+
+(defun sk/check-lisp-non-lisp-error ()
+  (with-temp-buffer
+    (text-mode)
+    (condition-case err
+        (progn (sk/lisp--dialect) nil)
+      (user-error (eq (car err) 'user-error)))))
+
 (sk/check-true "batch init" (featurep 'sk-keys))
 
 (sk/check-key "SPC c f" 'sk/format-buffer)
@@ -111,6 +126,11 @@ cat > "$probe" <<'ELISP'
 (sk/check-key "SPC b i" 'sk/window-open-ibuffer)
 (sk/check-key "SPC b k" 'sk/kill-current-buffer)
 (sk/check-key "SPC b K" 'sk/kill-ordinary-buffers-and-dashboard)
+(sk/check-key "SPC l r" 'sk/lisp-repl)
+(sk/check-key "SPC l b" 'sk/lisp-eval-buffer)
+(sk/check-key "SPC l d" 'sk/lisp-eval-defun)
+(sk/check-key "SPC l e" 'sk/lisp-eval-last-sexp)
+(sk/check-key "SPC l k" 'sk/lisp-docs)
 
 (sk/check-file-mode "fixtures/c/hello.c" 'c-mode)
 (sk/check-file-mode "fixtures/shell/sample.sh" 'sh-mode)
@@ -120,6 +140,11 @@ cat > "$probe" <<'ELISP'
 (sk/check-file-mode "fixtures/lua/sample.lua" 'lua-mode)
 (sk/check-file-mode "fixtures/scheme/sample.scm" 'scheme-mode)
 (sk/check-file-mode "fixtures/common-lisp/sample.lisp" 'lisp-mode)
+
+(sk/check-lisp-dialect 'emacs-lisp-mode 'elisp)
+(sk/check-lisp-dialect 'scheme-mode 'scheme)
+(sk/check-lisp-dialect 'lisp-mode 'common-lisp)
+(sk/check-true "lisp non-lisp error" (sk/check-lisp-non-lisp-error))
 
 (sk/check-true "format c" (sk/check-format-c))
 (sk/check-true "format shell" (sk/check-format-sh))
