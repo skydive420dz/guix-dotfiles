@@ -369,12 +369,16 @@ Scheme / Guile
   Backend:     Geiser + Geiser Guile
   Diagnostics: Geiser/native interaction
   Notes:       Guile is installed system-wide.
+               Native Scheme commands use =scheme-program-name= = guile.
+               Geiser is the richer REPL/docs/completion path.
 
 Common Lisp
   Mode:        lisp-mode for .lisp, .cl, and .asd
   Backend:     SLY + SBCL when SLY is started
   Diagnostics: SLY/native interaction
   Notes:       File opening is owned by lisp-mode; SLY is the REPL/tooling layer.
+               =inferior-lisp-program= is =sbcl=.
+               SLY is started manually with =M-x sly=; file open does not auto-start a REPL.
 #+end_src
 
 Acceptance probes should check actual buffer state, not just package presence:

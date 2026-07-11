@@ -13,6 +13,8 @@
 
 ;; Scheme/Guile:
 ;; Geiser provides the REPL, evaluation, docs, and navigation layer.
+(setq scheme-program-name "guile")
+
 (use-package geiser
   :if (locate-library "geiser")
   :commands (geiser geiser-mode run-geiser)
@@ -46,6 +48,8 @@
 ;; Common Lisp:
 ;; lisp-mode owns Common Lisp source buffers.  SLY talks to SBCL for REPL,
 ;; evaluation, completion, and inspection when you start it.
+(setq inferior-lisp-program "sbcl")
+
 (dolist (pattern '("\\.lisp\\'" "\\.cl\\'" "\\.asd\\'"))
   (add-to-list 'auto-mode-alist (cons pattern #'lisp-mode)))
 
@@ -58,9 +62,7 @@
 
 (use-package sly
   :if (locate-library "sly")
-  :commands sly
-  :custom
-  (inferior-lisp-program "sbcl"))
+  :commands sly)
 
 (provide 'sk-lisp)
 
