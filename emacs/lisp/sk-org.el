@@ -57,7 +57,7 @@
 (defvar sk/org-agenda-priority-map (make-sparse-keymap)
   "Org agenda priority commands under `sk/org-agenda-localleader-map'.")
 
-(defvar sk/org-source-block-languages
+(defconst sk/org-source-block-languages
   '("emacs-lisp" "scheme" "lisp" "sh" "bash" "c" "python" "lua" "json")
   "Languages offered when inserting Org source blocks.")
 

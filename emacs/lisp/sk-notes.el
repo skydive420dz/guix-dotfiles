@@ -32,8 +32,13 @@
 
 (defun sk/org-agenda-note-files ()
   "Return every Org note file under `sk/org-notes-root'."
-  (when (file-directory-p sk/org-notes-root)
-    (directory-files-recursively sk/org-notes-root "\\.org\\'")))
+  (let ((templates-dir (expand-file-name "Templates/" sk/org-notes-root)))
+    (when (file-directory-p sk/org-notes-root)
+      (delq nil
+            (mapcar (lambda (file)
+                      (unless (file-in-directory-p file templates-dir)
+                        file))
+                    (directory-files-recursively sk/org-notes-root "\\.org\\'"))))))
 
 (defun sk/org-refresh-agenda-files ()
   "Refresh `org-agenda-files' from the note tree."
