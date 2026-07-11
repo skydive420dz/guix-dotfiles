@@ -2,6 +2,7 @@
 
 (require 'project)
 (require 'browse-url)
+(require 'subr-x)
 
 (defvar sk/cache-directory
   (expand-file-name "emacs/" (or (getenv "XDG_CACHE_HOME") "~/.cache/"))
@@ -42,6 +43,76 @@
       browse-url-generic-program "chromium")
 
 (fset #'yes-or-no-p #'y-or-n-p)
+
+(defvar sk/log-timestamp-format "[%Y-%m-%d %H:%M:%S] "
+  "Timestamp format used in Emacs log buffers.")
+
+(defvar sk/log--message-advice-active nil
+  "Non-nil while timestamping the Messages buffer.")
+
+(defun sk/log--timestamp-region-lines (start end)
+  "Prefix non-empty log lines between START and END with a timestamp."
+  (let ((end-marker (copy-marker end t))
+        (timestamp (format-time-string sk/log-timestamp-format))
+        (inhibit-read-only t))
+    (save-excursion
+      (goto-char start)
+      (beginning-of-line)
+      (while (< (point) end-marker)
+        (unless (or (looking-at-p "\\s-*$")
+                    (looking-at-p "\\[[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} "))
+          (insert timestamp))
+        (forward-line 1)))))
+
+(defun sk/log--message-around (original format-string &rest args)
+  "Keep minibuffer messages unchanged while timestamping `*Messages*'."
+  (let* ((buffer (get-buffer "*Messages*"))
+         (start (when buffer
+                  (with-current-buffer buffer
+                    (point-max)))))
+    (prog1 (apply original format-string args)
+      (when (and format-string
+                 buffer
+                 start
+                 (not sk/log--message-advice-active))
+        (let ((sk/log--message-advice-active t))
+          (when (buffer-live-p buffer)
+            (with-current-buffer buffer
+              (sk/log--timestamp-region-lines start (point-max)))))))))
+
+(defun sk/log--warning-prefix (level entry)
+  "Add a timestamp before warnings while preserving warning LEVEL ENTRY."
+  (insert (format-time-string sk/log-timestamp-format))
+  entry)
+
+(defun sk/log--compilation-start (process)
+  "Add a timestamped header to compilation buffer PROCESS."
+  (when-let ((buffer (process-buffer process)))
+    (with-current-buffer buffer
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (goto-char (point-min))
+          (insert (format "%sStarted compilation\n\n"
+                          (format-time-string sk/log-timestamp-format))))))))
+
+(defun sk/log--compilation-finish (buffer status)
+  "Add a timestamped footer to compilation BUFFER with STATUS."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (goto-char (point-max))
+          (unless (bolp)
+            (insert "\n"))
+          (insert (format "%sCompilation %s"
+                          (format-time-string sk/log-timestamp-format)
+                          (string-trim status))))))))
+
+(unless (advice-member-p #'sk/log--message-around #'message)
+  (advice-add #'message :around #'sk/log--message-around))
+(setq warning-prefix-function #'sk/log--warning-prefix)
+(add-hook 'compilation-start-hook #'sk/log--compilation-start)
+(add-hook 'compilation-finish-functions #'sk/log--compilation-finish)
 
 (require 'server)
 (unless (server-running-p)

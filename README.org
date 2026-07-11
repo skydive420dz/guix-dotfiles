@@ -509,6 +509,11 @@ Bottom transient panel:
   Warnings / Compile logs
 #+end_src
 
+Emacs log buffers should carry timestamps where that does not break tooling:
+=*Messages*= gets per-message timestamps, =*Warnings*= uses a timestamped warning
+prefix, and compilation buffers get timestamped start/finish markers instead of
+per-line prefixes so file/line matching keeps working.
+
 The =SPC o= menu should stay compact and predictable:
 
 #+begin_src text
