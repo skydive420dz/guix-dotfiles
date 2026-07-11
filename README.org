@@ -566,6 +566,23 @@ to remove every non-Lisp binary from the system closure. Chromium, Emacs builds,
 Xorg, graphics/audio/network services, and hardware support will still pull
 normal system libraries.
 
+Browser note:
+
+Nyxt was evaluated as a possible programmable Lisp browser. The concept matches
+this machine's direction, but it is paused for now:
+
+- official Guix does not currently provide =nyxt=;
+- the Sijo Guix fork carries =nyxt= 3.11.7, while upstream is 4.0.0;
+- Nixpkgs carries =nyxt= 3.12.0;
+- upstream's Linux tarball is an AppImage, which conflicts with this repo's
+  reproducible/hackable package model and hit Guix/FHS binary assumptions during
+  testing;
+- no Nyxt files or packages are installed on GuixPC.
+
+Future direction: treat Nyxt as prior art for a personal Lisp browser or
+research browser project. Do not add Nyxt through AppImage or a broad Guix fork
+as part of the base system.
+
 Candidate native panels:
 
 #+begin_src text
