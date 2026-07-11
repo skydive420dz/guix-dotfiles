@@ -69,6 +69,13 @@
     "hv" '(helpful-variable :which-key "variable")
     "hk" '(helpful-key :which-key "key")
 
+    "l"  '(:ignore t :which-key "lisp")
+    "lb" '(sk/lisp-eval-buffer :which-key "eval buffer")
+    "ld" '(sk/lisp-eval-defun :which-key "eval defun")
+    "le" '(sk/lisp-eval-last-sexp :which-key "eval sexp")
+    "lk" '(sk/lisp-docs :which-key "docs")
+    "lr" '(sk/lisp-repl :which-key "repl")
+
     "w"  '(:ignore t :which-key "windows")
     "w=" '(balance-windows :which-key "balance")
     "wf" '(sk/window-toggle-full-frame :which-key "full frame")

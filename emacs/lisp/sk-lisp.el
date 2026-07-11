@@ -64,6 +64,103 @@
   :if (locate-library "sly")
   :commands sly)
 
+(defun sk/lisp--dialect ()
+  "Return the active Lisp dialect symbol for the current buffer."
+  (cond
+   ((derived-mode-p 'emacs-lisp-mode 'lisp-interaction-mode)
+    'elisp)
+   ((derived-mode-p 'scheme-mode)
+    'scheme)
+   ((derived-mode-p 'lisp-mode 'common-lisp-mode)
+    'common-lisp)
+   (t
+    (user-error "Not in a Lisp-family buffer"))))
+
+(defun sk/lisp-repl ()
+  "Start or switch to the REPL for the current Lisp dialect."
+  (interactive)
+  (pcase (sk/lisp--dialect)
+    ('elisp
+     (ielm))
+    ('scheme
+     (if (fboundp 'geiser-repl-switch)
+         (geiser-repl-switch)
+       (run-geiser 'guile)))
+    ('common-lisp
+     (if (fboundp 'sly)
+         (sly)
+       (user-error "SLY is not available")))))
+
+(defun sk/lisp-eval-buffer ()
+  "Evaluate the current buffer with the current Lisp dialect backend."
+  (interactive)
+  (pcase (sk/lisp--dialect)
+    ('elisp
+     (eval-buffer))
+    ('scheme
+     (if (fboundp 'geiser-eval-buffer)
+         (geiser-eval-buffer)
+       (user-error "Geiser eval is not available")))
+    ('common-lisp
+     (if (fboundp 'sly-eval-buffer)
+         (sly-eval-buffer)
+       (user-error "SLY eval is not available")))))
+
+(defun sk/lisp-eval-defun ()
+  "Evaluate the current top-level form with the Lisp dialect backend."
+  (interactive)
+  (pcase (sk/lisp--dialect)
+    ('elisp
+     (eval-defun nil))
+    ('scheme
+     (if (fboundp 'geiser-eval-definition)
+         (geiser-eval-definition)
+       (user-error "Geiser definition eval is not available")))
+    ('common-lisp
+     (cond
+      ((fboundp 'sly-eval-defun)
+       (sly-eval-defun))
+      ((fboundp 'lisp-eval-defun)
+       (lisp-eval-defun))
+      (t
+       (user-error "Common Lisp defun eval is not available"))))))
+
+(defun sk/lisp-eval-last-sexp ()
+  "Evaluate the sexp before point with the Lisp dialect backend."
+  (interactive)
+  (pcase (sk/lisp--dialect)
+    ('elisp
+     (eval-last-sexp nil))
+    ('scheme
+     (if (fboundp 'geiser-eval-last-sexp)
+         (geiser-eval-last-sexp)
+       (user-error "Geiser last-sexp eval is not available")))
+    ('common-lisp
+     (cond
+      ((fboundp 'sly-eval-last-expression)
+       (sly-eval-last-expression))
+      ((fboundp 'lisp-eval-last-sexp)
+       (lisp-eval-last-sexp))
+      (t
+       (user-error "Common Lisp last-sexp eval is not available"))))))
+
+(defun sk/lisp-docs ()
+  "Show docs for the symbol at point using the active Lisp backend."
+  (interactive)
+  (pcase (sk/lisp--dialect)
+    ('elisp
+     (if (fboundp 'helpful-at-point)
+         (helpful-at-point)
+       (describe-symbol (symbol-at-point))))
+    ('scheme
+     (if (fboundp 'geiser-doc-symbol-at-point)
+         (geiser-doc-symbol-at-point)
+       (eldoc-print-current-symbol-info)))
+    ('common-lisp
+     (if (fboundp 'sly-describe-symbol)
+         (sly-describe-symbol (symbol-name (symbol-at-point)))
+       (user-error "SLY describe is not available")))))
+
 (provide 'sk-lisp)
 
 ;;; sk-lisp.el ends here
