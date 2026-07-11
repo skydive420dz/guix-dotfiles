@@ -76,6 +76,34 @@
    (t
     (user-error "Not in a Lisp-family buffer"))))
 
+(defun sk/lisp--call-scheme (command &rest args)
+  "Call Geiser COMMAND with ARGS, or explain that the REPL must be started first."
+  (unless (fboundp command)
+    (user-error "Geiser command is not available: %s" command))
+  (condition-case err
+      (if args
+          (apply command args)
+        (call-interactively command))
+    (error
+     (let ((message (error-message-string err)))
+       (if (string-match-p "No Geiser REPL\\|No Scheme REPL" message)
+           (user-error "No Scheme REPL is active. Run SPC l r first.")
+         (signal (car err) (cdr err)))))))
+
+(defun sk/lisp--call-common-lisp (command &rest args)
+  "Call SLY COMMAND with ARGS, or explain that SLY must be started first."
+  (unless (fboundp command)
+    (user-error "SLY command is not available: %s" command))
+  (condition-case err
+      (if args
+          (apply command args)
+        (call-interactively command))
+    (error
+     (let ((message (error-message-string err)))
+       (if (string-match-p "No current SLY connection\\|No Common Lisp REPL" message)
+           (user-error "No Common Lisp REPL is active. Run SPC l r first.")
+         (signal (car err) (cdr err)))))))
+
 (defun sk/lisp-repl ()
   "Start or switch to the REPL for the current Lisp dialect."
   (interactive)
@@ -98,13 +126,9 @@
     ('elisp
      (eval-buffer))
     ('scheme
-     (if (fboundp 'geiser-eval-buffer)
-         (geiser-eval-buffer)
-       (user-error "Geiser eval is not available")))
+     (sk/lisp--call-scheme #'geiser-eval-buffer))
     ('common-lisp
-     (if (fboundp 'sly-eval-buffer)
-         (sly-eval-buffer)
-       (user-error "SLY eval is not available")))))
+     (sk/lisp--call-common-lisp #'sly-eval-buffer))))
 
 (defun sk/lisp-eval-defun ()
   "Evaluate the current top-level form with the Lisp dialect backend."
@@ -113,17 +137,9 @@
     ('elisp
      (eval-defun nil))
     ('scheme
-     (if (fboundp 'geiser-eval-definition)
-         (geiser-eval-definition)
-       (user-error "Geiser definition eval is not available")))
+     (sk/lisp--call-scheme #'geiser-eval-definition))
     ('common-lisp
-     (cond
-      ((fboundp 'sly-eval-defun)
-       (sly-eval-defun))
-      ((fboundp 'lisp-eval-defun)
-       (lisp-eval-defun))
-      (t
-       (user-error "Common Lisp defun eval is not available"))))))
+     (sk/lisp--call-common-lisp #'sly-eval-defun))))
 
 (defun sk/lisp-eval-last-sexp ()
   "Evaluate the sexp before point with the Lisp dialect backend."
@@ -132,17 +148,9 @@
     ('elisp
      (eval-last-sexp nil))
     ('scheme
-     (if (fboundp 'geiser-eval-last-sexp)
-         (geiser-eval-last-sexp)
-       (user-error "Geiser last-sexp eval is not available")))
+     (sk/lisp--call-scheme #'geiser-eval-last-sexp))
     ('common-lisp
-     (cond
-      ((fboundp 'sly-eval-last-expression)
-       (sly-eval-last-expression))
-      ((fboundp 'lisp-eval-last-sexp)
-       (lisp-eval-last-sexp))
-      (t
-       (user-error "Common Lisp last-sexp eval is not available"))))))
+     (sk/lisp--call-common-lisp #'sly-eval-last-expression))))
 
 (defun sk/lisp-docs ()
   "Show docs for the symbol at point using the active Lisp backend."
@@ -153,13 +161,9 @@
          (helpful-at-point)
        (describe-symbol (symbol-at-point))))
     ('scheme
-     (if (fboundp 'geiser-doc-symbol-at-point)
-         (geiser-doc-symbol-at-point)
-       (eldoc-print-current-symbol-info)))
+     (sk/lisp--call-scheme #'geiser-doc-symbol-at-point))
     ('common-lisp
-     (if (fboundp 'sly-describe-symbol)
-         (sly-describe-symbol (symbol-name (symbol-at-point)))
-       (user-error "SLY describe is not available")))))
+     (sk/lisp--call-common-lisp #'sly-describe-symbol (symbol-name (symbol-at-point))))))
 
 (provide 'sk-lisp)
 
