@@ -58,7 +58,7 @@
   "Org agenda priority commands under `sk/org-agenda-localleader-map'.")
 
 (defvar sk/org-source-block-languages
-  '("emacs-lisp" "sh" "bash" "nix" "lua" "qml" "rust" "c" "python" "haskell" "json" "yaml" "glsl")
+  '("emacs-lisp" "scheme" "lisp" "sh" "bash" "c" "python" "lua" "json")
   "Languages offered when inserting Org source blocks.")
 
 ;; Buffer setup:
@@ -333,7 +333,9 @@
    '((emacs-lisp . t)
      (shell . t)
      (python . t)
-     (lua . t)))
+     (lua . t)
+     (C . t)
+     (scheme . t)))
   (require 'org-habit)
   (add-to-list 'org-modules 'org-habit)
   (setq org-habit-graph-column 60)
@@ -341,16 +343,12 @@
   (dolist (template '(("sh" . "src sh")
                       ("bash" . "src bash")
                       ("el" . "src emacs-lisp")
-                      ("nix" . "src nix")
+                      ("scm" . "src scheme")
+                      ("cl" . "src lisp")
                       ("lua" . "src lua")
-                      ("qml" . "src qml")
-                      ("rs" . "src rust")
                       ("c" . "src c")
                       ("py" . "src python")
-                      ("hs" . "src haskell")
-                      ("json" . "src json")
-                      ("yaml" . "src yaml")
-                      ("glsl" . "src glsl")))
+                      ("json" . "src json")))
     (setq org-structure-template-alist
           (assoc-delete-all (car template) org-structure-template-alist))
     (add-to-list 'org-structure-template-alist template))

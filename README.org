@@ -594,6 +594,20 @@ Future direction: treat Nyxt as prior art for a personal Lisp browser or
 research browser project. Do not add Nyxt through AppImage or a broad Guix fork
 as part of the base system.
 
+Org source-block baseline:
+
+#+begin_src text
+Insert/edit helpers:
+  emacs-lisp, scheme, lisp, sh, bash, c, python, lua, json
+
+Babel execution enabled:
+  emacs-lisp, shell, python, lua, C, scheme
+
+Common Lisp:
+  Source blocks are available for notes and editing, but Babel execution is not
+  enabled until the SLY integration path is explicit and tested.
+#+end_src
+
 Candidate native panels:
 
 #+begin_src text
