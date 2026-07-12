@@ -34,6 +34,7 @@ STATIC    proven from source, but the failure was not exercised live
 RISK      plausible failure mode inferred from the current design
 POLICY    deliberate tradeoff that needs an explicit keep/change decision
 LIMIT     audit boundary; do not infer health beyond the available evidence
+CLOSED    accepted remediation passed the owning slice's live gates
 #+end_src
 
 Priorities mean:
@@ -150,13 +151,13 @@ REPL-, backend-, service-, or workflow-level acceptance tests.
 #+begin_src text
 Source organization:       strong
 Declared/deployed config:  aligned
-Live runtime convergence:  weak; mixed generations
+Live runtime convergence:  strong; fresh System 81 and Home 30 runtime
 Display/resource health:   good
 Validation safety:         poor
 Lisp foundation:           coherent Elisp/Guile/SBCL base
 Lisp ecosystem breadth:    early; most dialect families absent
 Reproducibility:            weak across a fresh pull
-Operational reliability:   blocked by the SSH/elogind leak
+Operational reliability:   restored; bounded SSH cleanup passes
 #+end_src
 
 The project is a credible Guix/EXWM workstation foundation.  It is not yet a
@@ -169,13 +170,13 @@ validation, and reproducibility findings are closed.
 
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
-| O-01 | P0  | VERIFIED | Every completed short SSH connection leaves an elogind session stuck in =closing=; cause is not yet proven. | 7 |
-| O-02 | P1  | VERIFIED | Current System/Home declarations are generation 80/30, but the booted/session runtime predates them. | 7 |
-| O-03 | P1  | VERIFIED | D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse report replacement pending. | 7, 10 |
-| O-04 | P1  | VERIFIED | The live Emacs package closure is older than the current profile and emits Org mismatch warnings when reloaded. | 7, 8 |
+| O-01 | P0  | CLOSED   | Elogind 255.24 removes command and PTY SSH sessions immediately; no closing session remained through 30 seconds. | 7 |
+| O-02 | P1  | CLOSED   | System generation 81 is both current and booted; fresh Home generation 30 services are running. | 7 |
+| O-03 | P1  | CLOSED   | D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse are fresh and no longer report replacement pending. | 7, 10 |
+| O-04 | P1  | CLOSED   | Fresh Emacs 30.2 and the live Org, Geiser, Geiser-Guile, and Projectile paths match the current profile. | 7, 8 |
 | O-05 | P1  | VERIFIED | Guix Home owns a user D-Bus while =dbus-launch= creates a second bus for EXWM. | 10 |
 | O-06 | P2  | VERIFIED | RTKit is absent; audio services fall back from real-time scheduling. | 10 |
-| O-07 | P2  | VERIFIED | One Kitty process remained on 0.46.2 while the current profile/new process used 0.47.4. | 7 |
+| O-07 | P2  | CLOSED   | The stale Kitty process is gone and the current launcher is Kitty 0.47.4. | 7 |
 | O-08 | P2  | VERIFIED | Bare noninteractive SSH resolves a different Guix and a non-setuid sudo path from login Fish. | 9 |
 | O-09 | P2  | VERIFIED | There are 79 System and 30 Home generations from roughly nine days, including duplicates. | 12 |
 | O-10 | P3  | VERIFIED | X screen blanking and DPMS remain enabled at 600 seconds. | 10 or 19 |
@@ -377,10 +378,11 @@ Record why it was rejected and which accepted baseline was restored.
 
 * Slice roadmap
 
-** TODO Slice 7: Runtime convergence and SSH incident baseline
+** DONE Slice 7: Runtime convergence and SSH incident baseline
 :PROPERTIES:
 :audit_priority: P0
 :findings: O-01 O-02 O-03 O-04 O-07
+:completed: 2026-07-12
 :END:
 
 Scope:
@@ -412,11 +414,10 @@ Not in scope:
 - channel updates;
 - custom kernel work.
 
-*** In-progress record: 2026-07-12
+*** Investigation and recovery record: 2026-07-12
 
-This is not an acceptance record.  The source/build gates are complete, but
-activation, reboot persistence, local desktop checks, and the bounded SSH
-negative control remain open.
+The source/build gates, controlled activation, reboot persistence, local
+desktop checks, and bounded SSH negative controls are complete.
 
 Pre-change evidence was captured through one persistent SSH connection only:
 
@@ -451,10 +452,11 @@ collection after FIFO EOF, leader exit, and release timeout:
 - [[https://github.com/elogind/elogind/issues/327][elogind issue 327: closing session without a process]];
 - [[https://github.com/elogind/elogind/releases/tag/v255.24][elogind 255.24 release notes]].
 
-This is the leading root cause, not yet the final live proof.  Do not use
+The exact upstream match plus the post-upgrade cleanup result establishes the
+255.17 session-GC defect as the accepted root cause for this host.  Do not use
 =loginctl terminate-session= or =kill-session= on 255.17, restart elogind from
 the only remote connection, delete files below =/run/systemd/sessions=, or mask
-the failure with =KillUserProcesses= or disabled PAM.
+this class of failure with =KillUserProcesses= or disabled PAM.
 
 Commit =54d8408a30e650291ae40637b02c781a19bfb0ee= introduces a narrow
 service-owned elogind 255.24 override.  It uses upstream commit
@@ -497,14 +499,28 @@ Generation 75 remains the last observed working boot target.  Home generation
 required: from the candidate it would select the immediately preceding
 generation, not necessarily 80 or 75.
 
-Post-reboot acceptance must first confirm the local desktop, converged
-generations, running elogind 255.24, and no Shepherd replacements.  Only then
-open one SSH control connection, run multiple commands inside it, and perform
-the bounded connect/disconnect checks.  All test sessions must be absent after
-30 seconds and the total/closing counts must return to baseline.  The package
-build succeeded against this Guix revision's PAM 1.5.2 despite upstream's newer
-declared PAM baseline; PAM login, sudo, SSH, and graphical ownership therefore
-remain explicit live acceptance gates.
+Post-reboot acceptance first confirmed the local desktop, converged
+generations, running elogind 255.24, and fresh Shepherd services.  One SSH
+control connection then held a stable session count while repeated commands
+ran inside it.  Separate command and PTY sessions were both absent at the first
+observation and after 30 seconds; the total returned to baseline with zero
+=closing= sessions.
+
+*** Acceptance record
+
+#+begin_src text
+Commit: 54d8408a30e650291ae40637b02c781a19bfb0ee; evidence checkpoint 90cce55f7f84641657583de7f1b5529b7829b5b0
+System generation: 81; /run/booted-system and /run/current-system both 6f67kj6ix8n8wf10b3ic78r73c7r26v7-system
+Home generation: 30; fg22z7rkd2aiwq3803ra2924f97fcgb4-home
+Channel revisions: guix a8391f2d7451c2463ba253ffa9872fa6f27485d7; nonguix 3b66965566fe8c96edb5a41fd39a9e5a90ad9b61; sk-guix b006225faf6835f858128690e35a60475f620639
+Source/evaluation checks: source hash reproduced; dry-run passed; elogind 255.24 package and complete System declaration built successfully
+Isolated checks: candidate daemon, PAM module, loginctl, D-Bus, udev, polkit, and generated sshd PAM paths all resolve to ff2932sq8k8z5vir6pav7zlkj5615gcp-elogind-255.24
+Negative-control result: commands inside c3 kept the count at 3; command session c4 and PTY session c5 were absent immediately and after 30 seconds; final closing count 0
+Live evidence: elogind PID 289 runs 255.24; PAM and loginctl use 255.24; fresh EXWM uses Emacs 30.2; Org 9.8.7, Geiser 0.33.1, Geiser-Guile 0.28.5, and Projectile 3.1.0 exactly match the profile; no stale Kitty process remains and the current launcher is 0.47.4; XRandR is 3440x1440/100 Hz; PipeWire has the expected HDMI sink; Wi-Fi and the default route are live; X keyboard and pointer state are available
+Persistence/restart evidence: controlled local reconfigure and reboot completed; generation 81 is booted/current; D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse started fresh with no replacement pending
+Residual risks: upstream elogind 255.24 declares a newer PAM baseline than Guix's 1.5.2, although build, boot, PAM SSH login, command cleanup, PTY cleanup, and graphical ownership passed; duplicate EXWM D-Bus and missing RTKit remain Slice 10 work
+Rollback path: keep generation 80 as the immediate 255.17 rollback, generation 75 as the last pre-slice working boot, and Home generation 29; select an exact generation rather than generic roll-back
+#+end_src
 
 ** TODO Slice 8: Non-mutating validation harness
 :PROPERTIES:

@@ -48,8 +48,8 @@ next active slice.
   2026-07-12 audit supersedes it as a validation-safety baseline.
 - [X] Decide Python formatter policy: =ruff format=.
 - [X] Decide Lua formatter policy: native indentation; no =stylua= for now.
-- [ ] Execute Slice 7: diagnose the SSH/PAM/elogind session-cleanup leak from the
-  local console and converge the booted, Home-service, EXWM, and package runtime.
+- [X] Execute Slice 7: elogind 255.24 fixed command and PTY SSH session cleanup;
+  System generation 81, Home services, EXWM, and package runtime are converged.
 - [ ] Replace =scripts/emacs-check= with the isolated, non-mutating live/batch
   split in Slice 8 before using it as an acceptance gate again.
 - [ ] Continue Slices 9 through 19 in audit order.  Do not expand dialect breadth

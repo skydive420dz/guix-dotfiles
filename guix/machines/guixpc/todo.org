@@ -45,7 +45,7 @@ Remaining cosmetic issue:
 * TODO 2026-07-12 configuration audit remediation
 :PROPERTIES:
 :created: 2026-07-12
-:next_slice: 7
+:next_slice: 8
 :END:
 
 Canonical evidence, finding status, slice definitions, and acceptance gates:
@@ -57,9 +57,10 @@ the same checklist is not maintained in two places.
 
 Current next action:
 
-- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 7: Runtime convergence and SSH incident baseline][Slice 7: runtime convergence and SSH incident baseline]] from the local
-  console.  Avoid repeated one-shot SSH connections until the session-cleanup
-  leak is understood.
+- [X] Accept [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 7: Runtime convergence and SSH incident baseline][Slice 7: runtime convergence and SSH incident baseline]].  Elogind 255.24,
+  converged System/Home runtime, and bounded command/PTY SSH cleanup passed.
+- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 8: Non-mutating validation harness][Slice 8: non-mutating validation harness]] before trusting the editor checker
+  as an acceptance gate again.
 
 Ordered follow-up:
 
