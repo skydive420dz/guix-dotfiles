@@ -173,6 +173,7 @@
     (start-process "picom" nil
                    "picom"
                    "--backend" "glx"
+                   "--vsync"
                    "--opacity-rule" sk/picom-opacity-rule)))
 
 (defvar sk/wallpaper-file
@@ -215,6 +216,7 @@
             (or exwm-title "")))))
 
 (defun sk/exwm-bind-keys ()
+  (exwm-input-set-key (kbd "C-q") #'exwm-input-send-next-key)
   (exwm-input-set-key (kbd "s-SPC") #'sk/exwm-launch-app)
   (exwm-input-set-key (kbd "s-h") #'sk/window-left)
   (exwm-input-set-key (kbd "s-j") #'sk/window-down)
