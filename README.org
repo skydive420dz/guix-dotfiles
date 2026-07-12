@@ -805,13 +805,15 @@ Channel definitions live in =guix/channels.scm= and are applied with =guix pull
 #+begin_src text
 guix     upstream GNU Guix packages and system modules
 nonguix  nonfree kernel/firmware transformation and substitutes
-sk-guix  personal package channel for packages we intentionally maintain
+sk-guix  personal package channel; currently only kitty-latest
 #+end_src
 
-=sk-guix= currently owns =kitty-latest=. The system imports it through =(sk
-packages terminals)= and installs =kitty-latest= directly, instead of resolving
-=kitty= through =specification->package=. After changing channels, run =guix
-pull= first, then =gsr= so the system evaluator can see the new channel modules.
+=sk-guix= owns =kitty-latest= only. The system imports it through =(sk packages
+terminals)= and installs =kitty-latest= directly, instead of resolving =kitty=
+through =specification->package=. Other applications should stay on upstream
+Guix/Nonguix unless we explicitly decide to package and maintain them in
+=sk-guix=. After changing channels, run =guix pull= first, then =gsr= so the
+system evaluator can see the new channel modules.
 
 * Live symlinks
 
