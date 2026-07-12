@@ -81,7 +81,7 @@
   (interactive)
   (if (and (bound-and-true-p lsp-mode)
            (fboundp 'lsp-execute-code-action))
-      (lsp-execute-code-action)
+      (call-interactively #'lsp-execute-code-action)
     (user-error "Code actions require an active LSP buffer")))
 
 (defun sk/code-docs ()

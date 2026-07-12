@@ -1,0 +1,5 @@
+#+title: Editor Check Fixture
+
+* Validation
+
+This file exercises the real Org mode hooks without touching personal notes.

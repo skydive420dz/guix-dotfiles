@@ -273,7 +273,13 @@
 
 (setq org-directory sk/org-notes-root
       org-agenda-files (or (sk/org-agenda-note-files) nil)
-      org-default-notes-file (sk/org-inbox-file)
+      ;; Batch validation must not create a personal inbox merely by loading
+      ;; the configuration.  Interactive sessions retain the ensure-on-start
+      ;; behavior used by capture commands.
+      org-default-notes-file
+      (if noninteractive
+          (expand-file-name "Inbox.org" sk/org-notes-root)
+        (sk/org-inbox-file))
       org-refile-targets '((org-agenda-files :maxlevel . 3))
       org-refile-use-outline-path 'file
       org-outline-path-complete-in-steps nil

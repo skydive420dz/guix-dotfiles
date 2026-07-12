@@ -19,9 +19,10 @@
       save-place-file
       (expand-file-name "saveplace" sk/cache-directory))
 
-(recentf-mode 1)
-(savehist-mode 1)
-(save-place-mode 1)
+(unless noninteractive
+  (recentf-mode 1)
+  (savehist-mode 1)
+  (save-place-mode 1))
 
 (setq backup-directory-alist
       `(("." . ,(expand-file-name "backups/" sk/cache-directory)))
@@ -114,12 +115,14 @@
 (add-hook 'compilation-start-hook #'sk/log--compilation-start)
 (add-hook 'compilation-finish-functions #'sk/log--compilation-finish)
 
-(require 'server)
-(unless (server-running-p)
-  (server-start))
+(unless noninteractive
+  (require 'server)
+  (unless (server-running-p)
+    (server-start)))
 
 (delete-selection-mode 1)
-(global-auto-revert-mode 1)
+(unless noninteractive
+  (global-auto-revert-mode 1))
 (show-paren-mode 1)
 (setq show-paren-delay 0)
 (setq-default indent-tabs-mode nil)

@@ -81,8 +81,9 @@ Terminal clients use the terminal emulator's font configuration instead.")
         display-time-format "%a %b %-d  %H:%M"
         display-time-default-load-average nil
         doom-modeline-time t)
-  (display-time-mode 1)
-  (doom-modeline-mode 1))
+  (unless noninteractive
+    (display-time-mode 1)
+    (doom-modeline-mode 1)))
 
 (provide 'sk-ui)
 

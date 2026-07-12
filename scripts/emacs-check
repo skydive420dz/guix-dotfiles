@@ -1,161 +1,142 @@
 #!/bin/sh
-set -eu
+set -u
 
-repo="${1:-$HOME/Projects/guix-dotfiles}"
-repo="$(cd "$repo" && pwd)"
-
-export PATH="$HOME/.guix-home/profile/bin:/run/privileged/bin:$HOME/.config/guix/current/bin:$HOME/.guix-profile/bin:/run/current-system/profile/bin:/run/current-system/profile/sbin:$PATH"
-export EMACSLOADPATH="${EMACSLOADPATH:-/run/current-system/profile/share/emacs/site-lisp:}"
-
-cd "$repo"
-
-if timeout 5 emacsclient --eval "(progn (load-file \"$repo/emacs/init.el\") :init-ok)" >/dev/null 2>&1
-then
-    printf '%s\n' 'live init: ok'
-else
-    printf '%s\n' 'live init: skipped or failed; checking batch'
+if [ "$#" -gt 1 ]; then
+    printf 'usage: %s [REPOSITORY]\n' "$0" >&2
+    exit 2
 fi
 
-probe="$(mktemp "${TMPDIR:-/tmp}/sk-emacs-check.XXXXXX.el")"
-trap 'rm -f "$probe"' EXIT HUP INT TERM
+real_home="${HOME:?HOME must be set}"
+repo="${1:-$real_home/Projects/guix-dotfiles}"
+repo="$(CDPATH='' cd -- "$repo" && pwd -P)" || exit 2
 
-cat > "$probe" <<'ELISP'
-(load-file "emacs/init.el")
+export PATH="$real_home/.guix-home/profile/bin:/run/privileged/bin:$real_home/.config/guix/current/bin:$real_home/.guix-profile/bin:/run/current-system/profile/bin:/run/current-system/profile/sbin:${PATH:-}"
+export EMACSLOADPATH="/run/current-system/profile/share/emacs/site-lisp:"
 
-(defvar sk/check-failures nil)
+for command in chmod cp emacs emacsclient env git mkdir mktemp rm sed timeout; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        printf 'preflight: missing %s\n' "$command" >&2
+        exit 2
+    fi
+done
 
-(defun sk/check-pass (label)
-  (message "ok: %s" label))
+live_expression_file="$repo/tests/emacs/live-check.el"
+batch_bootstrap="$repo/tests/emacs/batch-bootstrap.el"
+batch_checks="$repo/tests/emacs/batch-check.el"
 
-(defun sk/check-fail (label actual expected)
-  (push label sk/check-failures)
-  (message "fail: %s expected %S got %S" label expected actual))
+for file in "$live_expression_file" "$batch_bootstrap" "$batch_checks"; do
+    if [ ! -r "$file" ]; then
+        printf 'preflight: unreadable %s\n' "$file" >&2
+        exit 2
+    fi
+done
 
-(defun sk/check-equal (label actual expected)
-  (if (equal actual expected)
-      (sk/check-pass label)
-    (sk/check-fail label actual expected)))
+repo_status_before="$(git -C "$repo" status --porcelain=v1 --untracked-files=all)"
 
-(defun sk/check-true (label value)
-  (if value
-      (sk/check-pass label)
-    (sk/check-fail label value t)))
+run_live_checks() {
+    if [ "${SK_EMACS_CHECK_BREAK_LIVE:-0}" = 1 ]; then
+        live_expression='(error "deliberate live negative control")'
+    else
+        live_expression="$(sed -n '1,$p' "$live_expression_file")"
+    fi
 
-(defun sk/check-key (key expected)
-  (sk/check-equal
-   (format "key %s" key)
-   (lookup-key evil-normal-state-map (kbd key))
-   expected))
+    timeout 10 emacsclient \
+        --socket-name=server \
+        --alternate-editor=false \
+        --eval "$live_expression"
+    live_result=$?
+    printf '\n'
+    return "$live_result"
+}
 
-(defun sk/check-file-mode (path expected)
-  (with-temp-buffer
-    (setq buffer-file-name (expand-file-name path default-directory))
-    (delay-mode-hooks
-      (set-auto-mode))
-    (sk/check-true
-     (format "mode %s" path)
-     (if (listp expected)
-         (memq major-mode expected)
-       (eq major-mode expected)))))
+run_batch_checks() (
+    set -eu
 
-(defun sk/check-format-c ()
-  (with-temp-buffer
-    (insert "int main(){return 0;}\n")
-    (c-mode)
-    (sk/format-buffer)
-    (string-match-p "int main()" (buffer-string))))
+    sandbox="$(mktemp -d "${TMPDIR:-/tmp}/sk-emacs-check.XXXXXX")"
+    trap 'rm -rf -- "$sandbox"' EXIT
+    trap 'rm -rf -- "$sandbox"; trap - EXIT; exit 129' HUP
+    trap 'rm -rf -- "$sandbox"; trap - EXIT; exit 130' INT
+    trap 'rm -rf -- "$sandbox"; trap - EXIT; exit 143' TERM
 
-(defun sk/check-format-sh ()
-  (with-temp-buffer
-    (insert "if true; then\necho ok\nfi\n")
-    (sh-mode)
-    (sk/format-buffer)
-    (string-match-p "  echo ok" (buffer-string))))
+    source_root="$sandbox/source"
+    isolated_home="$sandbox/home"
+    isolated_tmp="$sandbox/tmp"
+    isolated_cache="$sandbox/xdg/cache"
+    isolated_config="$sandbox/xdg/config"
+    isolated_data="$sandbox/xdg/data"
+    isolated_state="$sandbox/xdg/state"
+    isolated_runtime="$sandbox/xdg/runtime"
 
-(defun sk/check-format-json ()
-  (with-temp-buffer
-    (insert "{\"b\":1,\"a\":[2,3]}\n")
-    (if (fboundp 'json-mode)
-        (json-mode)
-      (js-json-mode))
-    (sk/format-buffer)
-    (string-match-p "\n  \"b\"" (buffer-string))))
+    mkdir -p "$source_root" "$isolated_home" "$isolated_tmp" \
+        "$isolated_cache" "$isolated_config" "$isolated_data" \
+        "$isolated_state" "$isolated_runtime"
+    chmod 700 "$sandbox" "$isolated_home" "$isolated_tmp" "$isolated_runtime"
 
-(defun sk/check-format-python ()
-  (with-temp-buffer
-    (insert "def add(left,right):\n    return left+right\n")
-    (python-mode)
-    (sk/format-buffer)
-    (string-match-p "def add(left, right):" (buffer-string))))
+    cp -R "$repo/emacs" "$source_root/emacs"
+    cp -R "$repo/fixtures" "$source_root/fixtures"
 
-(defun sk/check-format-lua ()
-  (with-temp-buffer
-    (insert "local function add(left, right)\nreturn left + right\nend\n")
-    (lua-mode)
-    (sk/format-buffer)
-    (string-match-p
-     "\n  return left" (buffer-string))))
+    env -i \
+        HOME="$isolated_home" \
+        TMPDIR="$isolated_tmp" \
+        XDG_CACHE_HOME="$isolated_cache" \
+        XDG_CONFIG_HOME="$isolated_config" \
+        XDG_DATA_HOME="$isolated_data" \
+        XDG_STATE_HOME="$isolated_state" \
+        XDG_RUNTIME_DIR="$isolated_runtime" \
+        PATH="$PATH" \
+        EMACSLOADPATH="$EMACSLOADPATH" \
+        LANG=en_US.utf8 \
+        LC_ALL=en_US.utf8 \
+        SK_EMACS_CHECK_SOURCE_ROOT="$source_root" \
+        SK_EMACS_CHECK_SANDBOX_ROOT="$sandbox" \
+        SK_EMACS_CHECK_ORIGINAL_REPO="$repo" \
+        SK_EMACS_CHECK_REAL_HOME="$real_home" \
+        SK_EMACS_CHECK_BREAK_BATCH="${SK_EMACS_CHECK_BREAK_BATCH:-0}" \
+        SK_EMACS_CHECK_BREAK_WARNING="${SK_EMACS_CHECK_BREAK_WARNING:-0}" \
+        timeout 120 emacs --batch -Q \
+        --eval '(setq user-emacs-directory (file-name-as-directory (expand-file-name ".emacs.d" (getenv "HOME"))))' \
+        --eval '(setq flycheck-check-syntax-automatically nil)' \
+        --load "$batch_bootstrap" \
+        --load "$source_root/emacs/init.el" \
+        --eval '(run-hooks (quote after-init-hook))' \
+        --load "$batch_checks"
+)
 
-(defun sk/check-format-elisp ()
-  (with-temp-buffer
-    (insert "(progn\n(message \"x\"))\n")
-    (emacs-lisp-mode)
-    (sk/format-buffer)
-    (string-match-p "  (message" (buffer-string))))
+printf '%s\n' '== live read-only checks =='
+if run_live_checks; then
+    live_status=0
+    printf '%s\n' 'live: PASS'
+else
+    live_status=$?
+    printf 'live: FAIL (status %s)\n' "$live_status" >&2
+fi
 
-(defun sk/check-lisp-dialect (mode expected)
-  (with-temp-buffer
-    (funcall mode)
-    (sk/check-equal
-     (format "lisp dialect %s" mode)
-     (sk/lisp--dialect)
-     expected)))
+printf '%s\n' '== isolated batch checks =='
+if run_batch_checks; then
+    batch_status=0
+    printf '%s\n' 'batch: PASS'
+else
+    batch_status=$?
+    printf 'batch: FAIL (status %s)\n' "$batch_status" >&2
+fi
 
-(defun sk/check-lisp-non-lisp-error ()
-  (with-temp-buffer
-    (text-mode)
-    (condition-case err
-        (progn (sk/lisp--dialect) nil)
-      (user-error (eq (car err) 'user-error)))))
+repo_status_after="$(git -C "$repo" status --porcelain=v1 --untracked-files=all)"
+if [ "$repo_status_before" = "$repo_status_after" ]; then
+    repository_status=0
+    printf '%s\n' 'repository state: unchanged'
+else
+    repository_status=1
+    printf '%s\n' 'repository state: CHANGED' >&2
+    printf '%s\n' '-- before --' "$repo_status_before" '-- after --' "$repo_status_after" >&2
+fi
 
-(sk/check-true "batch init" (featurep 'sk-keys))
+if [ "$live_status" -eq 0 ] &&
+   [ "$batch_status" -eq 0 ] &&
+   [ "$repository_status" -eq 0 ]; then
+    printf '%s\n' 'emacs-check: PASS'
+    exit 0
+fi
 
-(sk/check-key "SPC c f" 'sk/format-buffer)
-(sk/check-key "SPC ," 'counsel-switch-buffer)
-(sk/check-key "SPC b b" 'counsel-ibuffer)
-(sk/check-key "SPC b i" 'sk/window-open-ibuffer)
-(sk/check-key "SPC b k" 'sk/kill-current-buffer)
-(sk/check-key "SPC b K" 'sk/kill-ordinary-buffers-and-dashboard)
-(sk/check-key "SPC l r" 'sk/lisp-repl)
-(sk/check-key "SPC l b" 'sk/lisp-eval-buffer)
-(sk/check-key "SPC l d" 'sk/lisp-eval-defun)
-(sk/check-key "SPC l e" 'sk/lisp-eval-last-sexp)
-(sk/check-key "SPC l k" 'sk/lisp-docs)
-
-(sk/check-file-mode "fixtures/c/hello.c" 'c-mode)
-(sk/check-file-mode "fixtures/shell/sample.sh" 'sh-mode)
-(sk/check-file-mode "fixtures/json/sample.json" '(json-mode js-json-mode))
-(sk/check-file-mode "fixtures/python/sample.py" 'python-mode)
-(sk/check-file-mode "fixtures/elisp/sample.el" 'emacs-lisp-mode)
-(sk/check-file-mode "fixtures/lua/sample.lua" 'lua-mode)
-(sk/check-file-mode "fixtures/scheme/sample.scm" 'scheme-mode)
-(sk/check-file-mode "fixtures/common-lisp/sample.lisp" 'lisp-mode)
-
-(sk/check-lisp-dialect 'emacs-lisp-mode 'elisp)
-(sk/check-lisp-dialect 'scheme-mode 'scheme)
-(sk/check-lisp-dialect 'lisp-mode 'common-lisp)
-(sk/check-true "lisp non-lisp error" (sk/check-lisp-non-lisp-error))
-
-(sk/check-true "format c" (sk/check-format-c))
-(sk/check-true "format shell" (sk/check-format-sh))
-(sk/check-true "format json" (sk/check-format-json))
-(sk/check-true "format python" (sk/check-format-python))
-(sk/check-true "format lua" (sk/check-format-lua))
-(sk/check-true "format elisp" (sk/check-format-elisp))
-
-(if sk/check-failures
-    (error "emacs-check failed: %S" (reverse sk/check-failures))
-  (message "batch probes: ok"))
-ELISP
-
-emacs --batch -l "$probe"
+printf 'emacs-check: FAIL (live=%s batch=%s repository=%s)\n' \
+    "$live_status" "$batch_status" "$repository_status" >&2
+exit 1
