@@ -229,7 +229,7 @@ tty1 mingetty autologin
 -> startx
 -> ~/.xinitrc
 -> shell/xinitrc
--> exwm
+-> dbus-launch emacs -fs --eval '(load-file "~/.exwm")'
 -> ~/.exwm
 -> emacs/exwm-loader.el
 -> ~/.emacs.d/exwm.el
