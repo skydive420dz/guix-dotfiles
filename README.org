@@ -53,7 +53,11 @@ next active slice.
 - [X] Replace =scripts/emacs-check= with the isolated, non-mutating live/batch
   split from Slice 8.  Independent failures, warning capture, real mode hooks,
   package ownership, ERT, byte compilation, and Checkdoc are now enforced.
-- [ ] Continue Slices 9 through 19 in audit order.  Do not expand dialect breadth
+- [X] Complete Slice 9 command, activation, and formatter correctness.  Fish,
+  Bash, and Eshell share one revision-reporting Guix wrapper; declaration and
+  Home links fail safely; JSONC, formatter filenames, lockfiles, and project
+  discovery now have explicit tested policies.
+- [ ] Continue Slices 10 through 19 in audit order.  Do not expand dialect breadth
   until the P0/P1 runtime, validation, and reproducibility prerequisites close.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 - [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
@@ -224,6 +228,12 @@ changes.
 
 Guix Home recreates the live app symlinks to these files during =ghr=. It does
 not replace them with store snapshots, so normal repo edits remain live.
+The project-owned link set is validated completely before it is changed.  A
+regular-file, directory, dangling-link, or missing-source conflict is preserved
+and makes activation nonzero without partially changing another project link.
+This transaction boundary does not include Guix Home's built-in activation
+services: their store-managed links can refresh before the later custom link
+service reports a failure.
 
 Fish behavior lives in =shell/config.fish= and is installed through Guix Home
 because Fish is the account login shell. Run =ghr= after editing it. The prompt
@@ -341,14 +351,17 @@ emacs/lisp/sk-evil.el
   Evil and Evil Collection setup.
 
 emacs/lisp/sk-project.el
-  Projectile, Counsel Projectile, and Magit setup.
+  Projectile, Counsel Projectile, and Magit setup.  Direct children of
+  =~/Projects= are the project collection.
 
 emacs/lisp/sk-lsp.el
   LSP mode, LSP Ivy, and LSP Treemacs setup.
 
 emacs/lisp/sk-core.el
   Generated state/cache, history files, backups/autosaves, server startup,
-  editing defaults, rainbow delimiters, and window history.
+  editing defaults, rainbow delimiters, and window history.  Lockfiles remain
+  enabled for same-file concurrent-edit detection; backups and auto-saves stay
+  centralized in the cache tree.
 
 emacs/lisp/sk-keys.el
   Global entry keys and leader key root.
@@ -361,6 +374,20 @@ tests/emacs/batch-bootstrap.el
 
 tests/emacs/batch-check.el
   ERT mode/backend/diagnostics/formatter/state and Elisp foundation checks.
+
+scripts/guix-reconfigure
+  Shared current-Guix, privileged-sudo, source, substitute, and revision
+  contract behind =gsr= and =ghr=.
+
+scripts/guix-entrypoints
+  Checked bootstrap/preflight for the three Guix declaration symlinks.
+
+scripts/shell-check
+  Deterministic ShellCheck gate for every project-owned shell input.
+
+tests/guix-entrypoints-check
+tests/guix-home-links-check
+  Missing/wrong/blocked/dangling entrypoint and Home activation safety gates.
 #+end_src
 
 Emacs packages are provided by Guix in =guix/systems/guixpc.scm=. Emacs Lisp
@@ -402,8 +429,17 @@ JSON
   Mode:        json-mode when available; built-in js-json-mode fallback
   Backend:     Flycheck json-jq
   Diagnostics: Flycheck path
+  Formatter:   jq through =SPC c f=
   Notes:       jq is preferred over Flycheck's python checker because this Guix
                profile exposes python3, while that checker looks for python.
+
+JSONC
+  Mode:        jsonc-mode
+  Backend:     no checker; installed JSON checkers reject comments
+  Diagnostics: deliberately disabled instead of producing false JSON errors
+  Formatter:   comment-preserving clang-format through =SPC c f=
+  Notes:       A sibling assumed =.json= filename selects the JSON parser while
+               retaining the visited directory for formatter configuration.
 
 Org
   Mode:        org-mode
@@ -477,7 +513,11 @@ formatter availability when intentionally installed
 Formatter decisions are intentionally conservative:
 
 #+begin_src text
-Python: ruff format, installed as a Guix system package.
+C/C++:  clang-format receives the visited filename for language and
+        .clang-format discovery.
+Shell:  shfmt receives the visited filename for configuration discovery.
+Python: ruff format receives --stdin-filename and is installed by Guix.
+JSON:   jq owns strict JSON; JSONC uses clang-format and keeps comments.
 Lua:    native Emacs indentation only. Stylua is the preferred external
         formatter in principle, but it is not packaged in the current Guix
         channel and local Rust crate packaging is out of scope for this setup.
@@ -848,6 +888,18 @@ gsr
 ghr
 #+end_src
 
+Fish, Bash, and Eshell route both aliases through =scripts/guix-reconfigure=.
+The wrapper ignores ambient =PATH= for the important choices: it uses
+=~/.config/guix/current/bin/guix=, =/run/setuid-programs/sudo= for system
+changes, the canonical declaration symlinks, and one substitute list.  Every
+invocation prints the resolved Guix executable and exact Guix channel revision.
+Inspect either plan without reconfiguring:
+
+#+begin_src sh
+gsr --print
+ghr --print
+#+end_src
+
 Regular application config changes usually need only a program reload.
 
 * Guix channels
@@ -884,6 +936,18 @@ The app and shell symlinks are managed by =guix/home/guixpc.scm=. The Guix
 entrypoint symlinks under =~/.config/guix= are bootstrap links and intentionally
 stay outside the Guix Home activation service so =gsr= and =ghr= always read the
 editable repo files.
+
+Check them without changing anything, or create/repair missing, wrong, or
+dangling symlinks during bootstrap:
+
+#+begin_src sh
+scripts/guix-entrypoints check
+scripts/guix-entrypoints bootstrap
+#+end_src
+
+Bootstrap refuses a regular-file/directory blocker or missing managed source and
+does not partially change another entrypoint.  It never overwrites a conflicting
+regular file.
 
 * Generated or local state
 

@@ -154,7 +154,7 @@ Source organization:       strong
 Declared/deployed config:  aligned
 Live runtime convergence:  strong; fresh System 81 and Home 30 runtime
 Display/resource health:   good
-Validation safety:         poor
+Validation safety:         strong; isolated editor and activation gates
 Lisp foundation:           coherent Elisp/Guile/SBCL base
 Lisp ecosystem breadth:    early; most dialect families absent
 Reproducibility:            weak across a fresh pull
@@ -178,7 +178,7 @@ validation, and reproducibility findings are closed.
 | O-05 | P1  | VERIFIED | Guix Home owns a user D-Bus while =dbus-launch= creates a second bus for EXWM. | 10 |
 | O-06 | P2  | VERIFIED | RTKit is absent; audio services fall back from real-time scheduling. | 10 |
 | O-07 | P2  | CLOSED   | The stale Kitty process is gone and the current launcher is Kitty 0.47.4. | 7 |
-| O-08 | P2  | VERIFIED | Bare noninteractive SSH resolves a different Guix and a non-setuid sudo path from login Fish. | 9 |
+| O-08 | P2  | CLOSED   | Fish, Bash, Eshell, and bare SSH automation route =gsr=/=ghr= through one current-Guix wrapper and explicit setuid sudo path. | 9 |
 | O-09 | P2  | VERIFIED | There are 79 System and 30 Home generations from roughly nine days, including duplicates. | 12 |
 | O-10 | P3  | VERIFIED | X screen blanking and DPMS remain enabled at 600 seconds. | 10 or 19 |
 | O-11 | P3  | VERIFIED | Elogind classifies the active EXWM login as an idle tty session. | 10 |
@@ -188,18 +188,18 @@ validation, and reproducibility findings are closed.
 
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
-| C-01 | P1  | VERIFIED | Eshell =ghr= targets missing =~/.config/guix/home/guixpc.scm= instead of =~/.config/guix/home.scm=. | 9 |
+| C-01 | P1  | CLOSED   | Fish, Bash, and Eshell =ghr= resolve the canonical =~/.config/guix/home.scm= through the shared wrapper. | 9 |
 | C-02 | P1  | CLOSED   | The live phase is observational and live/batch/repository failures contribute independently to the final status. | 8 |
 | C-03 | P1  | CLOSED   | Batch runs from copied sources under =env -i= with isolated HOME/TMP/XDG state and a write boundary. | 8 |
 | C-04 | P1  | CLOSED   | Fixture buffers run real mode hooks and assert LSP registration, Flycheck chains, Company, Geiser, Eldoc, diagnostics, and format routing. | 8 |
-| C-05 | P2  | RISK     | Home activation keeps conflicting regular files and succeeds, allowing partial deployment. | 9 |
+| C-05 | P2  | CLOSED   | Project-owned Home links are validated in two passes; blockers/dangling paths are preserved and make activation nonzero before any project link changes. | 9 |
 | C-06 | P2  | RISK     | Tty1 autologin can relaunch a failing X session while =sk-exwm-startx.log= is overwritten. | 11 |
-| C-07 | P2  | STATIC   | =.jsonc= uses jq for checking/formatting even though jq rejects comments. | 9 |
-| C-08 | P2  | STATIC   | Formatter subprocesses receive stdin without the visited source filename. | 9 |
-| C-09 | P2  | POLICY   | Emacs lockfiles are disabled, removing concurrent-edit protection. | 9 |
+| C-07 | P2  | CLOSED   | Strict JSON keeps jq; JSONC uses =jsonc-mode= with JSON-only Flycheck disabled and comment-preserving clang-format. | 9 |
+| C-08 | P2  | CLOSED   | clang-format, shfmt, and Ruff receive visited filenames, with non-file fallbacks and fixture-backed config discovery. | 9 |
+| C-09 | P2  | CLOSED   | Emacs lockfiles are explicitly enabled for concurrent-edit detection while backups/auto-saves stay centralized. | 9 |
 | C-10 | P2  | RISK     | Reloading modules is non-transactional and resets the complete =display-buffer-alist=. | 11 |
-| C-11 | P3  | STATIC   | Ranger handles the =json= extension twice; the later branch is unreachable. | 9 |
-| C-12 | P3  | STATIC   | Sourced Bash/Zsh files lack ShellCheck shell directives, creating avoidable lint noise. | 9 |
+| C-11 | P3  | CLOSED   | Ranger has one strict-JSON preview branch and routes JSONC through the text preview path. | 9 |
+| C-12 | P3  | CLOSED   | Sourced shell files declare their lint dialect and the deterministic whole-project ShellCheck gate is clean. | 9 |
 
 Named hooks, compilation hooks, and message advice remained singletons after the
 observed reload.  Anonymous-hook accumulation was not proven and must not be
@@ -225,7 +225,7 @@ reported as a confirmed bug without a focused test.
 | R-03 | P2  | POLICY   | Live repo symlinks make edits immediate but Home rollback does not restore application-file contents. | 13 |
 | R-04 | P2  | STATIC   | User applications, Emacs packages, compilers, and language tools are concentrated in the privileged system package list. | 13 |
 | R-05 | P2  | STATIC   | There are no per-dialect manifests/dev shells or automated build gates. | 12, 13 |
-| R-06 | P2  | STATIC   | Bootstrap entrypoint symlinks are intentionally outside Home but lack a checked bootstrap/preflight command. | 9, 13 |
+| R-06 | P2  | CLOSED   | =scripts/guix-entrypoints= checks or bootstraps every declaration link and refuses blockers/missing sources transactionally. | 9, 13 |
 
 ** Lisp ecosystem findings
 
@@ -240,7 +240,7 @@ reported as a confirmed bug without a focused test.
 | L-07 | P2  | VERIFIED | Guile readline/colorized modules and configured Eshell syntax highlighting are unavailable. | 14 |
 | L-08 | P2  | PARTIAL  | ERT, warning-fatal byte compilation, and Checkdoc foundations now exist; package-lint, Guile SRFI-64, and ASDF test workflows remain Slice 15. | 15 |
 | L-09 | P2  | STATIC   | Common Lisp has no declared Qlot/Quicklisp/Roswell/source-registry policy. | 15 |
-| L-10 | P2  | STATIC   | Projectile searches the dotfiles repo itself rather than the =~/Projects= collection. | 9, 15 |
+| L-10 | P2  | CLOSED   | Projectile discovers direct child Git repositories under the =~/Projects= collection; isolated sibling-repo coverage passes. | 9, 15 |
 | L-11 | P2  | CLOSED   | The unused ELPA tree is quarantined outside =package-user-dir= and no user ELPA path or Breadcrumb registration remains live. | 8 |
 | L-12 | P3  | VERIFIED | Yasnippet is enabled but no snippets are available. | 14 |
 | L-13 | P3  | POLICY   | Org offers Common Lisp block insertion while Common Lisp Babel execution remains deliberately disabled. | 15 |
@@ -594,10 +594,11 @@ Residual risks: connected Geiser/SLY evaluation, docs, semantic completion, xref
 Rollback path: revert 4d4925d for source behavior; move the quarantined ELPA directory back to ~/.emacs.d/elpa before an Emacs restart if Breadcrumb recovery is unexpectedly required
 #+end_src
 
-** TODO Slice 9: Command, path, formatter, and activation correctness
+** DONE Slice 9: Command, path, formatter, and activation correctness
 :PROPERTIES:
 :audit_priority: P1
 :findings: C-01 C-05 C-07 C-08 C-09 C-11 C-12 O-08 L-10 R-06
+:completed: 2026-07-12
 :END:
 
 Scope:
@@ -626,6 +627,49 @@ Acceptance gates:
 - formatter configuration discovery is covered by a fixture;
 - sibling repositories under =~/Projects= are discoverable;
 - ShellCheck has no project-owned actionable warnings.
+
+*** Acceptance record
+
+=scripts/guix-reconfigure= is now the single =gsr=/=ghr= implementation behind
+Fish, Bash, and Eshell.  It selects the pulled current Guix and privileged sudo
+by absolute path, uses the canonical declaration links and one substitute list,
+runs entrypoint preflight first, and prints the resolved executable, source, and
+40-character Guix revision.  A literal six-cell =system/home x
+Fish/Bash/Eshell= =--print= matrix produced byte-identical normalized plans for
+each mode.  Bare noninteractive SSH also ran =ghr --print= successfully.
+
+The three declaration links now have checked =check= and =bootstrap= commands.
+Focused negatives distinguish missing, wrong, blocked, dangling, blocked-parent,
+dangling-parent, and missing-source states.  Bootstrap repairs safe symlink
+states but preserves blockers and makes no other entrypoint change after a fatal
+preflight result.  Guix Home loads the exact tested Scheme helper and validates
+all project-owned app/shell links before mutation.  Regular-file, dangling-link,
+missing-source, and parent conflicts are preserved and raise nonzero without
+partially creating a sibling project link.
+
+Strict JSON retains =json-jq=.  JSONC now opens in =jsonc-mode=, explicitly keeps
+JSON-only Flycheck disabled, and formats comments/trailing commas with
+clang-format.  clang-format, shfmt, and Ruff receive visited filenames when
+available; an isolated =.clang-format= fixture proves directory-based discovery.
+Lockfiles are enabled, and Projectile's depth-one =~/Projects= search discovers
+two isolated sibling Git repositories.  Ranger's duplicate JSON branch and
+sourced-shell lint noise are removed.
+
+#+begin_src text
+Commit: 7be5fe8c48e1b12f1d08316fa8bb2b7a6cda19e2
+System generation: 81; unchanged
+Home generation: 31; /gnu/store/5l5rn2alj38qclkj93cybla70jhyx6ls-home
+Channel revisions: guix a8391f2d7451c2463ba253ffa9872fa6f27485d7; nonguix 3b66965566fe8c96edb5a41fd39a9e5a90ad9b61; sk-guix b006225faf6835f858128690e35a60475f620639
+Command evidence: all six Fish/Bash/Eshell system/home plans matched; system hash ded5a7b081b160e32a5305d9becb9eb0bfe5eef77307ec787be1b11ff731c7f0; home hash e60d28c01fdeb9052ba582d5615832acd2ff296b8d2b43541f9bc0b0d55567d5
+Privilege evidence: /run/setuid-programs/sudo resolves to setuid /run/privileged/bin/sudo
+Activation evidence: entrypoint and exact Home-helper negative suites passed; generated activation preserved a conflicting regular file and exited 1 without creating another project link
+Build/activation: guix home build returned the accepted Home store path; ghr activated Home generation 31; D-Bus, PipeWire, PipeWire-Pulse, and WirePlumber remained running
+Editor evidence: live PASS; isolated batch 15/15 ERT PASS; JSONC comments/trailing comma, formatter filename/config discovery, lockfiles, and sibling Git discovery passed; repository state unchanged
+Source/lint evidence: git diff --check, POSIX/Bash syntax, Scheme reader/runtime tests, and scripts/shell-check passed
+SSH evidence: no closing session remained after acceptance probes
+Residual risks: JSONC has no semantic validator until a JSONC-aware checker is packaged; built-in Guix Home activation services run before the custom project-link service and may refresh their own store links before a later custom-link failure; Emacs source changes activate on the next normal reload/restart; channel pinning remains Slice 12
+Rollback path: revert 7be5fe8 for source behavior; Home generation 30 remains the generated Fish/service fallback, but live repo-linked application contents require the source revert rather than Home rollback alone
+#+end_src
 
 ** TODO Slice 10: One session-bus and converged desktop services
 :PROPERTIES:

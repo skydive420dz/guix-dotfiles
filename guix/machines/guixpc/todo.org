@@ -45,7 +45,7 @@ Remaining cosmetic issue:
 * TODO 2026-07-12 configuration audit remediation
 :PROPERTIES:
 :created: 2026-07-12
-:next_slice: 9
+:next_slice: 10
 :END:
 
 Canonical evidence, finding status, slice definitions, and acceptance gates:
@@ -61,7 +61,10 @@ Current next action:
   converged System/Home runtime, and bounded command/PTY SSH cleanup passed.
 - [X] Accept [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 8: Non-mutating validation harness][Slice 8: non-mutating validation harness]].  Live queries are read-only; batch state
   is isolated and write-guarded; independent failures and 13 ERT checks pass.
-- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 9: Command, path, formatter, and activation correctness][Slice 9: command, path, formatter, and activation correctness]].
+- [X] Accept [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 9: Command, path, formatter, and activation correctness][Slice 9: command, path, formatter, and activation correctness]].  Shells share one
+  revision-reporting Guix wrapper; declaration and project links fail safely;
+  JSONC, formatter discovery, lockfiles, project discovery, and shell lint pass.
+- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 10: One session-bus and converged desktop services][Slice 10: one session-bus and converged desktop services]].
 
 Ordered follow-up:
 
