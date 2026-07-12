@@ -3,7 +3,8 @@
 
 (use-modules (gnu)
              (guix gexp)
-             (nonguix transformations))
+             (nonguix transformations)
+             (sk packages terminals))
 (use-service-modules cups desktop networking ssh sound xorg)
 
 (define %guixpc-monitor-config
@@ -44,6 +45,7 @@ EndSection")
     (packages
      (append
       ;; Keep this order stable: Guix profile collisions are resolved by order.
+      (list kitty-latest)
       (map specification->package
            '("curl"
              "fastfetch-minimal"
@@ -61,7 +63,6 @@ EndSection")
              "pamixer"
              "fish"
              "ranger"
-             "kitty"
              "ungoogled-chromium"
              "xdg-utils"
              "file"

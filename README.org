@@ -797,6 +797,22 @@ ghr
 
 Regular application config changes usually need only a program reload.
 
+* Guix channels
+
+Channel definitions live in =guix/channels.scm= and are applied with =guix pull
+-C ~/.config/guix/channels.scm= before rebuilding the system.
+
+#+begin_src text
+guix     upstream GNU Guix packages and system modules
+nonguix  nonfree kernel/firmware transformation and substitutes
+sk-guix  personal package channel for packages we intentionally maintain
+#+end_src
+
+=sk-guix= currently owns =kitty-latest=. The system imports it through =(sk
+packages terminals)= and installs =kitty-latest= directly, instead of resolving
+=kitty= through =specification->package=. After changing channels, run =guix
+pull= first, then =gsr= so the system evaluator can see the new channel modules.
+
 * Live symlinks
 
 The important live files are symlinks back into this repo:
