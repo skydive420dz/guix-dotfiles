@@ -8,12 +8,13 @@ if ! command -v shellcheck >/dev/null 2>&1; then
     exit 127
 fi
 
-exec shellcheck \
+shellcheck \
     "$repo/fixtures/shell/sample.sh" \
     "$repo/ranger/scope.sh" \
     "$repo/scripts/editor-tools-check" \
     "$repo/scripts/desktop-session-check" \
     "$repo/scripts/emacs-check" \
+    "$repo/scripts/exwm-session" \
     "$repo/scripts/guix-entrypoints" \
     "$repo/scripts/guix-reconfigure" \
     "$repo/scripts/shell-check" \
@@ -21,5 +22,10 @@ exec shellcheck \
     "$repo/shell/bashrc" \
     "$repo/shell/xinitrc" \
     "$repo/shell/zprofile" \
+    "$repo/tests/exwm-session-check" \
     "$repo/tests/guix-entrypoints-check" \
     "$repo/tests/guix-home-links-check"
+
+"$repo/tests/exwm-session-check"
+
+printf '%s\n' 'shell-check: PASS'

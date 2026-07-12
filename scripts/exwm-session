@@ -1,0 +1,56 @@
+#!/bin/sh
+set -u
+
+home=${HOME:?HOME must be set}
+state_home=${XDG_STATE_HOME:-$home/.local/state}
+log_dir=$state_home/sk-exwm
+current_log=$log_dir/startx-current.log
+previous_log=$log_dir/startx-previous.log
+legacy_log=$home/.cache/sk-exwm-startx.log
+
+if ! mkdir -p "$log_dir" || ! chmod 700 "$log_dir"; then
+    printf 'EXWM: cannot prepare state directory: %s\n' "$log_dir" >&2
+    exit 1
+fi
+
+if [ -f "$current_log" ]; then
+    if ! mv -f "$current_log" "$previous_log"; then
+        printf 'EXWM: cannot rotate %s to %s\n' \
+            "$current_log" "$previous_log" >&2
+        exit 1
+    fi
+elif [ ! -e "$previous_log" ] && [ -f "$legacy_log" ]; then
+    if ! cp -p "$legacy_log" "$previous_log"; then
+        printf 'EXWM: cannot preserve legacy log: %s\n' "$legacy_log" >&2
+        exit 1
+    fi
+fi
+
+umask 077
+started_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+if ! printf 'EXWM start: %s\n' "$started_at" >"$current_log"; then
+    printf 'EXWM: cannot create current log: %s\n' "$current_log" >&2
+    exit 1
+fi
+
+if command -v startx >/dev/null 2>&1; then
+    startx >>"$current_log" 2>&1
+    status=$?
+else
+    printf '%s\n' 'EXWM: startx is unavailable' >>"$current_log"
+    status=127
+fi
+
+finished_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+printf 'EXWM end: %s status=%s\n' "$finished_at" "$status" >>"$current_log"
+
+if [ "$status" -eq 0 ]; then
+    printf 'EXWM session ended; log retained at %s\n' "$current_log"
+else
+    printf 'EXWM startup failed with status %s; log retained at %s\n' \
+        "$status" "$current_log" >&2
+    printf '%s\n' \
+        'Recovery: inspect the log, fix the cause, then run sk-start-exwm.' >&2
+fi
+
+exit "$status"

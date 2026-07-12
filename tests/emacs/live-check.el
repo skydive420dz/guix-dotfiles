@@ -43,10 +43,34 @@
                (and (boundp 'server-process)
                     (processp server-process)
                     (process-live-p server-process)))
-         (cons "EXWM connection"
+         (cons "EXWM public runtime"
                (and (featurep 'exwm)
-                    (boundp 'exwm--connection)
-                    exwm--connection))
+                    (featurep 'sk-exwm)
+                    (bound-and-true-p exwm-wm-mode)
+                    (fboundp 'exwm-manage-get-pid)
+                    (fboundp 'sk/reload-modules)
+                    (fboundp 'sk/exwm-assert-compatible)
+                    (boundp 'sk/exwm-launch-intents)
+                    (equal (sk/exwm-installed-version)
+                           sk/exwm-reviewed-version)))
+         (cons "EXWM reviewed workspaces"
+               (and (= 5 (length exwm-workspace--list))
+                    (seq-every-p #'frame-live-p exwm-workspace--list)
+                    (eq (sk/exwm-workspace-frame 0)
+                        (car exwm-workspace--list))))
+         (cons "owned display policy"
+               (and sk/window-display-policy-migrated
+                    sk/window-xref-compatible-p
+                    (seq-every-p
+                     (lambda (rule)
+                       (= 1 (cl-count rule display-buffer-alist :test #'eq)))
+                     sk/window-owned-display-buffer-rules)
+                    (not (seq-some
+                          (lambda (legacy-rule)
+                            (memq legacy-rule display-buffer-alist))
+                          sk/window-legacy-display-buffer-rules))
+                    (memq #'sk/window-configure-xref-buffer
+                          xref-after-update-hook)))
          (cons "tracked core modules"
                (and (featurep 'sk-core)
                     (featurep 'sk-lisp)

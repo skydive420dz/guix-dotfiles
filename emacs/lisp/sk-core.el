@@ -2,6 +2,7 @@
 
 (require 'project)
 (require 'browse-url)
+(require 'lisp-mode)
 (require 'subr-x)
 
 (defvar sk/cache-directory
@@ -251,12 +252,95 @@
     "sk-notes")
   "GuixPC Emacs modules to reload with `sk/reload-config'.")
 
+(defun sk/reload--module-path (module)
+  "Return the source path for MODULE in `sk/lisp-directory'."
+  (expand-file-name (concat module ".el") sk/lisp-directory))
+
+(defun sk/reload--preflight-module (module path)
+  "Verify that MODULE at PATH is readable and structurally valid Lisp."
+  (unless (file-readable-p path)
+    (error "Reload preflight cannot read %s at %s" module path))
+  (with-temp-buffer
+    (insert-file-contents path)
+    (set-syntax-table emacs-lisp-mode-syntax-table)
+    (setq-local parse-sexp-ignore-comments t)
+    (condition-case err
+        (progn
+          (check-parens)
+          (goto-char (point-min))
+          (condition-case nil
+              (while t
+                (read (current-buffer)))
+            (end-of-file nil)))
+      (error
+       (error "Reload preflight failed in %s: %s"
+              module (error-message-string err))))))
+
+(defun sk/reload-modules (label modules &optional post-load)
+  "Reload MODULES for LABEL and run POST-LOAD after all loads succeed.
+Every source is reader-checked before the first load.  On failure, restore the
+display policy and report the exact stage; definitions evaluated by earlier
+modules cannot be rolled back and are reported as partial state."
+  (let* ((module-paths
+          (mapcar (lambda (module)
+                    (cons module (sk/reload--module-path module)))
+                  modules))
+         (display-policy-before (copy-sequence display-buffer-alist))
+         (owned-rules-were-bound (boundp 'sk/window-owned-display-buffer-rules))
+         (owned-rules-before
+          (and owned-rules-were-bound
+               (copy-sequence sk/window-owned-display-buffer-rules)))
+         (current-rules-were-bound (boundp 'sk/window-display-buffer-rules))
+         (current-rules-before
+          (and current-rules-were-bound
+               (copy-sequence sk/window-display-buffer-rules)))
+         (migration-was-bound (boundp 'sk/window-display-policy-migrated))
+         (migration-before
+          (and migration-was-bound sk/window-display-policy-migrated))
+         (completed nil)
+         (current "preflight"))
+    (condition-case err
+        (progn
+          (dolist (entry module-paths)
+            (setq current (car entry))
+            (sk/reload--preflight-module (car entry) (cdr entry)))
+          (dolist (entry module-paths)
+            (setq current (car entry))
+            (load (cdr entry) nil 'nomessage)
+            (push (car entry) completed))
+          (when post-load
+            (setq current "post-load activation")
+            (funcall post-load))
+          (message "%s reloaded (%d modules)" label (length modules))
+          t)
+      ((error quit)
+       (setq display-buffer-alist display-policy-before)
+       (if owned-rules-were-bound
+           (setq sk/window-owned-display-buffer-rules owned-rules-before)
+         (when (boundp 'sk/window-owned-display-buffer-rules)
+           (makunbound 'sk/window-owned-display-buffer-rules)))
+       (if current-rules-were-bound
+           (setq sk/window-display-buffer-rules current-rules-before)
+         (when (boundp 'sk/window-display-buffer-rules)
+           (makunbound 'sk/window-display-buffer-rules)))
+       (if migration-was-bound
+           (setq sk/window-display-policy-migrated migration-before)
+         (when (boundp 'sk/window-display-policy-migrated)
+           (makunbound 'sk/window-display-policy-migrated)))
+       (let ((summary
+              (format
+               "%s reload failed in %s after %d/%d modules: %s; display policy restored; earlier definitions may have changed"
+               label current (length completed) (length modules)
+               (error-message-string err))))
+         (message "%s" summary)
+         (if (eq (car err) 'quit)
+             (signal 'quit (cdr err))
+           (signal 'user-error (list summary))))))))
+
 (defun sk/reload-config ()
   "Reload the GuixPC Emacs modules without restarting EXWM."
   (interactive)
-  (dolist (file sk/reload-module-files)
-    (load (expand-file-name file sk/lisp-directory) nil 'nomessage))
-  (message "GuixPC Emacs config reloaded"))
+  (sk/reload-modules "GuixPC Emacs config" sk/reload-module-files))
 
 (when (and (fboundp 'native-comp-available-p)
            (native-comp-available-p))

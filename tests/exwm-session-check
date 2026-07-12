@@ -1,0 +1,177 @@
+#!/bin/sh
+set -eu
+
+require_fish=0
+case ${1:-} in
+    '') ;;
+    --require-fish) require_fish=1 ;;
+    *)
+        printf 'usage: %s [--require-fish]\n' "$0" >&2
+        exit 2
+        ;;
+esac
+[ "$#" -le 1 ] || exit 2
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+sandbox=$(mktemp -d "${TMPDIR:-/tmp}/sk-exwm-session-check.XXXXXX")
+trap 'rm -rf -- "$sandbox"' EXIT HUP INT TERM
+
+home=$sandbox/home
+state_home=$sandbox/state
+fake_bin=$sandbox/bin
+mkdir -p "$home/.cache" "$state_home" "$fake_bin"
+
+# These single-quoted lines are the literal contents of the fake executable.
+# shellcheck disable=SC2016
+printf '%s\n' \
+    '#!/bin/sh' \
+    'printf "fake startx attempt=%s\n" "${SK_FAKE_ATTEMPT:?}"' \
+    'exit "${SK_FAKE_STATUS:?}"' >"$fake_bin/startx"
+chmod +x "$fake_bin/startx"
+# shellcheck disable=SC2016
+printf '%s\n' '#!/bin/sh' \
+    'printf "%s\n" "${SK_FAKE_TTY:-/dev/tty1}"' >"$fake_bin/tty"
+chmod +x "$fake_bin/tty"
+printf '%s\n' '#!/bin/sh' 'exit 0' >"$fake_bin/fastfetch"
+chmod +x "$fake_bin/fastfetch"
+
+printf '%s\n' 'legacy startx evidence' >"$home/.cache/sk-exwm-startx.log"
+
+run_expected_failure() {
+    expected_status=$1
+    attempt=$2
+    if HOME="$home" XDG_STATE_HOME="$state_home" \
+        PATH="$fake_bin:$PATH" SK_FAKE_ATTEMPT="$attempt" \
+        SK_FAKE_STATUS="$expected_status" \
+        "$repo/scripts/exwm-session" >/dev/null 2>&1; then
+        printf 'expected EXWM attempt %s to fail\n' "$attempt" >&2
+        exit 1
+    else
+        actual_status=$?
+    fi
+    if [ "$actual_status" -ne "$expected_status" ]; then
+        printf 'attempt %s returned %s; expected %s\n' \
+            "$attempt" "$actual_status" "$expected_status" >&2
+        exit 1
+    fi
+}
+
+run_expected_failure 42 1
+
+current_log=$state_home/sk-exwm/startx-current.log
+previous_log=$state_home/sk-exwm/startx-previous.log
+grep -q 'fake startx attempt=1' "$current_log"
+grep -q 'status=42' "$current_log"
+grep -q 'legacy startx evidence' "$previous_log"
+
+run_expected_failure 43 2
+grep -q 'fake startx attempt=2' "$current_log"
+grep -q 'status=43' "$current_log"
+grep -q 'fake startx attempt=1' "$previous_log"
+grep -q 'status=42' "$previous_log"
+
+HOME="$home" XDG_STATE_HOME="$state_home" PATH="$fake_bin:$PATH" \
+    SK_FAKE_ATTEMPT=3 SK_FAKE_STATUS=0 \
+    "$repo/scripts/exwm-session" >/dev/null
+grep -q 'fake startx attempt=3' "$current_log"
+grep -q 'status=0' "$current_log"
+grep -q 'fake startx attempt=2' "$previous_log"
+grep -q 'status=43' "$previous_log"
+
+log_count=$(find "$state_home/sk-exwm" -type f -name 'startx-*.log' | wc -l | tr -d ' ')
+if [ "$log_count" -ne 2 ]; then
+    printf 'EXWM log count is %s; expected bounded current/previous pair\n' \
+        "$log_count" >&2
+    exit 1
+fi
+
+if command -v fish >/dev/null 2>&1; then
+    mkdir -p "$home/Projects"
+    ln -s "$repo" "$home/Projects/guix-dotfiles"
+    # The single-quoted body is evaluated by Fish, not this POSIX shell.
+    # shellcheck disable=SC2016
+    if ! fish_output=$(
+        unset SSH_CONNECTION DISPLAY WAYLAND_DISPLAY
+        HOME="$home" XDG_STATE_HOME="$state_home" PATH="$fake_bin:$PATH" \
+            SK_FAKE_ATTEMPT=4 SK_FAKE_STATUS=44 \
+            fish --no-config --login --interactive --command '
+                source "$HOME/Projects/guix-dotfiles/shell/config.fish"
+                echo FISH_AUTO_RECOVERY_REACHED
+            ' 2>&1
+    ); then
+        printf 'Fish automatic recovery did not return to the shell: %s\n' \
+            "$fish_output" >&2
+        exit 1
+    fi
+    if ! printf '%s\n' "$fish_output" | grep -q 'FISH_AUTO_RECOVERY_REACHED'; then
+        printf 'Fish automatic recovery marker is absent: %s\n' \
+            "$fish_output" >&2
+        exit 1
+    fi
+    grep -q 'fake startx attempt=4' "$current_log"
+    grep -q 'status=44' "$current_log"
+
+    for control in ssh display tty2; do
+        case $control in
+            ssh)
+                # The single-quoted body is evaluated by Fish.
+                # shellcheck disable=SC2016
+                control_output=$(HOME="$home" XDG_STATE_HOME="$state_home" \
+                    PATH="$fake_bin:$PATH" SSH_CONNECTION=fixture \
+                    SK_FAKE_ATTEMPT=5 SK_FAKE_STATUS=45 \
+                    fish --no-config --login --interactive --command '
+                        source "$HOME/Projects/guix-dotfiles/shell/config.fish"
+                        echo FISH_NEGATIVE_CONTROL_REACHED
+                    ' 2>&1)
+                ;;
+            display)
+                # The single-quoted body is evaluated by Fish.
+                # shellcheck disable=SC2016
+                control_output=$(
+                    unset SSH_CONNECTION WAYLAND_DISPLAY
+                    HOME="$home" XDG_STATE_HOME="$state_home" \
+                        PATH="$fake_bin:$PATH" DISPLAY=:9 \
+                        SK_FAKE_ATTEMPT=5 SK_FAKE_STATUS=45 \
+                        fish --no-config --login --interactive --command '
+                            source "$HOME/Projects/guix-dotfiles/shell/config.fish"
+                            echo FISH_NEGATIVE_CONTROL_REACHED
+                        ' 2>&1
+                )
+                ;;
+            tty2)
+                # The single-quoted body is evaluated by Fish.
+                # shellcheck disable=SC2016
+                control_output=$(
+                    unset SSH_CONNECTION DISPLAY WAYLAND_DISPLAY
+                    HOME="$home" XDG_STATE_HOME="$state_home" \
+                        PATH="$fake_bin:$PATH" SK_FAKE_TTY=/dev/tty2 \
+                        SK_FAKE_ATTEMPT=5 SK_FAKE_STATUS=45 \
+                        fish --no-config --login --interactive --command '
+                            source "$HOME/Projects/guix-dotfiles/shell/config.fish"
+                            echo FISH_NEGATIVE_CONTROL_REACHED
+                        ' 2>&1
+                )
+                ;;
+        esac
+        if ! printf '%s\n' "$control_output" | \
+             grep -q 'FISH_NEGATIVE_CONTROL_REACHED' || \
+           printf '%s\n' "$control_output" | grep -q 'EXWM:'; then
+            printf 'Fish %s negative control failed: %s\n' \
+                "$control" "$control_output" >&2
+            exit 1
+        fi
+    done
+    grep -q 'fake startx attempt=4' "$current_log"
+    if grep -q 'fake startx attempt=5' "$current_log"; then
+        printf '%s\n' 'Fish negative control started EXWM unexpectedly' >&2
+        exit 1
+    fi
+else
+    if [ "$require_fish" -eq 1 ]; then
+        printf '%s\n' 'exwm-session-check: fish is required but unavailable' >&2
+        exit 127
+    fi
+    printf '%s\n' 'SKIP: fish recovery prompt check (fish unavailable)'
+fi
+
+printf '%s\n' 'exwm-session-check: PASS'

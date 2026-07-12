@@ -166,6 +166,22 @@ else
     fail "X DPMS policy is $dpms_policy or disabled"
 fi
 
+picom_processes=$(ps -u "$uid" -o comm=,args= | awk '
+    $1 == "picom" {
+        count += 1
+        if (index($0, "--backend glx") && index($0, "--vsync") &&
+            index($0, "85:class_g = ") && index($0, "Emacs")) expected += 1
+    }
+    END { print count + 0, expected + 0 }
+')
+picom_count=$(printf '%s\n' "$picom_processes" | awk '{ print $1 }')
+expected_picom_count=$(printf '%s\n' "$picom_processes" | awk '{ print $2 }')
+if [ "$picom_count" -eq 1 ] && [ "$expected_picom_count" -eq 1 ]; then
+    pass 'Xinit owns exactly one Picom process with the declared policy'
+else
+    fail "Picom process/policy counts are $picom_count/$expected_picom_count; expected 1/1"
+fi
+
 rtkit_priority_property=$(busctl --system get-property \
     org.freedesktop.RealtimeKit1 /org/freedesktop/RealtimeKit1 \
     org.freedesktop.RealtimeKit1 MaxRealtimePriority 2>&1)

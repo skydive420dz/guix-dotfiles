@@ -4,6 +4,47 @@ set -gx VISUAL "emacsclient -n -a emacs"
 set -gx BROWSER chromium
 set -gx PAGER less
 
+function sk-start-exwm
+    test -z "$SSH_CONNECTION"
+    or begin
+        echo "EXWM: refusing to start from SSH" >&2
+        return 1
+    end
+
+    test -z "$DISPLAY"
+    or begin
+        echo "EXWM: DISPLAY is already set" >&2
+        return 1
+    end
+
+    test -z "$WAYLAND_DISPLAY"
+    or begin
+        echo "EXWM: WAYLAND_DISPLAY is already set" >&2
+        return 1
+    end
+
+    set -l current_tty (tty 2>/dev/null)
+    test "$current_tty" = "/dev/tty1"
+    or begin
+        echo "EXWM: start from the local tty1 recovery shell" >&2
+        return 1
+    end
+
+    set -l session_runner "$HOME/Projects/guix-dotfiles/scripts/exwm-session"
+    test -x "$session_runner"
+    or begin
+        echo "EXWM: session runner is unavailable: $session_runner" >&2
+        return 1
+    end
+
+    command "$session_runner"
+    set -l exwm_status $status
+    if test $exwm_status -ne 0
+        echo "EXWM: returned to tty1 recovery shell" >&2
+    end
+    return $exwm_status
+end
+
 function __sk_start_exwm_from_tty
     status is-login
     or return
@@ -24,11 +65,7 @@ function __sk_start_exwm_from_tty
     test "$current_tty" = "/dev/tty1"
     or return
 
-    command -q startx
-    or return
-
-    mkdir -p "$HOME/.cache"
-    exec startx >"$HOME/.cache/sk-exwm-startx.log" 2>&1
+    sk-start-exwm
 end
 
 __sk_start_exwm_from_tty

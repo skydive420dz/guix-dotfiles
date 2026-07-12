@@ -1,6 +1,28 @@
 ;;; sk-window-policy.el --- Shared window and panel policy -*- lexical-binding: t; -*-
 
+(require 'seq)
 (require 'subr-x)
+(require 'xref)
+
+(defconst sk/window-reviewed-emacs-major-version 30
+  "Emacs major release reviewed for the Xref result adapter.")
+
+(defvar sk/window-xref-compatible-p
+  (and (= emacs-major-version sk/window-reviewed-emacs-major-version)
+       (fboundp 'xref-pop-to-location)
+       (boundp 'xref-buffer-name))
+  "Non-nil when the reviewed Xref result adapter can be installed.")
+
+(defconst sk/window-xref-buffer-name
+  (if (boundp 'xref-buffer-name) xref-buffer-name "*xref*")
+  "Xref result buffer name used by the reviewed display policy.")
+
+(unless sk/window-xref-compatible-p
+  (display-warning
+   'sk-window-policy
+   (format "Xref RET adapter disabled: Emacs %s is outside reviewed major %s"
+           emacs-version sk/window-reviewed-emacs-major-version)
+   :warning))
 
 (defvar sk/window-master-width-ratio 0.62
   "Width ratio used for the left master window.")
@@ -433,11 +455,16 @@ Directories continue replacing the Dired panel buffer."
   "Visit the Xref item at point in the main window."
   (interactive)
   (require 'xref)
-  (let ((xref (xref--item-at-point)))
-    (unless xref
+  (unless sk/window-xref-compatible-p
+    (user-error "Xref result navigation is not reviewed for Emacs %s"
+                emacs-version))
+  (let ((item (get-text-property
+               (if (eolp) (max (point-min) (1- (point))) (point))
+               'xref-item)))
+    (unless item
       (user-error "No xref at point"))
     (select-window (sk/window-main-window))
-    (xref--show-location (xref-item-location xref) t)))
+    (xref-pop-to-location item)))
 
 (defun sk/window-flycheck-error-list-goto-error (&optional pos)
   "Visit the Flycheck error at POS in the main window."
@@ -467,8 +494,31 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
 (with-eval-after-load 'ibuffer
   (define-key ibuffer-mode-map (kbd "RET") #'sk/window-ibuffer-visit-buffer))
 
-(with-eval-after-load 'xref
-  (define-key xref--xref-buffer-mode-map (kbd "RET") #'sk/window-xref-goto-xref))
+(defvar sk/window-xref-navigation-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") #'sk/window-xref-goto-xref)
+    (define-key map [return] #'sk/window-xref-goto-xref)
+    map)
+  "Local navigation bindings for the public Xref result buffer.")
+
+(define-minor-mode sk/window-xref-navigation-mode
+  "Keep Xref result navigation aligned with the main-window policy."
+  :init-value nil
+  :lighter nil
+  :keymap sk/window-xref-navigation-mode-map)
+
+(defun sk/window-configure-xref-buffer ()
+  "Enable GuixPC navigation bindings in the public Xref result buffer."
+  (when (and sk/window-xref-compatible-p
+             (equal (buffer-name) sk/window-xref-buffer-name))
+    (sk/window-xref-navigation-mode 1)
+    (when (fboundp 'evil-local-set-key)
+      (evil-local-set-key 'normal (kbd "RET") #'sk/window-xref-goto-xref)
+      (evil-local-set-key 'normal [return] #'sk/window-xref-goto-xref)
+      (evil-local-set-key 'motion (kbd "RET") #'sk/window-xref-goto-xref)
+      (evil-local-set-key 'motion [return] #'sk/window-xref-goto-xref))))
+
+(add-hook 'xref-after-update-hook #'sk/window-configure-xref-buffer)
 
 (with-eval-after-load 'flycheck
   (define-key flycheck-error-list-mode-map (kbd "RET") #'sk/window-flycheck-error-list-goto-error))
@@ -485,7 +535,7 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
       (kbd "RET") #'sk/window-ibuffer-visit-buffer
       [return] #'sk/window-ibuffer-visit-buffer))
   (with-eval-after-load 'xref
-    (evil-define-key* '(normal motion) xref--xref-buffer-mode-map
+    (evil-define-key* '(normal motion) sk/window-xref-navigation-mode-map
       (kbd "RET") #'sk/window-xref-goto-xref
       [return] #'sk/window-xref-goto-xref))
   (with-eval-after-load 'flycheck
@@ -534,8 +584,87 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
         (goto-char (min point (point-max)))
         (message "Full-frame %s" (buffer-name buffer))))))
 
-(setq display-buffer-alist
-      '(((derived-mode . treemacs-mode)
+(defvar sk/window-owned-display-buffer-rules nil
+  "Exact display rules installed by the GuixPC window policy.")
+
+(defvar sk/window-display-buffer-rules nil
+  "Current GuixPC rules prepended to `display-buffer-alist'.")
+
+(defvar sk/window-display-policy-migrated nil
+  "Non-nil after removing the pre-ownership project display rules once.")
+
+(defconst sk/window-legacy-display-buffer-rules
+  '(((derived-mode . treemacs-mode)
+     (display-buffer-reuse-window display-buffer-in-side-window)
+     (side . left)
+     (slot . 0)
+     (window-width . 35)
+     (reusable-frames . nil)
+     (inhibit-switch-frame . t)
+     (window-parameters . ((no-delete-other-windows . t))))
+    ((or (derived-mode . help-mode)
+         "\\*\\(?:Help\\|Apropos\\|eldoc\\)\\*")
+     (display-buffer-reuse-window
+      display-buffer-reuse-mode-window
+      display-buffer-in-side-window)
+     (side . right)
+     (slot . 1)
+     (window-width . 0.42)
+     (mode . (help-mode helpful-mode))
+     (reusable-frames . nil)
+     (inhibit-switch-frame . t)
+     (window-parameters . ((no-delete-other-windows . t))))
+    ((or "\\*Ibuffer\\*"
+         (derived-mode . ibuffer-mode)
+         (derived-mode . dired-mode)
+         (derived-mode . xref--xref-buffer-mode)
+         (derived-mode . magit-mode)
+         (derived-mode . eshell-mode)
+         (derived-mode . shell-mode)
+         (derived-mode . term-mode)
+         (derived-mode . vterm-mode))
+     (display-buffer-reuse-window
+      display-buffer-reuse-mode-window
+      display-buffer-in-side-window)
+     (side . right)
+     (slot . 0)
+     (window-width . 0.42)
+     (mode . (ibuffer-mode dired-mode xref--xref-buffer-mode magit-mode
+              eshell-mode shell-mode term-mode vterm-mode))
+     (reusable-frames . nil)
+     (inhibit-switch-frame . t)
+     (window-parameters . ((no-delete-other-windows . t))))
+    ("\\*\\(?:Warnings\\|Compile-Log\\|compilation\\)\\*"
+     (display-buffer-reuse-window display-buffer-in-side-window)
+     (side . bottom)
+     (slot . 0)
+     (window-height . 0.28)
+     (reusable-frames . nil)
+     (inhibit-switch-frame . t)
+     (window-parameters . ((no-delete-other-windows . t)))))
+  "Exact former project rules migrated into explicit ownership once.")
+
+(defun sk/window-legacy-display-buffer-rule-p (rule)
+  "Return non-nil when RULE belongs to the pre-ownership project policy."
+  (member rule sk/window-legacy-display-buffer-rules))
+
+(defun sk/window-install-display-buffer-rules (rules)
+  "Install project-owned RULES while preserving foreign display rules."
+  (let ((foreign-rules
+         (seq-remove
+          (lambda (rule)
+            (memq rule sk/window-owned-display-buffer-rules))
+          display-buffer-alist)))
+    (unless sk/window-display-policy-migrated
+      (setq foreign-rules
+            (seq-remove #'sk/window-legacy-display-buffer-rule-p
+                        foreign-rules)
+            sk/window-display-policy-migrated t))
+    (setq display-buffer-alist (append rules foreign-rules)))
+  (setq sk/window-owned-display-buffer-rules rules))
+
+(setq sk/window-display-buffer-rules
+      `(((derived-mode . treemacs-mode)
          (display-buffer-reuse-window display-buffer-in-side-window)
          (side . left)
          (slot . 0)
@@ -556,9 +685,9 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
          (inhibit-switch-frame . t)
          (window-parameters . ((no-delete-other-windows . t))))
         ((or "\\*Ibuffer\\*"
+             ,(regexp-quote sk/window-xref-buffer-name)
              (derived-mode . ibuffer-mode)
              (derived-mode . dired-mode)
-             (derived-mode . xref--xref-buffer-mode)
              (derived-mode . magit-mode)
              (derived-mode . eshell-mode)
              (derived-mode . shell-mode)
@@ -570,7 +699,7 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
          (side . right)
          (slot . 0)
          (window-width . 0.42)
-         (mode . (ibuffer-mode dired-mode xref--xref-buffer-mode magit-mode
+         (mode . (ibuffer-mode dired-mode magit-mode
                   eshell-mode shell-mode term-mode vterm-mode))
          (reusable-frames . nil)
          (inhibit-switch-frame . t)
@@ -583,6 +712,8 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
          (reusable-frames . nil)
          (inhibit-switch-frame . t)
          (window-parameters . ((no-delete-other-windows . t))))))
+
+(sk/window-install-display-buffer-rules sk/window-display-buffer-rules)
 
 ;; Compatibility names kept while callers move to the policy API.
 (defalias 'sk/display-buffer-right #'sk/window-display-right)
