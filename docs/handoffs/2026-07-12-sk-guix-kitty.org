@@ -1,0 +1,230 @@
+#+title: GuixPC sk-guix Kitty Handoff
+#+date: 2026-07-12
+
+* Scope
+
+This note records the current GuixPC channel/package work so a new thread can
+continue without rediscovering context.
+
+The active change is narrow:
+
+- create and publish a personal Guix channel, =sk-guix=;
+- use that channel for =kitty-latest= only;
+- keep Fish on upstream Guix;
+- do not put Brave or any other browser in =sk-guix= unless explicitly chosen
+  later.
+
+* Hosts and repositories
+
+#+begin_src text
+GuixPC host:          192.168.1.221
+User:                 skydive420dz
+
+Channel repo:         ~/Projects/sk-guix
+Channel remote:       git@github.com:skydive420dz/sk-guix.git
+Relevant channel commits:
+  20c41a2 docs: mark kitty latest as promoted
+  b006225 Add kitty latest evaluation
+
+System config repo:   ~/Projects/guix-dotfiles
+System remote:        git@github.com:skydive420dz/guix-dotfiles.git
+Relevant system commits:
+  latest local commit: docs: add sk-guix kitty handoff
+  72ea8d1 docs: clarify sk-guix package ownership
+  4c98a8c guixpc: use kitty from sk-guix channel
+#+end_src
+
+At the time this note was written, =guix-dotfiles= was ahead of =origin/main=
+by local commits. Push status should be checked before assuming GitHub has the
+latest handoff state.
+
+* Channel state
+
+=guix-dotfiles/guix/channels.scm= now includes:
+
+#+begin_src scheme
+(channel
+ (name 'sk-guix)
+ (url "https://github.com/skydive420dz/sk-guix.git")
+ (branch "main"))
+#+end_src
+
+The URL is HTTPS because =guix pull= failed with the SSH URL in this context:
+
+#+begin_src text
+guix pull: error: Git error: remote rejected authentication: Failed getting response
+#+end_src
+
+The current pulled Guix channels on GuixPC are:
+
+#+begin_src text
+guix     2232e2cf53cb46a7afc397a622efc4b1478f1ff7
+nonguix  3b66965566fe8c96edb5a41fd39a9e5a90ad9b61
+sk-guix  b006225faf6835f858128690e35a60475f620639
+#+end_src
+
+Important: =sk-guix= currently has no channel introduction/signing setup. Guix
+can pull it, but it is not authenticated like Guix/Nonguix. Treat channel
+signing as a later hardening task, not as part of the current Kitty activation.
+
+* Package state
+
+=sk-guix= currently contains:
+
+- =kitty-latest=, viable and promoted to GuixPC;
+- =fish-latest=, intentionally not promoted.
+
+=kitty-latest=:
+
+#+begin_src text
+Version:       0.47.4
+Upstream tag:  v0.47.4
+Source hash:   1m8sn8hs63qw8n3hvn07pqmnd4grqfr59pxgwa4jq7ivd1nrcfsh
+Module:        (sk packages terminals)
+File:          sk/packages/terminals.scm
+#+end_src
+
+The package inherits Guix upstream =kitty= and adds only the deltas needed for
+0.47.4:
+
+- updated source tag and hash;
+- new Go native inputs:
+  - =go-github-com-emmansun-base64=;
+  - =go-github-com-sgtdi-fswatcher=;
+- narrow test skips for build-container assumptions:
+  - =kitty_tests/dnd_kitten.py= imports a graphics test module already disabled
+    by the Guix Kitty package;
+  - =tools/utils/machine_id/api_test.go= assumes =/etc/machine-id= exists.
+
+=fish-latest=:
+
+- stays on mainstream Guix for now;
+- recipe evaluation exists in =sk-guix= but it is not wired into GuixPC;
+- build blocker noted in =sk-guix/README.org=: newer Fish needs additional Rust
+  crate/vendor work, including unresolved =unic-langid= at the time of testing.
+
+* System wiring
+
+=guix-dotfiles/guix/systems/guixpc.scm= now imports:
+
+#+begin_src scheme
+(sk packages terminals)
+#+end_src
+
+The package list now installs =kitty-latest= directly before the regular
+=specification->package= list:
+
+#+begin_src scheme
+(packages
+ (append
+  ;; Keep this order stable: Guix profile collisions are resolved by order.
+  (list kitty-latest)
+  (map specification->package
+       '(...))))
+#+end_src
+
+The old mainstream =kitty= string was removed from the package list.
+
+* Verification already completed
+
+Channel pull completed:
+
+#+begin_src sh
+guix pull -C ~/Projects/guix-dotfiles/guix/channels.scm
+#+end_src
+
+System build completed:
+
+#+begin_src sh
+~/.config/guix/current/bin/guix system build ~/Projects/guix-dotfiles/guix/systems/guixpc.scm
+#+end_src
+
+Output path:
+
+#+begin_src text
+/gnu/store/r7xmppmnhszhl1smpxbybkvimsxb9cxl-system
+#+end_src
+
+Package-level runtime check completed:
+
+#+begin_src sh
+~/.config/guix/current/bin/guix shell kitty-latest -- kitty --version
+#+end_src
+
+Observed output:
+
+#+begin_src text
+kitty 0.47.4 created by Kovid Goyal
+#+end_src
+
+* Not completed yet
+
+The system has been build-verified but not activated from the assistant side.
+Remote activation was not attempted because sudo requires the user's password.
+
+To activate on GuixPC:
+
+#+begin_src sh
+gsr
+#+end_src
+
+Then verify in a normal GuixPC shell/session:
+
+#+begin_src sh
+command -v kitty
+kitty --version
+#+end_src
+
+Expected:
+
+#+begin_src text
+kitty 0.47.4 created by Kovid Goyal
+#+end_src
+
+* Logical next steps
+
+1. Push both repos if not already pushed:
+
+   #+begin_src sh
+   cd ~/Projects/sk-guix && git status -sb && git push
+   cd ~/Projects/guix-dotfiles && git status -sb && git push
+   #+end_src
+
+2. On GuixPC, activate the build:
+
+   #+begin_src sh
+   gsr
+   #+end_src
+
+3. Test Kitty from the real EXWM session:
+
+   - launch with =s-RET=;
+   - check =kitty --version=;
+   - verify font, opacity/compositor behavior, copy/paste, and normal terminal
+     launch behavior.
+
+4. If Kitty works, checkpoint with a note that =kitty-latest= is accepted.
+
+5. If Kitty fails, do not unwind the channel. First collect:
+
+   #+begin_src sh
+   kitty --version
+   kitty --debug-config
+   echo $PATH
+   guix describe
+   #+end_src
+
+6. Later hardening options:
+
+   - add a proper channel introduction/signing setup for =sk-guix=;
+   - pin channel commits if we want =guix pull= to stop advancing Guix/Nonguix
+     unexpectedly;
+   - decide whether =fish-latest= is worth solving;
+   - do not add Brave to =sk-guix= unless explicitly deciding to maintain a
+     browser package.
+
+* Current policy
+
+=sk-guix= is not a dumping ground for everything newer than Guix. It is only for
+packages we intentionally decide to maintain. As of this note, that means
+=kitty-latest= only.
