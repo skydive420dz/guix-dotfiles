@@ -26,6 +26,12 @@ elif [ ! -e "$previous_log" ] && [ -f "$legacy_log" ]; then
     fi
 fi
 
+if [ -f "$previous_log" ] && ! chmod 600 "$previous_log"; then
+    printf 'EXWM: cannot make previous log private: %s\n' \
+        "$previous_log" >&2
+    exit 1
+fi
+
 umask 077
 started_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 if ! printf 'EXWM start: %s\n' "$started_at" >"$current_log"; then

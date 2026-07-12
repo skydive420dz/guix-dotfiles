@@ -63,6 +63,10 @@ previous_log=$state_home/sk-exwm/startx-previous.log
 grep -q 'fake startx attempt=1' "$current_log"
 grep -q 'status=42' "$current_log"
 grep -q 'legacy startx evidence' "$previous_log"
+if ! find "$previous_log" -prune -perm 600 | grep -q .; then
+    printf '%s\n' 'migrated previous log is not mode 0600' >&2
+    exit 1
+fi
 
 run_expected_failure 43 2
 grep -q 'fake startx attempt=2' "$current_log"
