@@ -172,16 +172,16 @@ validation, and reproducibility findings are closed.
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
 | O-01 | P0  | CLOSED   | Elogind 255.24 removes command and PTY SSH sessions immediately; no closing session remained through 30 seconds. | 7 |
-| O-02 | P1  | CLOSED   | System generation 81 is both current and booted; fresh Home generation 30 services are running. | 7 |
-| O-03 | P1  | CLOSED   | D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse are fresh and no longer report replacement pending. | 7, 10 |
+| O-02 | P1  | CLOSED   | System generation 82 is both current and booted; fresh Home generation 32 services are running. | 7, 10 |
+| O-03 | P1  | CLOSED   | D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse are fresh in Home generation 32 with no replacement pending. | 7, 10 |
 | O-04 | P1  | CLOSED   | Fresh Emacs 30.2 and the live Org, Geiser, Geiser-Guile, and Projectile paths match the current profile. | 7, 8 |
-| O-05 | P1  | VERIFIED | Guix Home owns a user D-Bus while =dbus-launch= creates a second bus for EXWM. | 10 |
-| O-06 | P2  | VERIFIED | RTKit is absent; audio services fall back from real-time scheduling. | 10 |
+| O-05 | P1  | CLOSED   | EXWM, launched applications, PipeWire, WirePlumber, and PipeWire-Pulse share the one canonical Guix Home D-Bus; no =dbus-launch= remains. | 10 |
+| O-06 | P2  | CLOSED   | RTKit is active through system D-Bus/Polkit; PipeWire obtains an RR data-loop with a bounded 200000-microsecond realtime limit. | 10 |
 | O-07 | P2  | CLOSED   | The stale Kitty process is gone and the current launcher is Kitty 0.47.4. | 7 |
 | O-08 | P2  | CLOSED   | Fish, Bash, Eshell, and bare SSH automation route =gsr=/=ghr= through one current-Guix wrapper and explicit setuid sudo path. | 9 |
-| O-09 | P2  | VERIFIED | There are 79 System and 30 Home generations from roughly nine days, including duplicates. | 12 |
-| O-10 | P3  | VERIFIED | X screen blanking and DPMS remain enabled at 600 seconds. | 10 or 19 |
-| O-11 | P3  | VERIFIED | Elogind classifies the active EXWM login as an idle tty session. | 10 |
+| O-09 | P2  | VERIFIED | There are 81 retained System and 32 Home generations from roughly nine days, including duplicates. | 12 |
+| O-10 | P3  | CLOSED   | X screen blanking and DPMS are explicitly declared and active at 600 seconds; elogind does not suspend the workstation. | 10 |
+| O-11 | P3  | POLICY   | Elogind intentionally retains the startx/PAM login as active local =tty1= with =Type=tty=; fresh-session =IdleHint=no= and EXWM child X11 metadata are correct. | 10 |
 | O-12 | P3  | VERIFIED | Historical Blueman logs show dconf persistence failure; current relevance is unproven. | 19 |
 
 ** Configuration correctness and validation findings
@@ -671,10 +671,11 @@ Residual risks: JSONC has no semantic validator until a JSONC-aware checker is p
 Rollback path: revert 7be5fe8 for source behavior; Home generation 30 remains the generated Fish/service fallback, but live repo-linked application contents require the source revert rather than Home rollback alone
 #+end_src
 
-** TODO Slice 10: One session-bus and converged desktop services
+** DONE Slice 10: One session-bus and converged desktop services
 :PROPERTIES:
 :audit_priority: P1
 :findings: O-03 O-05 O-06 O-10 O-11
+:completed: 2026-07-12
 :END:
 
 Scope:
@@ -750,13 +751,69 @@ PipeWire data-loop with bounded realtime timeout, an actual ALSA/BlueZ default
 sink, finite targeted playback, correct volume bindings, the declared X power
 policy, and the accepted active local tty1 metadata.  Then power/connect the
 paired Bose Mini II and rerun with =--require-bluetooth=.  Manually confirm
-audible HDMI/Bluetooth output, both XF86 volume keys, and one launched EXWM app.
+audible Bluetooth output, both XF86 volume keys, and one launched EXWM app.
+Confirm audible HDMI only when HDMI audio is part of the workstation's actual
+use.
 
 If the candidate cannot boot, select System generation 81 in GRUB.  If the
 system boots but the strict Home-bus assertion prevents EXWM, SSH remains the
 recovery path: revert =1321f76= and reboot to restore the previous Xinit launch.
 The strict failure can still trigger the known tty1 autologin/retry and
 overwritten-log behavior; that remains C-06 in Slice 11.
+
+*** Acceptance record
+
+The reboot converged on System generation 82 and Home generation 32.  The
+current and booted system both resolve to
+=/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system=.  The source checkout is
+clean, no Home service is replacement-pending, and no closing SSH session
+remained after the acceptance probes.
+
+=scripts/desktop-session-check= and its strict =--require-bluetooth= mode both
+pass.  There is exactly one general user bus at
+=unix:path=/run/user/1000/bus=, with no =dbus-launch= process or private EXWM
+bus.  EXWM, PipeWire, WirePlumber, PipeWire-Pulse, and launched applications
+inherit that address.  The separate AT-SPI accessibility bus remains
+purpose-specific and is not a duplicate general session bus.
+
+RTKit reports maximum realtime priority 20 and =RTTimeUSecMax= 200000.  The
+daemon runs as the dedicated =rtkit= account, a fresh audio client reports no
+RTKit error, and PipeWire has an exercised RR data-loop with the matching
+bounded realtime limit.  X reports the declared 600-second blanking and DPMS
+values.  Login1 reports the fresh local tty1 session active with =IdleHint=no=;
+its =Type=tty= classification remains the explicitly accepted startx/PAM
+architecture rather than an audio or application blocker.
+
+The strict audio gate selected the connected, trusted Bose Mini II SoundLink
+BlueZ sink and completed a finite low-volume stream to a physical output.  The
+user then confirmed audible Bluetooth playback and both physical XF86 volume
+keys.  Chromium streams were visibly routed to the Bose sink.  A real Kitty
+desktop-entry launch through EXWM's direct fallback inherited =DISPLAY=:0=,
+=XDG_SESSION_TYPE=x11=, =XDG_SESSION_DESKTOP=exwm=, and the canonical bus.  The
+HDMI sink remains enumerated and passed the automated targeted-stream probe,
+but audible HDMI is deliberately not an acceptance requirement because this
+workstation has no HDMI audio device in use.
+
+The Emacs live gate and all 15 isolated ERT checks pass, and the repository
+remained unchanged by validation.
+
+#+begin_src text
+Implementation commit: 1321f76099757fe52af331c74c0a13d7995fc7a5
+System generation: 82; current and booted at /gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system
+Home generation: 32
+Session gate: desktop-session-check PASS; --require-bluetooth PASS
+Physical gate: audible Bose output PASS; volume-down PASS; volume-up PASS
+Application gate: EXWM Kitty desktop-entry fallback PASS on the canonical bus
+HDMI policy: endpoint and automated stream present; audible test not required because unused
+Editor gate: live PASS; isolated batch 15/15 ERT PASS; repository unchanged
+SSH gate: no closing session remained
+#+end_src
+
+Residual risk moves to Slice 11: if the strict Home-bus assertion fails during
+startup, tty1 autologin can retry and overwrite the previous startup log.  The
+accepted runtime is otherwise converged.  Roll back to System generation 81
+from GRUB if the system service layer regresses; revert =1321f76= and reboot if
+the Xinit ownership policy regresses.
 
 ** TODO Slice 11: EXWM startup, reload, and client-placement reliability
 :PROPERTIES:

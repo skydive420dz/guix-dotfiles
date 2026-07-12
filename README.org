@@ -57,10 +57,10 @@ next active slice.
   Bash, and Eshell share one revision-reporting Guix wrapper; declaration and
   Home links fail safely; JSONC, formatter filenames, lockfiles, and project
   discovery now have explicit tested policies.
-- [ ] Activate and accept the built Slice 10 candidate.  Source commit
-  =1321f76= removes EXWM's private D-Bus, provides RTKit, declares the existing
-  ten-minute display-only power policy, and adds =scripts/desktop-session-check=.
-- [ ] After Slice 10 acceptance, continue Slices 11 through 19 in audit order.
+- [X] Activate and accept Slice 10.  System generation 82 and Home generation
+  32 now use one canonical Home D-Bus, active RTKit, the declared ten-minute
+  display-only power policy, and the passing desktop-session checker.
+- [ ] Continue Slices 11 through 19 in audit order.
   Do not expand dialect breadth until the P0/P1 runtime, validation, and
   reproducibility prerequisites close.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
@@ -871,8 +871,7 @@ xset q | grep "auto repeat delay"
 
 * Desktop session policy
 
-The declared Slice 10 candidate gives each long-lived desktop service one
-owner:
+The accepted Slice 10 baseline gives each long-lived desktop service one owner:
 
 #+begin_src text
 session D-Bus             Guix Home at unix:path=/run/user/1000/bus
@@ -911,9 +910,12 @@ connected:
 scripts/desktop-session-check --require-bluetooth
 #+end_src
 
-An acceptance run still includes three physical checks that automation cannot
-honestly prove: audible HDMI/Bluetooth playback, both XF86 volume keys, and one
-real EXWM application launch on the canonical bus.
+The accepted run used the strict Bluetooth gate with the Bose Mini II as the
+default sink, then manually confirmed audible Bluetooth output and both XF86
+volume keys.  A real Kitty launch through EXWM's desktop-entry fallback inherited
+the canonical bus.  The HDMI endpoint and targeted automated stream remain
+healthy, but audible HDMI output is intentionally outside this machine's
+acceptance policy because no HDMI audio device is used.
 
 * Apply
 
