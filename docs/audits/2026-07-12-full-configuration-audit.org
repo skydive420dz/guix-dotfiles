@@ -35,6 +35,7 @@ RISK      plausible failure mode inferred from the current design
 POLICY    deliberate tradeoff that needs an explicit keep/change decision
 LIMIT     audit boundary; do not infer health beyond the available evidence
 CLOSED    accepted remediation passed the owning slice's live gates
+PARTIAL   accepted portion passed, with a named residual owned by a later slice
 #+end_src
 
 Priorities mean:
@@ -188,9 +189,9 @@ validation, and reproducibility findings are closed.
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
 | C-01 | P1  | VERIFIED | Eshell =ghr= targets missing =~/.config/guix/home/guixpc.scm= instead of =~/.config/guix/home.scm=. | 9 |
-| C-02 | P1  | VERIFIED | =scripts/emacs-check= mutates live EXWM, suppresses live errors, and can exit zero from batch success. | 8 |
-| C-03 | P1  | VERIFIED | The checker is not XDG-isolated and can touch real recentf/Org/server state. | 8 |
-| C-04 | P1  | STATIC   | Mode probes use =delay-mode-hooks= and therefore do not test promised backend/completion/diagnostic behavior. | 8 |
+| C-02 | P1  | CLOSED   | The live phase is observational and live/batch/repository failures contribute independently to the final status. | 8 |
+| C-03 | P1  | CLOSED   | Batch runs from copied sources under =env -i= with isolated HOME/TMP/XDG state and a write boundary. | 8 |
+| C-04 | P1  | CLOSED   | Fixture buffers run real mode hooks and assert LSP registration, Flycheck chains, Company, Geiser, Eldoc, diagnostics, and format routing. | 8 |
 | C-05 | P2  | RISK     | Home activation keeps conflicting regular files and succeeds, allowing partial deployment. | 9 |
 | C-06 | P2  | RISK     | Tty1 autologin can relaunch a failing X session while =sk-exwm-startx.log= is overwritten. | 11 |
 | C-07 | P2  | STATIC   | =.jsonc= uses jq for checking/formatting even though jq rejects comments. | 9 |
@@ -231,16 +232,16 @@ reported as a confirmed bug without a focused test.
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
 | L-01 | P1  | VERIFIED | Supported families are Emacs Lisp, Guile Scheme, and SBCL Common Lisp only. | 14-18 |
-| L-02 | P1  | STATIC   | Current probes do not exercise real Geiser/SLY evaluation, docs, completion, xref, tests, or projects. | 8, 15 |
+| L-02 | P1  | PARTIAL  | Cold-buffer Geiser/SLY ownership and completion setup are checked; connected evaluation, docs, xref, tests, and projects remain Slice 15. | 8, 15 |
 | L-03 | P2  | STATIC   | No structural editing layer is configured for Lisp-family modes. | 14 |
 | L-04 | P2  | STATIC   | Backend errors are normalized by regex-matching third-party English messages. | 14 |
 | L-05 | P2  | RISK     | Scheme fallback does not guard missing =run-geiser=; docs at whitespace can operate on nil. | 14 |
 | L-06 | P2  | VERIFIED | Geiser activation is redundant; SLY editing changes indentation before a connection, while ownership docs imply a narrower role. | 14 |
 | L-07 | P2  | VERIFIED | Guile readline/colorized modules and configured Eshell syntax highlighting are unavailable. | 14 |
-| L-08 | P2  | STATIC   | There is no ERT/checkdoc/package-lint surface, Guile SRFI-64 workflow, or ASDF test fixture/command. | 15 |
+| L-08 | P2  | PARTIAL  | ERT, warning-fatal byte compilation, and Checkdoc foundations now exist; package-lint, Guile SRFI-64, and ASDF test workflows remain Slice 15. | 15 |
 | L-09 | P2  | STATIC   | Common Lisp has no declared Qlot/Quicklisp/Roswell/source-registry policy. | 15 |
 | L-10 | P2  | STATIC   | Projectile searches the dotfiles repo itself rather than the =~/Projects= collection. | 9, 15 |
-| L-11 | P2  | VERIFIED | An undeclared =~/.emacs.d/elpa/breadcrumb-1.0.1= contaminates package state, though it was not loaded. | 8 |
+| L-11 | P2  | CLOSED   | The unused ELPA tree is quarantined outside =package-user-dir= and no user ELPA path or Breadcrumb registration remains live. | 8 |
 | L-12 | P3  | VERIFIED | Yasnippet is enabled but no snippets are available. | 14 |
 | L-13 | P3  | POLICY   | Org offers Common Lisp block insertion while Common Lisp Babel execution remains deliberately disabled. | 15 |
 
@@ -522,10 +523,11 @@ Residual risks: upstream elogind 255.24 declares a newer PAM baseline than Guix'
 Rollback path: keep generation 80 as the immediate 255.17 rollback, generation 75 as the last pre-slice working boot, and Home generation 29; select an exact generation rather than generic roll-back
 #+end_src
 
-** TODO Slice 8: Non-mutating validation harness
+** DONE Slice 8: Non-mutating validation harness
 :PROPERTIES:
 :audit_priority: P1
 :findings: C-02 C-03 C-04 L-02 L-11
+:completed: 2026-07-12
 :END:
 
 Scope:
@@ -550,6 +552,47 @@ Acceptance gates:
 - a deliberately broken live query and a deliberately broken batch assertion
   both make the suite nonzero;
 - the package path contains only documented ownership sources.
+
+*** Acceptance record
+
+The checker now coordinates three independent results: a fixed observational
+expression against the existing EXWM server, a copied and isolated batch init,
+and a before/after repository snapshot.  Batch starts with =env -i=, assigns
+HOME, TMPDIR, and all XDG locations below one temporary root, and rejects file
+writes outside that root.  Server startup, persistent history modes, personal
+note creation, display time, and global auto-revert are disabled when
+=noninteractive=.
+
+Real fixture hooks run for C, Python, Lua, shell, JSON, Elisp, Scheme, Common
+Lisp, and Org.  Deferred LSP startup alone is replaced with an observer, so no
+language server starts.  The checks cover LSP commands and diagnostics/UI
+hooks, Company policy, Flycheck selection/chaining, Geiser/Guile ownership,
+SLY cold-buffer ownership, Eldoc calls, diagnostics dispatch, exact formatter
+routing, keys, package paths, and unsupported-mode errors.  A copied Elisp
+fixture supplies the initial ERT, warning-fatal byte-compile, and Checkdoc
+surface.
+
+The audit's unmanaged Breadcrumb package was confirmed activated in package
+state but not loaded as a feature.  The complete user ELPA directory was moved
+reversibly to
+=~/.local/state/emacs/elpa-quarantine-20260712-slice8=, and its stale live
+load-path/package registrations were removed.  Keep the quarantine until the
+next normal EXWM restart and another full pass, then delete it.  Rollback is to
+move it back to =~/.emacs.d/elpa= before restarting Emacs.
+
+#+begin_src text
+Commit: 4d4925d5fae5f5f46fb00d1c18e9a5f8dffba541
+System generation: 81; booted/current remained 6f67kj6ix8n8wf10b3ic78r73c7r26v7-system
+Home generation: 30; remained fg22z7rkd2aiwq3803ra2924f97fcgb4-home
+Channel revisions: guix a8391f2d7451c2463ba253ffa9872fa6f27485d7; nonguix 3b66965566fe8c96edb5a41fd39a9e5a90ad9b61; sk-guix b006225faf6835f858128690e35a60475f620639
+Source/evaluation checks: git diff --check, sh -n, ShellCheck, Elisp reader/check-parens, and live-expression single-form validation passed
+Isolated checks: 13/13 ERT tests passed; real formatters passed; warning-fatal copied-fixture byte compilation and Checkdoc passed; batch load paths were limited to the sandbox or /gnu/store
+Negative-control result: deliberate live error produced live=1 batch=0; deliberate ERT failure produced live=0 batch=1; deliberate warning produced live=0 batch=1; every overall result was nonzero
+Live evidence: EXWM Emacs 30.2 passed current-profile checks for Org 9.8.7, Geiser 0.33.1, Geiser-Guile 0.28.5, Projectile 3.1.0, LSP 10.0.0, and SLY 1.0.43-9.9c43bf6; Company, Flycheck, Yasnippet, hooks, keys, server, and positive load-path ownership passed; Breadcrumb was absent
+Persistence/restart evidence: two consecutive full runs returned zero; 756 cache/history/server/notes/quarantine fingerprint entries were content-identical; the live feature/hook/advice/server fingerprint was identical; repository state remained unchanged
+Residual risks: connected Geiser/SLY evaluation, docs, semantic completion, xref, project, and test workflows remain Slice 15; whole-tree Checkdoc/package-lint and dialect project fixtures also remain there; source changes intentionally were not reloaded into live EXWM and activate on the next normal session start
+Rollback path: revert 4d4925d for source behavior; move the quarantined ELPA directory back to ~/.emacs.d/elpa before an Emacs restart if Breadcrumb recovery is unexpectedly required
+#+end_src
 
 ** TODO Slice 9: Command, path, formatter, and activation correctness
 :PROPERTIES:

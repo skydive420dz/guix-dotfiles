@@ -50,8 +50,9 @@ next active slice.
 - [X] Decide Lua formatter policy: native indentation; no =stylua= for now.
 - [X] Execute Slice 7: elogind 255.24 fixed command and PTY SSH session cleanup;
   System generation 81, Home services, EXWM, and package runtime are converged.
-- [ ] Replace =scripts/emacs-check= with the isolated, non-mutating live/batch
-  split in Slice 8 before using it as an acceptance gate again.
+- [X] Replace =scripts/emacs-check= with the isolated, non-mutating live/batch
+  split from Slice 8.  Independent failures, warning capture, real mode hooks,
+  package ownership, ERT, byte compilation, and Checkdoc are now enforced.
 - [ ] Continue Slices 9 through 19 in audit order.  Do not expand dialect breadth
   until the P0/P1 runtime, validation, and reproducibility prerequisites close.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
@@ -271,6 +272,36 @@ cd ~/Projects/guix-dotfiles
 scripts/emacs-check
 #+end_src
 
+The checker has two independent phases:
+
+#+begin_src text
+live   one fixed read-only expression sent to the existing EXWM server
+batch  copied sources under env -i with isolated HOME, TMPDIR, and every XDG path
+#+end_src
+
+The live phase never loads configuration.  It checks the running executable,
+EXWM/server state, package generations, hooks, keys, and positive load-path
+ownership.  The batch phase prevents writes outside its temporary root, keeps
+server/history/notes startup disabled, captures warnings, runs real mode hooks
+with only deferred LSP process startup stubbed, and executes ERT, formatter,
+byte-compile, and Checkdoc gates.  Repository status is compared before and
+after both phases.
+
+These maintenance-only negative controls must each exit nonzero while reporting
+the other phase independently:
+
+#+begin_src sh
+SK_EMACS_CHECK_BREAK_LIVE=1 scripts/emacs-check
+SK_EMACS_CHECK_BREAK_BATCH=1 scripts/emacs-check
+SK_EMACS_CHECK_BREAK_WARNING=1 scripts/emacs-check
+#+end_src
+
+The unmanaged Breadcrumb ELPA tree found by the audit was not used by this
+configuration.  It is quarantined outside =package-user-dir= at
+=~/.local/state/emacs/elpa-quarantine-20260712-slice8=.  Keep it until a normal
+EXWM restart and another full check pass; then it is safe to delete.  To roll
+back before deletion, move it back to =~/.emacs.d/elpa= and restart Emacs.
+
 Do not use plain =emacs --batch= from SSH as the canonical check. Noninteractive
 SSH may start with a minimal =PATH= and no =EMACSLOADPATH=, which can produce
 false package warnings even when the live EXWM Emacs session can load the same
@@ -321,6 +352,15 @@ emacs/lisp/sk-core.el
 
 emacs/lisp/sk-keys.el
   Global entry keys and leader key root.
+
+tests/emacs/live-check.el
+  The single observational expression allowed to query the live EXWM server.
+
+tests/emacs/batch-bootstrap.el
+  Batch warning capture and the sandbox write boundary.
+
+tests/emacs/batch-check.el
+  ERT mode/backend/diagnostics/formatter/state and Elisp foundation checks.
 #+end_src
 
 Emacs packages are provided by Guix in =guix/systems/guixpc.scm=. Emacs Lisp
