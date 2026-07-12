@@ -12,6 +12,7 @@ exec shellcheck \
     "$repo/fixtures/shell/sample.sh" \
     "$repo/ranger/scope.sh" \
     "$repo/scripts/editor-tools-check" \
+    "$repo/scripts/desktop-session-check" \
     "$repo/scripts/emacs-check" \
     "$repo/scripts/guix-entrypoints" \
     "$repo/scripts/guix-reconfigure" \

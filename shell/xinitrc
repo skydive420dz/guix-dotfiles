@@ -15,6 +15,52 @@ export XDG_SESSION_DESKTOP=exwm
 export XDG_SESSION_TYPE=x11
 export DESKTOP_SESSION=exwm
 
+if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
+    printf '%s\n' 'EXWM: Guix Home did not set XDG_RUNTIME_DIR' >&2
+    exit 1
+fi
+
+session_bus_socket="$XDG_RUNTIME_DIR/bus"
+expected_session_bus="unix:path=$session_bus_socket"
+if [ "${DBUS_SESSION_BUS_ADDRESS:-}" != "$expected_session_bus" ]; then
+    printf 'EXWM: expected Home D-Bus at %s, got %s\n' \
+        "$expected_session_bus" "${DBUS_SESSION_BUS_ADDRESS:-<unset>}" >&2
+    exit 1
+fi
+
+tries=0
+while [ ! -S "$session_bus_socket" ] && [ "$tries" -lt 50 ]; do
+    sleep 0.1
+    tries=$((tries + 1))
+done
+if [ ! -S "$session_bus_socket" ]; then
+    printf 'EXWM: Home D-Bus socket is unavailable: %s\n' \
+        "$session_bus_socket" >&2
+    exit 1
+fi
+
+if ! command -v dbus-update-activation-environment >/dev/null 2>&1; then
+    printf '%s\n' 'EXWM: dbus-update-activation-environment is unavailable' >&2
+    exit 1
+fi
+
+dbus-update-activation-environment \
+    DBUS_SESSION_BUS_ADDRESS \
+    DISPLAY XAUTHORITY \
+    XDG_RUNTIME_DIR XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE \
+    DESKTOP_SESSION
+
+# This desktop never auto-suspends, but X blanks and powers down the monitor
+# after ten minutes of X input inactivity.  This is display protection, not a
+# screen lock; tty1 autologin remains a separate trust-policy decision.
+if command -v xset >/dev/null 2>&1; then
+    xset s blank || printf '%s\n' 'EXWM: failed to enable X blanking' >&2
+    xset s 600 600 || printf '%s\n' 'EXWM: failed to set X blanking timeout' >&2
+    xset +dpms || printf '%s\n' 'EXWM: failed to enable DPMS' >&2
+    xset dpms 600 600 600 || \
+        printf '%s\n' 'EXWM: failed to set DPMS timeouts' >&2
+fi
+
 if command -v xrandr >/dev/null 2>&1; then
     if ! xrandr --query | grep -q '^   3440x1440.*100\.00\*'; then
         xrandr --output HDMI-A-0 --mode 3440x1440 --rate 100 || true
@@ -35,4 +81,4 @@ if command -v xhost >/dev/null 2>&1; then
     xhost +SI:localuser:"$USER" >/dev/null 2>&1 || true
 fi
 
-exec dbus-launch --exit-with-session emacs -fs --eval '(load-file "~/.exwm")'
+exec emacs -fs --eval '(load-file "~/.exwm")'

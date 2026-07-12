@@ -8,7 +8,7 @@
              (guix packages)
              (nonguix transformations)
              (sk packages terminals))
-(use-service-modules cups desktop networking ssh sound xorg)
+(use-service-modules cups dbus desktop networking ssh sound xorg)
 
 ;; Elogind 255.17 can leave completed SSH sessions leaderless and stuck in
 ;; "closing".  255.24 contains the upstream session-GC fixes for FIFO EOF,
@@ -161,6 +161,9 @@ EndSection")
        (list
         (service openssh-service-type)
         (service bluetooth-service-type)
+        ;; Give PipeWire bounded realtime scheduling through the standard
+        ;; system D-Bus/Polkit service instead of broad CAP_SYS_NICE grants.
+        (service rtkit-service-type)
         (service xorg-server-service-type
                  (xorg-configuration
                   (keyboard-layout keyboard-layout)

@@ -1,0 +1,325 @@
+#!/bin/sh
+set -u
+
+usage() {
+    printf 'usage: %s [--require-bluetooth]\n' "$0" >&2
+    exit 2
+}
+
+require_bluetooth=0
+case ${1:-} in
+    '') ;;
+    --require-bluetooth) require_bluetooth=1 ;;
+    *) usage ;;
+esac
+[ "$#" -le 1 ] || usage
+
+home=${HOME:?HOME must be set}
+PATH="$home/.guix-home/profile/bin:/run/current-system/profile/bin:/run/current-system/profile/sbin:${PATH:-}"
+export PATH
+
+for command in awk bluetoothctl busctl dbus-send emacsclient env getent grep head herd id loginctl \
+    pgrep ps pw-cat sed tr wc wpctl xset; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        printf 'desktop-session-check: missing command: %s\n' "$command" >&2
+        exit 2
+    fi
+done
+
+failures=0
+bluetooth_skipped=0
+
+pass() {
+    printf 'PASS: %s\n' "$1"
+}
+
+fail() {
+    printf 'FAIL: %s\n' "$1" >&2
+    failures=$((failures + 1))
+}
+
+positive_integer() {
+    case ${1:-} in
+        ''|*[!0-9]*|0) return 1 ;;
+        *) return 0 ;;
+    esac
+}
+
+process_environment_value() {
+    pid=$1
+    name=$2
+    tr '\0' '\n' <"/proc/$pid/environ" |
+        sed -n "s/^${name}=//p" |
+        sed -n '1p'
+}
+
+uid=$(id -u)
+runtime_dir=${XDG_RUNTIME_DIR:-/run/user/$uid}
+expected_bus="unix:path=$runtime_dir/bus"
+emacs_pid=$(pgrep -u "$uid" -f 'emacs -fs --eval' | sed -n '1p')
+
+if [ -z "$emacs_pid" ] || [ ! -r "/proc/$emacs_pid/environ" ]; then
+    printf '%s\n' 'desktop-session-check: live EXWM Emacs was not found' >&2
+    exit 2
+fi
+
+emacs_bus=$(process_environment_value "$emacs_pid" DBUS_SESSION_BUS_ADDRESS)
+display=$(process_environment_value "$emacs_pid" DISPLAY)
+xauthority=$(process_environment_value "$emacs_pid" XAUTHORITY)
+session_type=$(process_environment_value "$emacs_pid" XDG_SESSION_TYPE)
+session_desktop=$(process_environment_value "$emacs_pid" XDG_SESSION_DESKTOP)
+session_id=$(process_environment_value "$emacs_pid" XDG_SESSION_ID)
+
+if [ "$emacs_bus" = "$expected_bus" ]; then
+    pass "EXWM uses the Guix Home session bus ($expected_bus)"
+else
+    fail "EXWM bus is ${emacs_bus:-unset}; expected $expected_bus"
+fi
+
+bus_counts=$(ps -u "$uid" -o comm=,args= | awk -v socket="$runtime_dir/bus" '
+    $1 == "dbus-daemon" && index($0, "--session") {
+        general += 1
+        if (index($0, "--address=unix:path=" socket)) canonical += 1
+    }
+    END { print general + 0, canonical + 0 }
+')
+general_bus_count=$(printf '%s\n' "$bus_counts" | awk '{ print $1 }')
+canonical_bus_count=$(printf '%s\n' "$bus_counts" | awk '{ print $2 }')
+if [ "$general_bus_count" -eq 1 ] && [ "$canonical_bus_count" -eq 1 ]; then
+    pass 'exactly one general user session bus is running'
+else
+    fail "general/canonical user bus counts are $general_bus_count/$canonical_bus_count; expected 1/1"
+fi
+
+dbus_launch_count=$(pgrep -u "$uid" -x dbus-launch 2>/dev/null | wc -l | tr -d ' ')
+if [ "$dbus_launch_count" -eq 0 ]; then
+    pass 'dbus-launch is absent'
+else
+    fail "dbus-launch process count is $dbus_launch_count"
+fi
+
+if env DBUS_SESSION_BUS_ADDRESS="$expected_bus" \
+    dbus-send --session --type=method_call --print-reply \
+    --dest=org.freedesktop.DBus /org/freedesktop/DBus \
+    org.freedesktop.DBus.ListNames >/dev/null 2>&1; then
+    pass 'canonical session bus responds to D-Bus calls'
+else
+    fail 'canonical session bus did not answer ListNames'
+fi
+
+emacs_identity=$(emacsclient --socket-name=server --alternate-editor=false \
+    --eval '(list (emacs-pid) (featurep (quote exwm)))' 2>&1)
+if [ "$emacs_identity" = "($emacs_pid t)" ]; then
+    pass 'the canonical Emacs server is the live EXWM process'
+else
+    fail "Emacs server identity is $emacs_identity; expected ($emacs_pid t)"
+fi
+
+for service in dbus pipewire wireplumber pipewire-pulseaudio; do
+    service_status=$(herd status "$service" 2>&1)
+    if printf '%s\n' "$service_status" | grep -q 'It is running'; then
+        pass "$service is running"
+    else
+        fail "$service is not running"
+    fi
+    if printf '%s\n' "$service_status" | grep -q 'Replacement pending'; then
+        fail "$service has a replacement pending"
+    else
+        pass "$service has no replacement pending"
+    fi
+done
+
+for process_name in pipewire wireplumber pipewire-pulse; do
+    process_pid=$(pgrep -u "$uid" -x "$process_name" | sed -n '1p')
+    process_bus=
+    if [ -n "$process_pid" ] && [ -r "/proc/$process_pid/environ" ]; then
+        process_bus=$(process_environment_value "$process_pid" DBUS_SESSION_BUS_ADDRESS)
+    fi
+    if [ "$process_bus" = "$expected_bus" ]; then
+        pass "$process_name uses the canonical session bus"
+    else
+        fail "$process_name bus is ${process_bus:-unset}; expected $expected_bus"
+    fi
+done
+
+if [ "$display" = :0 ] && [ "$session_type" = x11 ] && \
+   [ "$session_desktop" = exwm ]; then
+    pass 'EXWM exports the intended X11 desktop metadata'
+else
+    fail "EXWM metadata is DISPLAY=${display:-unset} TYPE=${session_type:-unset} DESKTOP=${session_desktop:-unset}"
+fi
+
+xset_status=$(env DISPLAY="$display" XAUTHORITY="$xauthority" xset q 2>&1)
+screen_policy=$(printf '%s\n' "$xset_status" |
+    awk '/timeout:/ { print $2 ":" $4; exit }')
+dpms_policy=$(printf '%s\n' "$xset_status" |
+    awk '/Standby:/ { print $2 ":" $4 ":" $6; exit }')
+if [ "$screen_policy" = 600:600 ]; then
+    pass 'X screen blanking is explicitly 600/600 seconds'
+else
+    fail "X screen blanking is $screen_policy; expected 600:600"
+fi
+if [ "$dpms_policy" = 600:600:600 ] && \
+   printf '%s\n' "$xset_status" | grep -q 'DPMS is Enabled'; then
+    pass 'X DPMS standby/suspend/off is enabled at 600 seconds'
+else
+    fail "X DPMS policy is $dpms_policy or disabled"
+fi
+
+rtkit_priority_property=$(busctl --system get-property \
+    org.freedesktop.RealtimeKit1 /org/freedesktop/RealtimeKit1 \
+    org.freedesktop.RealtimeKit1 MaxRealtimePriority 2>&1)
+rtkit_priority_type=$(printf '%s\n' "$rtkit_priority_property" | awk '{ print $1 }')
+rtkit_priority=$(printf '%s\n' "$rtkit_priority_property" | awk '{ print $2 }')
+rtkit_priority_fields=$(printf '%s\n' "$rtkit_priority_property" | awk '{ print NF }')
+if [ "$rtkit_priority_fields" -eq 2 ] && [ "$rtkit_priority_type" = i ] && \
+   positive_integer "$rtkit_priority"; then
+    pass "RTKit is active (maximum priority $rtkit_priority)"
+else
+    fail "RTKit MaxRealtimePriority query failed: $rtkit_priority_property"
+fi
+
+rtkit_timeout_property=$(busctl --system get-property \
+    org.freedesktop.RealtimeKit1 /org/freedesktop/RealtimeKit1 \
+    org.freedesktop.RealtimeKit1 RTTimeUSecMax 2>&1)
+rtkit_timeout_type=$(printf '%s\n' "$rtkit_timeout_property" | awk '{ print $1 }')
+rtkit_timeout_max=$(printf '%s\n' "$rtkit_timeout_property" | awk '{ print $2 }')
+rtkit_timeout_fields=$(printf '%s\n' "$rtkit_timeout_property" | awk '{ print NF }')
+if [ "$rtkit_timeout_fields" -eq 2 ] && \
+   { [ "$rtkit_timeout_type" = x ] || [ "$rtkit_timeout_type" = t ]; } && \
+   positive_integer "$rtkit_timeout_max"; then
+    pass "RTKit realtime timeout ceiling is $rtkit_timeout_max us"
+else
+    fail "RTKit RTTimeUSecMax query failed: $rtkit_timeout_property"
+    rtkit_timeout_max=0
+fi
+
+if getent passwd rtkit >/dev/null 2>&1 && \
+   pgrep -u rtkit -x rtkit-daemon >/dev/null 2>&1; then
+    pass 'RTKit daemon runs under its dedicated rtkit account'
+else
+    fail 'RTKit account or daemon ownership is missing'
+fi
+
+audio_status=$(env XDG_RUNTIME_DIR="$runtime_dir" \
+    DBUS_SESSION_BUS_ADDRESS="$expected_bus" wpctl status 2>&1)
+if printf '%s\n' "$audio_status" | grep -q "PipeWire 'pipewire-0'" && \
+   printf '%s\n' "$audio_status" | grep -q 'Sinks:'; then
+    pass 'PipeWire graph and sinks are visible'
+else
+    fail 'PipeWire graph or sinks are unavailable'
+fi
+if printf '%s\n' "$audio_status" | grep -q 'RTKit error'; then
+    fail 'a fresh PipeWire client still reports an RTKit error'
+else
+    pass 'fresh PipeWire client reports no RTKit error'
+fi
+
+sink_info=$(env XDG_RUNTIME_DIR="$runtime_dir" \
+    DBUS_SESSION_BUS_ADDRESS="$expected_bus" \
+    wpctl inspect '@DEFAULT_AUDIO_SINK@' 2>&1)
+sink_target=$(printf '%s\n' "$sink_info" |
+    sed -n 's/.*node\.name = "\([^"]*\)".*/\1/p' | sed -n '1p')
+sink_description=$(printf '%s\n' "$sink_info" |
+    sed -n 's/.*node\.description = "\([^"]*\)".*/\1/p' | sed -n '1p')
+physical_sink=0
+case $sink_target in
+    alsa_output.*|bluez_output.*) physical_sink=1 ;;
+esac
+if [ "$physical_sink" -eq 1 ]; then
+    pass "default output is physical: $sink_description ($sink_target)"
+else
+    fail "default output is not physical: ${sink_description:-unknown} (${sink_target:-unknown})"
+fi
+
+if env XDG_RUNTIME_DIR="$runtime_dir" DBUS_SESSION_BUS_ADDRESS="$expected_bus" \
+    wpctl get-volume '@DEFAULT_AUDIO_SINK@' >/dev/null 2>&1; then
+    pass 'default audio sink and volume control are available'
+else
+    fail 'default audio sink volume query failed'
+fi
+
+volume_bindings=$(emacsclient --socket-name=server --alternate-editor=false --eval '
+  (list
+   (cdr (assoc (kbd "<XF86AudioRaiseVolume>") exwm-input-global-keys))
+   (cdr (assoc (kbd "<XF86AudioLowerVolume>") exwm-input-global-keys)))' 2>&1)
+if printf '%s\n' "$volume_bindings" | grep -q 'sk/volume-raise' && \
+   printf '%s\n' "$volume_bindings" | grep -q 'sk/volume-lower'; then
+    pass 'EXWM volume keys retain their wpctl command bindings'
+else
+    fail "EXWM volume bindings are $volume_bindings"
+fi
+
+if [ "$physical_sink" -eq 1 ] && \
+   head -c 19200 /dev/zero |
+   env XDG_RUNTIME_DIR="$runtime_dir" DBUS_SESSION_BUS_ADDRESS="$expected_bus" \
+       pw-cat --playback --raw --target "$sink_target" --rate 48000 \
+       --channels 2 --format s16 --volume 0.001 - >/dev/null 2>&1; then
+    pass 'finite low-volume stream reached the physical output'
+else
+    fail 'finite playback stream did not reach a physical output'
+fi
+
+pipewire_pid=$(pgrep -u "$uid" -x pipewire | sed -n '1p')
+realtime_threads=0
+realtime_timeout=
+if [ -n "$pipewire_pid" ]; then
+    realtime_threads=$(ps -L -p "$pipewire_pid" -o cls=,rtprio= |
+        awk '$1 == "RR" && $2 + 0 > 0 { count += 1 } END { print count + 0 }')
+    realtime_timeout=$(awk '
+        $1 == "Max" && $2 == "realtime" && $3 == "timeout" { print $4 }
+    ' "/proc/$pipewire_pid/limits")
+fi
+if [ "$realtime_threads" -gt 0 ]; then
+    pass "PipeWire owns $realtime_threads realtime data-loop thread(s)"
+else
+    fail 'PipeWire has no RR realtime thread'
+fi
+if positive_integer "$realtime_timeout" && [ "$rtkit_timeout_max" -gt 0 ] && \
+   [ "$realtime_timeout" -le "$rtkit_timeout_max" ]; then
+    pass "PipeWire realtime timeout is bounded at $realtime_timeout us"
+else
+    fail "PipeWire realtime timeout is ${realtime_timeout:-unset}; RTKit ceiling is $rtkit_timeout_max"
+fi
+
+if [ -n "$session_id" ]; then
+    login_status=$(loginctl show-session "$session_id" \
+        -p Active -p Remote -p Type -p TTY -p IdleHint 2>&1)
+    if printf '%s\n' "$login_status" | grep -q '^Active=yes$' && \
+       printf '%s\n' "$login_status" | grep -q '^Remote=no$'; then
+        pass "elogind session $session_id is the active local login"
+    else
+        fail "elogind session $session_id is not active/local"
+    fi
+    printf '%s\n' "$login_status" | sed 's/^/INFO: login1 /'
+else
+    fail 'EXWM has no XDG_SESSION_ID'
+fi
+
+bluetooth_device=${SK_BLUETOOTH_DEVICE:-04:52:C7:86:93:08}
+bluetooth_info=$(bluetoothctl info "$bluetooth_device" 2>&1 || true)
+if printf '%s\n' "$bluetooth_info" | grep -q 'Connected: yes'; then
+    if printf '%s\n' "$audio_status" | grep -qi 'bluez\|Bose Mini II'; then
+        pass 'Bluetooth speaker is connected and visible to PipeWire'
+    else
+        fail 'Bluetooth speaker is connected but absent from PipeWire'
+    fi
+elif [ "$require_bluetooth" -eq 1 ]; then
+    fail "Bluetooth speaker $bluetooth_device is not connected"
+else
+    printf 'SKIP: Bluetooth speaker %s is not connected; rerun with --require-bluetooth for the manual gate\n' \
+        "$bluetooth_device"
+    bluetooth_skipped=1
+fi
+
+if [ "$failures" -eq 0 ]; then
+    if [ "$bluetooth_skipped" -eq 1 ]; then
+        printf '%s\n' 'desktop-session-check: PASS (Bluetooth gate skipped)'
+    else
+        printf '%s\n' 'desktop-session-check: PASS'
+    fi
+    exit 0
+fi
+
+printf 'desktop-session-check: FAIL (%s checks)\n' "$failures" >&2
+exit 1
