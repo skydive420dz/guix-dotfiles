@@ -57,8 +57,12 @@ next active slice.
   Bash, and Eshell share one revision-reporting Guix wrapper; declaration and
   Home links fail safely; JSONC, formatter filenames, lockfiles, and project
   discovery now have explicit tested policies.
-- [ ] Continue Slices 10 through 19 in audit order.  Do not expand dialect breadth
-  until the P0/P1 runtime, validation, and reproducibility prerequisites close.
+- [ ] Activate and accept the built Slice 10 candidate.  Source commit
+  =1321f76= removes EXWM's private D-Bus, provides RTKit, declares the existing
+  ten-minute display-only power policy, and adds =scripts/desktop-session-check=.
+- [ ] After Slice 10 acceptance, continue Slices 11 through 19 in audit order.
+  Do not expand dialect breadth until the P0/P1 runtime, validation, and
+  reproducibility prerequisites close.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 - [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
   the GRUB prompt before making more bootloader changes.
@@ -864,6 +868,52 @@ the requested value remains =67=. Validate the live setting with:
 #+begin_src sh
 xset q | grep "auto repeat delay"
 #+end_src
+
+* Desktop session policy
+
+The declared Slice 10 candidate gives each long-lived desktop service one
+owner:
+
+#+begin_src text
+session D-Bus             Guix Home at unix:path=/run/user/1000/bus
+PipeWire/WirePlumber      Guix Home Shepherd services on that bus
+realtime scheduling       system RTKit through D-Bus/Polkit
+EXWM and launched apps    inherit the Guix Home bus directly
+AT-SPI accessibility bus  separate purpose-specific bus under /run/user/1000/at-spi
+#+end_src
+
+=shell/xinitrc= refuses an absent or noncanonical Home bus instead of silently
+autolaunching a second one.  It updates only the graphical D-Bus activation
+variables, without =--all= or systemd integration, then starts Emacs directly.
+
+The machine never suspends itself through elogind.  X independently blanks and
+powers down the monitor after 600 seconds of X input inactivity, with standby,
+suspend, and off all set to 600 seconds.  This preserves the observed desktop
+behavior and protects the panel; it is not a screen lock.  Tty1 autologin
+remains a separate Slice 19 trust decision.
+
+The graphical login is intentionally still represented by elogind as the
+active local =tty1= session with =Type=tty= and a tty-derived idle hint.  EXWM
+children receive correct =DISPLAY=:0=, =XDG_SESSION_TYPE=x11=, and desktop
+metadata.  Correcting login1's type would require changing how the PAM session
+is created, not an Xinit environment tweak, and is outside this slice.
+
+After a fresh system/session activation, validate the automated boundary with:
+
+#+begin_src sh
+scripts/desktop-session-check
+#+end_src
+
+The stricter Bluetooth gate expects the paired Bose speaker to be powered and
+connected:
+
+#+begin_src sh
+scripts/desktop-session-check --require-bluetooth
+#+end_src
+
+An acceptance run still includes three physical checks that automation cannot
+honestly prove: audible HDMI/Bluetooth playback, both XF86 volume keys, and one
+real EXWM application launch on the canonical bus.
 
 * Apply
 

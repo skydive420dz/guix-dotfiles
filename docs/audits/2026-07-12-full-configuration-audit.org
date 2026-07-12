@@ -694,6 +694,70 @@ Acceptance gates:
 - RTKit succeeds or the fallback is explicitly accepted with its consequences;
 - DPMS and screen blanking match the recorded desktop policy.
 
+*** Prepared activation checkpoint
+
+The source candidate keeps Guix Home as the only general user session-bus
+owner.  Xinit now requires the canonical =/run/user/1000/bus= address, waits a
+bounded five seconds for its socket, updates only the explicit X11 activation
+variables, and starts Emacs directly.  It never falls back to =dbus-launch=.
+The system declaration adds Guix's standard =rtkit-service-type=, which extends
+system D-Bus, Polkit, and accounts without granting the user/audio group broad
+realtime capabilities.
+
+The existing display behavior is made explicit rather than redesigned: elogind
+never auto-suspends the workstation, while X blanks and powers down the monitor
+after 600 seconds.  This is not a lock.  Elogind's =Type=tty= and stale
+tty-derived =IdleHint=yes= are accepted limitations of the startx-inside-tty1
+PAM model; EXWM's application environment remains =x11=/=exwm=.  Changing
+login1 metadata correctly would require a different graphical login/session
+creation architecture.
+
+Pre-activation evidence proves the target failures: Home D-Bus owns
+=/run/user/1000/bus= for PipeWire/WirePlumber, while Xinit's =dbus-launch=
+created a second =/tmp/dbus-*= bus for Emacs, Chromium, and AT-SPI.  All four
+Home services are replacement-pending after Home generation 31.  RTKit is not
+activatable; fresh clients report =ServiceUnknown=, PipeWire has no RR thread,
+and its realtime timeout is unlimited.  The live checker reports these exact
+failures while still proving the canonical Home bus responds, X metadata and
+600-second display policy are correct, volume bindings exist, and a finite
+PipeWire stream can be negotiated.  A physical-sink gate now rejects
+=Dummy Output= instead of mistaking it for working audio.
+
+#+begin_src text
+Implementation commit: 1321f76099757fe52af331c74c0a13d7995fc7a5
+Built candidate: /gnu/store/yr6x7ssaiwpw48891n7aqbpaa8jrqim1-system
+Pre-activation System: generation 81, current and booted at /gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system
+Pre-activation Home: generation 31; D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse replacement-pending
+Source gates: git diff --check, sh -n, scripts/shell-check, current-Guix evaluation, and full system build passed
+#+end_src
+
+Save editor work and push this checkpoint before activation.  From the local
+EXWM session or another verified local console, run:
+
+#+begin_src sh
+gsr
+/run/setuid-programs/sudo /run/current-system/profile/sbin/reboot
+#+end_src
+
+No =ghr= is required: the Xinit file is a live repo symlink, and the reboot is
+the intended boundary that clears existing Home Shepherd replacements while
+starting the new system D-Bus/RTKit configuration and EXWM tree together.  Do
+not live-kill the old private bus.
+
+After reboot, =scripts/desktop-session-check= must pass with one general user
+bus, no =dbus-launch=, no pending service replacements, active RTKit, an RR
+PipeWire data-loop with bounded realtime timeout, an actual ALSA/BlueZ default
+sink, finite targeted playback, correct volume bindings, the declared X power
+policy, and the accepted active local tty1 metadata.  Then power/connect the
+paired Bose Mini II and rerun with =--require-bluetooth=.  Manually confirm
+audible HDMI/Bluetooth output, both XF86 volume keys, and one launched EXWM app.
+
+If the candidate cannot boot, select System generation 81 in GRUB.  If the
+system boots but the strict Home-bus assertion prevents EXWM, SSH remains the
+recovery path: revert =1321f76= and reboot to restore the previous Xinit launch.
+The strict failure can still trigger the known tty1 autologin/retry and
+overwritten-log behavior; that remains C-06 in Slice 11.
+
 ** TODO Slice 11: EXWM startup, reload, and client-placement reliability
 :PROPERTIES:
 :audit_priority: P2

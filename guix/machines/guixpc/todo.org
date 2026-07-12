@@ -64,7 +64,12 @@ Current next action:
 - [X] Accept [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 9: Command, path, formatter, and activation correctness][Slice 9: command, path, formatter, and activation correctness]].  Shells share one
   revision-reporting Guix wrapper; declaration and project links fail safely;
   JSONC, formatter discovery, lockfiles, project discovery, and shell lint pass.
-- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 10: One session-bus and converged desktop services][Slice 10: one session-bus and converged desktop services]].
+- [ ] Accept [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 10: One session-bus and converged desktop services][Slice 10: one session-bus and converged desktop services]].
+  - [X] Build source commit =1321f76= and system candidate
+    =/gnu/store/yr6x7ssaiwpw48891n7aqbpaa8jrqim1-system=.
+  - [ ] Push the checkpoint, run =gsr=, and reboot from the local session.
+  - [ ] Pass the automated desktop-session checker plus physical audio,
+    Bluetooth, volume-key, and application-launch gates.
 
 Ordered follow-up:
 
