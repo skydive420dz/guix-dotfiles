@@ -1,0 +1,733 @@
+#+title: GuixPC Full Configuration Audit and Slice Roadmap
+#+date: 2026-07-12
+#+status: active
+
+* Purpose
+
+This document is the durable baseline for the stabilization and Lisp-ecosystem
+work that follows the 2026-07-12 full audit.  It records:
+
+- what was verified in the repository and on GuixPC;
+- confirmed bugs and observed runtime problems;
+- configuration risks that have not yet failed;
+- strong points that should be preserved;
+- current Lisp-dialect coverage and missing capabilities;
+- ordered implementation slices with explicit acceptance gates.
+
+The finding register is canonical.  =README.org= and
+=guix/machines/guixpc/todo.org= should link here instead of copying detailed
+status that can drift.
+
+Related records:
+
+- project overview: [[file:../../README.org][README]];
+- machine queue: [[file:../../guix/machines/guixpc/todo.org][guixpc TODO]];
+- historical package handoff: [[file:../handoffs/2026-07-12-sk-guix-kitty.org][sk-guix Kitty handoff]].
+
+* Status language
+
+Findings use the following evidence labels:
+
+#+begin_src text
+VERIFIED  directly observed on the host or reproduced from current source
+STATIC    proven from source, but the failure was not exercised live
+RISK      plausible failure mode inferred from the current design
+POLICY    deliberate tradeoff that needs an explicit keep/change decision
+LIMIT     audit boundary; do not infer health beyond the available evidence
+#+end_src
+
+Priorities mean:
+
+#+begin_src text
+P0  stop-the-line operational problem
+P1  fix before expanding the ecosystem
+P2  reliability, reproducibility, or workflow debt
+P3  low-risk polish or cleanup
+#+end_src
+
+Generation numbers, process versions, session counts, service state, resource
+figures, and display/audio observations are a dated snapshot.  Recheck the
+relevant values when each slice begins.
+
+* Audit boundary and integrity note
+
+The audit covered the local checkout, the live checkout, active Guix System and
+Home generations, the EXWM/Emacs session, user Shepherd services, editor tools,
+shell syntax, application configuration, and Lisp tooling.
+
+The intended audit was read-only.  No repository files, packages, channels,
+generations, services, or machine configuration were changed.  Two incidental
+state effects were discovered and reported during validation:
+
+1. =scripts/emacs-check= loaded the complete init into the running EXWM Emacs.
+   Named hooks and advice remained singletons, but the action was not
+   observational and produced Org version-mismatch warnings.
+2. A batch probe changed =HOME= but inherited the real =XDG_CACHE_HOME=.  Emacs
+   reported pruning 20 unavailable recentf entries, which may have been saved on
+   exit.  This proved that the current checker is not isolated.
+
+The audit also exposed an elogind/SSH lifecycle leak.  Approximately 50 stale
+sessions existed before the audit.  Short audit connections increased the count
+to at least 91 closing sessions before new SSH connections were stopped.  Do not
+run connection-heavy remote probes until Slice 7 establishes a safe procedure.
+
+The following privileged areas were not available because local sudo
+authentication is required:
+
+- system Shepherd status through the protected socket;
+- root-owned system, SSH, kernel, and Guix daemon logs;
+- privileged confirmation of the elogind/PAM/sshd root cause.
+
+Core processes were observed, but that is not evidence that every system service
+is healthy.
+
+* Verified baseline
+
+** Repository and deployment
+
+#+begin_src text
+Repository:          ~/Projects/guix-dotfiles
+Branch:              main
+Commit:              44bba02e7712ed104f5205929ad2a51914226a10
+Working tree:        clean
+Stored tracking ref: origin/main at the same commit
+#+end_src
+
+The local and GuixPC checkouts matched.  No remote fetch was performed during
+the audit, so this proves agreement with the stored tracking ref, not an
+independent refresh of GitHub.
+
+System generation 80 and Home generation 30 were created on 2026-07-12 at about
+13:16.  Their embedded system and Home source files were hash-identical to the
+current repository files.
+
+All three Guix declarations evaluated successfully with the current pulled Guix:
+
+- =guix/channels.scm=;
+- =guix/systems/guixpc.scm=;
+- =guix/home/guixpc.scm=.
+
+** Channel provenance
+
+#+begin_src text
+guix     a8391f2d7451c2463ba253ffa9872fa6f27485d7
+nonguix  3b66965566fe8c96edb5a41fd39a9e5a90ad9b61
+sk-guix  b006225faf6835f858128690e35a60475f620639
+#+end_src
+
+These revisions are recorded by the current System and Home generations.  They
+are not pinned in =guix/channels.scm= for a fresh pull.
+
+** Live desktop and resources
+
+Verified live:
+
+- Xorg on =HDMI-A-0= at =3440x1440_100= / 100.00 Hz;
+- Emacs 30.2 with EXWM enabled and five workspaces;
+- Picom, Chromium, Kitty, NetworkManager, wpa_supplicant, Bluetooth, D-Bus,
+  PipeWire, WirePlumber, and PipeWire-Pulse processes;
+- audio query working through =pamixer=;
+- about 26 GiB memory available and no swap use;
+- root filesystem 48 percent used and home filesystem 2 percent used.
+
+One isolated Xorg warning reported a 33 ms Razer Naga event-processing delay
+after several hours.  It is not evidence of general system pressure.
+
+** Static and tool validation
+
+- all tracked Emacs Lisp files passed reader/parenthesis validation;
+- shell and Fish syntax validation passed;
+- all 15 commands checked by =scripts/editor-tools-check= were present;
+- trivial Guile evaluation returned the expected value;
+- trivial SBCL and bundled ASDF evaluation returned the expected value;
+- no tracked secrets were found.
+
+These checks establish syntax and basic availability only.  They do not replace
+REPL-, backend-, service-, or workflow-level acceptance tests.
+
+* Executive assessment
+
+#+begin_src text
+Source organization:       strong
+Declared/deployed config:  aligned
+Live runtime convergence:  weak; mixed generations
+Display/resource health:   good
+Validation safety:         poor
+Lisp foundation:           coherent Elisp/Guile/SBCL base
+Lisp ecosystem breadth:    early; most dialect families absent
+Reproducibility:            weak across a fresh pull
+Operational reliability:   blocked by the SSH/elogind leak
+#+end_src
+
+The project is a credible Guix/EXWM workstation foundation.  It is not yet a
+full Lisp ecosystem.  Expansion should wait until the P0/P1 runtime,
+validation, and reproducibility findings are closed.
+
+* Finding register
+
+** Operational and live-state findings
+
+| ID   | Pri | Evidence | Finding | Target slice |
+|------+-----+----------+---------+--------------|
+| O-01 | P0  | VERIFIED | Every completed short SSH connection leaves an elogind session stuck in =closing=; cause is not yet proven. | 7 |
+| O-02 | P1  | VERIFIED | Current System/Home declarations are generation 80/30, but the booted/session runtime predates them. | 7 |
+| O-03 | P1  | VERIFIED | D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse report replacement pending. | 7, 10 |
+| O-04 | P1  | VERIFIED | The live Emacs package closure is older than the current profile and emits Org mismatch warnings when reloaded. | 7, 8 |
+| O-05 | P1  | VERIFIED | Guix Home owns a user D-Bus while =dbus-launch= creates a second bus for EXWM. | 10 |
+| O-06 | P2  | VERIFIED | RTKit is absent; audio services fall back from real-time scheduling. | 10 |
+| O-07 | P2  | VERIFIED | One Kitty process remained on 0.46.2 while the current profile/new process used 0.47.4. | 7 |
+| O-08 | P2  | VERIFIED | Bare noninteractive SSH resolves a different Guix and a non-setuid sudo path from login Fish. | 9 |
+| O-09 | P2  | VERIFIED | There are 79 System and 30 Home generations from roughly nine days, including duplicates. | 12 |
+| O-10 | P3  | VERIFIED | X screen blanking and DPMS remain enabled at 600 seconds. | 10 or 19 |
+| O-11 | P3  | VERIFIED | Elogind classifies the active EXWM login as an idle tty session. | 10 |
+| O-12 | P3  | VERIFIED | Historical Blueman logs show dconf persistence failure; current relevance is unproven. | 19 |
+
+** Configuration correctness and validation findings
+
+| ID   | Pri | Evidence | Finding | Target slice |
+|------+-----+----------+---------+--------------|
+| C-01 | P1  | VERIFIED | Eshell =ghr= targets missing =~/.config/guix/home/guixpc.scm= instead of =~/.config/guix/home.scm=. | 9 |
+| C-02 | P1  | VERIFIED | =scripts/emacs-check= mutates live EXWM, suppresses live errors, and can exit zero from batch success. | 8 |
+| C-03 | P1  | VERIFIED | The checker is not XDG-isolated and can touch real recentf/Org/server state. | 8 |
+| C-04 | P1  | STATIC   | Mode probes use =delay-mode-hooks= and therefore do not test promised backend/completion/diagnostic behavior. | 8 |
+| C-05 | P2  | RISK     | Home activation keeps conflicting regular files and succeeds, allowing partial deployment. | 9 |
+| C-06 | P2  | RISK     | Tty1 autologin can relaunch a failing X session while =sk-exwm-startx.log= is overwritten. | 11 |
+| C-07 | P2  | STATIC   | =.jsonc= uses jq for checking/formatting even though jq rejects comments. | 9 |
+| C-08 | P2  | STATIC   | Formatter subprocesses receive stdin without the visited source filename. | 9 |
+| C-09 | P2  | POLICY   | Emacs lockfiles are disabled, removing concurrent-edit protection. | 9 |
+| C-10 | P2  | RISK     | Reloading modules is non-transactional and resets the complete =display-buffer-alist=. | 11 |
+| C-11 | P3  | STATIC   | Ranger handles the =json= extension twice; the later branch is unreachable. | 9 |
+| C-12 | P3  | STATIC   | Sourced Bash/Zsh files lack ShellCheck shell directives, creating avoidable lint noise. | 9 |
+
+Named hooks, compilation hooks, and message advice remained singletons after the
+observed reload.  Anonymous-hook accumulation was not proven and must not be
+reported as a confirmed bug without a focused test.
+
+** EXWM and session-design findings
+
+| ID   | Pri | Evidence | Finding | Target slice |
+|------+-----+----------+---------+--------------|
+| X-01 | P2  | STATIC   | Wallpaper and Picom each have Xinit and Emacs startup owners. | 11 |
+| X-02 | P2  | RISK     | A global next-client reservation and eight-second timer can place the wrong X window. | 11 |
+| X-03 | P2  | RISK     | Reservation happens before desktop-entry launch validation and can leave a stale split. | 11 |
+| X-04 | P2  | RISK     | Private EXWM/Xref APIs increase upgrade sensitivity on rolling packages. | 11, 12 |
+| X-05 | P2  | POLICY   | Tty1 autologin, =xhost= access, and Kitty remote control broaden the local trust boundary. | 19 |
+| X-06 | P3  | POLICY   | Full transparency, compositor behavior, and screen blanking need one documented visual/power policy. | 19 |
+
+** Reproducibility and package-architecture findings
+
+| ID   | Pri | Evidence | Finding | Target slice |
+|------+-----+----------+---------+--------------|
+| R-01 | P1  | STATIC   | Guix, Nonguix, and sk-guix follow moving branches rather than repository-recorded commits. | 12 |
+| R-02 | P1  | VERIFIED | =sk-guix= has no channel introduction/signing setup. | 12 |
+| R-03 | P2  | POLICY   | Live repo symlinks make edits immediate but Home rollback does not restore application-file contents. | 13 |
+| R-04 | P2  | STATIC   | User applications, Emacs packages, compilers, and language tools are concentrated in the privileged system package list. | 13 |
+| R-05 | P2  | STATIC   | There are no per-dialect manifests/dev shells or automated build gates. | 12, 13 |
+| R-06 | P2  | STATIC   | Bootstrap entrypoint symlinks are intentionally outside Home but lack a checked bootstrap/preflight command. | 9, 13 |
+
+** Lisp ecosystem findings
+
+| ID   | Pri | Evidence | Finding | Target slice |
+|------+-----+----------+---------+--------------|
+| L-01 | P1  | VERIFIED | Supported families are Emacs Lisp, Guile Scheme, and SBCL Common Lisp only. | 14-18 |
+| L-02 | P1  | STATIC   | Current probes do not exercise real Geiser/SLY evaluation, docs, completion, xref, tests, or projects. | 8, 15 |
+| L-03 | P2  | STATIC   | No structural editing layer is configured for Lisp-family modes. | 14 |
+| L-04 | P2  | STATIC   | Backend errors are normalized by regex-matching third-party English messages. | 14 |
+| L-05 | P2  | RISK     | Scheme fallback does not guard missing =run-geiser=; docs at whitespace can operate on nil. | 14 |
+| L-06 | P2  | VERIFIED | Geiser activation is redundant; SLY editing changes indentation before a connection, while ownership docs imply a narrower role. | 14 |
+| L-07 | P2  | VERIFIED | Guile readline/colorized modules and configured Eshell syntax highlighting are unavailable. | 14 |
+| L-08 | P2  | STATIC   | There is no ERT/checkdoc/package-lint surface, Guile SRFI-64 workflow, or ASDF test fixture/command. | 15 |
+| L-09 | P2  | STATIC   | Common Lisp has no declared Qlot/Quicklisp/Roswell/source-registry policy. | 15 |
+| L-10 | P2  | STATIC   | Projectile searches the dotfiles repo itself rather than the =~/Projects= collection. | 9, 15 |
+| L-11 | P2  | VERIFIED | An undeclared =~/.emacs.d/elpa/breadcrumb-1.0.1= contaminates package state, though it was not loaded. | 8 |
+| L-12 | P3  | VERIFIED | Yasnippet is enabled but no snippets are available. | 14 |
+| L-13 | P3  | POLICY   | Org offers Common Lisp block insertion while Common Lisp Babel execution remains deliberately disabled. | 15 |
+
+* Current Lisp capability matrix
+
+** Emacs Lisp
+
+Present:
+
+- Emacs 30.2 native evaluation;
+- Eldoc, Helpful, xref, native navigation;
+- unified =SPC l= evaluation, REPL, and documentation commands.
+
+Missing or incomplete:
+
+- ERT project fixture and one-command test workflow;
+- checkdoc, byte-compile, and package-lint acceptance;
+- explicit Edebug/macro-expansion surface;
+- structural editing and authored snippets.
+
+** Guile Scheme
+
+Present:
+
+- Guile 3.0.11;
+- Geiser and Geiser-Guile;
+- Scheme-mode CAPF-first Company configuration;
+- Scheme Babel execution;
+- trivial CLI evaluation verified.
+
+Missing or incomplete:
+
+- Guile readline/colorized modules;
+- SRFI-64/guild project and test workflow;
+- isolated Geiser evaluation/docs/completion acceptance;
+- broader Scheme implementation policy.
+
+** SBCL Common Lisp
+
+Present:
+
+- SBCL 2.6.4;
+- SLY 1.0.43;
+- bundled ASDF 3.3.7;
+- =.lisp=, =.cl=, and =.asd= mode ownership;
+- trivial SBCL and ASDF evaluation verified.
+
+Missing or incomplete:
+
+- ASDF system fixture and =test-op= workflow;
+- isolated SLY evaluation/docs/completion acceptance;
+- dependency/source-registry policy such as Qlot or another explicitly chosen
+  approach;
+- Common Lisp Babel execution, intentionally deferred until tested.
+
+** Absent dialect families
+
+No complete runtime/editor/REPL/test slice exists for:
+
+- Clojure, ClojureScript, Leiningen, or Babashka;
+- Racket;
+- Fennel;
+- Janet;
+- Hy;
+- Chez, Chicken, Gambit, MIT Scheme, or Scheme48;
+- ECL, CLISP, or ABCL.
+
+Adding a binary alone does not count as support.  A dialect is accepted only
+when runtime, editor mode, REPL, project discovery, evaluation, tests,
+formatter/linter policy, fixture, and validation land together.
+
+* Strong points to preserve
+
+- The README clearly separates System, Home, and application ownership.
+- Guix owns packages; Emacs source does not install packages at runtime.
+- Emacs modules are small, mostly focused, and use lexical binding.
+- Elisp, Guile, and Common Lisp use appropriate native/REPL backends.
+- Opening a Lisp file does not unexpectedly start a REPL.
+- The shared =SPC l= surface gives the dialects a coherent user contract.
+- Formatting is manual; there is no surprise format-on-save policy.
+- Tracked fixtures and a tool-presence probe establish a useful base.
+- Hardware-specific display/filesystem assumptions are centralized and
+  documented for this one machine.
+- Current repo-backed links were correct and source/deployed declarations
+  matched.
+- Display startup is accepted and stable at 3440x1440/100 Hz.
+- Current resource headroom is excellent.
+- No tracked secrets were found.
+
+The live-symlink model is a deliberate strength for rapid configuration
+iteration.  Preserve it unless rollback semantics are explicitly chosen over
+immediacy; do not accidentally replace it with store snapshots during cleanup.
+
+* Slice execution rules
+
+Every slice must follow these rules:
+
+1. Start from a clean working tree and record the current System, Home, and
+   channel generations relevant to the slice.
+2. Do not use repeated one-shot SSH connections until O-01 is closed.  Prefer
+   local console work or one persistent connection when remote access is
+   unavoidable.
+3. Keep source edits, activation, and live acceptance as separate gates.
+4. A passing evaluator/build is not live acceptance.
+5. Never run a validation command that loads the complete init into the live
+   EXWM session.
+6. Isolate =HOME= and every XDG state/cache/config directory for batch tests.
+7. Preserve current keyboard wiring and window behavior unless the slice
+   explicitly owns a change.
+8. Do not expand dialect breadth while a P0/P1 prerequisite for that layer is
+   open.
+9. Update this document when a slice is accepted, rejected, or split.
+10. Record exact keep/delete and rollback criteria for generation, package, and
+    state cleanup.
+
+When a slice is accepted, change its heading to =DONE=, add a =completed=
+property, and append an acceptance record using this shape:
+
+#+begin_src text
+Commit:
+System generation:
+Home generation:
+Channel revisions:
+Source/evaluation checks:
+Isolated checks:
+Negative-control result:
+Live evidence:
+Persistence/restart evidence:
+Residual risks:
+Rollback path:
+#+end_src
+
+Use =REJECTED= in prose rather than pretending an abandoned experiment passed.
+Record why it was rejected and which accepted baseline was restored.
+
+* Slice roadmap
+
+** TODO Slice 7: Runtime convergence and SSH incident baseline
+:PROPERTIES:
+:audit_priority: P0
+:findings: O-01 O-02 O-03 O-04 O-07
+:END:
+
+Scope:
+
+- investigate the elogind/PAM/sshd session leak from the local console with
+  privileged logs;
+- capture the pre-cleanup session list and one representative stale session;
+- choose cleanup/restart/reboot action only after evidence is saved;
+- converge the booted system, Home services, EXWM Emacs, and Kitty runtime with
+  the current generations;
+- define a safe remote-audit connection procedure.
+
+Acceptance gates:
+
+- one controlled SSH connect/disconnect does not leave a leaderless closing
+  session after a bounded grace period;
+- repeated commands inside one persistent connection do not create sessions;
+- booted/current generation state is intentionally documented;
+- no user Shepherd service reports replacement pending;
+- live Org, Geiser, Geiser-Guile, Projectile, and Kitty versions match the
+  current profile;
+- fresh EXWM startup still reaches 3440x1440/100 Hz with working audio,
+  networking, and input;
+- rollback path is written before any cleanup.
+
+Not in scope:
+
+- editor feature expansion;
+- channel updates;
+- custom kernel work.
+
+** TODO Slice 8: Non-mutating validation harness
+:PROPERTIES:
+:audit_priority: P1
+:findings: C-02 C-03 C-04 L-02 L-11
+:END:
+
+Scope:
+
+- replace live init loading with read-only live queries;
+- create a fully isolated batch environment;
+- keep server startup, notes creation, recentf/savehist, and real user cache out
+  of batch validation;
+- fail visibly on live query failure, package-generation mismatch, unexpected
+  warnings, or probe failure;
+- add ERT/byte-compile/checkdoc foundations;
+- decide whether the undeclared breadcrumb ELPA residue is removed or declared.
+
+Acceptance gates:
+
+- running the suite leaves repository status and user state unchanged;
+- no live module, hook, advice, timer, server, note, recentf, or XDG file is
+  changed;
+- live and batch phases have independent exit status and readable diagnostics;
+- mode probes run real hooks and assert the intended backend/completion/
+  diagnostics state;
+- a deliberately broken live query and a deliberately broken batch assertion
+  both make the suite nonzero;
+- the package path contains only documented ownership sources.
+
+** TODO Slice 9: Command, path, formatter, and activation correctness
+:PROPERTIES:
+:audit_priority: P1
+:findings: C-01 C-05 C-07 C-08 C-09 C-11 C-12 O-08 L-10 R-06
+:END:
+
+Scope:
+
+- fix Eshell =ghr= and align its substitute policy;
+- make current-Guix and privileged-sudo command selection explicit across
+  interactive, Eshell, and automation contexts;
+- add a bootstrap/preflight check for Guix entrypoint symlinks;
+- make Home activation report blocked or dangling links as a failure without
+  overwriting user files;
+- separate JSON and JSONC validation/formatting policy;
+- pass visited filenames to formatters when supported;
+- decide and document the Emacs lockfile policy;
+- point Projectile at the intended projects collection;
+- remove low-risk shell/ranger lint noise.
+
+Acceptance gates:
+
+- =gsr= and =ghr= resolve the same source and Guix executable in Fish, Bash,
+  and Eshell;
+- noninteractive automation prints or asserts the Guix revision it uses;
+- bootstrap/preflight detects every missing, wrong, blocked, or dangling link;
+- a conflicting regular file is preserved and makes activation/preflight
+  visibly nonzero;
+- valid JSONC is not rejected by a JSON-only checker;
+- formatter configuration discovery is covered by a fixture;
+- sibling repositories under =~/Projects= are discoverable;
+- ShellCheck has no project-owned actionable warnings.
+
+** TODO Slice 10: One session-bus and converged desktop services
+:PROPERTIES:
+:audit_priority: P1
+:findings: O-03 O-05 O-06 O-10 O-11
+:END:
+
+Scope:
+
+- choose Guix Home or Xinit as the single session D-Bus owner;
+- make the EXWM tree use that bus consistently;
+- provide RTKit or explicitly accept/document the fallback;
+- decide desired DPMS/screen-blanking policy;
+- improve the session metadata/idle story where practical;
+- keep PipeWire/WirePlumber behavior working across Home reconfigure and login.
+
+Acceptance gates:
+
+- exactly one intended user session bus serves EXWM applications;
+- no service remains replacement-pending after the documented activation flow;
+- audio playback, volume keys, Bluetooth audio, and application activation work;
+- RTKit succeeds or the fallback is explicitly accepted with its consequences;
+- DPMS and screen blanking match the recorded desktop policy.
+
+** TODO Slice 11: EXWM startup, reload, and client-placement reliability
+:PROPERTIES:
+:audit_priority: P2
+:findings: C-06 C-10 X-01 X-02 X-03 X-04
+:END:
+
+Scope:
+
+- give wallpaper and Picom one startup owner each;
+- replace or constrain the global next-client timer heuristic;
+- validate launcher inputs before reserving layout state;
+- ensure timed-out/failed launches remove any reserved split;
+- make startup failures retain timestamped logs and provide a tty escape path;
+- make reload transactional enough to preserve package display rules and report
+  partial failure;
+- reduce private-API dependence or cover it with versioned tests.
+
+Acceptance gates:
+
+- concurrent slow/fast launches and a popup cannot steal one another's target;
+- a failed launch leaves no pending timer, hook, or extra split;
+- restarting/reloading does not duplicate Picom or wallpaper work;
+- a deliberately broken EXWM startup retains the previous and current logs and
+  returns to a usable recovery path;
+- reload failure is visible and does not claim success;
+- existing keyboard and master/stack behavior remain accepted.
+
+** TODO Slice 12: Reproducible channels, build gates, and retention
+:PROPERTIES:
+:audit_priority: P1
+:findings: O-09 R-01 R-02 R-05 X-04
+:END:
+
+Scope:
+
+- choose a repository-recorded channel lock/pin workflow;
+- add a proper =sk-guix= channel introduction/signing process;
+- evaluate/build channels, Home, System, and maintained custom packages before
+  promotion;
+- document channel-update and rollback flow;
+- define System/Home/pull generation retention with keep/delete gates.
+
+Acceptance gates:
+
+- a fresh checkout can reproduce the recorded channel revisions without relying
+  on an old live generation;
+- =sk-guix= authenticity is verified by Guix;
+- CI or a repeatable local gate catches declaration/package breakage before
+  activation;
+- retention never deletes the current, booted, last-known-good, or explicitly
+  pinned generations;
+- a rollback drill is documented and tested.
+
+** TODO Slice 13: Package ownership and per-dialect environments
+:PROPERTIES:
+:audit_priority: P2
+:findings: R-03 R-04 R-05 R-06
+:END:
+
+Scope:
+
+- define the minimal packages that must stay in System for boot/EXWM recovery;
+- move appropriate user/editor ownership to Guix Home;
+- create composable manifests or dev shells for dialect families;
+- preserve the deliberate live-symlink editing model unless rollback semantics
+  are explicitly changed;
+- document bootstrap from a fresh machine.
+
+Suggested tiers:
+
+#+begin_src text
+base workstation  Emacs/EXWM recovery, hardware and session services
+core Lisp         Elisp support, Guile/Geiser, SBCL/SLY, shared editor tools
+JVM Lisp          JDK, Clojure tooling, CIDER stack
+Racket            Racket runtime, editor integration, formatter/tests/docs
+experimental      optional small dialects, one accepted vertical slice at a time
+#+end_src
+
+Acceptance gates:
+
+- the base machine can reach a recoverable editor/WM without optional dialect
+  environments;
+- each manifest evaluates and enters independently;
+- Home changes no longer require unnecessary privileged system rebuilds;
+- live symlink and rollback semantics are explicitly tested and documented;
+- fresh bootstrap has one checked sequence from channels to System to Home.
+
+** TODO Slice 14: Core Lisp editing correctness and structural editing
+:PROPERTIES:
+:audit_priority: P2
+:findings: L-03 L-04 L-05 L-06 L-07 L-12
+:END:
+
+Scope:
+
+- choose one Guix-packaged, Evil-compatible structural editing contract;
+- fix Lisp docs/eval guards at whitespace and unavailable-backend states;
+- replace fragile English-message matching where stable backend state is
+  available;
+- make Geiser and SLY hook/indent ownership explicit;
+- provide Guile readline/colorized support or remove the dead suggestion path;
+- either package Eshell syntax highlighting or remove the inactive config;
+- add a small intentional snippet set rather than an empty global engine.
+
+Acceptance gates:
+
+- structural editing works in Elisp, Scheme, Common Lisp, and Org source-edit
+  buffers without breaking Evil motions;
+- no-symbol and no-backend states return clear user errors;
+- exactly one intended Geiser activation path runs;
+- SLY indentation behavior matches documented ownership before and after a
+  connection;
+- Guile CLI and Geiser REPL have accepted line editing/completion;
+- snippet startup reports the expected authored snippets, not an empty set.
+
+** TODO Slice 15: Elisp, Guile, and Common Lisp project/test workflows
+:PROPERTIES:
+:audit_priority: P1
+:findings: L-02 L-08 L-09 L-13
+:END:
+
+Scope:
+
+- add real project fixtures for Elisp, Guile, and ASDF Common Lisp;
+- expose one-command test/debug/documentation workflows;
+- test isolated Geiser and SLY REPL evaluation, docs, completion, and failure
+  behavior;
+- choose the Common Lisp dependency/source-registry policy;
+- decide Common Lisp Babel execution only after the isolated path is accepted.
+
+Acceptance gates:
+
+- Elisp fixture passes ERT, byte-compile, and checkdoc gates;
+- Guile fixture passes its chosen SRFI-64/guild test path from CLI and Emacs;
+- Common Lisp fixture loads through ASDF and passes =test-op= from CLI and SLY;
+- =SPC l= commands are tested in cold files and connected REPL buffers;
+- project discovery, compile/test output, xref, and documentation use the shared
+  window policy correctly;
+- Common Lisp Babel is either tested and enabled or remains disabled with a
+  precise reason.
+
+** TODO Slice 16: Clojure/JVM vertical slice
+:PROPERTIES:
+:audit_priority: P2
+:depends_on: 7 8 12 13 15
+:END:
+
+Land together:
+
+- pinned/declarative JVM and Clojure runtime ownership;
+- Clojure major mode and CIDER or an explicitly chosen alternative;
+- REPL connect/start/stop flow;
+- project/dependency tool policy;
+- formatter/linter policy;
+- unit-test and namespace-reload workflow;
+- tracked project fixture and isolated acceptance probe;
+- integration with =SPC l=, =SPC c=, project, diagnostics, and window policy.
+
+Do not mark the slice complete because =clojure= starts.  All listed layers must
+pass in the live editor.
+
+** TODO Slice 17: Racket vertical slice
+:PROPERTIES:
+:audit_priority: P2
+:depends_on: 7 8 12 13 15
+:END:
+
+Land together:
+
+- declarative Racket runtime;
+- Racket major mode and REPL;
+- module/project discovery;
+- formatter/linter and test policy;
+- documentation and macro-expansion workflow;
+- tracked fixture and isolated acceptance probe;
+- shared leader and window-policy integration.
+
+** TODO Slice 18: Optional dialect incubation
+:PROPERTIES:
+:audit_priority: P3
+:depends_on: 16 17
+:END:
+
+Evaluate Fennel, Janet, Hy, alternate Schemes, and alternate Common Lisp
+implementations one at a time.  Each candidate needs a written value proposition
+and the same vertical acceptance contract as Clojure and Racket.  Do not turn
+=sk-guix= into a general newer-package dumping ground to satisfy this slice.
+
+** TODO Slice 19: Final desktop, security, and documentation polish
+:PROPERTIES:
+:audit_priority: P3
+:findings: O-10 O-12 X-05 X-06
+:END:
+
+Scope:
+
+- document accepted physical-autologin and local X trust assumptions;
+- disable or constrain Kitty remote control if unused;
+- decide Blueman/dconf ownership if the GUI remains part of the workflow;
+- align screen blanking, compositor, transparency, and power policy;
+- convert dated handoffs to clearly historical records;
+- reconcile README, this audit, machine TODO, and actual accepted behavior.
+
+Acceptance gates:
+
+- every expanded trust boundary has an explicit keep/change decision;
+- no historical note reads as current activation status;
+- the README describes accepted current behavior while this file retains audit
+  evidence and slice history;
+- all open findings are closed, explicitly deferred, or moved into a dated
+  successor audit.
+
+* Deferred work
+
+The existing custom-kernel inventory and plan remain separate from this roadmap.
+Do not combine kernel experimentation with runtime recovery, session ownership,
+or Lisp ecosystem expansion.  The accepted Nonguix kernel generation must remain
+available as rollback until the hardware inventory and rollback criteria are
+complete.
+
+The GRUB ultrawide issue remains cosmetic and should not block any slice above.
+
+* Audit completion criteria
+
+This audit can be marked complete when:
+
+- O-01 and every P1 finding are closed or explicitly accepted with evidence;
+- the runtime and validation gates are non-mutating and repeatable;
+- channel provenance can be reproduced from the repository;
+- Elisp, Guile, and Common Lisp have real project/test acceptance;
+- at least the planned Clojure and Racket vertical slices are either accepted or
+  deliberately rejected with recorded reasons;
+- README and machine TODO point to the final accepted state;
+- a privileged follow-up confirms system Shepherd and root-owned log health.
