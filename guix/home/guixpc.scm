@@ -14,40 +14,18 @@
 (define %repo-root
   (dirname (dirname (dirname (current-filename)))))
 
+(define %repo-link-helper
+  (local-file (string-append (dirname (current-filename)) "/repo-links.scm")
+              "sk-repo-links.scm"))
+
 (define %repo-link-activation
   #~(begin
-      (use-modules ((guix build utils) #:select (mkdir-p)))
-
       (define home (getenv "HOME"))
       (define repo #$%repo-root)
-
-      (define (symlink-path? path)
-        (let ((stat (false-if-exception (lstat path))))
-          (and stat
-               (eq? (stat:type stat) 'symlink))))
-
-      (define (ensure-repo-link target source)
-        (let* ((target-path (string-append home "/" target))
-               (source-path (string-append repo "/" source))
-               (parent (dirname target-path)))
-          (mkdir-p parent)
-          (cond
-           ((and (symlink-path? target-path)
-                 (string=? (readlink target-path) source-path))
-            #t)
-           ((symlink-path? target-path)
-            (delete-file target-path)
-            (symlink source-path target-path)
-            (format #t "Updated symlink ~a -> ~a~%" target-path source-path))
-           ((not (file-exists? target-path))
-            (symlink source-path target-path)
-            (format #t "Created symlink ~a -> ~a~%" target-path source-path))
-           (else
-            (format #t "Keeping existing non-symlink ~a~%" target-path)))))
-
-      (for-each
-       (lambda (link)
-         (ensure-repo-link (car link) (cadr link)))
+      (primitive-load #$%repo-link-helper)
+      ((module-ref (current-module) 'sk:activate-repo-links)
+       home
+       repo
        '((".bash_profile" "shell/bash_profile")
          (".bashrc" "shell/bashrc")
          (".zprofile" "shell/zprofile")
@@ -77,8 +55,8 @@
               '(("ls" . "ls -p --color=auto")
                 ("ll" . "ls -l")
                 ("grep" . "grep --color=auto")
-                ("gsr" . "sudo $HOME/.config/guix/current/bin/guix system reconfigure $HOME/.config/guix/systems/guixpc.scm --substitute-urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'")
-                ("ghr" . "$HOME/.config/guix/current/bin/guix home reconfigure $HOME/.config/guix/home.scm --substitute-urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'")))))
+                ("gsr" . "$HOME/Projects/guix-dotfiles/scripts/guix-reconfigure system")
+                ("ghr" . "$HOME/Projects/guix-dotfiles/scripts/guix-reconfigure home")))))
    (service home-dbus-service-type)
    (service home-pipewire-service-type
             (home-pipewire-configuration

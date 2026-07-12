@@ -1,2 +1,3 @@
+# shellcheck shell=sh disable=SC1091
 # Honor system-wide environment variables
-source /etc/profile
+. /etc/profile

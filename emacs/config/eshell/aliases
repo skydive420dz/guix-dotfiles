@@ -1,5 +1,5 @@
 alias ll ls -alh $*
 alias la ls -A $*
 alias l ls -CF $*
-alias gsr sudo ~/.config/guix/current/bin/guix system reconfigure ~/.config/guix/systems/guixpc.scm --substitute-urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
-alias ghr ~/.config/guix/current/bin/guix home reconfigure ~/.config/guix/home/guixpc.scm
+alias gsr ~/Projects/guix-dotfiles/scripts/guix-reconfigure system $*
+alias ghr ~/Projects/guix-dotfiles/scripts/guix-reconfigure home $*

@@ -1,0 +1,27 @@
+#!/bin/sh
+
+set -u
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P) || exit 1
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/guix-home-links-check.XXXXXX") || exit 1
+guile=${GUILE:-guile}
+
+cleanup() {
+    rm -rf "$tmp"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+if ! command -v "$guile" >/dev/null 2>&1; then
+    printf 'guix-home-links-check: Guile executable not found: %s\n' \
+        "$guile" >&2
+    exit 2
+fi
+
+mkdir -p "$tmp/host-home"
+HOME=$tmp/host-home GUILE_AUTO_COMPILE=0 \
+    "$guile" --no-auto-compile \
+    -s "$repo/tests/guix-home-links-check.scm" \
+    "$repo/guix/home/repo-links.scm" "$tmp"

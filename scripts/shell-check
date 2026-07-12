@@ -1,0 +1,24 @@
+#!/bin/sh
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+
+if ! command -v shellcheck >/dev/null 2>&1; then
+    printf 'shell-check: missing command: shellcheck\n' >&2
+    exit 127
+fi
+
+exec shellcheck \
+    "$repo/fixtures/shell/sample.sh" \
+    "$repo/ranger/scope.sh" \
+    "$repo/scripts/editor-tools-check" \
+    "$repo/scripts/emacs-check" \
+    "$repo/scripts/guix-entrypoints" \
+    "$repo/scripts/guix-reconfigure" \
+    "$repo/scripts/shell-check" \
+    "$repo/shell/bash_profile" \
+    "$repo/shell/bashrc" \
+    "$repo/shell/xinitrc" \
+    "$repo/shell/zprofile" \
+    "$repo/tests/guix-entrypoints-check" \
+    "$repo/tests/guix-home-links-check"

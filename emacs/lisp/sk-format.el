@@ -5,6 +5,20 @@
 
 (require 'subr-x)
 
+(defun sk/format--source-filename (fallback)
+  "Return the visited source filename or FALLBACK under `default-directory'."
+  (expand-file-name (or buffer-file-name fallback)))
+
+(defun sk/format--jsonc-assumed-filename ()
+  "Return a JSON filename beside the current JSONC source.
+
+clang-format does not recognize the .jsonc extension, so retain the source
+directory and basename for configuration discovery while selecting its JSON
+parser explicitly through a .json suffix."
+  (concat (file-name-sans-extension
+           (sk/format--source-filename "buffer.jsonc"))
+          ".json"))
+
 (defun sk/format--replace-buffer (buffer)
   "Replace current buffer contents with BUFFER contents, preserving point roughly."
   (let ((line (line-number-at-pos))
@@ -51,13 +65,28 @@
   (save-excursion
     (cond
      ((derived-mode-p 'c-mode 'c-ts-mode 'c++-mode 'c++-ts-mode)
-      (sk/format--external "clang-format"))
+      (sk/format--external
+       "clang-format"
+       (concat "--assume-filename="
+               (sk/format--source-filename
+                (if (derived-mode-p 'c++-mode 'c++-ts-mode)
+                    "buffer.cpp"
+                  "buffer.c")))))
      ((derived-mode-p 'sh-mode)
-      (sk/format--external "shfmt" "-i" "2"))
+      (sk/format--external "shfmt"
+                           "--filename" (sk/format--source-filename "buffer.sh")
+                           "-i" "2"))
+     ((derived-mode-p 'jsonc-mode)
+      (sk/format--external
+       "clang-format"
+       (concat "--assume-filename=" (sk/format--jsonc-assumed-filename))))
      ((derived-mode-p 'json-mode 'json-ts-mode 'js-json-mode)
       (sk/format--external "jq" "."))
      ((derived-mode-p 'python-mode 'python-ts-mode)
-      (sk/format--external "ruff" "format" "-"))
+      (sk/format--external "ruff" "format"
+                           "--stdin-filename"
+                           (sk/format--source-filename "buffer.py")
+                           "-"))
      ((derived-mode-p 'lua-mode)
       (sk/format--indent-buffer))
      ((derived-mode-p 'emacs-lisp-mode 'lisp-interaction-mode

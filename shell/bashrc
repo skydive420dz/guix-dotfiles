@@ -1,3 +1,4 @@
+# shellcheck shell=bash disable=SC1091
 # Bash initialization for interactive non-login shells and
 # for remote shells (info "(bash) Bash Startup Files").
 
@@ -32,5 +33,5 @@ alias grep='grep --color=auto'
 export EDITOR='emacsclient -t -a "emacs -nw"'
 export VISUAL='emacsclient -c -a emacs'
 export PAGER='less'
-alias gsr="sudo \$HOME/.config/guix/current/bin/guix system reconfigure \$HOME/.config/guix/systems/guixpc.scm --substitute-urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'"
-alias ghr="\$HOME/.config/guix/current/bin/guix home reconfigure \$HOME/.config/guix/home.scm --substitute-urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'"
+alias gsr='$HOME/Projects/guix-dotfiles/scripts/guix-reconfigure system'
+alias ghr='$HOME/Projects/guix-dotfiles/scripts/guix-reconfigure home'

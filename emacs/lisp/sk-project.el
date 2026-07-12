@@ -2,6 +2,10 @@
 
 (require 'sk-window-policy)
 
+(defconst sk/projects-directory
+  (file-name-as-directory (expand-file-name "~/Projects"))
+  "Top-level collection containing this user's project repositories.")
+
 (use-package projectile
   :diminish projectile-mode
   :config (projectile-mode)
@@ -9,10 +13,10 @@
   :bind-keymap
   ("C-c p" . projectile-command-map)
   :init
-  ;; NOTE: Set this to the folder where you keep your Git repos!
-  (when (file-directory-p "~/Projects/guix-dotfiles")
-    (setq projectile-project-search-path '("~/Projects/guix-dotfiles")))
-  (setq projectile-switch-project-action #'projectile-dired))
+  ;; Discover direct children such as guix-dotfiles and sk-guix, not the
+  ;; dotfiles repository alone.
+  (setq projectile-project-search-path `((,sk/projects-directory . 1))
+        projectile-switch-project-action #'projectile-dired))
 
 (use-package counsel-projectile
   :config (counsel-projectile-mode))

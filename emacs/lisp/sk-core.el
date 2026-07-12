@@ -30,7 +30,9 @@
       `((".*" ,(expand-file-name "auto-save/" sk/cache-directory) t))
       auto-save-list-file-prefix
       (expand-file-name "auto-save-list/.saves-" sk/cache-directory)
-      create-lockfiles nil)
+      ;; Keep same-file edit detection across Emacs processes.  Lockfiles stay
+      ;; beside visited files; centralized backups and auto-saves remain above.
+      create-lockfiles t)
 
 (setq ring-bell-function nil
       visible-bell t

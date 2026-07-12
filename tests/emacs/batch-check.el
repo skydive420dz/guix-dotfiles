@@ -150,7 +150,13 @@
    (lambda ()
      (should (memq major-mode '(json-mode js-json-mode)))
      (should (bound-and-true-p flycheck-mode))
-     (should (eq flycheck-checker 'json-jq)))))
+     (should (eq flycheck-checker 'json-jq))))
+  (sk/check-with-fixture
+   "json/sample.jsonc"
+   (lambda ()
+     (should (eq major-mode 'jsonc-mode))
+     (should-not (bound-and-true-p flycheck-mode))
+     (should-not flycheck-checker))))
 
 (ert-deftest sk/check-lisp-hooks-and-backends ()
   (sk/check-with-eldoc-fixture
@@ -259,6 +265,13 @@
     (if (fboundp 'json-mode) (json-mode) (js-json-mode))
     (sk/format-buffer)
     (should (string-match-p "\n  \"b\"" (buffer-string))))
+  (sk/check-with-fixture
+   "json/sample.jsonc"
+   (lambda ()
+     (should (eq major-mode 'jsonc-mode))
+     (sk/format-buffer)
+     (should (string-match-p "// JSONC keeps comments" (buffer-string)))
+     (should (string-match-p "3[ \t\n\r]*],[ \t\n\r]*}" (buffer-string)))))
   (with-temp-buffer
     (insert "def add(left,right):\n    return left+right\n")
     (sk/check-call-mode-without-lsp #'python-mode)
@@ -276,11 +289,18 @@
     (should (string-match-p "  (message" (buffer-string)))))
 
 (ert-deftest sk/check-formatter-dispatch-contract ()
-  (dolist (case '((c-mode . ("clang-format"))
-                  (sh-mode . ("shfmt" "-i" "2"))
+  (dolist (case `((c-mode . ("clang-format"
+                             ,(concat "--assume-filename="
+                                      (expand-file-name "buffer.c"))))
+                  (sh-mode . ("shfmt" "--filename"
+                              ,(expand-file-name "buffer.sh") "-i" "2"))
                   (json-mode . ("jq" "."))
                   (js-json-mode . ("jq" "."))
-                  (python-mode . ("ruff" "format" "-"))))
+                  (jsonc-mode . ("clang-format"
+                                 ,(concat "--assume-filename="
+                                          (expand-file-name "buffer.json"))))
+                  (python-mode . ("ruff" "format" "--stdin-filename"
+                                      ,(expand-file-name "buffer.py") "-"))))
     (with-temp-buffer
       (let (route)
         (cl-letf (((symbol-function 'lsp-deferred) #'ignore)
@@ -305,6 +325,65 @@
   (with-temp-buffer
     (fundamental-mode)
     (should-error (sk/format-buffer) :type 'user-error)))
+
+(ert-deftest sk/check-formatter-visited-filenames-and-config ()
+  (dolist (case '(("formatter-config/sample.c" . c)
+                  ("shell/sample.sh" . shell)
+                  ("python/sample.py" . python)
+                  ("json/sample.jsonc" . jsonc)))
+    (sk/check-with-fixture
+     (car case)
+     (lambda ()
+       (let* ((source (expand-file-name buffer-file-name))
+              (expected
+               (pcase (cdr case)
+                 ('c `("clang-format"
+                       ,(concat "--assume-filename=" source)))
+                 ('shell `("shfmt" "--filename" ,source "-i" "2"))
+                 ('python `("ruff" "format" "--stdin-filename" ,source "-"))
+                 ('jsonc `("clang-format"
+                           ,(concat "--assume-filename="
+                                    (concat (file-name-sans-extension source)
+                                            ".json"))))))
+              route)
+         (cl-letf (((symbol-function 'sk/format--external)
+                    (lambda (&rest arguments) (setq route arguments))))
+           (sk/format-buffer))
+         (should (equal route expected))))))
+  ;; The visited filename must let clang-format find the fixture-local style.
+  (sk/check-with-fixture
+   "formatter-config/sample.c"
+   (lambda ()
+     (sk/format-buffer)
+     (should (string-match-p "\n      if (1)" (buffer-string)))
+     (should (string-match-p "\n            return 0;" (buffer-string))))))
+
+(ert-deftest sk/check-lockfile-and-project-collection-policy ()
+  (should create-lockfiles)
+  (should (equal sk/projects-directory
+                 (file-name-as-directory
+                  (expand-file-name "Projects" (getenv "HOME")))))
+  (should (equal projectile-project-search-path
+                 `((,sk/projects-directory . 1))))
+  (dolist (name '("alpha" "beta"))
+    (make-directory
+     (expand-file-name ".git" (expand-file-name name sk/projects-directory))
+     t))
+  (let ((projectile-known-projects nil)
+        discovered)
+    (cl-letf (((symbol-function 'projectile-add-known-project)
+               (lambda (project) (push project discovered))))
+      (projectile-discover-projects-in-search-path))
+    (dolist (name '("alpha" "beta"))
+      (let ((expected
+             (directory-file-name
+              (file-truename (expand-file-name name sk/projects-directory)))))
+        (should
+         (seq-some
+          (lambda (project)
+            (string= expected
+                     (directory-file-name (file-truename project))))
+          discovered))))))
 
 (ert-deftest sk/check-elisp-test-foundation ()
   (let* ((fixture (sk/check-fixture-path "elisp/sample.el"))

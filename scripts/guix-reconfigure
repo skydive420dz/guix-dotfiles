@@ -1,0 +1,118 @@
+#!/bin/sh
+set -eu
+
+usage() {
+    printf 'usage: %s system|home [--print] [GUIX-OPTION ...]\n' "$0" >&2
+    exit 64
+}
+
+[ "$#" -ge 1 ] || usage
+
+mode=$1
+shift
+
+print_only=0
+if [ "${1:-}" = "--print" ]; then
+    print_only=1
+    shift
+fi
+
+if [ "$print_only" -eq 1 ] && [ "$#" -ne 0 ]; then
+    usage
+fi
+
+home=${HOME:?HOME must be set}
+script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
+entrypoints_check="$script_dir/guix-entrypoints"
+guix="$home/.config/guix/current/bin/guix"
+privileged_sudo=/run/setuid-programs/sudo
+substitute_urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
+
+case "$mode" in
+    system)
+        source="$home/.config/guix/systems/guixpc.scm"
+        ;;
+    home)
+        source="$home/.config/guix/home.scm"
+        ;;
+    *)
+        usage
+        ;;
+esac
+
+if [ ! -x "$entrypoints_check" ]; then
+    printf 'guix-reconfigure: entrypoint checker is not executable: %s\n' \
+        "$entrypoints_check" >&2
+    exit 1
+fi
+
+"$entrypoints_check" check
+
+if [ ! -x "$guix" ]; then
+    printf 'guix-reconfigure: current Guix is not executable: %s\n' "$guix" >&2
+    exit 1
+fi
+
+if [ ! -r "$source" ]; then
+    printf 'guix-reconfigure: configuration source is not readable: %s\n' "$source" >&2
+    exit 1
+fi
+
+if [ "$mode" = system ] && [ ! -x "$privileged_sudo" ]; then
+    printf 'guix-reconfigure: privileged sudo is not executable: %s\n' "$privileged_sudo" >&2
+    exit 1
+fi
+
+guix_resolved=$(readlink -f "$guix")
+source_resolved=$(readlink -f "$source")
+guix_revision=$(
+    "$guix" describe --format=recutils |
+        awk '
+            $1 == "name:" { guix_channel = ($2 == "guix"); next }
+            guix_channel && $1 == "commit:" { print $2; exit }
+        '
+)
+
+if [ -z "$guix_resolved" ] || [ -z "$source_resolved" ] || [ -z "$guix_revision" ]; then
+    printf 'guix-reconfigure: could not establish Guix provenance\n' >&2
+    exit 1
+fi
+
+case $guix_revision in
+    *[!0-9a-f]*)
+        printf 'guix-reconfigure: invalid Guix revision: %s\n' \
+            "$guix_revision" >&2
+        exit 1
+        ;;
+esac
+
+if [ "${#guix_revision}" -ne 40 ]; then
+    printf 'guix-reconfigure: invalid Guix revision length: %s\n' \
+        "$guix_revision" >&2
+    exit 1
+fi
+
+printf 'guix-reconfigure: mode=%s\n' "$mode"
+printf 'guix-reconfigure: guix=%s\n' "$guix"
+printf 'guix-reconfigure: guix-resolved=%s\n' "$guix_resolved"
+printf 'guix-reconfigure: guix-revision=%s\n' "$guix_revision"
+printf 'guix-reconfigure: source=%s\n' "$source"
+printf 'guix-reconfigure: source-resolved=%s\n' "$source_resolved"
+printf 'guix-reconfigure: substitute-urls=%s\n' "$substitute_urls"
+
+if [ "$mode" = system ]; then
+    printf 'guix-reconfigure: sudo=%s\n' "$privileged_sudo"
+    printf 'guix-reconfigure: sudo-resolved=%s\n' "$(readlink -f "$privileged_sudo")"
+fi
+
+if [ "$print_only" -eq 1 ]; then
+    exit 0
+fi
+
+if [ "$mode" = system ]; then
+    exec "$privileged_sudo" "$guix" system reconfigure "$source" \
+        --substitute-urls="$substitute_urls" "$@"
+else
+    exec "$guix" home reconfigure "$source" \
+        --substitute-urls="$substitute_urls" "$@"
+fi

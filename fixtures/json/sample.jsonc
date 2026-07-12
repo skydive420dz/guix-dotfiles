@@ -1,0 +1,5 @@
+{
+  // JSONC keeps comments and permits a trailing comma.
+  "enabled": true,
+  "values": [1, 2, 3],
+}

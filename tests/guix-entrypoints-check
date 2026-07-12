@@ -1,0 +1,122 @@
+#!/bin/sh
+
+set -u
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P) || exit 1
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/guix-entrypoints-check.XXXXXX") || exit 1
+sandbox_repo=$tmp/repo
+sandbox_home=$tmp/home
+entrypoints=$sandbox_repo/scripts/guix-entrypoints
+
+cleanup() {
+    rm -rf "$tmp"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+fail() {
+    printf 'FAIL: %s\n' "$1" >&2
+    exit 1
+}
+
+contains() {
+    case $1 in
+        *"$2"*) return 0 ;;
+        *) fail "expected output to contain: $2" ;;
+    esac
+}
+
+mkdir -p "$sandbox_repo/scripts" \
+    "$sandbox_repo/guix/home" \
+    "$sandbox_repo/guix/systems" \
+    "$sandbox_home"
+cp "$repo/scripts/guix-entrypoints" "$entrypoints"
+chmod +x "$entrypoints"
+printf 'channels\n' >"$sandbox_repo/guix/channels.scm"
+printf 'home\n' >"$sandbox_repo/guix/home/guixpc.scm"
+printf 'system\n' >"$sandbox_repo/guix/systems/guixpc.scm"
+
+output=$(HOME=$sandbox_home "$entrypoints" check 2>&1)
+status=$?
+[ "$status" -ne 0 ] || fail 'missing links passed check'
+contains "$output" 'MISSING channels.scm'
+contains "$output" 'MISSING home.scm'
+contains "$output" 'MISSING systems/guixpc.scm'
+
+HOME=$sandbox_home "$entrypoints" bootstrap >/dev/null 2>&1 || \
+    fail 'bootstrap did not create missing links'
+HOME=$sandbox_home "$entrypoints" check >/dev/null 2>&1 || \
+    fail 'fresh bootstrap did not pass check'
+
+printf 'other\n' >"$tmp/other"
+ln -snf "$tmp/other" "$sandbox_home/.config/guix/home.scm"
+output=$(HOME=$sandbox_home "$entrypoints" check 2>&1)
+status=$?
+[ "$status" -ne 0 ] || fail 'wrong link passed check'
+contains "$output" 'WRONG home.scm'
+HOME=$sandbox_home "$entrypoints" bootstrap >/dev/null 2>&1 || \
+    fail 'bootstrap did not repair wrong link'
+
+ln -snf "$tmp/absent" "$sandbox_home/.config/guix/home.scm"
+output=$(HOME=$sandbox_home "$entrypoints" check 2>&1)
+status=$?
+[ "$status" -ne 0 ] || fail 'dangling link passed check'
+contains "$output" 'WRONG home.scm'
+contains "$output" 'DANGLING home.scm'
+HOME=$sandbox_home "$entrypoints" bootstrap >/dev/null 2>&1 || \
+    fail 'bootstrap did not repair dangling wrong link'
+
+unlink "$sandbox_home/.config/guix/home.scm"
+printf 'preserve me\n' >"$sandbox_home/.config/guix/home.scm"
+unlink "$sandbox_home/.config/guix/channels.scm"
+output=$(HOME=$sandbox_home "$entrypoints" bootstrap 2>&1)
+status=$?
+[ "$status" -ne 0 ] || fail 'regular-file conflict passed bootstrap'
+contains "$output" 'BLOCKED home.scm'
+contains "$output" 'bootstrap refused; no links were changed'
+[ "$(sed -n '1p' "$sandbox_home/.config/guix/home.scm")" = 'preserve me' ] || \
+    fail 'regular-file conflict was overwritten'
+[ ! -e "$sandbox_home/.config/guix/channels.scm" ] || \
+    fail 'bootstrap partially changed links after a conflict'
+
+rm "$sandbox_home/.config/guix/home.scm"
+HOME=$sandbox_home "$entrypoints" bootstrap >/dev/null 2>&1 || \
+    fail 'bootstrap did not recover after conflict removal'
+
+unlink "$sandbox_home/.config/guix/systems/guixpc.scm"
+rmdir "$sandbox_home/.config/guix/systems"
+printf 'parent blocker\n' >"$sandbox_home/.config/guix/systems"
+unlink "$sandbox_home/.config/guix/channels.scm"
+output=$(HOME=$sandbox_home "$entrypoints" bootstrap 2>&1)
+status=$?
+[ "$status" -ne 0 ] || fail 'regular-file parent passed bootstrap'
+contains "$output" 'BLOCKED parent for systems/guixpc.scm'
+[ "$(sed -n '1p' "$sandbox_home/.config/guix/systems")" = \
+    'parent blocker' ] || fail 'regular-file parent was overwritten'
+[ ! -e "$sandbox_home/.config/guix/channels.scm" ] || \
+    fail 'bootstrap partially changed links after a blocked parent'
+
+rm "$sandbox_home/.config/guix/systems"
+ln -s "$tmp/absent-parent" "$sandbox_home/.config/guix/systems"
+output=$(HOME=$sandbox_home "$entrypoints" bootstrap 2>&1)
+status=$?
+[ "$status" -ne 0 ] || fail 'dangling parent passed bootstrap'
+contains "$output" 'DANGLING parent for systems/guixpc.scm'
+[ -L "$sandbox_home/.config/guix/systems" ] || \
+    fail 'dangling parent was overwritten'
+[ ! -e "$sandbox_home/.config/guix/channels.scm" ] || \
+    fail 'bootstrap partially changed links after a dangling parent'
+
+unlink "$sandbox_home/.config/guix/systems"
+HOME=$sandbox_home "$entrypoints" bootstrap >/dev/null 2>&1 || \
+    fail 'bootstrap did not recover after parent conflicts'
+rm "$sandbox_repo/guix/channels.scm"
+output=$(HOME=$sandbox_home "$entrypoints" bootstrap 2>&1)
+status=$?
+[ "$status" -ne 0 ] || fail 'missing managed source passed bootstrap'
+contains "$output" 'DANGLING source for channels.scm'
+contains "$output" 'bootstrap refused; no links were changed'
+
+printf 'PASS: guix entrypoint checks and bootstrap safety\n'

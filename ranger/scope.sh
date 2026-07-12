@@ -57,7 +57,7 @@ case "$FILE_EXTENSION_LOWER" in
             odt2txt "$FILE_PATH" && exit 5
         fi
         ;;
-    bash|c|cc|conf|cpp|css|csv|el|h|hpp|html|ini|js|json|lua|md|nix|org|py|qml|rs|scm|sh|txt|toml|ts|tsx|xml|yaml|yml|zsh)
+    bash|c|cc|conf|cpp|css|csv|el|h|hpp|html|ini|js|jsonc|lua|md|nix|org|py|qml|rs|scm|sh|txt|toml|ts|tsx|xml|yaml|yml|zsh)
         preview_text
         ;;
     a|ace|alz|arc|arj|bz|bz2|cab|cpio|gz|jar|lha|lz|lzh|lzma|lzo|rpm|rz|tar|tbz|tbz2|tgz|tlz|txz|xz|zip)
