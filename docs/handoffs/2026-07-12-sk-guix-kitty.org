@@ -1,5 +1,14 @@
 #+title: GuixPC sk-guix Kitty Handoff
 #+date: 2026-07-12
+#+status: historical
+
+#+begin_quote
+Historical handoff.  Its push, activation, and next-step sections describe the
+state at handoff time; they are not the active execution queue.  A later audit
+verified System generation 80 and current-profile Kitty 0.47.4 while one
+pre-reconfigure Kitty 0.46.2 process remained alive pending runtime convergence.
+Continue from [[file:../audits/2026-07-12-full-configuration-audit.org][the 2026-07-12 full configuration audit and slice roadmap]].
+#+end_quote
 
 * Scope
 
@@ -157,7 +166,7 @@ Observed output:
 kitty 0.47.4 created by Kovid Goyal
 #+end_src
 
-* Not completed yet
+* Historical activation state at handoff time
 
 The system has been build-verified but not activated from the assistant side.
 Remote activation was not attempted because sudo requires the user's password.
@@ -181,7 +190,7 @@ Expected:
 kitty 0.47.4 created by Kovid Goyal
 #+end_src
 
-* Logical next steps
+* Historical next steps at handoff time
 
 1. Push both repos if not already pushed:
 

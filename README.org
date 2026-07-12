@@ -7,12 +7,18 @@ Source of truth for the guixpc experiment machine.
 This section tracks the active stabilization pass. Keep it current when a slice
 is accepted so the repo records intent, not only implementation commits.
 
+The current machine-wide baseline and canonical slice status live in
+[[file:docs/audits/2026-07-12-full-configuration-audit.org][the 2026-07-12 full configuration audit]].  It records verified state,
+confirmed defects, qualified risks, strengths, Lisp coverage, and acceptance
+gates.  [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue and points to the
+next active slice.
+
 ** Completed
 
 - [X] Slice 0: Runtime sanity
   Confirmed the live EXWM/Emacs path, clean repo state, active Guix
   system/home generations, and SSH-side validation limits.
-- [X] Slice 1: Full audit
+- [X] Slice 1: Editor/tooling audit
   Inventoried package ownership, active language modes, LSP-backed and non-LSP
   paths, diagnostics, completion, =SPC c= commands, and helper/window behavior.
 - [X] Slice 2: Completion and diagnostics polish
@@ -38,9 +44,16 @@ is accepted so the repo records intent, not only implementation commits.
 ** Next
 
 - [X] Extend =scripts/emacs-check= with batch probes for mode detection,
-  keybindings, and formatting dispatch.
+  keybindings, and formatting dispatch.  This implementation landed, but the
+  2026-07-12 audit supersedes it as a validation-safety baseline.
 - [X] Decide Python formatter policy: =ruff format=.
 - [X] Decide Lua formatter policy: native indentation; no =stylua= for now.
+- [ ] Execute Slice 7: diagnose the SSH/PAM/elogind session-cleanup leak from the
+  local console and converge the booted, Home-service, EXWM, and package runtime.
+- [ ] Replace =scripts/emacs-check= with the isolated, non-mutating live/batch
+  split in Slice 8 before using it as an acceptance gate again.
+- [ ] Continue Slices 9 through 19 in audit order.  Do not expand dialect breadth
+  until the P0/P1 runtime, validation, and reproducibility prerequisites close.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 - [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
   the GRUB prompt before making more bootloader changes.
