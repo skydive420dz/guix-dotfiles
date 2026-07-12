@@ -455,10 +455,14 @@ Picom is intentionally scoped to Emacs frame transparency only:
 picom --backend glx --opacity-rule '85:class_g = "Emacs"'
 #+end_src
 
-EXWM starts Picom during session startup and reload. It terminates any existing
-=picom= process before starting the managed one, so manual compositor tests do
-not survive a reload. Browser and terminal transparency are not managed through
-global active/inactive opacity rules.
+The X session starts the wallpaper and Picom before launching Emacs/EXWM so the
+compositor is already active when Emacs appears. It launches Emacs fullscreen
+directly instead of using the Guix =exwm= wrapper, whose hardcoded =-mm=
+maximized-frame startup can briefly draw a small pre-maximized frame. EXWM
+startup only starts Picom when no existing process is running. =M-x
+sk/start-picom= remains the explicit manual restart command for compositor
+tests. Browser and terminal transparency are not managed through global
+active/inactive opacity rules.
 
 =s-h= uses the normal left-window focus path first. If normal windmove cannot
 see a left target and Treemacs is open, it falls back to selecting Treemacs.

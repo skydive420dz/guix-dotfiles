@@ -15,7 +15,23 @@ export XDG_SESSION_TYPE=x11
 export DESKTOP_SESSION=exwm
 
 if command -v xrandr >/dev/null 2>&1; then
-    xrandr --output HDMI-A-0 --mode 3440x1440 --rate 100 || true
+    if ! xrandr --query | grep -q '^   3440x1440.*100\.00\*'; then
+        xrandr --output HDMI-A-0 --mode 3440x1440 --rate 100 || true
+    fi
 fi
 
-exec exwm
+wallpaper_file="$HOME/Projects/guix-dotfiles/assets/wallpapers/waifu-cyberpunk.png"
+if command -v xwallpaper >/dev/null 2>&1 && [ -r "$wallpaper_file" ]; then
+    xwallpaper --zoom "$wallpaper_file" || true
+fi
+
+if command -v picom >/dev/null 2>&1; then
+    pkill -x picom 2>/dev/null || true
+    picom --backend glx --vsync --opacity-rule '85:class_g = "Emacs"' &
+fi
+
+if command -v xhost >/dev/null 2>&1; then
+    xhost +SI:localuser:"$USER" >/dev/null 2>&1 || true
+fi
+
+exec dbus-launch --exit-with-session emacs -fs --eval '(load-file "~/.exwm")'

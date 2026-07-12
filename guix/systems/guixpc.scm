@@ -27,7 +27,7 @@
 
   (kernel-arguments
    (cons* "modprobe.blacklist=pcspkr"
-          "video=HDMI-A-1:3440x1440@60"
+          "video=HDMI-A-0:3440x1440@100"
           %default-kernel-arguments))
   
   ;; The list of user accounts ('root' is implicit).
@@ -144,9 +144,25 @@
                   (service openssh-service-type)
                   (service bluetooth-service-type)
                   (service xorg-server-service-type
-                   (xorg-configuration (keyboard-layout keyboard-layout)))
+                   (xorg-configuration
+                    (keyboard-layout keyboard-layout)
+                    (extra-config
+                     (list "
+Section \"Monitor\"
+  Identifier \"HDMI-A-0\"
+  Modeline \"3440x1440_100\" 534.60 3440 3488 3520 3600 1440 1443 1448 1485 +HSync +VSync
+  Option \"PreferredMode\" \"3440x1440_100\"
+EndSection"))))
                   (service startx-command-service-type
-                   (xorg-configuration (keyboard-layout keyboard-layout))))
+                   (xorg-configuration
+                    (keyboard-layout keyboard-layout)
+                    (extra-config
+                     (list "
+Section \"Monitor\"
+  Identifier \"HDMI-A-0\"
+  Modeline \"3440x1440_100\" 534.60 3440 3488 3520 3600 1440 1443 1448 1485 +HSync +VSync
+  Option \"PreferredMode\" \"3440x1440_100\"
+EndSection")))))
 
             ;; This is the default list of services we
             ;; are appending to.

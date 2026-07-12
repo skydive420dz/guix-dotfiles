@@ -164,6 +164,11 @@
 (defvar sk/picom-opacity-rule "85:class_g = \"Emacs\""
   "Picom opacity rule for Emacs frame transparency.")
 
+(defun sk/picom-running-p ()
+  "Return non-nil when a Picom process is already running."
+  (and (executable-find "pgrep")
+       (eq 0 (call-process "pgrep" nil nil nil "-x" "picom"))))
+
 (defun sk/start-picom ()
   "Start the session compositor with the managed EXWM opacity rule."
   (interactive)
@@ -175,6 +180,11 @@
                    "--backend" "glx"
                    "--vsync"
                    "--opacity-rule" sk/picom-opacity-rule)))
+
+(defun sk/ensure-picom ()
+  "Start Picom only when it is not already running."
+  (unless (sk/picom-running-p)
+    (sk/start-picom)))
 
 (defvar sk/wallpaper-file
   (expand-file-name "~/Projects/guix-dotfiles/assets/wallpapers/waifu-cyberpunk.png"))
@@ -265,7 +275,7 @@
   (sk/exwm-bind-keys)
   (sk/set-wallpaper)
   (sk/set-keyboard-repeat)
-  (sk/start-picom)
+  (sk/ensure-picom)
   (exwm-wm-mode))
 
 (provide 'sk-exwm)
