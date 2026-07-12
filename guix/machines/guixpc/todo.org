@@ -15,6 +15,33 @@ Keep kernel optimization behind the separate hardware inventory task.
 - [X] Decide base desktop/session direction: Emacs/EXWM.
 - [X] Clean and repaste the machine after shutdown.
 
+* DONE Display and EXWM startup stabilization
+:PROPERTIES:
+:created: 2026-07-11
+:completed: 2026-07-11
+:END:
+Accepted baseline:
+
+- Xorg starts on =HDMI-A-0= using the explicit =3440x1440_100= modeline.
+- =xrandr= is fallback-only, not the normal path.
+- =shell/xinitrc= starts wallpaper and Picom before fullscreen Emacs/EXWM.
+- Emacs uses =-fs= and loads =~/.exwm= directly instead of using the Guix =exwm=
+  wrapper's hardcoded =-mm= startup.
+- Picom is scoped to Emacs opacity: =picom --backend glx --vsync --opacity-rule
+  '85:class_g = "Emacs"'.
+
+Rejected experiment:
+
+- Do not add =amdgpu= to =initrd-modules= on this machine. It pulled AMDGPU/DRM
+  into the initrd but made X fall back to a generic =default= 1024x768 screen.
+  Reverting returned the accepted 3440x1440 state.
+
+Remaining cosmetic issue:
+
+- GRUB and earliest boot text are still not ultrawide. Diagnose manually with
+  GRUB =videoinfo= before changing bootloader generation. If 3440x1440 is not
+  listed there, Guix =gfxmode= cannot force it.
+
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:
 :created: 2026-07-03
@@ -68,6 +95,7 @@ Only after hardware inventory is reviewed:
 
 - Identify required boot, storage, and filesystem modules.
 - Identify exact Realtek Wi-Fi chipset, driver, and firmware.
-- Identify AMD graphics path and firmware needs.
+- Identify AMD graphics path and firmware needs. Do not use the failed
+  =amdgpu= initrd preload approach as the baseline.
 - Decide whether to pin a known-good kernel or track Nonguix linux.
 - Build custom kernel as a separate generation, keeping the generic Nonguix generation as rollback.

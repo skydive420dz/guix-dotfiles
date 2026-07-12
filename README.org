@@ -30,6 +30,10 @@ is accepted so the repo records intent, not only implementation commits.
 - [X] Slice 6: Fixtures and tool probes
   Added tracked fixtures plus =scripts/editor-tools-check= for reproducible
   tool availability checks.
+- [X] Display/session startup stabilization
+  Corrected the active connector to =HDMI-A-0=, made Xorg prefer the explicit
+  =3440x1440_100= modeline, changed =xrandr= to fallback-only, and starts
+  wallpaper/Picom before launching fullscreen Emacs/EXWM.
 
 ** Next
 
@@ -38,6 +42,8 @@ is accepted so the repo records intent, not only implementation commits.
 - [X] Decide Python formatter policy: =ruff format=.
 - [X] Decide Lua formatter policy: native indentation; no =stylua= for now.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
+- [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
+  the GRUB prompt before making more bootloader changes.
 - [ ] Treat a custom kernel as a future experiment only after hardware
   inventory and rollback criteria are documented. The current stable baseline is
   the Nonguix kernel with the hardware modules already proven on this machine.
@@ -463,6 +469,18 @@ startup only starts Picom when no existing process is running. =M-x
 sk/start-picom= remains the explicit manual restart command for compositor
 tests. Browser and terminal transparency are not managed through global
 active/inactive opacity rules.
+
+Live acceptance for the display/session path:
+
+#+begin_src text
+Xorg initial mode: 3440x1440_100
+xrandr current:    3440x1440_100 100.00*+
+Emacs frame:       3440x1440 fullboth
+#+end_src
+
+Do not preload =amdgpu= through =initrd-modules= on this machine. That experiment
+made X fall back to a generic =default= 1024x768 screen. Reverting it restored
+the accepted =HDMI-A-0= / =3440x1440_100= path.
 
 =s-h= uses the normal left-window focus path first. If normal windmove cannot
 see a left target and Treemacs is open, it falls back to selecting Treemacs.
