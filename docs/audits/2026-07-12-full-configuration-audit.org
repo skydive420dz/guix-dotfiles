@@ -412,6 +412,100 @@ Not in scope:
 - channel updates;
 - custom kernel work.
 
+*** In-progress record: 2026-07-12
+
+This is not an acceptance record.  The source/build gates are complete, but
+activation, reboot persistence, local desktop checks, and the bounded SSH
+negative control remain open.
+
+Pre-change evidence was captured through one persistent SSH connection only:
+
+- at =2026-07-12T14:40:56-04:00=, elogind held 96 sessions: 94
+  leaderless sessions in =closing= plus the active graphical and control
+  sessions;
+- representative stale session =c502= had =Service=sshd=, a dead leader, no
+  =Scope=, and no remaining reference FIFO;
+- the control session was =c514=; several commands inside it left the session
+  count unchanged at 96;
+- =/run/booted-system= was the preserved generation 75 closure
+  =8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system=, while
+  =/run/current-system= was generation 80
+  =jk1793wbqbn68y2s8ccpnpqicibrf8nz-system=;
+- Home generation 30 was current, while D-Bus, PipeWire, WirePlumber, and
+  PipeWire-Pulse all reported replacement pending;
+- System generations 75, 79, and 80 and Home generations 29 and 30 were
+  confirmed present.  No generation cleanup was performed.
+
+The generated SSH service uses the stock Guix OpenSSH configuration and a PAM
+session stack containing =pam_elogind.so=, =pam_loginuid.so=, =pam_env.so=,
+and =pam_unix.so=.  The running elogind was vanilla 255.17 on cgroup v2.  The
+project's existing elogind overrides only govern idle, lid, and suspend policy;
+none owns session garbage collection.
+
+The observed failure strongly matches two upstream 255.17 reports: short SSH
+commands leave dead-leader sessions indefinitely in =closing=, and sessions can
+remain closing without any process.  Upstream 255.24 explicitly fixes garbage
+collection after FIFO EOF, leader exit, and release timeout:
+
+- [[https://github.com/elogind/elogind/issues/297][elogind issue 297: SSH sessions remain closing]];
+- [[https://github.com/elogind/elogind/issues/327][elogind issue 327: closing session without a process]];
+- [[https://github.com/elogind/elogind/releases/tag/v255.24][elogind 255.24 release notes]].
+
+This is the leading root cause, not yet the final live proof.  Do not use
+=loginctl terminate-session= or =kill-session= on 255.17, restart elogind from
+the only remote connection, delete files below =/run/systemd/sessions=, or mask
+the failure with =KillUserProcesses= or disabled PAM.
+
+Commit =54d8408a30e650291ae40637b02c781a19bfb0ee= introduces a narrow
+service-owned elogind 255.24 override.  It uses upstream commit
+=8b6e5172370b9864b3e86907e5b9a9cc6153b7e3= and recursive hash
+=0id4gjwjxcb860ibpr5irc3birgr89m650q4alrkpqdnd81nfyvk=.  The package and
+complete system build passed.  The candidate system is
+=kk8k5a84wzypz6dhpgi8m0gf6mkiid9x-system=; its profile =loginctl=, Shepherd
+daemon, =pam_elogind.so=, D-Bus metadata, udev data, and polkit data all resolve
+to =ff2932sq8k8z5vir6pav7zlkj5615gcp-elogind-255.24=.  The generated candidate
+=sshd= PAM service also resolves to that exact module.
+
+Activation must be performed from a local console because remote noninteractive
+=sudo= is unavailable.  Between reconfigure and reboot, PAM would point at the
+new module while the old daemon could remain replacement pending; make no SSH
+or other fresh PAM login in that interval.  From tty2 or another verified local
+console, run:
+
+#+begin_src sh
+sudo /run/current-system/profile/bin/sh -c \
+  '/home/skydive420dz/.config/guix/current/bin/guix system reconfigure \
+     /home/skydive420dz/Projects/guix-dotfiles/guix/systems/guixpc.scm &&
+   /run/current-system/profile/sbin/reboot'
+#+end_src
+
+The single privileged shell is intentional: its PAM session starts before
+activation, and it performs the reboot without opening a second PAM session in
+the temporary mixed-daemon interval.
+
+Keep every current generation until acceptance.  If the candidate fails, boot
+generation 80 from GRUB or set it from a recovery console and reboot:
+
+#+begin_src sh
+sudo /run/current-system/profile/bin/sh -c \
+  '/home/skydive420dz/.config/guix/current/bin/guix system switch-generation 80 &&
+   /run/current-system/profile/sbin/reboot'
+#+end_src
+
+Generation 75 remains the last observed working boot target.  Home generation
+29 remains the Home fallback.  Do not use =roll-back= when a specific target is
+required: from the candidate it would select the immediately preceding
+generation, not necessarily 80 or 75.
+
+Post-reboot acceptance must first confirm the local desktop, converged
+generations, running elogind 255.24, and no Shepherd replacements.  Only then
+open one SSH control connection, run multiple commands inside it, and perform
+the bounded connect/disconnect checks.  All test sessions must be absent after
+30 seconds and the total/closing counts must return to baseline.  The package
+build succeeded against this Guix revision's PAM 1.5.2 despite upstream's newer
+declared PAM baseline; PAM login, sudo, SSH, and graphical ownership therefore
+remain explicit live acceptance gates.
+
 ** TODO Slice 8: Non-mutating validation harness
 :PROPERTIES:
 :audit_priority: P1
