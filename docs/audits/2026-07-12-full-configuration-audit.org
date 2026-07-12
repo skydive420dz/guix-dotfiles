@@ -842,6 +842,96 @@ Acceptance gates:
 - reload failure is visible and does not claim success;
 - existing keyboard and master/stack behavior remain accepted.
 
+*** Prepared activation checkpoint
+
+The candidate removes the tty1 restart loop without changing the existing
+autologin trust policy.  Fish silently excludes SSH, existing graphical
+sessions, and non-tty1 logins, then calls =scripts/exwm-session= without =exec=.
+The runner rotates a private bounded pair at
+=~/.local/state/sk-exwm/startx-{current,previous}.log= (or below
+=$XDG_STATE_HOME= when set), records UTC start/end timestamps and status, and
+returns a failed or ended X session to the authenticated tty1 recovery prompt.
+The legacy cache log is copied into the previous slot once when no prior state
+log exists.
+
+Xinit remains the sole automatic wallpaper and Picom owner so compositing is
+ready before the fullscreen Emacs frame.  EXWM retains manual maintenance
+commands but startup/reload no longer repeats the visual work.  The desktop
+checker now requires exactly one Picom process with the declared GLX, VSync,
+and Emacs-only opacity policy.
+
+Application launch no longer reserves a window for whichever X client maps
+next.  A desktop entry must be visible, readable, simple enough for the direct
+=Exec= parser, and backed by available GUI/terminal executables before any
+process or layout state is created.  Each valid launch records a 30-second
+intent containing its origin frame, process/PID, and class aliases.  The one
+temporary manage dispatcher rejects transient, non-normal, fixed-size, and
+floating clients; exact and descendant PID matches win.  Live name fallback is
+restricted to the known single-instance Chromium path, and equal weak matches
+remain pending rather than guessing.  Failure, signal, timeout, match, and a
+successful reload all cancel the timer and remove the dispatcher when no intent
+remains.  A stack split is created only after a unique match.
+
+Reload now preflights every module with the Emacs Lisp syntax table and reader
+before loading the first one.  Runtime and post-load failures name the exact
+stage and completed count, restore =display-buffer-alist= plus the owned/current
+rule registries and migration flag, and state honestly that prior arbitrary
+definitions/hooks may already have changed.  The project prepends only its
+identity-owned rules, performs an exact one-time migration of the former four
+rules, and preserves foreign rules even when their match criterion collides.
+Real Xref result construction, local Evil RET precedence, and the public jump
+path are tested end to end.  EXWM 0.35 is the guarded compatibility floor for
+the remaining workspace/floating private adapters; the Emacs 30 Xref adapter
+degrades with a warning on another major version instead of aborting init.
+
+Candidate evidence:
+
+#+begin_src text
+Implementation commit: 39df7c354971042008f6bdd93ecf027b7c095c46
+Built Home candidate: /gnu/store/wg9jd7f1xp3hfc59x90krxq1dzxf9db3-home
+Pre-activation runtime: System generation 82; Home generation 32
+Shell gates: git diff --check, sh -n, Fish syntax, ShellCheck, and strict Fish recovery PASS
+Recovery fixture: failed status 44 returned past config source; current/previous logs retained; SSH/DISPLAY/tty2 controls stayed silent
+Editor gates: strengthened live policy PASS; isolated batch 25/25 ERT PASS; repository unchanged
+Reload gate: exact failure stage/count and display rollback tests PASS; live reload kept Picom PID 508 unchanged
+Placement gate: delayed client -> workspace index 3; fast client -> index 4; unrelated client -> index 0; pending intents/dispatcher -> 0/0
+Cleanup gate: missing entry and forced timeout left pending/dispatcher 0/0 and all-frame window count 7 -> 7
+Desktop gate: strict Bluetooth/session checker PASS, including exactly one Xinit-owned Picom
+Build gate: guix home build returned the Home candidate above
+#+end_src
+
+The source is ready, but C-06 and the slice remain open until the store-copied
+Fish configuration starts a fresh session.  Save editor work and push both
+checkpoint commits.  Then run from the local EXWM session:
+
+#+begin_src sh
+ghr
+/run/setuid-programs/sudo /run/current-system/profile/sbin/reboot
+#+end_src
+
+No =gsr= is required.  After reboot, verify that System generation 82 remains
+booted and Home advanced from generation 32.  Run
+=tests/exwm-session-check --require-fish=, =scripts/shell-check=,
+=scripts/emacs-check=, and =scripts/desktop-session-check --require-bluetooth=.
+The real state directory must contain a current log and, after legacy migration
+or a second attempt, the previous log.  During the active EXWM session, current
+must contain exactly one fresh =EXWM start= record, the strengthened live EXWM
+gate must pass, and no retry record/loop may appear; the successful end/status
+record is written only when that session eventually exits.
+Reload EXWM once and prove the sole Picom PID is unchanged.  Launch a normal
+Kitty and Chromium client, confirm placement/master-stack keys remain correct,
+and confirm no intent/timer/dispatcher remains.  The deliberately broken
+startup requirement is satisfied by the strict isolated Fish/startx harness;
+do not sabotage the working live session merely to repeat it physically.
+
+If the Home activation prevents a graphical start, the new path should return
+to tty1 with a retained log; SSH remains the second recovery path.  Revert
+=39df7c3= in the source checkout, run =guix home switch-generation 32=, and
+then reboot.  Because Emacs application files are live repository links, Home
+rollback alone does not revert them; both steps are required for a complete
+rollback.  Running =ghr= from the reverted source is an alternative that
+creates a new Home generation with the old behavior.
+
 ** TODO Slice 12: Reproducible channels, build gates, and retention
 :PROPERTIES:
 :audit_priority: P1

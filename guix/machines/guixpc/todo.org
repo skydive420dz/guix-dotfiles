@@ -72,7 +72,15 @@ Current next action:
   - [X] Pass both desktop-session checker modes, audible Bose Bluetooth output,
     both physical volume keys, and a real EXWM Kitty launch on the canonical bus.
     Audible HDMI is not required because this workstation does not use it.
-- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 11: EXWM startup, reload, and client-placement reliability][Slice 11: EXWM startup, reload, and client-placement reliability]].
+- [ ] Accept [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 11: EXWM startup, reload, and client-placement reliability][Slice 11: EXWM startup, reload, and client-placement reliability]].
+  - [X] Build implementation commit =39df7c3= and Home candidate
+    =/gnu/store/wg9jd7f1xp3hfc59x90krxq1dzxf9db3-home=.
+  - [X] Pass strict Fish recovery, shell, live EXWM, 25/25 isolated ERT,
+    Bluetooth desktop-session, placement concurrency, and cleanup gates.
+  - [ ] Push the checkpoint, run =ghr=, and reboot into a fresh tty1/EXWM
+    session so the store-copied Fish configuration is active.
+  - [ ] Accept fresh-session logs, reload/Picom, application placement, and
+    keyboard/master-stack behavior; then advance =next_slice= to 12.
 
 Ordered follow-up:
 

@@ -60,7 +60,11 @@ next active slice.
 - [X] Activate and accept Slice 10.  System generation 82 and Home generation
   32 now use one canonical Home D-Bus, active RTKit, the declared ten-minute
   display-only power policy, and the passing desktop-session checker.
-- [ ] Continue Slices 11 through 19 in audit order.
+- [ ] Activate and accept the prepared Slice 11 checkpoint.  Source commit
+  =39df7c3= and Home candidate =/gnu/store/wg9jd7f1xp3hfc59x90krxq1dzxf9db3-home=
+  provide bounded tty recovery, matched application placement, single-owner
+  visual startup, transactional display-policy reload, and focused tests.
+- [ ] After Slice 11 acceptance, continue Slices 12 through 19 in audit order.
   Do not expand dialect breadth until the P0/P1 runtime, validation, and
   reproducibility prerequisites close.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
@@ -254,10 +258,11 @@ This machine uses Emacs as both editor and X window manager.
 tty1 mingetty autologin
 -> Fish login shell
 -> shell/config.fish guard
+-> scripts/exwm-session (bounded current/previous logs)
 -> startx
 -> ~/.xinitrc
 -> shell/xinitrc
--> dbus-launch emacs -fs --eval '(load-file "~/.exwm")'
+-> emacs -fs --eval '(load-file "~/.exwm")'
 -> ~/.exwm
 -> emacs/exwm-loader.el
 -> ~/.emacs.d/exwm.el
@@ -271,6 +276,23 @@ There is no graphical display manager in the intended path.  The system config
 removes GDM, tty1 autologins as =skydive420dz=, and Fish starts EXWM only for
 the local interactive tty1 login shell.  SSH shells are excluded by the Fish
 guard.
+
+The session runner keeps a bounded private current/previous log pair:
+
+#+begin_src text
+~/.local/state/sk-exwm/startx-current.log
+~/.local/state/sk-exwm/startx-previous.log
+#+end_src
+
+If =XDG_STATE_HOME= is set, its value replaces =~/.local/state=.
+The previous file appears after a legacy-log migration or the second attempt;
+the state directory never grows beyond the pair.
+
+A failed or normally ended X session returns to the existing tty1 Fish prompt
+instead of terminating the login shell and triggering another mingetty
+autologin.  Inspect the current log, correct the cause, and run =sk-start-exwm=
+to retry.  SSH, an existing graphical display, and non-tty1 login shells remain
+silent and never autostart X.
 
 The live EXWM session should report EXWM as loaded:
 
@@ -555,17 +577,39 @@ XF86AudioLowerVolume  lower default sink volume through wpctl
 Picom is intentionally scoped to Emacs frame transparency only:
 
 #+begin_src text
-picom --backend glx --opacity-rule '85:class_g = "Emacs"'
+picom --backend glx --vsync --opacity-rule '85:class_g = "Emacs"'
 #+end_src
 
 The X session starts the wallpaper and Picom before launching Emacs/EXWM so the
 compositor is already active when Emacs appears. It launches Emacs fullscreen
 directly instead of using the Guix =exwm= wrapper, whose hardcoded =-mm=
-maximized-frame startup can briefly draw a small pre-maximized frame. EXWM
-startup only starts Picom when no existing process is running. =M-x
-sk/start-picom= remains the explicit manual restart command for compositor
-tests. Browser and terminal transparency are not managed through global
-active/inactive opacity rules.
+maximized-frame startup can briefly draw a small pre-maximized frame.  Xinit is
+the only automatic wallpaper/Picom owner; EXWM startup and reload never repeat
+either operation.  =M-x sk/start-picom= and =M-x sk/set-wallpaper= remain
+explicit maintenance commands.  Browser and terminal transparency are not
+managed through global active/inactive opacity rules.
+
+** Application placement and reload policy
+
+Desktop entries are fully resolved and validated before a process starts.  The
+launcher omits =Hidden=/=NoDisplay= entries and conservatively omits complex
+=Exec= quoting that the direct parser cannot reproduce faithfully.  It never
+creates a speculative split.  Instead, a 30-second launch intent records the
+origin workspace, process PID, and normalized class metadata.  The EXWM manage
+hook rejects transient, dialog, fixed-size, and floating clients; it prefers
+exact/descendant PID matching and allows live class fallback only for the known
+single-instance Chromium path.  An ambiguous match is ignored.  Failure,
+timeout, successful placement, and reload all remove the intent and timer.
+
+Configuration reload reader-checks every module before loading the first one.
+It reports the exact failed module and how many earlier modules loaded, restores
+the complete project display-policy state, and explicitly warns that arbitrary
+earlier function/hook mutations cannot be rolled back.  Project display rules
+are identity-owned and preserve foreign/package rules.  The reviewed runtime
+floor is EXWM 0.35; its remaining private workspace/floating adapters are
+guarded by that exact compatibility check.  The Xref RET adapter is reviewed on
+Emacs 30 and degrades with a warning instead of blocking editor startup on a
+future Emacs major release.
 
 Live acceptance for the display/session path:
 
