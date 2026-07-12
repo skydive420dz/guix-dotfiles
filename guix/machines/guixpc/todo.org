@@ -45,7 +45,7 @@ Remaining cosmetic issue:
 * TODO 2026-07-12 configuration audit remediation
 :PROPERTIES:
 :created: 2026-07-12
-:next_slice: 11
+:next_slice: 12
 :END:
 
 Canonical evidence, finding status, slice definitions, and acceptance gates:
@@ -72,15 +72,20 @@ Current next action:
   - [X] Pass both desktop-session checker modes, audible Bose Bluetooth output,
     both physical volume keys, and a real EXWM Kitty launch on the canonical bus.
     Audible HDMI is not required because this workstation does not use it.
-- [ ] Accept [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 11: EXWM startup, reload, and client-placement reliability][Slice 11: EXWM startup, reload, and client-placement reliability]].
+- [X] Accept [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 11: EXWM startup, reload, and client-placement reliability][Slice 11: EXWM startup, reload, and client-placement reliability]].
   - [X] Build implementation commit =39df7c3= and Home candidate
     =/gnu/store/wg9jd7f1xp3hfc59x90krxq1dzxf9db3-home=.
   - [X] Pass strict Fish recovery, shell, live EXWM, 25/25 isolated ERT,
-    Bluetooth desktop-session, placement concurrency, and cleanup gates.
-  - [ ] Push the checkpoint, run =ghr=, and reboot into a fresh tty1/EXWM
+    placement concurrency, and cleanup gates.  The pre-activation strict
+    desktop-session run passed with Bose connected; after reboot Bose was off,
+    so the non-strict run passed with Bluetooth skipped.  Slice 10 retains the
+    accepted audible Bluetooth and physical-volume-key evidence.
+  - [X] Push the checkpoint, run =ghr=, and reboot into a fresh tty1/EXWM
     session so the store-copied Fish configuration is active.
-  - [ ] Accept fresh-session logs, reload/Picom, application placement, and
-    keyboard/master-stack behavior; then advance =next_slice= to 12.
+  - [X] Accept fresh-session logs, reload/Picom, application placement, and
+    keyboard/master-stack behavior.  System/Home generations are 83/33; the
+    System store realization is unchanged from Slice 10.
+- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 12: Reproducible channels, build gates, and retention][Slice 12: reproducible channels, build gates, and retention]].
 
 Ordered follow-up:
 

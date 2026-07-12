@@ -60,11 +60,13 @@ next active slice.
 - [X] Activate and accept Slice 10.  System generation 82 and Home generation
   32 now use one canonical Home D-Bus, active RTKit, the declared ten-minute
   display-only power policy, and the passing desktop-session checker.
-- [ ] Activate and accept the prepared Slice 11 checkpoint.  Source commit
-  =39df7c3= and Home candidate =/gnu/store/wg9jd7f1xp3hfc59x90krxq1dzxf9db3-home=
-  provide bounded tty recovery, matched application placement, single-owner
-  visual startup, transactional display-policy reload, and focused tests.
-- [ ] After Slice 11 acceptance, continue Slices 12 through 19 in audit order.
+- [X] Activate and accept Slice 11.  A fresh session now combines Home
+  generation 33's bounded private tty recovery logs with the matched
+  application placement, single-owner visual startup, transactional
+  display-policy reload, and 25 focused ERT checks from source commit
+  =39df7c3=.
+  Log-permission hardening is commit =6b395ba=.
+- [ ] Continue Slices 12 through 19 in audit order.
   Do not expand dialect breadth until the P0/P1 runtime, validation, and
   reproducibility prerequisites close.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.

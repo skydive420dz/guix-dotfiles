@@ -172,14 +172,14 @@ validation, and reproducibility findings are closed.
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
 | O-01 | P0  | CLOSED   | Elogind 255.24 removes command and PTY SSH sessions immediately; no closing session remained through 30 seconds. | 7 |
-| O-02 | P1  | CLOSED   | System generation 82 is both current and booted; fresh Home generation 32 services are running. | 7, 10 |
-| O-03 | P1  | CLOSED   | D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse are fresh in Home generation 32 with no replacement pending. | 7, 10 |
+| O-02 | P1  | CLOSED   | System generation 83 is both current and booted at the accepted Slice 10 realization; fresh Home generation 33 services are running. | 7, 10, 11 |
+| O-03 | P1  | CLOSED   | D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse are fresh in Home generation 33 with no replacement pending. | 7, 10, 11 |
 | O-04 | P1  | CLOSED   | Fresh Emacs 30.2 and the live Org, Geiser, Geiser-Guile, and Projectile paths match the current profile. | 7, 8 |
 | O-05 | P1  | CLOSED   | EXWM, launched applications, PipeWire, WirePlumber, and PipeWire-Pulse share the one canonical Guix Home D-Bus; no =dbus-launch= remains. | 10 |
 | O-06 | P2  | CLOSED   | RTKit is active through system D-Bus/Polkit; PipeWire obtains an RR data-loop with a bounded 200000-microsecond realtime limit. | 10 |
 | O-07 | P2  | CLOSED   | The stale Kitty process is gone and the current launcher is Kitty 0.47.4. | 7 |
 | O-08 | P2  | CLOSED   | Fish, Bash, Eshell, and bare SSH automation route =gsr=/=ghr= through one current-Guix wrapper and explicit setuid sudo path. | 9 |
-| O-09 | P2  | VERIFIED | There are 81 retained System and 32 Home generations from roughly nine days, including duplicates. | 12 |
+| O-09 | P2  | VERIFIED | There are 82 retained System and 33 Home generations from roughly nine days, including duplicates. | 12 |
 | O-10 | P3  | CLOSED   | X screen blanking and DPMS are explicitly declared and active at 600 seconds; elogind does not suspend the workstation. | 10 |
 | O-11 | P3  | POLICY   | Elogind intentionally retains the startx/PAM login as active local =tty1= with =Type=tty=; fresh-session =IdleHint=no= and EXWM child X11 metadata are correct. | 10 |
 | O-12 | P3  | VERIFIED | Historical Blueman logs show dconf persistence failure; current relevance is unproven. | 19 |
@@ -193,11 +193,11 @@ validation, and reproducibility findings are closed.
 | C-03 | P1  | CLOSED   | Batch runs from copied sources under =env -i= with isolated HOME/TMP/XDG state and a write boundary. | 8 |
 | C-04 | P1  | CLOSED   | Fixture buffers run real mode hooks and assert LSP registration, Flycheck chains, Company, Geiser, Eldoc, diagnostics, and format routing. | 8 |
 | C-05 | P2  | CLOSED   | Project-owned Home links are validated in two passes; blockers/dangling paths are preserved and make activation nonzero before any project link changes. | 9 |
-| C-06 | P2  | RISK     | Tty1 autologin can relaunch a failing X session while =sk-exwm-startx.log= is overwritten. | 11 |
+| C-06 | P2  | CLOSED   | Fresh Home generation 33 uses a non-=exec= runner with bounded current/previous logs and returns failures to tty1; the strict Fish harness proves retry and exclusion paths. | 11 |
 | C-07 | P2  | CLOSED   | Strict JSON keeps jq; JSONC uses =jsonc-mode= with JSON-only Flycheck disabled and comment-preserving clang-format. | 9 |
 | C-08 | P2  | CLOSED   | clang-format, shfmt, and Ruff receive visited filenames, with non-file fallbacks and fixture-backed config discovery. | 9 |
 | C-09 | P2  | CLOSED   | Emacs lockfiles are explicitly enabled for concurrent-edit detection while backups/auto-saves stay centralized. | 9 |
-| C-10 | P2  | RISK     | Reloading modules is non-transactional and resets the complete =display-buffer-alist=. | 11 |
+| C-10 | P2  | CLOSED   | Reload preflights all modules, identifies partial runtime failure, restores all owned display-policy state, and preserves foreign rules. | 11 |
 | C-11 | P3  | CLOSED   | Ranger has one strict-JSON preview branch and routes JSONC through the text preview path. | 9 |
 | C-12 | P3  | CLOSED   | Sourced shell files declare their lint dialect and the deterministic whole-project ShellCheck gate is clean. | 9 |
 
@@ -209,10 +209,10 @@ reported as a confirmed bug without a focused test.
 
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
-| X-01 | P2  | STATIC   | Wallpaper and Picom each have Xinit and Emacs startup owners. | 11 |
-| X-02 | P2  | RISK     | A global next-client reservation and eight-second timer can place the wrong X window. | 11 |
-| X-03 | P2  | RISK     | Reservation happens before desktop-entry launch validation and can leave a stale split. | 11 |
-| X-04 | P2  | RISK     | Private EXWM/Xref APIs increase upgrade sensitivity on rolling packages. | 11, 12 |
+| X-01 | P2  | CLOSED   | Xinit is the sole automatic wallpaper/Picom owner; fresh reload retained the one Picom process and PID. | 11 |
+| X-02 | P2  | CLOSED   | PID/class-matched launch intents place delayed and fast clients on their origin workspaces while unrelated clients remain independent. | 11 |
+| X-03 | P2  | CLOSED   | Visible/simple desktop entries and executables validate before launch; failure and timeout leave no intent, dispatcher, process, or speculative split. | 11 |
+| X-04 | P2  | PARTIAL  | Public EXWM/Xref APIs replace avoidable private calls; the remaining workspace/floating adapters are isolated behind the reviewed EXWM 0.35 gate pending Slice 12 pinning. | 11, 12 |
 | X-05 | P2  | POLICY   | Tty1 autologin, =xhost= access, and Kitty remote control broaden the local trust boundary. | 19 |
 | X-06 | P3  | POLICY   | Full transparency, compositor behavior, and screen blanking need one documented visual/power policy. | 19 |
 
@@ -815,10 +815,11 @@ accepted runtime is otherwise converged.  Roll back to System generation 81
 from GRUB if the system service layer regresses; revert =1321f76= and reboot if
 the Xinit ownership policy regresses.
 
-** TODO Slice 11: EXWM startup, reload, and client-placement reliability
+** DONE Slice 11: EXWM startup, reload, and client-placement reliability
 :PROPERTIES:
 :audit_priority: P2
 :findings: C-06 C-10 X-01 X-02 X-03 X-04
+:completed: 2026-07-12
 :END:
 
 Scope:
@@ -931,6 +932,66 @@ then reboot.  Because Emacs application files are live repository links, Home
 rollback alone does not revert them; both steps are required for a complete
 rollback.  Running =ghr= from the reverted source is an alternative that
 creates a new Home generation with the old behavior.
+
+*** Acceptance record
+
+The fresh boot activated Home generation 33 at
+=/gnu/store/dbmnwmi0jypvpi5kb0xn29wjpdhnjr6z-home=.  System generation 83 is
+current and booted at
+=/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system=, the same accepted system
+realization used by Slice 10.  The first inspection saw 84 seconds of uptime,
+proving that the new store-copied Fish configuration—not the pre-activation
+login shell—owned startup.
+
+The real state directory contains current and previous logs.  Current has one
+=EXWM start: 2026-07-12T22:53:21Z= record and no end record while the session is
+active; no retry record or autologin loop appeared.  Both files are mode 0600.
+Commit =6b395ba= makes this privacy invariant durable even when the previous
+file is first copied from the legacy cache log.
+
+Fresh live EXWM reports reviewed EXWM 0.35, five live workspaces, zero launch
+intents, zero dispatcher hooks, four identity-owned display rules with no
+duplicates, and the reviewed Emacs 30 Xref adapter.  A reload returned success
+and left the sole Xinit-owned Picom at PID 515.  The strengthened live editor
+gate and all 25 isolated ERT checks pass with repository state unchanged.  The
+fresh key map retained the exact focus, master-stack, Kitty, browser, and reload
+bindings.
+
+The post-reboot placement probe launched delayed, immediate, and unrelated
+Kitty clients with distinct classes and PIDs.  They resolved respectively to
+workspace indexes 3, 4, and 0; pending intent/dispatcher counts returned to
+0/0.  Probe cleanup removed every client.  A missing desktop entry and forced
+timeout then left counts at 0/0 and all-frame window count unchanged at 6 -> 6.
+
+The strict Fish recovery harness, Fish syntax, ShellCheck, and desktop service
+gates pass.  The Bose speaker was powered off/disconnected after reboot, so the
+post-reboot non-strict desktop run passed with its Bluetooth gate skipped; the
+strict run's only failure was that expected disconnected device.  Slice 10's
+strict connected-Bose automation and the user's audible Bluetooth/volume-key
+confirmation remain the accepted hardware evidence.  HDMI remains the current
+physical default while Bose is off and is not an audible acceptance target on
+this workstation.  No closing SSH session remained.
+
+#+begin_src text
+Implementation commit: 39df7c354971042008f6bdd93ecf027b7c095c46
+Activation-checkpoint commit: ad7df7f
+Log-permission hardening commit: 6b395ba
+System: generation 83; current and booted at /gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system
+Home: generation 33 at /gnu/store/dbmnwmi0jypvpi5kb0xn29wjpdhnjr6z-home
+Startup: one current start record; no active-session end/retry; current and previous mode 0600
+Shell/recovery: strict Fish PASS; shell-check PASS
+Editor/reload: live PASS; isolated batch 25/25 ERT PASS; Picom PID 515 -> 515
+Keys: s-h/j/k/l focus; s-m promote; s-M normalize; s-return Kitty; s-w browser; s-r reload
+Placement: slow/fast/unrelated PID 1301/1302/1303 -> workspace 3/4/0; cleanup 0/0
+Failure cleanup: missing entry and forced timeout; window count 6 -> 6
+Desktop: PASS with on-demand disconnected Bluetooth skipped; all Slice 11 service gates pass
+#+end_src
+
+Slice 11 is complete.  X-04 remains partial only for the isolated, version-gated
+private EXWM adapters and moves with channel pinning into Slice 12.  Functional
+rollback remains: revert =6b395ba= first and then =39df7c3=, switch to Home
+generation 32, then reboot; Home rollback alone does not revert live-linked
+Emacs sources.
 
 ** TODO Slice 12: Reproducible channels, build gates, and retention
 :PROPERTIES:
