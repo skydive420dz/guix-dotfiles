@@ -45,7 +45,7 @@ Remaining cosmetic issue:
 * TODO 2026-07-12 configuration audit remediation
 :PROPERTIES:
 :created: 2026-07-12
-:next_slice: 12
+:next_slice: 13
 :END:
 
 Canonical evidence, finding status, slice definitions, and acceptance gates:
@@ -85,17 +85,21 @@ Current next action:
   - [X] Accept fresh-session logs, reload/Picom, application placement, and
     keyboard/master-stack behavior.  System/Home generations are 83/33; the
     System store realization is unchanged from Slice 10.
-- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 12: Reproducible channels, build gates, and retention][Slice 12: reproducible channels, build gates, and retention]].
+- [X] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 12: Reproducible channels, build gates, and retention][Slice 12: reproducible channels, build gates, and retention]].
   - [X] Publish and clean-clone authenticate =sk-guix= introduction
     =eaade368=, target =b84ff24=, and orphan keyring =9122748=.
   - [X] Pin Guix =a8391f2=, Nonguix =3b66965=, and =sk-guix= =b84ff24=;
     pass the isolated authenticated time-machine provenance check.
   - [X] Pass the promoted package, quarantined Fish evaluation, Home, System,
     reviewed EXWM 0.35, shell, and fixture gates without activation.
-  - [X] Pass live retention verification and the read-only rollback drill;
-    protect System 83/81/80/75, Home 33/32/29, and pull 4/3/2.
-  - [ ] Push the checkpoint, pull the exact lock, run =gsr= and =ghr=, reboot,
-    then record the new accepted pull/System/Home generations.
+  - [X] Pass live retention verification and the read-only rollback drill.
+    The accepted next-promotion pins are System 84/83/81/80/75, Home
+    34/33/32/29, and pull 5/4/3/2.
+  - [X] Push the checkpoint, pull the exact lock, run =gsr= and =ghr=, and
+    reboot into Pull generation 5, System generation 84, and Home generation
+    34.  Fresh shell, editor, desktop, provenance, retention, and rollback
+    checks pass.
+- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 13: Package ownership and per-dialect environments][Slice 13: package ownership and per-dialect environments]].
 
 Ordered follow-up:
 

@@ -151,19 +151,20 @@ REPL-, backend-, service-, or workflow-level acceptance tests.
 
 #+begin_src text
 Source organization:       strong
-Declared/deployed config:  aligned
-Live runtime convergence:  strong; fresh System 81 and Home 30 runtime
+Declared/deployed config:  aligned at the authenticated three-channel lock
+Live runtime convergence:  strong; fresh System 84 and Home 34 runtime
 Display/resource health:   good
 Validation safety:         strong; isolated editor and activation gates
 Lisp foundation:           coherent Elisp/Guile/SBCL base
 Lisp ecosystem breadth:    early; most dialect families absent
-Reproducibility:            weak across a fresh pull
+Reproducibility:            strong; clean-clone authentication and build gates pass
 Operational reliability:   restored; bounded SSH cleanup passes
 #+end_src
 
 The project is a credible Guix/EXWM workstation foundation.  It is not yet a
-full Lisp ecosystem.  Expansion should wait until the P0/P1 runtime,
-validation, and reproducibility findings are closed.
+full Lisp ecosystem.  The P0/P1 runtime, validation, and reproducibility
+prerequisites are now closed, so package ownership and deliberate per-dialect
+expansion can begin with Slice 13.
 
 * Finding register
 
@@ -172,14 +173,14 @@ validation, and reproducibility findings are closed.
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
 | O-01 | P0  | CLOSED   | Elogind 255.24 removes command and PTY SSH sessions immediately; no closing session remained through 30 seconds. | 7 |
-| O-02 | P1  | CLOSED   | System generation 83 is both current and booted at the accepted Slice 10 realization; fresh Home generation 33 services are running. | 7, 10, 11 |
-| O-03 | P1  | CLOSED   | D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse are fresh in Home generation 33 with no replacement pending. | 7, 10, 11 |
+| O-02 | P1  | CLOSED   | System generation 84 is both current and booted at the authenticated Slice 12 realization; fresh Home generation 34 services are running. | 7, 10, 11, 12 |
+| O-03 | P1  | CLOSED   | D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse are fresh in Home generation 34 with no replacement pending. | 7, 10, 11, 12 |
 | O-04 | P1  | CLOSED   | Fresh Emacs 30.2 and the live Org, Geiser, Geiser-Guile, and Projectile paths match the current profile. | 7, 8 |
 | O-05 | P1  | CLOSED   | EXWM, launched applications, PipeWire, WirePlumber, and PipeWire-Pulse share the one canonical Guix Home D-Bus; no =dbus-launch= remains. | 10 |
 | O-06 | P2  | CLOSED   | RTKit is active through system D-Bus/Polkit; PipeWire obtains an RR data-loop with a bounded 200000-microsecond realtime limit. | 10 |
 | O-07 | P2  | CLOSED   | The stale Kitty process is gone and the current launcher is Kitty 0.47.4. | 7 |
 | O-08 | P2  | CLOSED   | Fish, Bash, Eshell, and bare SSH automation route =gsr=/=ghr= through one current-Guix wrapper and explicit setuid sudo path. | 9 |
-| O-09 | P2  | POLICY   | The read-only retention gate protects exact System/Home/pull targets and reports 27 System plus 17 Home duplicate-link candidates; no deletion or garbage collection is implemented. | 12 |
+| O-09 | P2  | POLICY   | The read-only retention gate protects accepted System 84, Home 34, and pull 5 plus older recovery tiers; it reports 27 System and 17 Home duplicate-link candidates, but implements no deletion or garbage collection. | 12 |
 | O-10 | P3  | CLOSED   | X screen blanking and DPMS are explicitly declared and active at 600 seconds; elogind does not suspend the workstation. | 10 |
 | O-11 | P3  | POLICY   | Elogind intentionally retains the startx/PAM login as active local =tty1= with =Type=tty=; fresh-session =IdleHint=no= and EXWM child X11 metadata are correct. | 10 |
 | O-12 | P3  | VERIFIED | Historical Blueman logs show dconf persistence failure; current relevance is unproven. | 19 |
@@ -193,7 +194,7 @@ validation, and reproducibility findings are closed.
 | C-03 | P1  | CLOSED   | Batch runs from copied sources under =env -i= with isolated HOME/TMP/XDG state and a write boundary. | 8 |
 | C-04 | P1  | CLOSED   | Fixture buffers run real mode hooks and assert LSP registration, Flycheck chains, Company, Geiser, Eldoc, diagnostics, and format routing. | 8 |
 | C-05 | P2  | CLOSED   | Project-owned Home links are validated in two passes; blockers/dangling paths are preserved and make activation nonzero before any project link changes. | 9 |
-| C-06 | P2  | CLOSED   | Fresh Home generation 33 uses a non-=exec= runner with bounded current/previous logs and returns failures to tty1; the strict Fish harness proves retry and exclusion paths. | 11 |
+| C-06 | P2  | CLOSED   | Fresh Home generation 34 uses a non-=exec= runner with bounded current/previous logs and returns failures to tty1; the strict Fish harness proves retry and exclusion paths. | 11, 12 |
 | C-07 | P2  | CLOSED   | Strict JSON keeps jq; JSONC uses =jsonc-mode= with JSON-only Flycheck disabled and comment-preserving clang-format. | 9 |
 | C-08 | P2  | CLOSED   | clang-format, shfmt, and Ruff receive visited filenames, with non-file fallbacks and fixture-backed config discovery. | 9 |
 | C-09 | P2  | CLOSED   | Emacs lockfiles are explicitly enabled for concurrent-edit detection while backups/auto-saves stay centralized. | 9 |
@@ -987,16 +988,17 @@ Failure cleanup: missing entry and forced timeout; window count 6 -> 6
 Desktop: PASS with on-demand disconnected Bluetooth skipped; all Slice 11 service gates pass
 #+end_src
 
-Slice 11 is complete.  X-04 remains partial only for the isolated, version-gated
-private EXWM adapters and moves with channel pinning into Slice 12.  Functional
+Slice 11 is complete.  Its isolated, version-gated private EXWM adapters moved
+with authenticated channel pinning into Slice 12, where X-04 closes.  Functional
 rollback remains: revert =6b395ba= first and then =39df7c3=, switch to Home
 generation 32, then reboot; Home rollback alone does not revert live-linked
 Emacs sources.
 
-** TODO Slice 12: Reproducible channels, build gates, and retention
+** DONE Slice 12: Reproducible channels, build gates, and retention
 :PROPERTIES:
 :audit_priority: P1
 :findings: O-09 R-01 R-02 R-05 X-04
+:completed: 2026-07-12
 :END:
 
 Scope:
@@ -1081,6 +1083,57 @@ acceptance.  If the new pull frontend fails, switch exactly to pull generation
 4; if activation fails, restore the matching source checkpoint before switching
 the exact System/Home generation because live application links are not rolled
 back by Guix Home.
+
+*** Acceptance record
+
+The pushed implementation and prepared-documentation checkpoints are
+=62e2849= and =0542684=.  A fresh GitHub clone at =0542684= ran
+=scripts/guix-build-gate --plan= successfully without relying on the live
+checkout.  The canonical pull then created generation 5 at:
+
+#+begin_src text
+Pull 5:   /gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+System 84: /gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system
+Home 34:   /gnu/store/xzhsfha3cbbzgs3gddi47iq1fk89fmiq-home
+#+end_src
+
+Pull generation 5 describes the exact repository-pinned Guix, Nonguix, and
+=sk-guix= commits and records the =sk-guix= introduction and signer.  The pull
+printed Guix's local channel-file trust warning before updating =sk-guix=; this
+is distinct from Git authentication, and the resulting generation contains the
+expected introduction, signer, and target.  Both =gsr --print= and =ghr
+--print= accept that active provenance.
+
+After a normal reboot, System generation 84 was both current and booted at the
+exact store target above; Home generation 34 was current.  D-Bus, PipeWire,
+WirePlumber, and PipeWire-Pulse were running with no replacement pending, no
+closing login session remained, and Kitty reported 0.47.4.  The repository was
+clean and synchronized with the pushed checkpoint during these checks.
+
+=scripts/shell-check= passed all focused fixtures.  =scripts/emacs-check=
+passed its read-only live phase and all 25 isolated ERT checks without changing
+the repository.  The non-strict desktop checker passed after reboot; its strict
+mode failed only because the Bose speaker was powered off and disconnected.
+The earlier accepted connected-Bose automation, audible output, and physical
+volume-key test remain the hardware evidence.  HDMI audio is not an acceptance
+target on this workstation.
+
+The rotated retention manifest now protects System 84 as the accepted
+promotion baseline, 83 as immediate rollback, and 81/80/75 as older recovery
+tiers.  It similarly protects Home 34/33/32/29 and pull 5/4/3/2.  Live
+verification reports generation counts 83/34/5; the duplicate-only plan remains
+27 System, 17 Home, and zero pull candidates.  The read-only rollback drill
+passes and renders exact switch commands through the immutable protected pull
+5 frontend for System 84, Home 34, and pull 5, with 83/33/4 as the immediate
+older tier.  No generation was deleted, no switch was performed by the drill,
+and no garbage collection ran.
+
+Slice 12 is accepted.  R-05 remains partial only for the composable manifests
+and per-dialect development shells assigned to Slice 13.  For functional
+rollback from this accepted state, first restore the pre-Slice-12 source
+checkpoint =6707cbb=, then use the protected pull 4 Guix to switch exactly to
+System 83, Home 33, and pull 4.  Home rollback alone still does not restore
+live-linked application sources.
 
 ** TODO Slice 13: Package ownership and per-dialect environments
 :PROPERTIES:

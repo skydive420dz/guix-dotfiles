@@ -66,11 +66,11 @@ next active slice.
   display-policy reload, and 25 focused ERT checks from source commit
   =39df7c3=.
   Log-permission hardening is commit =6b395ba=.
-- [ ] Activate and accept the prepared Slice 12 checkpoint.  All three
-  channels are authenticated and pinned, the non-activating package/Home/System
-  gate passes, and the read-only retention/rollback planner protects exact
-  System, Home, and pull generations.
-- [ ] After Slice 12 acceptance, continue Slices 13 through 19 in audit order.
+- [X] Activate and accept Slice 12.  Pull generation 5, System generation 84,
+  and Home generation 34 now share the exact authenticated channel lock; the
+  non-activating package/Home/System gate and read-only retention/rollback
+  planner pass from the accepted frontend.
+- [ ] Continue Slices 13 through 19 in audit order.
   Do not expand dialect breadth until the P0/P1 runtime, validation, and
   reproducibility prerequisites close.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
