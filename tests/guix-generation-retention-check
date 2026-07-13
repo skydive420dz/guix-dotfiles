@@ -1,0 +1,258 @@
+#!/bin/sh
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+tool=$repo/scripts/guix-generation-retention
+sandbox=$(mktemp -d "${TMPDIR:-/tmp}/guix-generation-retention-check.XXXXXX")
+trap 'rm -rf -- "$sandbox"' EXIT HUP INT TERM
+
+root=$sandbox/root
+home=$sandbox/home
+fixture_user=fixture
+system_profiles=$root/var/guix/profiles
+user_profiles=$system_profiles/per-user/$fixture_user
+store=$root/gnu/store
+grub=$root/boot/grub/grub.cfg
+pins=$sandbox/pins.tsv
+marker=$sandbox/guix-executed
+
+mkdir -p "$user_profiles" "$store" "$root/run" "$(dirname "$grub")" \
+    "$home/.config/guix"
+
+make_store_item() {
+    msi_kind=$1
+    msi_name=$2
+    msi_path=$store/$msi_name
+    mkdir -p "$msi_path"
+    case $msi_kind in
+        system)
+            : >"$msi_path/kernel"
+            : >"$msi_path/initrd"
+            ;;
+        home)
+            : >"$msi_path/activate"
+            ;;
+        pull)
+            mkdir -p "$msi_path/bin"
+            # The single-quoted line is the literal fake executable body.
+            # shellcheck disable=SC2016
+            printf '%s\n' \
+                '#!/bin/sh' \
+                'if [ "${1:-}" = --version ]; then exit 0; fi' \
+                ': >"${GUIX_FAKE_EXECUTED:?}"' \
+                'exit 99' >"$msi_path/bin/guix"
+            chmod +x "$msi_path/bin/guix"
+            ;;
+    esac
+}
+
+link_generation() {
+    lg_kind=$1
+    lg_generation=$2
+    lg_target=$3
+    case $lg_kind in
+        system) lg_link=$system_profiles/system-$lg_generation-link ;;
+        home) lg_link=$user_profiles/guix-home-$lg_generation-link ;;
+        pull) lg_link=$user_profiles/current-guix-$lg_generation-link ;;
+    esac
+    ln -s "$store/$lg_target" "$lg_link"
+}
+
+system_a=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-system
+system_b=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-system
+system_c=cccccccccccccccccccccccccccccccc-system
+system_d=dddddddddddddddddddddddddddddddd-system
+home_a=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-home
+home_b=ffffffffffffffffffffffffffffffff-home
+home_c=gggggggggggggggggggggggggggggggg-home
+home_d=hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh-home
+pull_a=iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii-profile
+pull_b=jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-profile
+pull_c=kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk-profile
+
+for item in "$system_a" "$system_b" "$system_c" "$system_d"; do
+    make_store_item system "$item"
+done
+for item in "$home_a" "$home_b" "$home_c" "$home_d"; do
+    make_store_item home "$item"
+done
+for item in "$pull_a" "$pull_b" "$pull_c"; do
+    make_store_item pull "$item"
+done
+
+link_generation system 1 "$system_a"
+link_generation system 2 "$system_a"
+link_generation system 3 "$system_b"
+link_generation system 4 "$system_c"
+link_generation system 5 "$system_d"
+link_generation home 1 "$home_a"
+link_generation home 2 "$home_a"
+link_generation home 3 "$home_b"
+link_generation home 4 "$home_b"
+link_generation home 5 "$home_c"
+link_generation home 6 "$home_d"
+link_generation pull 1 "$pull_a"
+link_generation pull 2 "$pull_a"
+link_generation pull 3 "$pull_b"
+link_generation pull 4 "$pull_c"
+
+ln -s system-5-link "$system_profiles/system"
+ln -s guix-home-6-link "$user_profiles/guix-home"
+ln -s current-guix-4-link "$user_profiles/current-guix"
+ln -s "$store/$system_d" "$root/run/current-system"
+ln -s "$store/$system_d" "$root/run/booted-system"
+ln -s "$user_profiles/current-guix" "$home/.config/guix/current"
+
+printf '%b\n' \
+    '# kind	generation	canonical-store-target	role	reason' \
+    "system\t4\t/gnu/store/$system_c\tpromotion-rollback\tfixture promotion System" \
+    "system\t3\t/gnu/store/$system_b\tpreferred-rollback\tfixture older System fallback" \
+    "home\t5\t/gnu/store/$home_c\tpromotion-rollback\tfixture promotion Home" \
+    "home\t1\t/gnu/store/$home_a\tpreferred-rollback\tprotected older duplicate" \
+    "pull\t3\t/gnu/store/$pull_b\tpromotion-rollback\tfixture promotion pull" \
+    "pull\t1\t/gnu/store/$pull_a\tpreferred-rollback\tprotected older duplicate" \
+    >"$pins"
+
+printf '%s\n' \
+    'menuentry current-system' \
+    'gnu.system=/var/guix/profiles/system-4-link' \
+    'gnu.system=/var/guix/profiles/system-3-link' \
+    >"$grub"
+
+run_tool() {
+    GUIX_RETENTION_ROOT=$root \
+    GUIX_RETENTION_USER=$fixture_user \
+    GUIX_RETENTION_HOME=$home \
+    GUIX_RETENTION_PINS=$pins \
+    GUIX_FAKE_EXECUTED=$marker \
+        "$tool" "$@"
+}
+
+run_tool_with_pins() {
+    rtwp_pins=$1
+    shift
+    GUIX_RETENTION_ROOT=$root \
+    GUIX_RETENTION_USER=$fixture_user \
+    GUIX_RETENTION_HOME=$home \
+    GUIX_RETENTION_PINS=$rtwp_pins \
+    GUIX_FAKE_EXECUTED=$marker \
+        "$tool" "$@"
+}
+
+fail_check() {
+    printf 'guix-generation-retention-check: %s\n' "$*" >&2
+    exit 1
+}
+
+real_pins=$repo/guix/machines/guixpc/generation-pins.tsv
+real_pin_count=$(awk -F '\t' '
+    !/^[[:space:]]*#/ && !/^[[:space:]]*$/ {
+        if (NF != 5) exit 2
+        count++
+    }
+    END { print count + 0 }
+' "$real_pins") || fail_check 'real pin manifest is malformed'
+[ "$real_pin_count" -ge 6 ] ||
+    fail_check "real pin manifest has only $real_pin_count rows"
+if ! awk -F '\t' '
+    /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+    seen[$1 FS $2]++ { bad = 1 }
+    $4 == "promotion-rollback" { promotion[$1]++ }
+    $4 == "preferred-rollback" { preferred[$1]++ }
+    END {
+        for (kind in promotion)
+            if (promotion[kind] != 1) bad = 1
+        exit !(promotion["system"] == 1 && promotion["home"] == 1 &&
+               promotion["pull"] == 1 && preferred["system"] == 1 &&
+               preferred["home"] == 1 && preferred["pull"] == 1 && !bad)
+    }
+' "$real_pins"; then
+    fail_check 'real pin manifest lacks unique promotion/preferred recovery tiers'
+fi
+
+inventory_output=$(run_tool inventory)
+printf '%s\n' "$inventory_output" | grep -q 'System generations: 5'
+printf '%s\n' "$inventory_output" | grep -q 'Home generations: 6'
+printf '%s\n' "$inventory_output" | grep -q 'Pull generations: 4'
+
+plan_output=$(run_tool plan)
+printf '%s\n' "$plan_output" | grep -q '^System duplicate candidates: 1$'
+printf '%s\n' "$plan_output" | grep -q '^Home duplicate candidates: 3$'
+printf '%s\n' "$plan_output" | grep -q '^Pull duplicate candidates: none$'
+printf '%s\n' "$plan_output" | grep -q 'system delete-generations 1$'
+printf '%s\n' "$plan_output" | grep -q 'home delete-generations 3$'
+if printf '%s\n' "$plan_output" | grep -Eq 'delete-generations[[:space:]]*$|delete-generations[ =][0-9]+[dwm]'; then
+    fail_check 'plan emitted a bare or duration-based deletion selector'
+fi
+if printf '%s\n' "$plan_output" | grep -q 'pull --delete-generations'; then
+    fail_check 'plan emitted a pull deletion without a candidate'
+fi
+
+verify_output=$(run_tool verify)
+printf '%s\n' "$verify_output" | grep -q '^Retention verification: PASS$'
+
+link_count_before=$(find "$system_profiles" -type l | wc -l | tr -d ' ')
+drill_output=$(run_tool rollback-drill)
+link_count_after=$(find "$system_profiles" -type l | wc -l | tr -d ' ')
+[ "$link_count_before" -eq "$link_count_after" ] ||
+    fail_check 'rollback drill changed the fixture generation links'
+[ ! -e "$marker" ] || fail_check 'rollback drill executed a mutating historical Guix action'
+printf '%s\n' "$drill_output" | grep -q 'Rollback drill: PASS (read-only artifact/command-path rehearsal; no generation was switched)'
+printf '%s\n' "$drill_output" | grep -q 'system switch-generation 4'
+printf '%s\n' "$drill_output" | grep -q 'home switch-generation 5'
+printf '%s\n' "$drill_output" | grep -q 'pull --switch-generation=3'
+
+if run_tool apply >"$sandbox/apply.out" 2>&1; then
+    fail_check 'unsupported apply action unexpectedly succeeded'
+else
+    apply_status=$?
+fi
+[ "$apply_status" -eq 64 ] || fail_check "unsupported apply returned $apply_status, expected 64"
+
+bad_pins=$sandbox/bad-pins.tsv
+sed "s#/gnu/store/$system_c#/gnu/store/zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-system#" \
+    "$pins" >"$bad_pins"
+if run_tool_with_pins "$bad_pins" verify >"$sandbox/bad-pin.out" 2>&1; then
+    fail_check 'mismatched pin unexpectedly passed'
+fi
+grep -q 'pinned target mismatch for system 4' "$sandbox/bad-pin.out"
+
+unlink "$system_profiles/system"
+ln -s system-4-link "$system_profiles/system"
+if run_tool verify >"$sandbox/current-mismatch.out" 2>&1; then
+    fail_check 'current/runtime System mismatch unexpectedly passed'
+fi
+grep -q 'System profile and /run/current-system differ' "$sandbox/current-mismatch.out"
+unlink "$system_profiles/system"
+ln -s system-5-link "$system_profiles/system"
+
+unrooted=llllllllllllllllllllllllllllllll-system
+make_store_item system "$unrooted"
+unlink "$root/run/booted-system"
+ln -s "$store/$unrooted" "$root/run/booted-system"
+if run_tool verify >"$sandbox/unrooted-boot.out" 2>&1; then
+    fail_check 'unrooted booted System unexpectedly passed'
+fi
+grep -q 'booted System has no retained generation root' "$sandbox/unrooted-boot.out"
+unlink "$root/run/booted-system"
+ln -s "$store/$system_d" "$root/run/booted-system"
+
+cp "$grub" "$sandbox/grub.saved"
+printf '%s\n' \
+    'menuentry current-system' \
+    'gnu.system=/var/guix/profiles/system-3-link' \
+    >"$grub"
+if run_tool rollback-drill >"$sandbox/missing-grub.out" 2>&1; then
+    fail_check 'missing preferred GRUB rollback entry unexpectedly passed'
+fi
+grep -q 'GRUB is missing System generation 4' "$sandbox/missing-grub.out"
+cp "$sandbox/grub.saved" "$grub"
+
+unlink "$system_profiles/system-4-link"
+ln -s "$store/missing-system" "$system_profiles/system-4-link"
+if run_tool verify >"$sandbox/dangling.out" 2>&1; then
+    fail_check 'dangling pinned generation unexpectedly passed'
+fi
+grep -q 'dangling or out-of-root system generation' "$sandbox/dangling.out"
+
+printf '%s\n' 'guix-generation-retention-check: PASS'

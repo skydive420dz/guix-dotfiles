@@ -1,0 +1,251 @@
+#!/bin/sh
+
+set -eu
+
+usage() {
+    printf 'usage: %s [--plan]\n' "$0" >&2
+    exit 64
+}
+
+case $# in
+    0) plan=0 ;;
+    1)
+        [ "$1" = --plan ] || usage
+        plan=1
+        ;;
+    *) usage ;;
+esac
+
+home=${HOME:?HOME must be set}
+script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
+repo=$(CDPATH='' cd "$script_dir/.." && pwd -P)
+channels=$repo/guix/channels.scm
+home_config=$repo/guix/home/guixpc.scm
+system_config=$repo/guix/systems/guixpc.scm
+bootstrap_guix=$home/.config/guix/current/bin/guix
+substitute_urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
+promoted_expression='(list (@ (sk packages terminals) kitty-latest) (@ (sk packages golang) go-github-com-emmansun-base64) (@ (sk packages golang) go-github-com-sgtdi-fswatcher))'
+quarantined_expression='(@ (sk packages shells) fish-latest)'
+
+for file in "$channels" "$home_config" "$system_config"; do
+    if [ ! -r "$file" ]; then
+        printf 'guix-build-gate: unreadable declaration: %s\n' "$file" >&2
+        exit 2
+    fi
+done
+
+if [ ! -x "$bootstrap_guix" ]; then
+    printf 'guix-build-gate: canonical Guix is not executable: %s\n' \
+        "$bootstrap_guix" >&2
+    exit 2
+fi
+
+for command in awk cat cmp cp mkdir mktemp rm sort; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        printf 'guix-build-gate: missing command: %s\n' "$command" >&2
+        exit 2
+    fi
+done
+
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/sk-guix-build-gate.XXXXXX")
+cleanup() {
+    rm -rf -- "$tmp"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+expected_channels=$tmp/expected-channels
+actual_channels=$tmp/actual-channels
+describe_output=$tmp/describe.rec
+channel_snapshot=$tmp/channels.scm
+isolated_config=$tmp/config
+isolated_cache=$tmp/cache
+isolated_home=$tmp/home
+trusted_channels=$isolated_config/guix/trusted-channels.scm
+cp "$channels" "$channel_snapshot"
+
+awk '
+    /\(name '\''[^)]*\)/ {
+        name = $0
+        sub(/^.*\(name '\''/, "", name)
+        sub(/\).*/, "", name)
+        next
+    }
+    /\(commit "[^"]*"\)/ && name != "" {
+        commit = $0
+        sub(/^.*\(commit "/, "", commit)
+        sub(/".*/, "", commit)
+        print name, commit
+        name = ""
+    }
+' "$channel_snapshot" >"$expected_channels"
+
+if ! awk '
+    NF != 2 || length($2) != 40 || $2 ~ /[^0-9a-f]/ { bad = 1 }
+    $1 == "guix" { guix += 1 }
+    $1 == "nonguix" { nonguix += 1 }
+    $1 == "sk-guix" { sk_guix += 1 }
+    END {
+        exit !(!bad && NR == 3 && guix == 1 && nonguix == 1 && sk_guix == 1)
+    }
+' "$expected_channels"; then
+    printf '%s\n' \
+        'guix-build-gate: channels.scm must pin guix, nonguix, and sk-guix to unique 40-hex commits' >&2
+    exit 2
+fi
+
+introduction_count=$(awk '
+    /^[[:space:]]*\(introduction([[:space:]]|$)/ { count += 1 }
+    END { print count + 0 }
+' "$channel_snapshot")
+if [ "$introduction_count" -ne 3 ]; then
+    printf '%s\n' \
+        'guix-build-gate: every pinned channel must carry an introduction' >&2
+    exit 2
+fi
+
+mkdir -p "$isolated_config/guix" "$isolated_cache" "$isolated_home"
+cp "$channel_snapshot" "$trusted_channels"
+
+export LC_ALL=C
+export TZ=UTC
+export GUILE_AUTO_COMPILE=0
+unset GUILE_LOAD_COMPILED_PATH GUILE_LOAD_PATH GUIX_BUILD_OPTIONS GUIX_PACKAGE_PATH
+
+printf '%s\n' '== pinned channel profile =='
+profile=$(
+    HOME="$isolated_home" \
+    XDG_CACHE_HOME="$isolated_cache" \
+    XDG_CONFIG_HOME="$isolated_config" \
+    "$bootstrap_guix" time-machine \
+        -q \
+        -C "$channel_snapshot" \
+        --allow-untrusted-channels=no \
+        --substitute-urls="$substitute_urls" \
+        --max-jobs=1 \
+        --cores=4
+)
+pinned_guix=$profile/bin/guix
+if [ ! -x "$pinned_guix" ]; then
+    printf 'guix-build-gate: time-machine returned no executable Guix profile: %s\n' \
+        "$profile" >&2
+    exit 1
+fi
+printf 'Pinned Guix profile: %s\n' "$profile"
+
+"$pinned_guix" describe --format=recutils >"$describe_output"
+cat "$describe_output"
+awk '
+    $1 == "name:" { name = $2; next }
+    $1 == "commit:" && name != "" { print name, $2; name = "" }
+' "$describe_output" >"$actual_channels"
+
+if ! awk '
+    NF != 2 || length($2) != 40 || $2 ~ /[^0-9a-f]/ { bad = 1 }
+    END { exit !(NR == 3 && !bad) }
+' "$actual_channels"; then
+    printf '%s\n' 'guix-build-gate: pinned Guix returned invalid channel provenance' >&2
+    exit 1
+fi
+
+sort "$expected_channels" >"$expected_channels.sorted"
+sort "$actual_channels" >"$actual_channels.sorted"
+if ! cmp -s "$expected_channels.sorted" "$actual_channels.sorted"; then
+    printf '%s\n' 'guix-build-gate: time-machine provenance differs from channels.scm' >&2
+    printf '%s\n' '-- expected --' >&2
+    cat "$expected_channels.sorted" >&2
+    printf '%s\n' '-- actual --' >&2
+    cat "$actual_channels.sorted" >&2
+    exit 1
+fi
+
+exwm_version=$(
+    "$pinned_guix" show emacs-exwm |
+        awk '$1 == "version:" { print $2; exit }'
+)
+if [ "$exwm_version" != 0.35 ]; then
+    printf 'guix-build-gate: reviewed EXWM version changed: expected 0.35, got %s\n' \
+        "${exwm_version:-missing}" >&2
+    exit 1
+fi
+printf 'Reviewed EXWM version: %s\n' "$exwm_version"
+
+run_promoted_packages() {
+    if [ "$plan" -eq 1 ]; then
+        "$pinned_guix" build \
+            --dry-run \
+            --no-grafts \
+            --substitute-urls="$substitute_urls" \
+            --max-jobs=1 \
+            --cores=4 \
+            --expression="$promoted_expression"
+    else
+        "$pinned_guix" build \
+            --no-grafts \
+            --substitute-urls="$substitute_urls" \
+            --max-jobs=1 \
+            --cores=4 \
+            --expression="$promoted_expression"
+    fi
+}
+
+run_home() {
+    if [ "$plan" -eq 1 ]; then
+        "$pinned_guix" home \
+            --dry-run \
+            --substitute-urls="$substitute_urls" \
+            --max-jobs=1 \
+            --cores=4 \
+            build "$home_config"
+    else
+        "$pinned_guix" home \
+            --substitute-urls="$substitute_urls" \
+            --max-jobs=1 \
+            --cores=4 \
+            build "$home_config"
+    fi
+}
+
+run_system() {
+    if [ "$plan" -eq 1 ]; then
+        "$pinned_guix" system \
+            --dry-run \
+            --substitute-urls="$substitute_urls" \
+            --max-jobs=1 \
+            --cores=4 \
+            build "$system_config"
+    else
+        "$pinned_guix" system \
+            --substitute-urls="$substitute_urls" \
+            --max-jobs=1 \
+            --cores=4 \
+            build "$system_config"
+    fi
+}
+
+printf '%s\n' '== promoted sk-guix packages =='
+run_promoted_packages
+
+printf '%s\n' '== quarantined sk-guix package evaluation =='
+"$pinned_guix" build \
+    --dry-run \
+    --no-grafts \
+    --substitute-urls="$substitute_urls" \
+    --max-jobs=1 \
+    --cores=4 \
+    --expression="$quarantined_expression"
+
+printf '%s\n' '== Guix Home declaration =='
+run_home
+
+printf '%s\n' '== Guix System declaration =='
+run_system
+
+if [ "$plan" -eq 1 ]; then
+    mode=plan
+else
+    mode=build
+fi
+printf 'guix-build-gate: PASS (mode=%s)\n' "$mode"

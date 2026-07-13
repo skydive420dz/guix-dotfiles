@@ -1,0 +1,139 @@
+#!/bin/sh
+set -eu
+
+source_repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+sandbox=$(mktemp -d "${TMPDIR:-/tmp}/guix-reconfigure-check.XXXXXX")
+trap 'rm -rf -- "$sandbox"' EXIT HUP INT TERM
+
+repo=$sandbox/repo
+home=$sandbox/home
+fake_guix=$sandbox/store/guix-command
+fake_log=$sandbox/reconfigure.log
+wrapper=$repo/scripts/guix-reconfigure
+
+mkdir -p "$repo/scripts" "$repo/guix/home" \
+    "$home/.config/guix/current/bin" "$(dirname "$fake_guix")"
+cp "$source_repo/scripts/guix-reconfigure" "$wrapper"
+chmod +x "$wrapper"
+
+printf '%s\n' '#!/bin/sh' 'exit 0' >"$repo/scripts/guix-entrypoints"
+chmod +x "$repo/scripts/guix-entrypoints"
+printf '%s\n' '(home-environment)' >"$repo/guix/home/guixpc.scm"
+
+cat >"$repo/guix/channels.scm" <<'EOF'
+(list
+ (channel
+  (name 'guix)
+  (url "https://example.org/guix.git")
+  (branch "master")
+  (commit "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+  (introduction
+   (make-channel-introduction
+    "1111111111111111111111111111111111111111"
+    (openpgp-fingerprint "AAAA BBBB"))))
+ (channel
+  (name 'nonguix)
+  (url "https://example.org/nonguix.git")
+  (branch "master")
+  (commit "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+  (introduction
+   (make-channel-introduction
+    "2222222222222222222222222222222222222222"
+    (openpgp-fingerprint "CCCC DDDD"))))
+ (channel
+  (name 'sk-guix)
+  (url "https://example.org/sk-guix.git")
+  (branch "main")
+  (commit "cccccccccccccccccccccccccccccccccccccccc")
+  (introduction
+   (make-channel-introduction
+    "3333333333333333333333333333333333333333"
+    (openpgp-fingerprint "EEEE FFFF")))))
+EOF
+
+cat >"$fake_guix" <<'EOF'
+#!/bin/sh
+set -eu
+
+if [ "${1:-}" = describe ]; then
+    guix_url=https://example.org/guix.git
+    guix_branch=master
+    guix_commit=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    guix_intro=1111111111111111111111111111111111111111
+    guix_signer='AAAA BBBB'
+    case ${SK_FAKE_MISMATCH:-} in
+        url) guix_url=https://mirror.example.org/guix.git ;;
+        branch) guix_branch=testing ;;
+        commit) guix_commit=dddddddddddddddddddddddddddddddddddddddd ;;
+        introduction) guix_intro=4444444444444444444444444444444444444444 ;;
+        signer) guix_signer='9999 9999' ;;
+    esac
+    cat <<EOF_RECORDS
+name: guix
+url: $guix_url
+branch: $guix_branch
+commit: $guix_commit
+introductioncommit: $guix_intro
+introductionsigner: $guix_signer
+
+name: nonguix
+url: https://example.org/nonguix.git
+branch: master
+commit: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+introductioncommit: 2222222222222222222222222222222222222222
+introductionsigner: CCCC DDDD
+
+name: sk-guix
+url: https://example.org/sk-guix.git
+branch: main
+commit: cccccccccccccccccccccccccccccccccccccccc
+introductioncommit: 3333333333333333333333333333333333333333
+introductionsigner: EEEE FFFF
+EOF_RECORDS
+    if [ "${SK_FAKE_MISMATCH:-}" = extra ]; then
+        cat <<'EOF_EXTRA'
+
+name: extra
+url: https://example.org/extra.git
+branch: main
+commit: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+EOF_EXTRA
+    fi
+    exit 0
+fi
+
+printf 'CALL' >>"${SK_FAKE_LOG:?}"
+for argument in "$@"; do
+    printf '\t%s' "$argument" >>"$SK_FAKE_LOG"
+done
+printf '\n' >>"$SK_FAKE_LOG"
+EOF
+chmod +x "$fake_guix"
+
+ln -s "$fake_guix" "$home/.config/guix/current/bin/guix"
+ln -s "$repo/guix/channels.scm" "$home/.config/guix/channels.scm"
+ln -s "$repo/guix/home/guixpc.scm" "$home/.config/guix/home.scm"
+home_config_resolved=$(readlink -f "$repo/guix/home/guixpc.scm")
+
+run_wrapper() {
+    HOME=$home SK_FAKE_LOG=$fake_log SK_FAKE_MISMATCH=${SK_FAKE_MISMATCH:-} \
+        "$wrapper" home "$@"
+}
+
+output=$(run_wrapper --print)
+printf '%s\n' "$output" | grep -q 'guix-reconfigure: mode=home'
+printf '%s\n' "$output" | grep -q 'guix-revision=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+
+for mismatch in url branch commit introduction signer extra; do
+    if output=$(SK_FAKE_MISMATCH=$mismatch run_wrapper --print 2>&1); then
+        printf 'guix-reconfigure-check: %s mismatch passed\n' "$mismatch" >&2
+        exit 1
+    fi
+    printf '%s\n' "$output" | grep -q 'current Guix channels differ'
+done
+
+: >"$fake_log"
+run_wrapper >/dev/null
+grep -q "CALL.*home.*reconfigure.*$home_config_resolved" "$fake_log"
+
+printf '%s\n' 'guix-reconfigure-check: PASS'

@@ -15,7 +15,9 @@ shellcheck \
     "$repo/scripts/desktop-session-check" \
     "$repo/scripts/emacs-check" \
     "$repo/scripts/exwm-session" \
+    "$repo/scripts/guix-build-gate" \
     "$repo/scripts/guix-entrypoints" \
+    "$repo/scripts/guix-generation-retention" \
     "$repo/scripts/guix-reconfigure" \
     "$repo/scripts/shell-check" \
     "$repo/shell/bash_profile" \
@@ -23,9 +25,15 @@ shellcheck \
     "$repo/shell/xinitrc" \
     "$repo/shell/zprofile" \
     "$repo/tests/exwm-session-check" \
+    "$repo/tests/guix-build-gate-check" \
     "$repo/tests/guix-entrypoints-check" \
-    "$repo/tests/guix-home-links-check"
+    "$repo/tests/guix-generation-retention-check" \
+    "$repo/tests/guix-home-links-check" \
+    "$repo/tests/guix-reconfigure-check"
 
 "$repo/tests/exwm-session-check"
+"$repo/tests/guix-build-gate-check"
+"$repo/tests/guix-generation-retention-check"
+"$repo/tests/guix-reconfigure-check"
 
 printf '%s\n' 'shell-check: PASS'

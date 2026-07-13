@@ -1,0 +1,262 @@
+#!/bin/sh
+
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/sk-guix-build-gate-check.XXXXXX")
+tmp=$(CDPATH='' cd "$tmp" && pwd -P)
+cleanup() {
+    rm -rf -- "$tmp"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+fail() {
+    printf 'FAIL: %s\n' "$1" >&2
+    exit 1
+}
+
+contains() {
+    case $1 in
+        *"$2"*) ;;
+        *) fail "expected output to contain: $2" ;;
+    esac
+}
+
+sandbox_repo=$tmp/repo
+sandbox_home=$tmp/home
+fake_profile=$tmp/time-machine-profile
+fake_log=$tmp/guix.log
+gate=$sandbox_repo/scripts/guix-build-gate
+fake_guix=$sandbox_home/.config/guix/current/bin/guix
+
+mkdir -p "$sandbox_repo/scripts" "$sandbox_repo/guix/home" \
+    "$sandbox_repo/guix/systems" "$(dirname "$fake_guix")" \
+    "$fake_profile/bin"
+cp "$repo/scripts/guix-build-gate" "$gate"
+chmod +x "$gate"
+printf '%s\n' '(home-environment)' >"$sandbox_repo/guix/home/guixpc.scm"
+printf '%s\n' '(operating-system)' >"$sandbox_repo/guix/systems/guixpc.scm"
+
+write_channels() {
+    guix_commit=${1:-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+    cat >"$sandbox_repo/guix/channels.scm" <<EOF
+(list
+ (channel
+  (name 'guix)
+  (commit "$guix_commit")
+  (introduction
+   (make-channel-introduction
+    "1111111111111111111111111111111111111111"
+    (openpgp-fingerprint "AAAA"))))
+ (channel
+  (name 'nonguix)
+  (commit "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+  (introduction
+   (make-channel-introduction
+    "2222222222222222222222222222222222222222"
+    (openpgp-fingerprint "BBBB"))))
+ (channel
+  (name 'sk-guix)
+  (commit "cccccccccccccccccccccccccccccccccccccccc")
+  (introduction
+   (make-channel-introduction
+    "3333333333333333333333333333333333333333"
+    (openpgp-fingerprint "CCCC")))))
+EOF
+}
+
+write_channels
+
+cat >"$fake_guix" <<'EOF'
+#!/bin/sh
+set -eu
+
+printf 'CALL' >>"$SK_FAKE_GUIX_LOG"
+for arg in "$@"; do
+    printf '\t%s' "$arg" >>"$SK_FAKE_GUIX_LOG"
+done
+printf '\n' >>"$SK_FAKE_GUIX_LOG"
+
+if [ "${1:-}" = time-machine ]; then
+    [ "${SK_FAKE_FAIL:-}" != channels ] || exit 71
+    [ "${HOME:?}" != "${SK_FAKE_ORIGINAL_HOME:?}" ] || exit 78
+    [ -d "${XDG_CACHE_HOME:?}" ] || exit 79
+    [ -r "${XDG_CONFIG_HOME:?}/guix/trusted-channels.scm" ] || exit 76
+    cmp -s "$SK_FAKE_CHANNELS" \
+        "$XDG_CONFIG_HOME/guix/trusted-channels.scm" || exit 77
+    printf '%s\n' "$SK_FAKE_GUIX_PROFILE"
+    exit 0
+fi
+
+case ${1:-} in
+    describe)
+        if [ "${SK_FAKE_FAIL:-}" = provenance ]; then
+            guix_commit=dddddddddddddddddddddddddddddddddddddddd
+        else
+            guix_commit=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        fi
+        cat <<EOF_DESCRIBE
+name: guix
+commit: $guix_commit
+
+name: nonguix
+commit: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+
+name: sk-guix
+commit: cccccccccccccccccccccccccccccccccccccccc
+EOF_DESCRIBE
+        ;;
+    show)
+        if [ "${SK_FAKE_FAIL:-}" = exwm ]; then
+            version=0.36
+        else
+            version=0.35
+        fi
+        printf 'name: emacs-exwm\nversion: %s\n' "$version"
+        ;;
+    build)
+        case $* in
+            *kitty-latest*) stage=promoted ;;
+            *fish-latest*) stage=fish ;;
+            *) stage=unknown-build ;;
+        esac
+        [ "${SK_FAKE_FAIL:-}" != "$stage" ] || exit 72
+        printf '/gnu/store/fake-%s\n' "$stage"
+        ;;
+    home)
+        [ "${SK_FAKE_FAIL:-}" != home ] || exit 73
+        printf '%s\n' /gnu/store/fake-home
+        ;;
+    system)
+        [ "${SK_FAKE_FAIL:-}" != system ] || exit 74
+        printf '%s\n' /gnu/store/fake-system
+        ;;
+    *)
+        printf 'unexpected fake Guix command: %s\n' "$*" >&2
+        exit 75
+        ;;
+esac
+EOF
+chmod +x "$fake_guix"
+ln -s "$fake_guix" "$fake_profile/bin/guix"
+
+run_gate() {
+    : >"$fake_log"
+    HOME=$sandbox_home \
+        SK_FAKE_GUIX_LOG=$fake_log \
+        SK_FAKE_GUIX_PROFILE=$fake_profile \
+        SK_FAKE_CHANNELS=$sandbox_repo/guix/channels.scm \
+        SK_FAKE_ORIGINAL_HOME=$sandbox_home \
+        SK_FAKE_FAIL=${SK_FAKE_FAIL:-} \
+        "$gate" "$@"
+}
+
+logged_command() {
+    tab=$(printf '\t')
+    awk -F "$tab" -v command="$1" '
+        $2 == command { found = 1 }
+        END { exit !found }
+    ' "$fake_log"
+}
+
+logged_argument() {
+    tab=$(printf '\t')
+    awk -F "$tab" -v argument="$1" '
+        {
+            for (field = 2; field <= NF; field += 1) {
+                if ($field == argument) found = 1
+            }
+        }
+        END { exit !found }
+    ' "$fake_log"
+}
+
+output=$(run_gate)
+contains "$output" 'guix-build-gate: PASS (mode=build)'
+log=$(cat "$fake_log")
+contains "$log" 'time-machine'
+contains "$log" '-q'
+contains "$log" '--allow-untrusted-channels=no'
+contains "$log" '--max-jobs=1'
+contains "$log" '--cores=4'
+contains "$log" 'show'
+contains "$log" 'emacs-exwm'
+contains "$log" 'kitty-latest'
+contains "$log" 'go-github-com-emmansun-base64'
+contains "$log" 'go-github-com-sgtdi-fswatcher'
+contains "$log" 'fish-latest'
+contains "$log" "$sandbox_repo/guix/home/guixpc.scm"
+contains "$log" "$sandbox_repo/guix/systems/guixpc.scm"
+
+for forbidden in pull reconfigure switch-generation delete-generations gc; do
+    if logged_argument "$forbidden"; then
+        fail "gate invoked forbidden command: $forbidden"
+    fi
+done
+
+output=$(run_gate --plan)
+contains "$output" 'guix-build-gate: PASS (mode=plan)'
+plan_log=$(cat "$fake_log")
+dry_run_count=$(printf '%s\n' "$plan_log" | awk '
+    {
+        for (field = 1; field <= NF; field += 1) {
+            if ($field == "--dry-run") count += 1
+        }
+    }
+    END { print count + 0 }
+')
+[ "$dry_run_count" -eq 4 ] || \
+    fail "plan used --dry-run $dry_run_count times; expected 4"
+
+for stage in channels provenance exwm promoted fish home system; do
+    if output=$(SK_FAKE_FAIL=$stage run_gate 2>&1); then
+        fail "$stage failure passed the gate"
+    fi
+    case $stage in
+        channels|provenance|exwm|promoted|fish)
+            if logged_command home; then
+                fail "$stage failure continued into Home"
+            fi
+            ;;
+        home)
+            if logged_command system; then
+                fail 'Home failure continued into System'
+            fi
+            ;;
+        system) ;;
+    esac
+done
+
+write_channels moving
+if output=$(run_gate 2>&1); then
+    fail 'malformed channel commit passed the gate'
+fi
+contains "$output" 'must pin guix, nonguix, and sk-guix'
+if [ -s "$fake_log" ]; then
+    fail 'invalid channel pins invoked Guix'
+fi
+
+write_channels
+awk '
+    BEGIN { skipped = 0 }
+    /^[[:space:]]*\(introduction/ && !skipped { skipped = 1; next }
+    { print }
+' "$sandbox_repo/guix/channels.scm" >"$tmp/missing-introduction.scm"
+cp "$tmp/missing-introduction.scm" "$sandbox_repo/guix/channels.scm"
+if output=$(run_gate 2>&1); then
+    fail 'missing channel introduction passed the gate'
+fi
+contains "$output" 'every pinned channel must carry an introduction'
+if [ -s "$fake_log" ]; then
+    fail 'missing channel introduction invoked Guix'
+fi
+
+if output=$(run_gate unexpected 2>&1); then
+    fail 'unexpected argument passed the gate'
+fi
+contains "$output" 'usage:'
+
+printf '%s\n' 'guix-build-gate-check: PASS'

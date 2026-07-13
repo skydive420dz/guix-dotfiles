@@ -1,0 +1,420 @@
+#!/bin/sh
+set -eu
+
+program=${0##*/}
+
+usage() {
+    printf 'usage: %s inventory|plan|verify|rollback-drill\n' "$program" >&2
+    exit 64
+}
+
+fail() {
+    printf '%s: FAIL: %s\n' "$program" "$*" >&2
+    exit 1
+}
+
+[ "$#" -eq 1 ] || usage
+action=$1
+case $action in
+    inventory | plan | verify | rollback-drill) ;;
+    *) usage ;;
+esac
+
+script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
+repo=$(CDPATH='' cd "$script_dir/.." && pwd -P)
+pins=${GUIX_RETENTION_PINS:-$repo/guix/machines/guixpc/generation-pins.tsv}
+root=${GUIX_RETENTION_ROOT:-/}
+retention_user=${GUIX_RETENTION_USER:-$(id -un)}
+retention_home=${GUIX_RETENTION_HOME:-${HOME:?HOME must be set}}
+
+case $root in
+    /*) ;;
+    *) fail "GUIX_RETENTION_ROOT must be absolute: $root" ;;
+esac
+root=${root%/}
+[ -n "$root" ] || root=/
+[ -d "$root" ] || fail "GUIX_RETENTION_ROOT is not a directory: $root"
+root=$(CDPATH='' cd "$root" && pwd -P) ||
+    fail "cannot canonicalize GUIX_RETENTION_ROOT: $root"
+
+root_path() (
+    rp_logical=$1
+    if [ "$root" = / ]; then
+        printf '%s\n' "$rp_logical"
+    else
+        printf '%s%s\n' "$root" "$rp_logical"
+    fi
+)
+
+canonical_path() (
+    cp_source=$1
+    [ -e "$cp_source" ] || exit 1
+    cp_resolved=$(readlink -f "$cp_source") || exit 1
+    if [ "$root" != / ]; then
+        case $cp_resolved in
+            "$root"/*) cp_resolved=${cp_resolved#"$root"} ;;
+            *) exit 1 ;;
+        esac
+    fi
+    printf '%s\n' "$cp_resolved"
+)
+
+validate_store_target() {
+    vst_kind=$1
+    vst_target=$2
+    case $vst_target in
+        /gnu/store/*) ;;
+        *) fail "$vst_kind target is outside /gnu/store: $vst_target" ;;
+    esac
+    vst_name=${vst_target#/gnu/store/}
+    case $vst_name in
+        '' | */*) fail "invalid $vst_kind store target: $vst_target" ;;
+    esac
+    vst_hash=${vst_name%%-*}
+    case $vst_hash in
+        *[!0-9a-z]*) fail "invalid $vst_kind store hash: $vst_target" ;;
+    esac
+    [ "${#vst_hash}" -eq 32 ] ||
+        fail "invalid $vst_kind store hash length: $vst_target"
+    case $vst_kind:$vst_name in
+        system:*-system | home:*-home | pull:*-profile) ;;
+        *) fail "unexpected $vst_kind store suffix: $vst_target" ;;
+    esac
+}
+
+work=$(mktemp -d "${TMPDIR:-/tmp}/guix-generation-retention.XXXXXX")
+trap 'rm -rf -- "$work"' EXIT HUP INT TERM
+tab=$(printf '\t')
+inventory=$work/inventory.tsv
+currents=$work/currents.tsv
+normalized_pins=$work/pins.tsv
+protected=$work/protected.tsv
+candidates=$work/candidates.tsv
+: >"$inventory"
+: >"$currents"
+: >"$normalized_pins"
+: >"$protected"
+: >"$candidates"
+
+collect_generations() {
+    cg_kind=$1
+    cg_directory=$2
+    cg_prefix=$3
+    cg_unsorted=$work/$cg_kind.unsorted
+    : >"$cg_unsorted"
+
+    for cg_link in "$cg_directory"/"$cg_prefix"[0-9]*-link; do
+        [ -L "$cg_link" ] || continue
+        cg_name=${cg_link##*/}
+        cg_generation=${cg_name#"$cg_prefix"}
+        cg_generation=${cg_generation%-link}
+        case $cg_generation in
+            '' | *[!0-9]*)
+                fail "invalid $cg_kind generation link name: $cg_link"
+                ;;
+        esac
+        cg_target=$(canonical_path "$cg_link") ||
+            fail "dangling or out-of-root $cg_kind generation: $cg_link"
+        validate_store_target "$cg_kind" "$cg_target"
+        printf '%s\t%s\t%s\n' "$cg_kind" "$cg_generation" "$cg_target" \
+            >>"$cg_unsorted"
+    done
+
+    [ -s "$cg_unsorted" ] || fail "no $cg_kind generations found in $cg_directory"
+    if ! awk -F '\t' '
+        seen[$1 FS $2]++ { exit 1 }
+    ' "$cg_unsorted"; then
+        fail "duplicate $cg_kind generation numbers"
+    fi
+    sort -t "$tab" -k2,2n "$cg_unsorted" >>"$inventory"
+}
+
+record_current() {
+    rc_kind=$1
+    rc_pointer=$2
+    rc_prefix=$3
+    [ -L "$rc_pointer" ] || fail "missing $rc_kind current pointer: $rc_pointer"
+    rc_link=$(readlink "$rc_pointer") || fail "cannot read $rc_kind current pointer"
+    rc_name=${rc_link##*/}
+    rc_generation=${rc_name#"$rc_prefix"}
+    rc_generation=${rc_generation%-link}
+    case $rc_generation in
+        '' | *[!0-9]* | "$rc_name")
+            fail "unexpected $rc_kind current pointer target: $rc_link"
+            ;;
+    esac
+    rc_target=$(canonical_path "$rc_pointer") ||
+        fail "dangling or out-of-root $rc_kind current pointer: $rc_pointer"
+    rc_recorded=$(awk -F '\t' -v kind="$rc_kind" -v generation="$rc_generation" '
+        $1 == kind && $2 == generation { print $3 }
+    ' "$inventory")
+    [ -n "$rc_recorded" ] ||
+        fail "$rc_kind current generation $rc_generation is absent from inventory"
+    [ "$rc_recorded" = "$rc_target" ] ||
+        fail "$rc_kind current pointer target mismatch: $rc_recorded != $rc_target"
+    printf '%s\t%s\t%s\n' "$rc_kind" "$rc_generation" "$rc_target" \
+        >>"$currents"
+}
+
+validate_pins() {
+    [ -r "$pins" ] || fail "pin file is not readable: $pins"
+    if ! awk -F '\t' '
+        /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+        NF != 5 { exit 1 }
+    ' "$pins"; then
+        fail "pin file must contain exactly five tab-separated fields"
+    fi
+
+    while IFS="$tab" read -r vp_kind vp_generation vp_expected vp_role vp_reason; do
+        case $vp_kind in
+            '' | \#*) continue ;;
+            system | home | pull) ;;
+            *) fail "unknown pin kind: $vp_kind" ;;
+        esac
+        case $vp_generation in
+            '' | *[!0-9]*) fail "invalid pinned generation: $vp_kind $vp_generation" ;;
+        esac
+        case $vp_role in
+            promotion-rollback | preferred-rollback | emergency-rollback | last-known-good) ;;
+            *) fail "unknown pin role: $vp_kind $vp_generation $vp_role" ;;
+        esac
+        [ -n "$vp_reason" ] || fail "pin reason is empty: $vp_kind $vp_generation"
+        validate_store_target "$vp_kind" "$vp_expected"
+        vp_actual=$(awk -F '\t' -v kind="$vp_kind" -v generation="$vp_generation" '
+            $1 == kind && $2 == generation { print $3 }
+        ' "$inventory")
+        [ -n "$vp_actual" ] ||
+            fail "pinned generation is absent: $vp_kind $vp_generation"
+        [ "$vp_actual" = "$vp_expected" ] ||
+            fail "pinned target mismatch for $vp_kind $vp_generation: $vp_actual != $vp_expected"
+        printf '%s\t%s\t%s\t%s\t%s\n' \
+            "$vp_kind" "$vp_generation" "$vp_expected" "$vp_role" "$vp_reason" \
+            >>"$normalized_pins"
+    done <"$pins"
+
+    [ -s "$normalized_pins" ] || fail "pin file contains no pins"
+    if ! awk -F '\t' '
+        seen[$1 FS $2]++ { exit 1 }
+    ' "$normalized_pins"; then
+        fail "duplicate generation pin"
+    fi
+    for vp_required_kind in system home pull; do
+        vp_promotion_count=$(awk -F '\t' -v kind="$vp_required_kind" '$1 == kind && $4 == "promotion-rollback" { n++ } END { print n + 0 }' "$normalized_pins")
+        [ "$vp_promotion_count" -eq 1 ] ||
+            fail "$vp_required_kind requires exactly one promotion rollback pin"
+        vp_preferred_count=$(awk -F '\t' -v kind="$vp_required_kind" '$1 == kind && $4 == "preferred-rollback" { n++ } END { print n + 0 }' "$normalized_pins")
+        [ "$vp_preferred_count" -eq 1 ] ||
+            fail "$vp_required_kind requires exactly one preferred rollback pin"
+    done
+}
+
+prepare_state() {
+    ps_system_profiles=$(root_path /var/guix/profiles)
+    ps_user_profiles=$(root_path "/var/guix/profiles/per-user/$retention_user")
+    collect_generations system "$ps_system_profiles" system-
+    collect_generations home "$ps_user_profiles" guix-home-
+    collect_generations pull "$ps_user_profiles" current-guix-
+    record_current system "$ps_system_profiles/system" system-
+    record_current home "$ps_user_profiles/guix-home" guix-home-
+    record_current pull "$ps_user_profiles/current-guix" current-guix-
+
+    ps_system_current=$(awk -F '\t' '$1 == "system" { print $3 }' "$currents")
+    ps_runtime_current_path=$(root_path /run/current-system)
+    ps_runtime_current=$(canonical_path "$ps_runtime_current_path") ||
+        fail "missing or invalid runtime current System: $ps_runtime_current_path"
+    [ "$ps_runtime_current" = "$ps_system_current" ] ||
+        fail "System profile and /run/current-system differ: $ps_system_current != $ps_runtime_current"
+
+    ps_booted_path=$(root_path /run/booted-system)
+    booted_target=$(canonical_path "$ps_booted_path") ||
+        fail "missing or invalid booted System: $ps_booted_path"
+    validate_store_target system "$booted_target"
+    ps_booted_roots=$(awk -F '\t' -v target="$booted_target" '
+        $1 == "system" && $3 == target { n++ } END { print n + 0 }
+    ' "$inventory")
+    [ "$ps_booted_roots" -gt 0 ] ||
+        fail "booted System has no retained generation root: $booted_target"
+
+    ps_config_current=$retention_home/.config/guix/current
+    ps_config_target=$(canonical_path "$ps_config_current") ||
+        fail "missing or invalid current Guix profile: $ps_config_current"
+    ps_pull_current=$(awk -F '\t' '$1 == "pull" { print $3 }' "$currents")
+    [ "$ps_config_target" = "$ps_pull_current" ] ||
+        fail "current Guix link and pull profile differ: $ps_config_target != $ps_pull_current"
+
+    validate_pins
+    cut -f1,2 "$normalized_pins" >"$protected"
+    cut -f1,2 "$currents" >>"$protected"
+    sort -u "$protected" -o "$protected"
+
+    awk -F '\t' '
+        {
+            row[NR] = $0
+            key = $1 FS $3
+            if ($2 + 0 > newest[key] + 0)
+                newest[key] = $2
+        }
+        END {
+            for (i = 1; i <= NR; i++) {
+                split(row[i], field, FS)
+                key = field[1] FS field[3]
+                if (field[2] + 0 < newest[key] + 0)
+                    print row[i]
+            }
+        }
+    ' "$inventory" >"$work/duplicates.tsv"
+    awk -F '\t' '
+        NR == FNR { protected[$1 FS $2] = 1; next }
+        !protected[$1 FS $2]
+    ' "$protected" "$work/duplicates.tsv" >"$candidates"
+
+    ps_booted_survivors=$(awk -F '\t' -v target="$booted_target" '
+        NR == FNR { candidate[$1 FS $2] = 1; next }
+        $1 == "system" && $3 == target && !candidate[$1 FS $2] { n++ }
+        END { print n + 0 }
+    ' "$candidates" "$inventory")
+    [ "$ps_booted_survivors" -gt 0 ] ||
+        fail "plan would remove every generation root for the booted System"
+}
+
+count_kind() {
+    ck_file=$1
+    ck_kind=$2
+    awk -F '\t' -v kind="$ck_kind" '$1 == kind { n++ } END { print n + 0 }' "$ck_file"
+}
+
+comma_candidates() {
+    cc_kind=$1
+    awk -F '\t' -v kind="$cc_kind" '$1 == kind { print $2 }' "$candidates" |
+        sort -n | paste -sd, -
+}
+
+print_summary() {
+    printf 'System generations: %s\n' "$(count_kind "$inventory" system)"
+    printf 'Home generations: %s\n' "$(count_kind "$inventory" home)"
+    printf 'Pull generations: %s\n' "$(count_kind "$inventory" pull)"
+    awk -F '\t' '{ printf "Current %s: generation %s -> %s\n", $1, $2, $3 }' "$currents"
+    printf 'Booted System: %s\n' "$booted_target"
+}
+
+print_candidates() {
+    pc_system=$(comma_candidates system)
+    pc_home=$(comma_candidates home)
+    pc_pull=$(comma_candidates pull)
+    printf 'System duplicate candidates: %s\n' "${pc_system:-none}"
+    printf 'Home duplicate candidates: %s\n' "${pc_home:-none}"
+    printf 'Pull duplicate candidates: %s\n' "${pc_pull:-none}"
+}
+
+print_plan_command() {
+    ppc_kind=$1
+    ppc_generations=$(comma_candidates "$ppc_kind")
+    [ -n "$ppc_generations" ] || return 0
+    case $ppc_kind in
+        system)
+            printf 'Would run locally after review: /run/setuid-programs/sudo %s system delete-generations %s\n' \
+                "$retention_home/.config/guix/current/bin/guix" "$ppc_generations"
+            ;;
+        home)
+            printf 'Would run locally after review: %s home delete-generations %s\n' \
+                "$retention_home/.config/guix/current/bin/guix" "$ppc_generations"
+            ;;
+        pull)
+            printf 'Would run locally after review: %s pull --delete-generations=%s\n' \
+                "$retention_home/.config/guix/current/bin/guix" "$ppc_generations"
+            ;;
+    esac
+}
+
+role_field() {
+    rf_kind=$1
+    rf_role=$2
+    rf_field=$3
+    rf_result=$(awk -F '\t' -v kind="$rf_kind" -v role="$rf_role" -v field="$rf_field" '
+        $1 == kind && $4 == role { print $field }
+    ' "$normalized_pins")
+    rf_count=$(printf '%s\n' "$rf_result" | awk 'NF { n++ } END { print n + 0 }')
+    [ "$rf_count" -eq 1 ] ||
+        fail "$rf_kind requires exactly one $rf_role pin"
+    printf '%s\n' "$rf_result"
+}
+
+rollback_drill() {
+    rd_grub=$(root_path /boot/grub/grub.cfg)
+    [ -r "$rd_grub" ] || fail "GRUB configuration is not readable: $rd_grub"
+
+    while IFS="$tab" read -r rd_kind rd_generation rd_target rd_role rd_reason; do
+        : "$rd_role" "$rd_reason"
+        rd_physical=$(root_path "$rd_target")
+        case $rd_kind in
+            system)
+                [ -e "$rd_physical/kernel" ] ||
+                    fail "System $rd_generation is missing its kernel"
+                [ -e "$rd_physical/initrd" ] ||
+                    fail "System $rd_generation is missing its initrd"
+                rd_current=$(awk -F '\t' '$1 == "system" { print $2 }' "$currents")
+                if [ "$rd_generation" != "$rd_current" ]; then
+                    grep -F "system-$rd_generation-link" "$rd_grub" >/dev/null ||
+                        fail "GRUB is missing System generation $rd_generation"
+                fi
+                ;;
+            home)
+                [ -e "$rd_physical/activate" ] ||
+                    fail "Home $rd_generation is missing its activation program"
+                ;;
+            pull)
+                [ -x "$rd_physical/bin/guix" ] ||
+                    fail "Pull $rd_generation is missing an executable Guix"
+                "$rd_physical/bin/guix" --version >/dev/null 2>&1 ||
+                    fail "Pull $rd_generation Guix does not run --version"
+                ;;
+        esac
+    done <"$normalized_pins"
+
+    rd_system=$(role_field system promotion-rollback 2)
+    rd_home=$(role_field home promotion-rollback 2)
+    rd_pull=$(role_field pull promotion-rollback 2)
+    rd_recovery_guix=$(role_field pull promotion-rollback 3)/bin/guix
+    rd_older_system=$(role_field system preferred-rollback 2)
+    rd_older_home=$(role_field home preferred-rollback 2)
+    rd_older_pull=$(role_field pull preferred-rollback 2)
+    printf '%s\n' 'Rollback drill: PASS (read-only artifact/command-path rehearsal; no generation was switched)'
+    printf 'System recovery command: /run/setuid-programs/sudo %s system switch-generation %s && /run/current-system/profile/sbin/reboot\n' \
+        "$rd_recovery_guix" "$rd_system"
+    printf 'Home recovery command: %s home switch-generation %s\n' \
+        "$rd_recovery_guix" "$rd_home"
+    printf 'Pull recovery command: %s pull --switch-generation=%s\n' \
+        "$rd_recovery_guix" "$rd_pull"
+    printf 'Older recovery tier: System %s; Home %s; pull %s\n' \
+        "$rd_older_system" "$rd_older_home" "$rd_older_pull"
+    printf '%s\n' 'Home warning: generation rollback does not revert live repository symlinks; restore the matching source checkpoint first.'
+}
+
+prepare_state
+
+case $action in
+    inventory)
+        printf '%s\n' 'Inventory (kind, generation, canonical store target):'
+        cat "$inventory"
+        print_summary
+        printf '%s\n' 'Protected pins (kind, generation, target, role, reason):'
+        cat "$normalized_pins"
+        ;;
+    plan)
+        printf '%s\n' 'Retention plan: READ-ONLY; duplicate links only; no garbage collection'
+        print_summary
+        print_candidates
+        print_plan_command system
+        print_plan_command home
+        print_plan_command pull
+        printf '%s\n' 'Apply is intentionally unavailable; rerun plan after review and implement deletion only in a separately tested change.'
+        ;;
+    verify)
+        print_summary
+        print_candidates
+        printf '%s\n' 'Retention verification: PASS'
+        ;;
+    rollback-drill)
+        rollback_drill
+        ;;
+esac

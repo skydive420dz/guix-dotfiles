@@ -25,6 +25,7 @@ home=${HOME:?HOME must be set}
 script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
 entrypoints_check="$script_dir/guix-entrypoints"
 guix="$home/.config/guix/current/bin/guix"
+channels="$home/.config/guix/channels.scm"
 privileged_sudo=/run/setuid-programs/sudo
 substitute_urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
 
@@ -53,6 +54,12 @@ if [ ! -x "$guix" ]; then
     exit 1
 fi
 
+if [ ! -r "$channels" ]; then
+    printf 'guix-reconfigure: pinned channels are not readable: %s\n' \
+        "$channels" >&2
+    exit 1
+fi
+
 if [ ! -r "$source" ]; then
     printf 'guix-reconfigure: configuration source is not readable: %s\n' "$source" >&2
     exit 1
@@ -63,10 +70,134 @@ if [ "$mode" = system ] && [ ! -x "$privileged_sudo" ]; then
     exit 1
 fi
 
-guix_resolved=$(readlink -f "$guix")
+guix_profile=$(readlink -f "$home/.config/guix/current")
+guix_resolved=$guix_profile/bin/guix
 source_resolved=$(readlink -f "$source")
+if [ -z "$guix_profile" ] || [ ! -x "$guix_resolved" ]; then
+    printf 'guix-reconfigure: could not freeze current Guix profile: %s\n' \
+        "$home/.config/guix/current" >&2
+    exit 1
+fi
+expected_channels=$(
+    awk '
+        function quoted(line, value) {
+            value = line
+            if (value !~ /"/) return ""
+            sub(/^[^"]*"/, "", value)
+            sub(/".*/, "", value)
+            return value
+        }
+        function emit() {
+            if (name == "") return
+            if (url == "") url = "<missing>"
+            if (branch == "") branch = "<missing>"
+            if (commit == "") commit = "<missing>"
+            if (introduction == "") introduction = "<missing>"
+            if (signer == "") signer = "<missing>"
+            print name, url, branch, commit, introduction, signer
+            name = url = branch = commit = introduction = signer = ""
+        }
+        /\(name '\''[^)]*\)/ {
+            emit()
+            name = $0
+            sub(/^.*\(name '\''/, "", name)
+            sub(/\).*/, "", name)
+            next
+        }
+        /\(url "[^"]*"\)/ {
+            url = quoted($0)
+            next
+        }
+        /\(branch "[^"]*"\)/ {
+            branch = quoted($0)
+            next
+        }
+        /\(commit "[^"]*"\)/ && name != "" {
+            commit = $0
+            sub(/^.*\(commit "/, "", commit)
+            sub(/".*/, "", commit)
+            next
+        }
+        /\(make-channel-introduction/ {
+            introduction_pending = 1
+            value = quoted($0)
+            if (value != "") {
+                introduction = value
+                introduction_pending = 0
+            }
+            next
+        }
+        introduction_pending {
+            value = quoted($0)
+            if (value != "") {
+                introduction = value
+                introduction_pending = 0
+            }
+            next
+        }
+        /\(openpgp-fingerprint/ {
+            signer_pending = 1
+            value = quoted($0)
+            if (value != "") {
+                signer = value
+                signer_pending = 0
+                gsub(/[[:space:]]/, "", signer)
+            }
+            next
+        }
+        signer_pending {
+            value = quoted($0)
+            if (value != "") {
+                signer = value
+                signer_pending = 0
+                gsub(/[[:space:]]/, "", signer)
+            }
+        }
+        END { emit() }
+    ' "$channels" | sort
+)
+actual_channels=$(
+    "$guix_resolved" describe --format=recutils |
+        awk '
+            function emit() {
+                if (name == "") return
+                if (url == "") url = "<missing>"
+                if (branch == "") branch = "<missing>"
+                if (commit == "") commit = "<missing>"
+                if (introduction == "") introduction = "<missing>"
+                if (signer == "") signer = "<missing>"
+                print name, url, branch, commit, introduction, signer
+                name = url = branch = commit = introduction = signer = ""
+            }
+            $1 == "name:" { emit(); name = $2; next }
+            $1 == "url:" { url = $2; next }
+            $1 == "branch:" { branch = $2; next }
+            $1 == "commit:" { commit = $2; next }
+            $1 == "introductioncommit:" { introduction = $2; next }
+            $1 == "introductionsigner:" {
+                signer = $0
+                sub(/^[^:]*:[[:space:]]*/, "", signer)
+                gsub(/[[:space:]]/, "", signer)
+                next
+            }
+            NF == 0 { emit(); next }
+            END { emit() }
+        ' |
+        sort
+)
+
+if [ -z "$expected_channels" ] || [ "$actual_channels" != "$expected_channels" ]; then
+    printf '%s\n' \
+        'guix-reconfigure: current Guix channels differ from the repository lock' >&2
+    printf '%s\n' 'expected:' "$expected_channels" 'actual:' "$actual_channels" >&2
+    printf 'guix-reconfigure: run %s before activation\n' \
+        "$script_dir/guix-build-gate" >&2
+    printf 'guix-reconfigure: then pull exactly %s\n' "$channels" >&2
+    exit 1
+fi
+
 guix_revision=$(
-    "$guix" describe --format=recutils |
+    "$guix_resolved" describe --format=recutils |
         awk '
             $1 == "name:" { guix_channel = ($2 == "guix"); next }
             guix_channel && $1 == "commit:" { print $2; exit }
@@ -110,9 +241,9 @@ if [ "$print_only" -eq 1 ]; then
 fi
 
 if [ "$mode" = system ]; then
-    exec "$privileged_sudo" "$guix" system reconfigure "$source" \
+    exec "$privileged_sudo" "$guix_resolved" system reconfigure "$source_resolved" \
         --substitute-urls="$substitute_urls" "$@"
 else
-    exec "$guix" home reconfigure "$source" \
+    exec "$guix_resolved" home reconfigure "$source_resolved" \
         --substitute-urls="$substitute_urls" "$@"
 fi

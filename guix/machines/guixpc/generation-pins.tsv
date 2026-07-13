@@ -1,0 +1,11 @@
+# kind	generation	canonical-store-target	role	reason
+system	83	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	promotion-rollback	Immediate accepted System baseline for Slice 12 promotion
+system	81	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system	preferred-rollback	Last distinct accepted elogind 255.24 System before Slice 10
+system	80	/gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system	emergency-rollback	Pre-elogind-upgrade recovery only; contains the known 255.17 SSH session defect
+system	75	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	last-known-good	Last observed working pre-slice boot target
+home	33	/gnu/store/dbmnwmi0jypvpi5kb0xn29wjpdhnjr6z-home	promotion-rollback	Immediate accepted Home baseline for Slice 12 promotion
+home	32	/gnu/store/5l5rn2alj38qclkj93cybla70jhyx6ls-home	preferred-rollback	Generated Home fallback for Slice 11
+home	29	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	last-known-good	Pre-sk-guix historical Home fallback
+pull	4	/gnu/store/irs2nbihzakvv0jjs0vzvjyxz2lkiym7-profile	promotion-rollback	Immediate accepted Guix frontend for Slice 12 promotion
+pull	3	/gnu/store/x9mc2silb9pdszck8yfbvh4plysxkmw2-profile	preferred-rollback	Immediate Guix frontend rollback with sk-guix present
+pull	2	/gnu/store/fyjqkz8rl6q459pshbn2r9nihfw9x3xw-profile	last-known-good	Pre-sk-guix channel recovery baseline
