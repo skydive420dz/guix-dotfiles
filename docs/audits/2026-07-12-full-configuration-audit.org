@@ -179,7 +179,7 @@ validation, and reproducibility findings are closed.
 | O-06 | P2  | CLOSED   | RTKit is active through system D-Bus/Polkit; PipeWire obtains an RR data-loop with a bounded 200000-microsecond realtime limit. | 10 |
 | O-07 | P2  | CLOSED   | The stale Kitty process is gone and the current launcher is Kitty 0.47.4. | 7 |
 | O-08 | P2  | CLOSED   | Fish, Bash, Eshell, and bare SSH automation route =gsr=/=ghr= through one current-Guix wrapper and explicit setuid sudo path. | 9 |
-| O-09 | P2  | VERIFIED | There are 82 retained System and 33 Home generations from roughly nine days, including duplicates. | 12 |
+| O-09 | P2  | POLICY   | The read-only retention gate protects exact System/Home/pull targets and reports 27 System plus 17 Home duplicate-link candidates; no deletion or garbage collection is implemented. | 12 |
 | O-10 | P3  | CLOSED   | X screen blanking and DPMS are explicitly declared and active at 600 seconds; elogind does not suspend the workstation. | 10 |
 | O-11 | P3  | POLICY   | Elogind intentionally retains the startx/PAM login as active local =tty1= with =Type=tty=; fresh-session =IdleHint=no= and EXWM child X11 metadata are correct. | 10 |
 | O-12 | P3  | VERIFIED | Historical Blueman logs show dconf persistence failure; current relevance is unproven. | 19 |
@@ -212,7 +212,7 @@ reported as a confirmed bug without a focused test.
 | X-01 | P2  | CLOSED   | Xinit is the sole automatic wallpaper/Picom owner; fresh reload retained the one Picom process and PID. | 11 |
 | X-02 | P2  | CLOSED   | PID/class-matched launch intents place delayed and fast clients on their origin workspaces while unrelated clients remain independent. | 11 |
 | X-03 | P2  | CLOSED   | Visible/simple desktop entries and executables validate before launch; failure and timeout leave no intent, dispatcher, process, or speculative split. | 11 |
-| X-04 | P2  | PARTIAL  | Public EXWM/Xref APIs replace avoidable private calls; the remaining workspace/floating adapters are isolated behind the reviewed EXWM 0.35 gate pending Slice 12 pinning. | 11, 12 |
+| X-04 | P2  | CLOSED   | The remaining private EXWM adapters are isolated behind an exact 0.35 gate, and all three authenticated channel commits are repository-pinned. | 11, 12 |
 | X-05 | P2  | POLICY   | Tty1 autologin, =xhost= access, and Kitty remote control broaden the local trust boundary. | 19 |
 | X-06 | P3  | POLICY   | Full transparency, compositor behavior, and screen blanking need one documented visual/power policy. | 19 |
 
@@ -220,11 +220,11 @@ reported as a confirmed bug without a focused test.
 
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
-| R-01 | P1  | STATIC   | Guix, Nonguix, and sk-guix follow moving branches rather than repository-recorded commits. | 12 |
-| R-02 | P1  | VERIFIED | =sk-guix= has no channel introduction/signing setup. | 12 |
+| R-01 | P1  | CLOSED   | =guix/channels.scm= pins exact Guix, Nonguix, and authenticated sk-guix commits; the isolated time-machine provenance gate matches all three. | 12 |
+| R-02 | P1  | CLOSED   | =sk-guix= publishes a signed introduction, authorized signer, orphan public keyring, and signed target that pass isolated clean-clone Guix authentication. | 12 |
 | R-03 | P2  | POLICY   | Live repo symlinks make edits immediate but Home rollback does not restore application-file contents. | 13 |
 | R-04 | P2  | STATIC   | User applications, Emacs packages, compilers, and language tools are concentrated in the privileged system package list. | 13 |
-| R-05 | P2  | STATIC   | There are no per-dialect manifests/dev shells or automated build gates. | 12, 13 |
+| R-05 | P2  | PARTIAL  | The pinned package/Home/System promotion gate is automated; composable per-dialect manifests and dev shells remain Slice 13. | 12, 13 |
 | R-06 | P2  | CLOSED   | =scripts/guix-entrypoints= checks or bootstraps every declaration link and refuses blockers/missing sources transactionally. | 9, 13 |
 
 ** Lisp ecosystem findings
@@ -1018,6 +1018,69 @@ Acceptance gates:
 - retention never deletes the current, booted, last-known-good, or explicitly
   pinned generations;
 - a rollback drill is documented and tested.
+
+*** Prepared implementation checkpoint
+
+The published =sk-guix= authentication chain is:
+
+#+begin_src text
+Keyring branch: 91227481e62463a1baec63f8effe7aaf6b4bfbdb
+Introduction: eaade3680892ce74ebae68f4922cd0eb4a463a17
+Target: b84ff24a515b2b6d0db85c0da30960c96e20ad22
+Signer: 6B09 4D15 B02E 54B0 F6B5 E9E8 6F83 FC62 D232 E5EC
+#+end_src
+
+A clean HTTPS clone with isolated =HOME= and =XDG_CACHE_HOME= authenticated the
+target through =origin/keyring=.  This isolation was required: an earlier probe
+correctly exposed a mispublished keyring ref that an existing authentication
+cache had masked.  The ref was repaired with an exact force-with-lease and the
+fully isolated verification now passes.
+
+The repository lock records Guix =a8391f2d7451c2463ba253ffa9872fa6f27485d7=,
+Nonguix =3b66965566fe8c96edb5a41fd39a9e5a90ad9b61=, and =sk-guix=
+=b84ff24a515b2b6d0db85c0da30960c96e20ad22=.  Isolated HOME, cache, and
+explicit trust state plus =--allow-untrusted-channels=no= realized the exact
+time-machine profile and reported those commits and all three introductions.
+Guix may reuse already-authenticated immutable store objects; the separate
+isolated clean-clone authentication above verifies the published =sk-guix=
+refs.
+
+=scripts/guix-build-gate= then built promoted Kitty 0.47.4 and both maintained
+Go inputs, evaluated the quarantined Fish 4.8.0 derivation without building it,
+and built:
+
+#+begin_src text
+Home: /gnu/store/xzhsfha3cbbzgs3gddi47iq1fk89fmiq-home
+System: /gnu/store/yr6x7ssaiwpw48891n7aqbpaa8jrqim1-system
+#+end_src
+
+The gate also preserves the reviewed EXWM 0.35 contract.  It does not invoke
+=pull=, reconfiguration, profile switching/deletion, or garbage collection.
+The strengthened shell gate and both new negative-control fixtures pass.
+
+Live retention verification sees System/Home/pull counts 82/33/4 and protects
+System 83/81/80/75, Home 33/32/29, and pull 4/3/2 with exact store targets.  Its
+duplicate-only plan reports 27 System and 17 Home link candidates and no pull
+candidate.  There is deliberately no apply action and no generation was
+deleted.  The read-only rollback drill checks kernel/initrd and Home activation
+artifact presence, runs each protected pull Guix with =--version=, and finds the
+required textual GRUB generation references.  It does not switch, activate, or
+boot them.  Recovery commands target the immediate promotion baseline System
+83, Home 33, and pull 4 through the protected pull 4 Guix executable; older
+81/32/3 tiers remain documented separately.
+
+Both activation wrappers currently refuse as intended because active pull
+generation 4 still contains =sk-guix= =b006225= rather than the new locked
+=b84ff24=.  No active profile, System, Home, session, or generation changed in
+this checkpoint.
+
+After pushing the source checkpoint, run the canonical current Guix =pull=
+against =~/.config/guix/channels.scm=, verify exact provenance, then run =gsr=
+and =ghr= and reboot.  Keep pull 4, System 83/81, and Home 33/32 until fresh
+acceptance.  If the new pull frontend fails, switch exactly to pull generation
+4; if activation fails, restore the matching source checkpoint before switching
+the exact System/Home generation because live application links are not rolled
+back by Guix Home.
 
 ** TODO Slice 13: Package ownership and per-dialect environments
 :PROPERTIES:
