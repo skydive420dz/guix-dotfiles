@@ -74,8 +74,87 @@
       (sk/check-with-fixture relative function))
     (should (memq 1 eldoc-calls))))
 
+(defun sk/check-lisp-runtime-process-p (process)
+  "Return non-nil when PROCESS is a Guile or SBCL runtime."
+  (seq-some (lambda (argument)
+              (string-match-p "\\(?:^\\|/\\)\\(?:guile\\|sbcl\\)\\'"
+                              argument))
+            (or (process-command process) '())))
+
+(defun sk/check-puni-contract-in-mode (mode)
+  "Check the reviewed structural-editing contract after enabling MODE."
+  (with-temp-buffer
+    (insert "(alpha) beta")
+    (funcall mode)
+    (should (bound-and-true-p puni-mode))
+    (goto-char 3)
+    (let ((puni-blink-for-sexp-manipulating nil))
+      (puni-slurp-forward 1))
+    (should (equal (buffer-string) "(alpha beta)"))
+    (check-parens)
+    (evil-normal-state)
+    (should (eq (key-binding (kbd "j")) #'evil-next-visual-line))
+    (should (eq (key-binding (kbd "k")) #'evil-previous-visual-line))))
+
+(defun sk/check-puni-org-source-edit (language expected-mode)
+  "Check Puni in an Org LANGUAGE editor using EXPECTED-MODE."
+  (let ((origin (generate-new-buffer " *sk-org-src-structural*"))
+        edit-buffer)
+    (unwind-protect
+        (save-window-excursion
+          (switch-to-buffer origin)
+          (org-mode)
+          (insert (format "#+begin_src %s\n(alpha) beta\n#+end_src\n"
+                          language))
+          (goto-char (point-min))
+          (search-forward "alpha")
+          (let ((org-src-window-setup 'current-window))
+            (org-edit-special))
+          (setq edit-buffer (current-buffer))
+          (should (eq major-mode expected-mode))
+          (should (bound-and-true-p org-src-mode))
+          (should (bound-and-true-p puni-mode))
+          (goto-char (point-min))
+          (search-forward "alpha")
+          (goto-char (match-beginning 0))
+          (let ((puni-blink-for-sexp-manipulating nil))
+            (puni-slurp-forward 1))
+          (check-parens)
+          (evil-normal-state)
+          (should (eq (key-binding (kbd "j")) #'evil-next-visual-line))
+          (org-edit-src-exit)
+          (should (eq (current-buffer) origin))
+          (goto-char (point-min))
+          (should (search-forward "(alpha beta)" nil t)))
+      (when (buffer-live-p edit-buffer)
+        (kill-buffer edit-buffer))
+      (when (buffer-live-p origin)
+        (kill-buffer origin)))))
+
 (ert-deftest sk/check-isolated-runtime-state ()
   (should noninteractive)
+  (let* ((home-profile
+          (file-name-as-directory
+           (or (getenv "SK_EMACS_CHECK_HOME_PROFILE")
+               (error "SK_EMACS_CHECK_HOME_PROFILE is required"))))
+         (system-profile
+          (file-name-as-directory
+           (or (getenv "SK_EMACS_CHECK_SYSTEM_PROFILE")
+               (error "SK_EMACS_CHECK_SYSTEM_PROFILE is required"))))
+         (expected-emacs
+          (or (getenv "SK_EMACS_CHECK_BATCH_EMACS")
+              (error "SK_EMACS_CHECK_BATCH_EMACS is required")))
+         (candidate-load-path
+          (concat (expand-file-name "share/emacs/site-lisp" home-profile)
+                  ":"
+                  (expand-file-name "share/emacs/site-lisp" system-profile)
+                  ":")))
+    (should
+     (file-equal-p
+      (expand-file-name invocation-name invocation-directory)
+      expected-emacs))
+    (should (string-prefix-p candidate-load-path
+                             (or (getenv "EMACSLOADPATH") ""))))
   (should (file-in-directory-p (file-truename user-emacs-directory)
                                (file-truename (getenv "HOME"))))
   (should (file-in-directory-p (file-truename sk/cache-directory)
@@ -90,6 +169,10 @@
                    (process-live-p server-process)))
   (dolist (file (list recentf-save-file savehist-file save-place-file))
     (should-not (file-exists-p file)))
+  (dolist (file (list projectile-known-projects-file
+                      projectile-frecency-file))
+    (should (file-in-directory-p (file-truename (file-name-directory file))
+                                 (file-truename sk/cache-directory))))
   (should-not (file-exists-p sk/org-notes-root))
   (should-not
    (catch 'real-user-package
@@ -164,29 +247,183 @@
    (lambda ()
      (should (eq major-mode 'emacs-lisp-mode))
      (should (eq (local-key-binding (kbd "C-c C-b")) #'eval-buffer))
+     (should (bound-and-true-p puni-mode))
      (should (eq (sk/lisp--dialect) 'elisp))))
   (sk/check-with-eldoc-fixture
    "scheme/sample.scm"
    (lambda ()
      (should (eq major-mode 'scheme-mode))
      (should (bound-and-true-p geiser-mode))
+     (should (bound-and-true-p puni-mode))
      (should (bound-and-true-p company-mode))
      (should (eq (car company-backends) 'company-capf))
+     (dolist (function '(geiser-capf--for-filename
+                         geiser-capf--for-module
+                         geiser-capf--for-symbol))
+       (should (memq function completion-at-point-functions)))
      (should (equal scheme-program-name "guile"))
      (should (eq (sk/lisp--dialect) 'scheme))))
   (sk/check-with-eldoc-fixture
    "common-lisp/sample.lisp"
    (lambda ()
      (should (eq major-mode 'lisp-mode))
-     (should (eq lisp-indent-function #'common-lisp-indent-function))
+     (should (bound-and-true-p puni-mode))
+     (should (bound-and-true-p sly-editing-mode))
+     (should (bound-and-true-p sly-mode))
+     (should (eq lisp-indent-function #'sly--lisp-indent-function))
+     (should (fboundp 'sly-common-lisp-indent-function))
      (should (equal inferior-lisp-program "sbcl"))
      (should (fboundp 'sly))
-     (should-not (bound-and-true-p sly-mode))
+     (should-not (sly-connected-p))
      (should (eq (sk/lisp--dialect) 'common-lisp))))
   (dolist (extension '("cl" "asd"))
     (sk/check-with-eldoc-fixture
      (concat "common-lisp/sample." extension)
      (lambda () (should (eq major-mode 'lisp-mode))))))
+
+(ert-deftest sk/check-lisp-activation-and-indent-ownership ()
+  (should (= 1 (cl-count #'geiser-mode--maybe-activate scheme-mode-hook
+                          :test #'eq)))
+  (should (= 1 (cl-count #'sk/scheme-mode-setup scheme-mode-hook
+                          :test #'eq)))
+  (let ((calls 0)
+        (original-geiser-mode (symbol-function 'geiser-mode)))
+    (cl-letf (((symbol-function 'geiser-mode)
+               (lambda (&optional argument)
+                 (cl-incf calls)
+                 (funcall original-geiser-mode argument))))
+      (with-temp-buffer (scheme-mode)))
+    (should (= calls 1)))
+  (should (= 1 (cl-count #'sly-editing-mode lisp-mode-hook :test #'eq)))
+  (let ((first (generate-new-buffer " *sk-sly-indent-first*"))
+        (second (generate-new-buffer " *sk-sly-indent-second*")))
+    (unwind-protect
+        (progn
+          (with-current-buffer first (lisp-mode))
+          (sly-setup)
+          (with-current-buffer second (lisp-mode))
+          (dolist (buffer (list first second))
+            (with-current-buffer buffer
+              (should (bound-and-true-p sly-editing-mode))
+              (should (eq lisp-indent-function
+                          #'sly--lisp-indent-function))))
+          (should (= 1 (cl-count #'sly-editing-mode lisp-mode-hook
+                                  :test #'eq))))
+      (kill-buffer first)
+      (kill-buffer second)))
+  (should-not (seq-some #'sk/check-lisp-runtime-process-p (process-list))))
+
+(ert-deftest sk/check-lisp-backend-guards-and-errors ()
+  (dolist (mode '(emacs-lisp-mode scheme-mode lisp-mode))
+    (with-temp-buffer
+      (insert "   \n")
+      (funcall mode)
+      (goto-char (point-min))
+      (let ((condition (should-error (sk/lisp-docs) :type 'user-error)))
+        (should (equal (cadr condition) "No symbol at point")))))
+  (dolist (case '((sk/lisp--call-scheme
+                   sk/lisp--scheme-repl-active-p
+                   "No Scheme REPL is active; run SPC l r first")
+                  (sk/lisp--call-common-lisp
+                   sk/lisp--common-lisp-repl-active-p
+                   "No Common Lisp REPL is active; run SPC l r first")))
+    (pcase-let ((`(,dispatcher ,predicate ,message) case))
+      (let (called)
+        (cl-letf (((symbol-function predicate) (lambda () nil))
+                  ((symbol-function 'sk/check-backend-command)
+                   (lambda () (interactive) (setq called t))))
+          (let ((condition
+                 (should-error
+                  (funcall dispatcher #'sk/check-backend-command)
+                  :type 'user-error)))
+            (should (equal (cadr condition) message))
+            (should-not called))))
+      (cl-letf (((symbol-function predicate) (lambda () t))
+                ((symbol-function 'sk/check-backend-command)
+                 (lambda (&rest arguments) arguments)))
+        (should (equal (funcall dispatcher #'sk/check-backend-command
+                                'left 'right)
+                       '(left right))))))
+  (dolist (case '((sk/lisp--call-scheme
+                   sk/lisp--scheme-repl-active-p
+                   "No Geiser REPL synthetic backend failure")
+                  (sk/lisp--call-common-lisp
+                   sk/lisp--common-lisp-repl-active-p
+                   "No current SLY connection synthetic backend failure")))
+    (pcase-let ((`(,dispatcher ,predicate ,message) case))
+      (cl-letf (((symbol-function predicate) (lambda () t))
+                ((symbol-function 'sk/check-backend-command)
+                 (lambda () (interactive) (signal 'file-error (list message)))))
+        (let ((condition
+               (should-error
+                (funcall dispatcher #'sk/check-backend-command)
+                :type 'file-error)))
+          (should (equal (cadr condition) message))))))
+  (let ((missing-command (make-symbol "missing-lisp-backend-command")))
+    (should-error (sk/lisp--call-scheme missing-command) :type 'user-error)
+    (should-error (sk/lisp--call-common-lisp missing-command)
+                  :type 'user-error)))
+
+(ert-deftest sk/check-lisp-trailing-whitespace-evaluation ()
+  (dolist (case '((scheme-mode sk/lisp--scheme-repl-active-p
+                   geiser-eval-last-sexp geiser-eval-buffer)
+                  (lisp-mode sk/lisp--common-lisp-repl-active-p
+                   sly-eval-last-expression sly-eval-buffer)))
+    (pcase-let ((`(,mode ,predicate ,last-command ,buffer-command) case))
+      (with-temp-buffer
+        (insert "(alpha)\n   ")
+        (funcall mode)
+        (goto-char (point-max))
+        (let (last-called buffer-called)
+          (cl-letf (((symbol-function predicate) (lambda () t))
+                    ((symbol-function last-command)
+                     (lambda () (interactive) (setq last-called t)))
+                    ((symbol-function buffer-command)
+                     (lambda () (interactive) (setq buffer-called t))))
+            (sk/lisp-eval-last-sexp)
+            (erase-buffer)
+            (sk/lisp-eval-buffer))
+          (should last-called)
+          (should buffer-called))))))
+
+(ert-deftest sk/check-puni-lisp-and-org-source-editors ()
+  (dolist (mode '(emacs-lisp-mode lisp-interaction-mode scheme-mode lisp-mode))
+    (sk/check-puni-contract-in-mode mode))
+  (dolist (case '(("emacs-lisp" . emacs-lisp-mode)
+                  ("scheme" . scheme-mode)
+                  ("lisp" . lisp-mode)))
+    (sk/check-puni-org-source-edit (car case) (cdr case)))
+  (with-temp-buffer
+    (org-mode)
+    (should-not (bound-and-true-p puni-mode)))
+  (dolist (hook '(emacs-lisp-mode-hook lisp-interaction-mode-hook
+                  scheme-mode-hook lisp-mode-hook))
+    (should (= 1 (cl-count #'puni-mode (symbol-value hook) :test #'eq)))))
+
+(ert-deftest sk/check-authored-snippets-and-eshell-highlighting ()
+  (should (equal yas-snippet-dirs (list sk/snippets-directory)))
+  (should (file-equal-p sk/snippets-directory
+                        (expand-file-name "snippets" sk/user-directory)))
+  (dolist (contract sk/authored-snippet-contract)
+    (pcase-let ((`(,mode ,name ,key) contract))
+      (should (yas-lookup-snippet name mode t))
+      ;; Globalized minor modes intentionally skip hidden temporary buffers,
+      ;; so use a normally named ephemeral buffer to exercise startup.
+      (let ((buffer (generate-new-buffer "sk-yas-contract-")))
+        (unwind-protect
+            (with-current-buffer buffer
+              (funcall mode)
+              (insert key)
+              (should (bound-and-true-p yas-minor-mode))
+              (should (yas-expand))
+              (should-not (equal (buffer-string) key)))
+          (kill-buffer buffer)))))
+  (require 'esh-mode)
+  (should (featurep 'eshell-syntax-highlighting))
+  (should (bound-and-true-p eshell-syntax-highlighting-global-mode))
+  (with-temp-buffer
+    (eshell-mode)
+    (should (bound-and-true-p eshell-syntax-highlighting-mode))))
 
 (ert-deftest sk/check-org-hooks-without-personal-notes ()
   (sk/check-with-fixture
@@ -206,7 +443,15 @@
                      ("SPC l b" . sk/lisp-eval-buffer)
                      ("SPC l d" . sk/lisp-eval-defun)
                      ("SPC l e" . sk/lisp-eval-last-sexp)
-                     ("SPC l k" . sk/lisp-docs)))
+                     ("SPC l k" . sk/lisp-docs)
+                     ("SPC l [" . puni-slurp-backward)
+                     ("SPC l ]" . puni-slurp-forward)
+                     ("SPC l {" . puni-barf-backward)
+                     ("SPC l }" . puni-barf-forward)
+                     ("SPC l (" . puni-wrap-round)
+                     ("SPC l u" . puni-splice)
+                     ("SPC l R" . puni-raise)
+                     ("SPC l t" . puni-transpose)))
     (should (eq (lookup-key evil-normal-state-map (kbd (car binding)))
                 (cdr binding)))))
 

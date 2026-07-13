@@ -1,14 +1,14 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; Home generation 35 accepted the 74-package user/editor base before the
-;; System declaration consumed this recovery list.  The pending forced-SSH
-;; correction adds fish-foreign-env as package 75.  The System list guarantees
-;; a tty shell, Kitty, and `emacs -Q'; normal configured EXWM still consumes the
-;; accepted base Home services and editor profile.  Optional dialect
-;; environments live in guix/manifests and must not be added to either list
-;; merely for convenience.  Emacs is the sole overlap between the explicit
-;; lists below.  The realized profiles also deliberately overlap on Fish
-;; (Home's Fish service) and Guile (System's %base-packages).
+;; Home generation 36 accepted the 75-package user/editor base before the
+;; System declaration consumed this recovery list.  The structural-editing
+;; slice adds Puni and Eshell syntax highlighting as packages 76 and 77.  The
+;; System list guarantees a tty shell, Kitty, and `emacs -Q'; normal configured
+;; EXWM still consumes the accepted base Home services and editor profile.
+;; Optional dialect environments live in guix/manifests and must not be added
+;; to either list merely for convenience.  Emacs is the sole overlap between
+;; the explicit lists below.  The realized profiles also deliberately overlap
+;; on Fish (Home's Fish service) and Guile (System's %base-packages).
 
 (define %guixpc-recovery-package-specifications
   '("curl"
@@ -62,8 +62,10 @@
     "emacs-lsp-ui"
     "emacs-lsp-ivy"
     "emacs-vterm"
+    "emacs-eshell-syntax-highlighting"
     "emacs-lsp-treemacs"
     "emacs-yasnippet"
+    "emacs-puni"
     "emacs-geiser"
     "emacs-geiser-guile"
     "emacs-sly"

@@ -30,14 +30,15 @@
            "ripgrep" "vim" "xset" "xwallpaper" "picom" "xrandr"))
  "reviewed 13-package recovery floor changed")
 
-(assert (= (length home) 75)
-        "reviewed Home ownership list must contain exactly 75 packages")
+(assert (= (length home) 77)
+        "reviewed Home ownership list must contain exactly 77 packages")
 
 (for-each
  (lambda (specification)
    (assert (member specification home)
            (string-append "Home ownership lost " specification)))
  '("fish-foreign-env" "emacs" "emacs-use-package" "emacs-geiser" "emacs-sly"
+   "emacs-puni" "emacs-eshell-syntax-highlighting" "emacs-yasnippet"
    "guile" "sbcl" "python-lsp-server" "lua-language-server"
    "ungoogled-chromium" "ranger" "shellcheck"))
 
@@ -71,7 +72,8 @@
     (string-append "Home-only package leaked into System source: "
                    specification)))
  '("ungoogled-chromium" "ranger" "emacs-use-package" "emacs-geiser"
-   "emacs-sly" "sbcl" "python-lsp-server" "lua-language-server"
+   "emacs-sly" "emacs-puni" "emacs-eshell-syntax-highlighting"
+   "sbcl" "python-lsp-server" "lua-language-server"
    "gcc-toolchain" "gdb" "shellcheck"))
 
 (format #t "guix-package-ownership-check: PASS (recovery=~a home=~a)~%"

@@ -62,6 +62,14 @@
                             (file-in-directory-p canonical sk/user-directory))
                   (throw 'found canonical)))))
           nil))
+       (authored-snippets-loaded-p
+        (and (boundp 'sk/authored-snippet-contract)
+             (fboundp 'yas-lookup-snippet)
+             (seq-every-p
+              (lambda (contract)
+                (pcase-let ((`(,mode ,name ,_key) contract))
+                  (yas-lookup-snippet name mode t)))
+              sk/authored-snippet-contract)))
        (checks
         (list
          (cons "preferred Home/System Emacs executable"
@@ -129,6 +137,12 @@
                (bound-and-true-p global-flycheck-mode))
          (cons "global Yasnippet frontend"
                (bound-and-true-p yas-global-mode))
+         (cons "repository-authored snippets"
+               (and (equal yas-snippet-dirs (list sk/snippets-directory))
+                    (file-equal-p sk/snippets-directory
+                                  (expand-file-name "snippets"
+                                                    sk/user-directory))
+                    authored-snippets-loaded-p))
          (cons "Org package generation"
                (funcall owned-library-p "org" "org-[0-9]*"))
          (cons "Geiser package generation"
@@ -141,6 +155,14 @@
                (funcall owned-library-p "lsp-mode" "lsp-mode-[0-9]*"))
          (cons "SLY package generation"
                (funcall owned-library-p "sly" "sly-[0-9]*"))
+         (cons "Puni package generation"
+               (funcall owned-library-p "puni" "puni-[0-9]*"))
+         (cons "Yasnippet package generation"
+               (funcall owned-library-p "yasnippet" "yasnippet-[0-9]*"))
+         (cons "Eshell highlighting package generation"
+               (funcall owned-library-p
+                        "eshell-syntax-highlighting"
+                        "eshell-syntax-highlighting-[0-9]*"))
          (cons "Evil package generation"
                (funcall owned-library-p "evil" "evil-[0-9]*"))
          (cons "General package generation"
@@ -156,15 +178,37 @@
                (memq #'lsp-enable-which-key-integration lsp-mode-hook))
          (cons "Shell Flycheck hook" (memq #'flycheck-mode sh-mode-hook))
          (cons "Scheme setup hook"
-               (memq #'sk/scheme-mode-setup scheme-mode-hook))
+               (and (= 1 (cl-count #'sk/scheme-mode-setup scheme-mode-hook
+                                    :test #'eq))
+                    (= 1 (cl-count #'geiser-mode--maybe-activate
+                                    scheme-mode-hook :test #'eq))))
          (cons "Common Lisp setup hook"
-               (memq #'sk/common-lisp-mode-setup lisp-mode-hook))
+               (and (= 1 (cl-count #'sk/common-lisp-mode-setup lisp-mode-hook
+                                    :test #'eq))
+                    (= 1 (cl-count #'sly-editing-mode lisp-mode-hook
+                                    :test #'eq))
+                    (featurep 'sly)
+                    (fboundp 'sly-common-lisp-indent-function)))
+         (cons "scoped Puni hooks"
+               (seq-every-p
+                (lambda (hook)
+                  (= 1 (cl-count #'puni-mode (symbol-value hook) :test #'eq)))
+                '(emacs-lisp-mode-hook lisp-interaction-mode-hook
+                  scheme-mode-hook lisp-mode-hook)))
+         (cons "loaded Eshell highlighting"
+               (or (not (featurep 'esh-mode))
+                   (and (featurep 'eshell-syntax-highlighting)
+                        (bound-and-true-p
+                         eshell-syntax-highlighting-global-mode))))
          (cons "format key"
                (eq (lookup-key evil-normal-state-map (kbd "SPC c f"))
                    #'sk/format-buffer))
          (cons "Lisp REPL key"
                (eq (lookup-key evil-normal-state-map (kbd "SPC l r"))
                    #'sk/lisp-repl))
+         (cons "Lisp structural key"
+               (eq (lookup-key evil-normal-state-map (kbd "SPC l ]"))
+                   #'puni-slurp-forward))
          (cons "no user ELPA load path" (not user-elpa-entry))
          (cons "owned load path" (not unowned-load-path-entry))
          (cons "no breadcrumb library" (not (locate-library "breadcrumb")))
@@ -186,6 +230,9 @@
           :org (locate-library "org")
           :geiser (locate-library "geiser")
           :geiser-guile (locate-library "geiser-guile")
+          :puni (locate-library "puni")
+          :eshell-highlighting (locate-library "eshell-syntax-highlighting")
+          :snippets sk/snippets-directory
           :projectile (locate-library "projectile")
           :lsp (locate-library "lsp-mode")
           :sly (locate-library "sly"))))

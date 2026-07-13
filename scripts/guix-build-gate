@@ -25,6 +25,8 @@ system_config=$repo/guix/systems/guixpc.scm
 module_dir=$repo/guix/modules
 manifest_dir=$repo/guix/manifests
 racket_fixture=$repo/fixtures/racket/basic-test.rkt
+emacs_check=$repo/scripts/emacs-check
+guile_init=$repo/guile/guile
 frontend_input=${SK_GUIX_FRONTEND_PROFILE:-$home/.config/guix/current}
 substitute_urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
 promoted_expression='(list (@ (sk packages terminals) kitty-latest) (@ (sk packages golang) go-github-com-emmansun-base64) (@ (sk packages golang) go-github-com-sgtdi-fswatcher))'
@@ -35,12 +37,20 @@ for file in "$channels" "$home_config" "$system_config" \
     "$manifest_dir/core-lisp.scm" \
     "$manifest_dir/jvm-lisp.scm" \
     "$manifest_dir/racket.scm" \
-    "$racket_fixture"; do
+    "$racket_fixture" \
+    "$emacs_check" \
+    "$guile_init"; do
     if [ ! -r "$file" ]; then
         printf 'guix-build-gate: unreadable declaration: %s\n' "$file" >&2
         exit 2
     fi
 done
+
+if [ ! -x "$emacs_check" ]; then
+    printf 'guix-build-gate: candidate Emacs checker is not executable: %s\n' \
+        "$emacs_check" >&2
+    exit 2
+fi
 
 case $frontend_input in
     /*) ;;
@@ -84,7 +94,9 @@ describe_output=$tmp/describe.rec
 channel_snapshot=$tmp/channels.scm
 isolated_config=$tmp/config
 isolated_cache=$tmp/cache
+isolated_data=$tmp/data
 isolated_home=$tmp/home
+isolated_state=$tmp/state
 runtime_work=$tmp/runtime-work
 trusted_channels=$isolated_config/guix/trusted-channels.scm
 cp "$channels" "$channel_snapshot"
@@ -129,8 +141,8 @@ if [ "$introduction_count" -ne 3 ]; then
     exit 2
 fi
 
-mkdir -p "$isolated_config/guix" "$isolated_cache" "$isolated_home" \
-    "$runtime_work"
+mkdir -p "$isolated_config/guix" "$isolated_cache" "$isolated_data" \
+    "$isolated_home" "$isolated_state" "$runtime_work"
 cp "$channel_snapshot" "$trusted_channels"
 
 export LC_ALL=C
@@ -334,6 +346,15 @@ validate_system_recovery_profile() {
         exit 1
     fi
 
+    for module in readline colorized; do
+        module_file=$profile/share/guile/site/3.0/ice-9/$module.scm
+        if [ ! -r "$module_file" ]; then
+            printf 'guix-build-gate: System profile lacks Guile module: %s\n' \
+                "$module" >&2
+            exit 1
+        fi
+    done
+
     printf 'System recovery profile: PASS (%s)\n' "$profile"
 }
 
@@ -433,7 +454,8 @@ validate_home_profile_artifacts() {
         fi
     done
 
-    for library in geiser geiser-guile org sly use-package; do
+    for library in eshell-syntax-highlighting geiser geiser-guile org puni sly \
+        use-package yasnippet; do
         found=0
         for path in "$profile/share/emacs/site-lisp/$library"-*; do
             if [ -e "$path" ]; then
@@ -530,6 +552,13 @@ validate_realized_package_ownership() {
             'guix-build-gate: System profile lacks declared package: kitty-latest' >&2
         exit 1
     fi
+    for package in guile-readline guile-colorized; do
+        if ! profile_has_package "$system_records" "$package"; then
+            printf 'guix-build-gate: System profile lacks base package: %s\n' \
+                "$package" >&2
+            exit 1
+        fi
+    done
 
     for package in clojure clojure-tools leiningen openjdk racket \
         emacs-cider emacs-racket-mode; do
@@ -571,6 +600,81 @@ validate_realized_package_ownership() {
 
     printf '%s\n' \
         'Realized package ownership: PASS (overlap=emacs,fish,guile)'
+}
+
+validate_guile_profile_environment() {
+    system_result=$1
+    home_result=$2
+    system_profile=$system_result/profile
+    home_profile=$home_result/profile
+
+    if ! output=$(
+        (
+            unset INSIDE_EMACS
+            HOME="$isolated_home" \
+                XDG_CACHE_HOME="$isolated_cache" \
+                XDG_CONFIG_HOME="$isolated_config" \
+                XDG_DATA_HOME="$isolated_data" \
+                XDG_STATE_HOME="$isolated_state" \
+                GUILE_AUTO_COMPILE=0 \
+                GUILE_HISTORY="$tmp/guile-history" \
+                GUILE_LOAD_PATH="$home_profile/share/guile/site/3.0:$system_profile/share/guile/site/3.0" \
+                GUILE_LOAD_COMPILED_PATH="$home_profile/lib/guile/3.0/site-ccache:$home_profile/share/guile/site/3.0:$system_profile/lib/guile/3.0/site-ccache:$system_profile/share/guile/site/3.0" \
+                "$home_profile/bin/guile" --no-auto-compile \
+                -l "$guile_init" \
+                -c '(use-modules (ice-9 readline) (ice-9 colorized))
+                    (unless (and (procedure? activate-readline)
+                                 (procedure? activate-colorized))
+                      (error "missing Guile REPL activator"))
+                    (let* ((common
+                            (resolve-module
+                             (quote (system repl common))))
+                           (colorized
+                            (resolve-module (quote (ice-9 colorized))))
+                           (options
+                            (module-ref
+                             common (quote repl-default-options)))
+                           (printer
+                            (cadr (assq (quote print) options)))
+                           (expected
+                            (module-ref
+                             colorized
+                             (quote colorized-repl-printer))))
+                      (unless (eq? printer expected)
+                        (error ".guile did not activate colorized output")))
+                    (display "candidate-guile-ready\n")'
+        ) 2>&1
+    ); then
+        printf '%s\n' "$output" >&2
+        printf '%s\n' \
+            'guix-build-gate: candidate Guile startup failed' >&2
+        exit 1
+    fi
+
+    case $output in
+        *"Consider installing"*)
+            printf '%s\n' "$output" >&2
+            printf '%s\n' \
+                'guix-build-gate: candidate .guile used a missing-module fallback' >&2
+            exit 1
+            ;;
+    esac
+
+    printf '%s\n' 'Candidate Guile profile: PASS'
+}
+
+validate_candidate_emacs() {
+    home_result=$1
+    system_result=$2
+
+    SK_EMACS_CHECK_HOME_PROFILE="$home_result/profile" \
+        SK_EMACS_CHECK_SYSTEM_PROFILE="$system_result/profile" \
+        SK_EMACS_CHECK_BREAK_LIVE=0 \
+        SK_EMACS_CHECK_BREAK_BATCH=0 \
+        SK_EMACS_CHECK_BREAK_WARNING=0 \
+        "$emacs_check" --batch-only "$repo"
+
+    printf '%s\n' 'Candidate Emacs batch: PASS'
 }
 
 printf '%s\n' '== promoted sk-guix packages =='
@@ -637,7 +741,9 @@ else
     printf '%s\n' "$system_result"
     validate_system_recovery_profile "$system_result"
     validate_realized_package_ownership "$system_result" "$home_result"
+    validate_guile_profile_environment "$system_result" "$home_result"
     validate_nonlogin_fish_environment "$system_result" "$home_result"
+    validate_candidate_emacs "$home_result" "$system_result"
 fi
 
 if [ "$plan" -eq 1 ]; then

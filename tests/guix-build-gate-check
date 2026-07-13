@@ -25,6 +25,13 @@ contains() {
     esac
 }
 
+lacks() {
+    case $1 in
+        *"$2"*) fail "expected output to omit: $2" ;;
+        *) ;;
+    esac
+}
+
 sandbox_repo=$tmp/repo
 sandbox_home=$tmp/home
 fake_profile=$tmp/time-machine-profile
@@ -35,22 +42,43 @@ fake_home_manifest=$tmp/fake-home-installed
 fake_recovery_names=$tmp/fake-recovery-names
 fake_home_names=$tmp/fake-home-names
 fake_log=$tmp/guix.log
+fake_candidate_log=$tmp/candidate.log
 gate=$sandbox_repo/scripts/guix-build-gate
+fake_emacs_check=$sandbox_repo/scripts/emacs-check
 fake_guix=$sandbox_home/.config/guix/current/bin/guix
 fake_guile=$sandbox_home/bin/guile
 
 mkdir -p "$sandbox_repo/scripts" "$sandbox_repo/guix/home" \
     "$sandbox_repo/guix/systems" "$sandbox_repo/guix/manifests" \
     "$sandbox_repo/guix/modules/sk" "$sandbox_repo/fixtures/racket" \
+    "$sandbox_repo/guile" \
     "$(dirname "$fake_guix")" "$(dirname "$fake_guile")" \
     "$fake_profile/bin" "$fake_system/profile/bin" \
     "$fake_system/profile/share/emacs/site-lisp/exwm-0.35" \
+    "$fake_system/profile/share/guile/site/3.0/ice-9" \
     "$fake_home/profile/bin" "$fake_home/profile/share/fish/functions" \
     "$fake_home/files/.config/fish"
 cp "$repo/scripts/guix-build-gate" "$gate"
+cp "$repo/guile/guile" "$sandbox_repo/guile/guile"
 cp "$repo/guix/package-ownership.scm" \
     "$sandbox_repo/guix/package-ownership.scm"
 chmod +x "$gate"
+cat >"$fake_emacs_check" <<'EOF'
+#!/bin/sh
+set -eu
+[ "$#" -eq 2 ]
+[ "$1" = --batch-only ]
+[ "$2" = "$SK_FAKE_REPO" ]
+[ "$SK_EMACS_CHECK_HOME_PROFILE" = "$SK_FAKE_HOME/profile" ]
+[ "$SK_EMACS_CHECK_SYSTEM_PROFILE" = "$SK_FAKE_SYSTEM/profile" ]
+[ "$SK_EMACS_CHECK_BREAK_LIVE" = 0 ]
+[ "$SK_EMACS_CHECK_BREAK_BATCH" = 0 ]
+[ "$SK_EMACS_CHECK_BREAK_WARNING" = 0 ]
+printf '%s\n' EMACS >>"$SK_FAKE_CANDIDATE_LOG"
+[ "${SK_FAKE_FAIL:-}" != emacs ] || exit 96
+printf '%s\n' 'emacs-check: PASS'
+EOF
+chmod +x "$fake_emacs_check"
 printf '%s\n' '(home-environment)' >"$sandbox_repo/guix/home/guixpc.scm"
 printf '%s\n' '(operating-system)' >"$sandbox_repo/guix/systems/guixpc.scm"
 printf '%s\n' '(define-module (sk development-tiers))' \
@@ -61,6 +89,10 @@ for manifest in core-lisp jvm-lisp racket; do
 done
 printf '%s\n' '#lang racket/base' \
     >"$sandbox_repo/fixtures/racket/basic-test.rkt"
+printf '%s\n' ';; fake readline module' \
+    >"$fake_system/profile/share/guile/site/3.0/ice-9/readline.scm"
+printf '%s\n' ';; fake colorized module' \
+    >"$fake_system/profile/share/guile/site/3.0/ice-9/colorized.scm"
 
 for command in bluetoothctl curl dbus-update-activation-environment emacs fish \
     git kitty picom reset rg startx vim xrandr xset xwallpaper; do
@@ -95,7 +127,42 @@ for command in bat btop chafa chromium clang emacs fastfetch fzf gcc gdb \
     printf '%s\n' '#!/bin/sh' 'exit 0' >"$fake_home/profile/bin/$command"
     chmod +x "$fake_home/profile/bin/$command"
 done
-for library in geiser-0 geiser-guile-0 org-0 sly-0 use-package-0; do
+cat >"$fake_home/profile/bin/guile" <<'EOF'
+#!/bin/sh
+set -eu
+[ "${1:-}" = --no-auto-compile ]
+[ "${2:-}" = -l ]
+[ "${3:-}" = "$SK_FAKE_REPO/guile/guile" ]
+[ -r "$3" ]
+[ "${4:-}" = -c ]
+case ${5:-} in
+    *activate-readline*activate-colorized*repl-default-options*colorized-repl-printer*) ;;
+    *) exit 88 ;;
+esac
+[ "$HOME" != "$SK_FAKE_ORIGINAL_HOME" ]
+[ -d "$XDG_CACHE_HOME" ]
+[ -d "$XDG_CONFIG_HOME" ]
+[ -d "$XDG_DATA_HOME" ]
+[ -d "$XDG_STATE_HOME" ]
+case "$XDG_CONFIG_HOME:$XDG_DATA_HOME:$XDG_STATE_HOME" in
+    *"$SK_FAKE_ORIGINAL_HOME"*) exit 89 ;;
+esac
+[ "$GUILE_AUTO_COMPILE" = 0 ]
+[ -n "$GUILE_HISTORY" ]
+[ -z "${INSIDE_EMACS+x}" ]
+[ "$GUILE_LOAD_PATH" = "$SK_FAKE_HOME/profile/share/guile/site/3.0:$SK_FAKE_SYSTEM/profile/share/guile/site/3.0" ]
+[ "$GUILE_LOAD_COMPILED_PATH" = "$SK_FAKE_HOME/profile/lib/guile/3.0/site-ccache:$SK_FAKE_HOME/profile/share/guile/site/3.0:$SK_FAKE_SYSTEM/profile/lib/guile/3.0/site-ccache:$SK_FAKE_SYSTEM/profile/share/guile/site/3.0" ]
+printf '%s\n' GUILE >>"$SK_FAKE_CANDIDATE_LOG"
+[ "${SK_FAKE_FAIL:-}" != guile-profile ] || exit 97
+if [ "${SK_FAKE_GUILE_FALLBACK:-0}" = 1 ]; then
+    printf '%s\n' "Consider installing the 'guile-readline' package"
+    exit 0
+fi
+printf '%s\n' candidate-guile-ready
+EOF
+chmod +x "$fake_home/profile/bin/guile"
+for library in eshell-syntax-highlighting-0 geiser-0 geiser-guile-0 org-0 \
+    puni-0 sly-0 use-package-0 yasnippet-0; do
     mkdir -p "$fake_home/profile/share/emacs/site-lisp/$library"
 done
 printf '%s\n' 'function fenv' 'end' \
@@ -109,7 +176,8 @@ printf '%s\n' '# fake generated profile' >"$fake_home/files/.profile"
 printf '%s\n' curl git fish emacs emacs-exwm bluez ncurses ripgrep vim \
     xset xwallpaper picom xrandr >"$fake_recovery_names"
 printf '%s\n' fish-foreign-env emacs emacs-desktop-environment emacs-geiser \
-    emacs-sly guile sbcl lua-language-server python-lsp-server \
+    emacs-sly emacs-puni emacs-eshell-syntax-highlighting emacs-yasnippet \
+    guile sbcl lua-language-server python-lsp-server \
     ungoogled-chromium ranger shellcheck >"$fake_home_names"
 
 write_fake_manifest() {
@@ -120,6 +188,21 @@ write_fake_manifest() {
         printf '%s\t1\tout\t/gnu/store/fake-%s\n' "$package" "$package" \
             >>"$output"
     done
+}
+
+reset_fake_system_manifest() {
+    write_fake_manifest "$fake_system_manifest" \
+        bluez curl emacs emacs-exwm fish git guile guile-colorized \
+        guile-readline kitty-latest ncurses picom ripgrep vim xrandr xset \
+        xwallpaper
+}
+
+reset_fake_home_manifest() {
+    write_fake_manifest "$fake_home_manifest" \
+        emacs emacs-desktop-environment emacs-eshell-syntax-highlighting \
+        emacs-geiser emacs-puni emacs-sly emacs-yasnippet fish \
+        fish-foreign-env guile lua-language-server python-lsp-server ranger \
+        sbcl shellcheck ungoogled-chromium
 }
 
 remove_fake_manifest_package() {
@@ -142,13 +225,8 @@ replace_fake_manifest_path() {
     mv "$manifest.new" "$manifest"
 }
 
-write_fake_manifest "$fake_system_manifest" \
-    bluez curl emacs emacs-exwm fish git guile kitty-latest ncurses picom \
-    ripgrep vim xrandr xset xwallpaper
-write_fake_manifest "$fake_home_manifest" \
-    emacs emacs-desktop-environment emacs-geiser emacs-sly fish \
-    fish-foreign-env guile lua-language-server python-lsp-server ranger sbcl \
-    shellcheck ungoogled-chromium
+reset_fake_system_manifest
+reset_fake_home_manifest
 
 write_channels() {
     guix_commit=${1:-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
@@ -314,6 +392,7 @@ ln -s "$fake_guix" "$fake_profile/bin/guix"
 
 run_gate() {
     : >"$fake_log"
+    : >"$fake_candidate_log"
     PATH=$sandbox_home/bin:$PATH \
         HOME=$sandbox_home \
         SK_GUIX_FRONTEND_PROFILE=${SK_TEST_FRONTEND_PROFILE:-} \
@@ -326,8 +405,11 @@ run_gate() {
         SK_FAKE_RECOVERY_NAMES=$fake_recovery_names \
         SK_FAKE_HOME_NAMES=$fake_home_names \
         SK_FAKE_CHANNELS=$sandbox_repo/guix/channels.scm \
+        SK_FAKE_REPO=$sandbox_repo \
+        SK_FAKE_CANDIDATE_LOG=$fake_candidate_log \
         SK_FAKE_ORIGINAL_HOME=$sandbox_home \
         SK_FAKE_FAIL=${SK_FAKE_FAIL:-} \
+        SK_FAKE_GUILE_FALLBACK=${SK_FAKE_GUILE_FALLBACK:-0} \
         SK_FAKE_ABSENT_STATUS=${SK_FAKE_ABSENT_STATUS:-127} \
         SK_FAKE_FISH_STATUS=${SK_FAKE_FISH_STATUS:-0} \
         "$gate" "$@"
@@ -378,7 +460,11 @@ contains "$log" "$sandbox_repo/guix/home/guixpc.scm"
 contains "$log" "$sandbox_repo/guix/systems/guixpc.scm"
 contains "$output" 'System recovery profile: PASS'
 contains "$output" 'Realized package ownership: PASS (overlap=emacs,fish,guile)'
+contains "$output" 'Candidate Guile profile: PASS'
 contains "$output" 'Non-login SSH Fish environment: PASS'
+contains "$output" 'Candidate Emacs batch: PASS'
+contains "$(cat "$fake_candidate_log")" 'GUILE'
+contains "$(cat "$fake_candidate_log")" 'EMACS'
 
 override_profile=$tmp/override-bootstrap-profile
 mkdir -p "$override_profile/bin"
@@ -427,15 +513,71 @@ printf '%s\n' 'function fenv' 'end' \
 printf '%s\n' 'function fenv.main' 'end' \
     >"$fake_home/profile/share/fish/functions/fenv.main.fish"
 
+for library in eshell-syntax-highlighting puni yasnippet; do
+    mv "$fake_home/profile/share/emacs/site-lisp/$library-0" \
+        "$tmp/$library-0.absent"
+    if output=$(run_gate 2>&1); then
+        fail "Home profile missing $library site-lisp passed the gate"
+    fi
+    contains "$output" "Home profile lacks $library site-lisp"
+    mv "$tmp/$library-0.absent" \
+        "$fake_home/profile/share/emacs/site-lisp/$library-0"
+done
+
+for module in readline colorized; do
+    mv "$fake_system/profile/share/guile/site/3.0/ice-9/$module.scm" \
+        "$fake_system/profile/share/guile/site/3.0/ice-9/$module.scm.absent"
+    if output=$(run_gate 2>&1); then
+        fail "System profile missing Guile $module module passed the gate"
+    fi
+    contains "$output" "System profile lacks Guile module: $module"
+    mv "$fake_system/profile/share/guile/site/3.0/ice-9/$module.scm.absent" \
+        "$fake_system/profile/share/guile/site/3.0/ice-9/$module.scm"
+done
+
+for package in emacs-eshell-syntax-highlighting emacs-puni emacs-yasnippet; do
+    remove_fake_manifest_package "$fake_home_manifest" "$package"
+    if output=$(run_gate 2>&1); then
+        fail "Home manifest missing declared $package passed the gate"
+    fi
+    contains "$output" "Home profile lacks declared package: $package"
+    reset_fake_home_manifest
+done
+
 remove_fake_manifest_package "$fake_home_manifest" shellcheck
 if output=$(run_gate 2>&1); then
     fail 'Home manifest missing declared ShellCheck passed the gate'
 fi
 contains "$output" 'Home profile lacks declared package: shellcheck'
-write_fake_manifest "$fake_home_manifest" \
-    emacs emacs-desktop-environment emacs-geiser emacs-sly fish \
-    fish-foreign-env guile lua-language-server python-lsp-server ranger sbcl \
-    shellcheck ungoogled-chromium
+reset_fake_home_manifest
+
+for package in guile-readline guile-colorized; do
+    remove_fake_manifest_package "$fake_system_manifest" "$package"
+    if output=$(run_gate 2>&1); then
+        fail "System manifest missing $package passed the gate"
+    fi
+    contains "$output" "System profile lacks base package: $package"
+    reset_fake_system_manifest
+done
+
+if output=$(SK_FAKE_GUILE_FALLBACK=1 run_gate 2>&1); then
+    fail 'candidate Guile missing-module fallback passed the gate'
+fi
+contains "$output" 'candidate .guile used a missing-module fallback'
+
+if output=$(SK_FAKE_FAIL=guile-profile run_gate 2>&1); then
+    fail 'candidate Guile startup failure passed the gate'
+fi
+contains "$output" 'candidate Guile startup failed'
+contains "$(cat "$fake_candidate_log")" 'GUILE'
+lacks "$(cat "$fake_candidate_log")" 'EMACS'
+
+if output=$(SK_FAKE_FAIL=emacs run_gate 2>&1); then
+    fail 'candidate Emacs batch failure passed the gate'
+fi
+contains "$(cat "$fake_candidate_log")" 'GUILE'
+contains "$(cat "$fake_candidate_log")" 'EMACS'
+lacks "$output" 'Candidate Emacs batch: PASS'
 
 printf '%s\t1\tout\t/gnu/store/fake-guile\n' guile \
     >>"$fake_system_manifest"
@@ -443,9 +585,7 @@ if output=$(run_gate 2>&1); then
     fail 'duplicate System manifest name passed the gate'
 fi
 contains "$output" 'duplicate System profile package: guile'
-write_fake_manifest "$fake_system_manifest" \
-    bluez curl emacs emacs-exwm fish git guile kitty-latest ncurses picom \
-    ripgrep vim xrandr xset xwallpaper
+reset_fake_system_manifest
 
 replace_fake_manifest_path "$fake_home_manifest" fish \
     /gnu/store/different-fish
@@ -453,10 +593,7 @@ if output=$(run_gate 2>&1); then
     fail 'different Fish store paths passed the overlap gate'
 fi
 contains "$output" 'overlap package differs between profiles: fish'
-write_fake_manifest "$fake_home_manifest" \
-    emacs emacs-desktop-environment emacs-geiser emacs-sly fish \
-    fish-foreign-env guile lua-language-server python-lsp-server ranger sbcl \
-    shellcheck ungoogled-chromium
+reset_fake_home_manifest
 
 printf '%s\t1\tout\t/gnu/store/fake-sbcl\n' sbcl \
     >>"$fake_system_manifest"
@@ -464,9 +601,7 @@ if output=$(run_gate 2>&1); then
     fail 'System manifest containing Home-owned SBCL passed the gate'
 fi
 contains "$output" 'realized System/Home package overlap changed'
-write_fake_manifest "$fake_system_manifest" \
-    bluez curl emacs emacs-exwm fish git guile kitty-latest ncurses picom \
-    ripgrep vim xrandr xset xwallpaper
+reset_fake_system_manifest
 
 printf '%s\t1\tout\t/gnu/store/fake-racket\n' racket \
     >>"$fake_home_manifest"
@@ -474,10 +609,7 @@ if output=$(run_gate 2>&1); then
     fail 'optional Racket package in Home passed the gate'
 fi
 contains "$output" 'optional dialect leaked into Home: racket'
-write_fake_manifest "$fake_home_manifest" \
-    emacs emacs-desktop-environment emacs-geiser emacs-sly fish \
-    fish-foreign-env guile lua-language-server python-lsp-server ranger sbcl \
-    shellcheck ungoogled-chromium
+reset_fake_home_manifest
 
 printf '%s\t1\tout\t/gnu/store/fake-racket\n' racket \
     >>"$fake_system_manifest"
@@ -485,9 +617,7 @@ if output=$(run_gate 2>&1); then
     fail 'optional Racket package in System passed the gate'
 fi
 contains "$output" 'optional dialect leaked into System: racket'
-write_fake_manifest "$fake_system_manifest" \
-    bluez curl emacs emacs-exwm fish git guile kitty-latest ncurses picom \
-    ripgrep vim xrandr xset xwallpaper
+reset_fake_system_manifest
 
 for forbidden in pull reconfigure switch-generation delete-generations gc; do
     if logged_argument "$forbidden"; then
@@ -497,6 +627,9 @@ done
 
 output=$(run_gate --plan)
 contains "$output" 'guix-build-gate: PASS (mode=plan)'
+if [ -s "$fake_candidate_log" ]; then
+    fail 'plan invoked candidate runtime validation'
+fi
 plan_log=$(cat "$fake_log")
 dry_run_count=$(printf '%s\n' "$plan_log" | awk '
     {
@@ -510,7 +643,8 @@ dry_run_count=$(printf '%s\n' "$plan_log" | awk '
     fail "plan used --dry-run $dry_run_count times; expected 7"
 
 for stage in channels provenance exwm promoted fish core-manifest jvm-manifest \
-    racket-manifest core-runtime jvm-runtime racket-runtime home system; do
+    racket-manifest core-runtime jvm-runtime racket-runtime home system \
+    guile-profile emacs; do
     if output=$(SK_FAKE_FAIL=$stage run_gate 2>&1); then
         fail "$stage failure passed the gate"
     fi
@@ -525,7 +659,15 @@ for stage in channels provenance exwm promoted fish core-manifest jvm-manifest \
                 fail 'Home failure continued into System'
             fi
             ;;
-        system) ;;
+        system)
+            if [ -s "$fake_candidate_log" ]; then
+                fail 'System failure continued into candidate validation'
+            fi
+            ;;
+        guile-profile)
+            lacks "$(cat "$fake_candidate_log")" 'EMACS'
+            ;;
+        emacs) ;;
     esac
 done
 

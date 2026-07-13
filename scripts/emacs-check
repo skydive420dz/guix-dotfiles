@@ -1,8 +1,14 @@
 #!/bin/sh
 set -u
 
+batch_only=0
+if [ "${1:-}" = --batch-only ]; then
+    batch_only=1
+    shift
+fi
+
 if [ "$#" -gt 1 ]; then
-    printf 'usage: %s [REPOSITORY]\n' "$0" >&2
+    printf 'usage: %s [--batch-only] [REPOSITORY]\n' "$0" >&2
     exit 2
 fi
 
@@ -10,10 +16,58 @@ real_home="${HOME:?HOME must be set}"
 repo="${1:-$real_home/Projects/guix-dotfiles}"
 repo="$(CDPATH='' cd -- "$repo" && pwd -P)" || exit 2
 
-export PATH="$real_home/.guix-home/profile/bin:/run/privileged/bin:$real_home/.config/guix/current/bin:$real_home/.guix-profile/bin:/run/current-system/profile/bin:/run/current-system/profile/sbin:${PATH:-}"
-export EMACSLOADPATH="$real_home/.guix-home/profile/share/emacs/site-lisp:/run/current-system/profile/share/emacs/site-lisp:"
+if [ "$batch_only" -eq 0 ] && \
+   { [ "${SK_EMACS_CHECK_HOME_PROFILE+x}" = x ] || \
+     [ "${SK_EMACS_CHECK_SYSTEM_PROFILE+x}" = x ]; }; then
+    printf '%s\n' \
+        'preflight: candidate profile overrides require --batch-only' >&2
+    exit 2
+fi
 
-for command in chmod cp emacs emacsclient env git mkdir mktemp rm sed timeout; do
+home_profile=${SK_EMACS_CHECK_HOME_PROFILE:-$real_home/.guix-home/profile}
+system_profile=${SK_EMACS_CHECK_SYSTEM_PROFILE:-/run/current-system/profile}
+
+for profile in "$home_profile" "$system_profile"; do
+    case $profile in
+        /*) ;;
+        *)
+            printf 'preflight: candidate profile must be absolute: %s\n' \
+                "$profile" >&2
+            exit 2
+            ;;
+    esac
+    if [ ! -d "$profile" ]; then
+        printf 'preflight: candidate profile is not a directory: %s\n' \
+            "$profile" >&2
+        exit 2
+    fi
+done
+
+if [ -x "$home_profile/bin/emacs" ]; then
+    batch_emacs=$home_profile/bin/emacs
+elif [ "$batch_only" -eq 0 ] && [ -x "$system_profile/bin/emacs" ]; then
+    batch_emacs=$system_profile/bin/emacs
+else
+    printf 'preflight: candidate Home Emacs is not executable: %s\n' \
+        "$home_profile/bin/emacs" >&2
+    exit 2
+fi
+
+candidate_path="$home_profile/bin:$system_profile/bin:$system_profile/sbin"
+candidate_emacsloadpath="$home_profile/share/emacs/site-lisp:$system_profile/share/emacs/site-lisp:"
+
+if [ "$batch_only" -eq 1 ]; then
+    export PATH="$candidate_path"
+else
+    export PATH="$real_home/.guix-home/profile/bin:/run/privileged/bin:$real_home/.config/guix/current/bin:$real_home/.guix-profile/bin:/run/current-system/profile/bin:/run/current-system/profile/sbin:${PATH:-}"
+fi
+export EMACSLOADPATH="$candidate_emacsloadpath"
+
+required_commands='chmod cp env git mkdir mktemp rm timeout'
+if [ "$batch_only" -eq 0 ]; then
+    required_commands="$required_commands emacsclient sed"
+fi
+for command in $required_commands; do
     if ! command -v "$command" >/dev/null 2>&1; then
         printf 'preflight: missing %s\n' "$command" >&2
         exit 2
@@ -91,9 +145,12 @@ run_batch_checks() (
         SK_EMACS_CHECK_SANDBOX_ROOT="$sandbox" \
         SK_EMACS_CHECK_ORIGINAL_REPO="$repo" \
         SK_EMACS_CHECK_REAL_HOME="$real_home" \
+        SK_EMACS_CHECK_HOME_PROFILE="$home_profile" \
+        SK_EMACS_CHECK_SYSTEM_PROFILE="$system_profile" \
+        SK_EMACS_CHECK_BATCH_EMACS="$batch_emacs" \
         SK_EMACS_CHECK_BREAK_BATCH="${SK_EMACS_CHECK_BREAK_BATCH:-0}" \
         SK_EMACS_CHECK_BREAK_WARNING="${SK_EMACS_CHECK_BREAK_WARNING:-0}" \
-        timeout 120 emacs --batch -Q \
+        timeout 120 "$batch_emacs" --batch -Q \
         --eval '(setq user-emacs-directory (file-name-as-directory (expand-file-name ".emacs.d" (getenv "HOME"))))' \
         --eval '(setq flycheck-check-syntax-automatically nil)' \
         --load "$batch_bootstrap" \
@@ -103,7 +160,10 @@ run_batch_checks() (
 )
 
 printf '%s\n' '== live read-only checks =='
-if run_live_checks; then
+if [ "$batch_only" -eq 1 ]; then
+    live_status=0
+    printf '%s\n' 'live: SKIP (batch-only candidate validation)'
+elif run_live_checks; then
     live_status=0
     printf '%s\n' 'live: PASS'
 else

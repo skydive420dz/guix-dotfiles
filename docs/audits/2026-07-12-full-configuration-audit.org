@@ -1510,6 +1510,56 @@ Acceptance gates:
 - Guile CLI and Geiser REPL have accepted line editing/completion;
 - snippet startup reports the expected authored snippets, not an empty set.
 
+*** Prepared implementation checkpoint (2026-07-13; no generation activation)
+
+The prepared contract chooses pinned =emacs-puni= for structural transforms.
+=electric-pair-mode= retains insertion ownership, Puni is scoped to the four
+Lisp-family hooks, and Evil retains modal state and ordinary motions.  The
+reviewed leader surface exposes directional slurp/barf plus wrap, splice,
+raise, and transpose; it deliberately does not claim that stock Evil
+destructive operators preserve balance.
+
+Geiser now owns its single automatic Scheme editing-mode activation and does
+not start Guile on file open.  SLY and its indentation contrib load without
+starting SBCL, so =sly--lisp-indent-function= owns every Common Lisp buffer
+independently of buffer/load/connect order.  Evaluation wrappers check backend
+state rather than parsing third-party English errors; documentation rejects
+whitespace before backend dispatch.  Home additionally owns Puni and Eshell
+syntax highlighting, taking the reviewed explicit list from 75 to 77.
+Yasnippet eagerly loads four tracked templates from =emacs/snippets=, and
+Projectile known-project/frecency state now stays in the owned XDG cache tree.
+
+The build gate itself now verifies the Guile Readline/colorized System
+artifacts and manifest rows, loads the repository =.guile= against the candidate
+profiles, and runs =scripts/emacs-check --batch-only= with the absolute
+candidate Home Emacs and candidate Home/System load paths.  Its fixture rejects
+missing packages/artifacts, fallback messages, candidate-stage failures,
+wrong ordering, and candidate execution during =--plan=.
+
+Prepared evidence:
+
+- =scripts/shell-check --strict=: pass, including Home ownership =77=;
+- =scripts/guix-build-gate=: pass at pinned Guix =a8391f2=, Nonguix
+  =3b66965=, and sk-guix =b84ff24=;
+- candidate Home: =/gnu/store/693n0j3q7ikb8v0bzj76swqg82b6z219-home=;
+- candidate System: =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=;
+- isolated candidate Emacs: 30/30 ERT tests, zero unexpected results or
+  captured warnings;
+- candidate Guile startup: pass, and an SSH PTY probe returned
+  =(using-readline?) => #t=.
+
+No Guix generation activation or reboot occurred.  System generation 85 and
+Home generation 36 remain current at =m5znrpy...-system= and
+=n0xnfq...-home=.  The repository-owned =.guile= and Emacs entrypoints are live
+symlinks into this checkout, so new Guile processes and an explicit Emacs
+reload can already see source edits.  The running graphical Emacs and its Home
+package generation remain old, however, and cannot load Puni or Eshell syntax
+highlighting yet.  Slice 14 remains open until the prepared commit is pushed,
+=ghr= activates the Home candidate, the graphical Emacs process restarts, and
+live/connected acceptance confirms the runtime contract.  The System
+declaration did not change, so no System reconfigure is required for this
+checkpoint.
+
 ** TODO Slice 15: Elisp, Guile, and Common Lisp project/test workflows
 :PROPERTIES:
 :audit_priority: P1

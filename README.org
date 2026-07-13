@@ -74,9 +74,9 @@ next active slice.
   generation 36 pass fresh desktop/editor/ownership/forced-SSH acceptance.
   Exact retention roots are rotated, and the installed-base configuration
   bootstrap passes both fixture and isolated GuixPC acceptance.
-- [ ] Continue Slices 14 through 19 in audit order, beginning with Slice 14.
-  Do not expand dialect breadth until the P0/P1 runtime, validation, and
-  reproducibility prerequisites close.
+- [ ] Activate and accept the prepared Slice 14 checkpoint, then continue
+  Slices 15 through 19 in audit order.  Do not expand dialect breadth until the
+  P0/P1 runtime, validation, and reproducibility prerequisites close.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 - [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
   the GRUB prompt before making more bootloader changes.
@@ -355,6 +355,20 @@ live   one fixed read-only expression sent to the existing EXWM server
 batch  copied sources under env -i with isolated HOME, TMPDIR, and every XDG path
 #+end_src
 
+The full Guix build gate also calls the batch phase against the newly built
+Home and System profiles before activation:
+
+#+begin_src sh
+SK_EMACS_CHECK_HOME_PROFILE=/gnu/store/...-home/profile \
+SK_EMACS_CHECK_SYSTEM_PROFILE=/gnu/store/...-system/profile \
+  scripts/emacs-check --batch-only
+#+end_src
+
+Candidate mode deliberately skips the active EXWM server, runs the exact Home
+Emacs executable, and exposes only the candidate Home/System =PATH= and
+=EMACSLOADPATH=.  It is an internal pre-activation proof; the ordinary command
+above remains the combined live-and-isolated acceptance check.
+
 The live phase never loads configuration.  It checks the running executable,
 EXWM/server state, package generations, hooks, keys, and positive load-path
 ownership.  The batch phase prevents writes outside its temporary root, keeps
@@ -418,7 +432,8 @@ emacs/lisp/sk-evil.el
 
 emacs/lisp/sk-project.el
   Projectile, Counsel Projectile, and Magit setup.  Direct children of
-  =~/Projects= are the project collection.
+  =~/Projects= are the project collection; known-project and frecency state is
+  kept in the owned XDG Emacs cache tree.
 
 emacs/lisp/sk-lsp.el
   LSP mode, LSP Ivy, and LSP Treemacs setup.
@@ -532,15 +547,20 @@ Scheme / Guile
   Mode:        scheme-mode
   Backend:     Geiser + Geiser Guile
   Diagnostics: Geiser/native interaction
-  Notes:       Guile is installed system-wide.
+  Notes:       Guile, guile-readline, and guile-colorized are System-owned.
                Native Scheme commands use =scheme-program-name= = guile.
-               Geiser is the richer REPL/docs/completion path.
+               Geiser owns its one scheme-mode activation path and never starts
+               Guile merely because a file opens.  Its REPL supplies CAPF
+               completion; the CLI .guile enables Readline and colorized output,
+               with colorization suppressed inside Emacs.
 
 Common Lisp
   Mode:        lisp-mode for .lisp, .cl, and .asd
   Backend:     SLY + SBCL when SLY is started
   Diagnostics: SLY/native interaction
-  Notes:       File opening is owned by lisp-mode; SLY is the REPL/tooling layer.
+  Notes:       lisp-mode owns syntax; eagerly loaded SLY owns editing and
+               sly--lisp-indent-function consistently before and after a
+               connection.  Loading SLY does not start SBCL.
                =inferior-lisp-program= is =sbcl=.
                SLY is started manually with =M-x sly=; file open does not auto-start a REPL.
 #+end_src
@@ -554,6 +574,12 @@ SPC l b  evaluate buffer
 SPC l d  evaluate defun / top-level form
 SPC l e  evaluate last sexp
 SPC l k  show docs at point
+SPC l [ / ]  slurp backward / forward
+SPC l { / }  barf backward / forward
+SPC l (      wrap in round delimiters
+SPC l u      unwrap / splice
+SPC l R      raise the current form
+SPC l t      transpose forms
 #+end_src
 
 These are wrappers over existing commands, not replacements for native Emacs
@@ -567,7 +593,26 @@ Common Lisp:  SLY commands; richer docs/completion after SBCL/SLY connects
 
 Cold Lisp files should provide mode detection, indentation, basic syntax, and
 the correct command surface. Rich semantic completion/docs are REPL-backed for
-Scheme and Common Lisp.
+Scheme and Common Lisp. Evaluation checks backend connection state before
+dispatch, while backend failures after that check retain their original error.
+Documentation uniformly reports =No symbol at point= instead of prompting for
+or describing an unintended symbol at whitespace.
+
+=electric-pair-mode= owns delimiter insertion.  Puni is enabled only in Emacs
+Lisp, Lisp Interaction, Scheme, and Common Lisp buffers—including those modes
+inside Org source editing—and owns balanced deletion plus the explicit
+structural commands above.  Evil retains modal state and ordinary motions.
+Puni does not redefine stock Evil =d=, =c=, or =x= as structural operators; use
+the Puni commands when balance preservation is required.
+
+Yasnippet reads only the tracked =emacs/snippets= tree for authored templates:
+
+#+begin_src text
+emacs-lisp-mode  ERT test             ert
+scheme-mode      Guile procedure      define
+lisp-mode        Common Lisp function defun
+org-mode         Org source block     src
+#+end_src
 
 Acceptance probes should check actual buffer state, not just package presence:
 
@@ -731,7 +776,8 @@ SPC o v  Vterm, right utility panel
 
 =term= is still available through =M-x term=, but the leader binding is reserved
 for Treemacs. Vterm is the preferred terminal buffer once it is available on
-this machine.
+this machine.  Eshell syntax highlighting is Home-owned and activates globally
+when Eshell loads; it is no longer an optional, silently skipped branch.
 
 File-opening commands are intentionally split by interaction style:
 

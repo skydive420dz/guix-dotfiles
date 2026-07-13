@@ -11,7 +11,7 @@ convenient interactive line editing and input history.\n\n")))
         (cond ((false-if-exception (resolve-interface '(ice-9 colorized)))
                =>
                (lambda (module)
-                 ;; Enable completion and input history at the REPL.
+                 ;; Enable colorized values and prompts in terminal REPLs.
                  ((module-ref module 'activate-colorized))))
               (else
                (display "Consider installing the 'guile-colorized' package

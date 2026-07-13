@@ -47,7 +47,6 @@
         eshell-prompt-regexp (concat "^" (regexp-quote sk/eshell-prompt-symbol) " ")))
 
 (use-package eshell-syntax-highlighting
-  :if (locate-library "eshell-syntax-highlighting")
   :after esh-mode
   :config
   (eshell-syntax-highlighting-global-mode 1))

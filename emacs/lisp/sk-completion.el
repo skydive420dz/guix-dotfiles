@@ -45,10 +45,28 @@
 ;; Snippet engine:
 ;; lsp-mode advertises snippet-capable completions by default.  Yasnippet is the
 ;; provider that expands those snippets when a language server returns them.
+;; This tracked directory is the sole authored-snippet source; package-provided
+;; LSP snippets still arrive dynamically through Company.
+(defconst sk/snippets-directory
+  (expand-file-name "snippets" sk/user-directory)
+  "Repository-owned Yasnippet directory for the GuixPC editor.")
+
+(defconst sk/authored-snippet-contract
+  '((emacs-lisp-mode "ERT test" "ert")
+    (scheme-mode "Guile procedure" "define")
+    (lisp-mode "Common Lisp function" "defun")
+    (org-mode "Org source block" "src"))
+  "Reviewed authored snippets as (MODE NAME KEY) triples.")
+
 (use-package yasnippet
   :if (locate-library "yasnippet")
+  :init
+  (setq yas-snippet-dirs (list sk/snippets-directory))
   :config
-  (yas-global-mode 1))
+  (yas-global-mode 1)
+  ;; Global mode prepares lazy tables; finish with an eager load so startup and
+  ;; the live checker can prove the exact authored inventory immediately.
+  (yas-reload-all t))
 
 ;; Better minibuffer annotations for Ivy results.
 (use-package ivy-rich

@@ -17,9 +17,14 @@
 
 (use-package geiser
   :if (locate-library "geiser")
-  :commands (geiser geiser-mode run-geiser)
+  :demand t
+  :commands (geiser geiser-mode geiser-repl-switch)
   :custom
-  (geiser-default-implementation 'guile))
+  (geiser-default-implementation 'guile)
+  ;; Geiser's own `scheme-mode-hook' entry is the single activation path.
+  ;; Enabling the editing mode must not start Guile implicitly.
+  (geiser-mode-auto-p t)
+  (geiser-mode-start-repl-p nil))
 
 (use-package geiser-guile
   :if (locate-library "geiser-guile")
@@ -30,8 +35,6 @@
 (defun sk/scheme-mode-setup ()
   "Configure Scheme buffers for Guile/Geiser editing."
   (eldoc-mode 1)
-  (when (fboundp 'geiser-mode)
-    (geiser-mode 1))
   (when (fboundp 'company-mode)
     (company-mode 1)
     ;; Geiser exposes Scheme/Guile symbols through completion-at-point.  Keep
@@ -46,8 +49,9 @@
 (add-hook 'scheme-mode-hook #'sk/scheme-mode-setup)
 
 ;; Common Lisp:
-;; lisp-mode owns Common Lisp source buffers.  SLY talks to SBCL for REPL,
-;; evaluation, completion, and inspection when you start it.
+;; lisp-mode owns Common Lisp syntax and SLY owns its editing and indentation
+;; layer.  Loading that layer eagerly keeps every Lisp buffer consistent, but
+;; `sly-setup' does not start SBCL; the REPL remains explicitly user-started.
 (setq inferior-lisp-program "sbcl")
 
 (dolist (pattern '("\\.lisp\\'" "\\.cl\\'" "\\.asd\\'"))
@@ -55,14 +59,31 @@
 
 (defun sk/common-lisp-mode-setup ()
   "Configure Common Lisp source buffers without starting a REPL."
-  (setq-local lisp-indent-function #'common-lisp-indent-function)
+  ;; Keep a useful native fallback if the declared SLY package is unavailable.
+  ;; When SLY is present, its earlier hook owns `lisp-indent-function'.
+  (unless (bound-and-true-p sly-editing-mode)
+    (setq-local lisp-indent-function #'common-lisp-indent-function))
   (eldoc-mode 1))
 
 (add-hook 'lisp-mode-hook #'sk/common-lisp-mode-setup)
 
+(declare-function sly-setup "sly")
+
 (use-package sly
   :if (locate-library "sly")
-  :commands sly)
+  :demand t
+  :config
+  (sly-setup))
+
+;; Structural editing:
+;; Electric Pair owns delimiter insertion globally.  Puni owns balanced
+;; deletion and explicit structural transforms only in Lisp-family buffers;
+;; Evil continues to own modal state and ordinary motions.
+(use-package puni
+  :hook ((emacs-lisp-mode . puni-mode)
+         (lisp-interaction-mode . puni-mode)
+         (scheme-mode . puni-mode)
+         (lisp-mode . puni-mode)))
 
 (defun sk/lisp--dialect ()
   "Return the active Lisp dialect symbol for the current buffer."
@@ -76,33 +97,43 @@
    (t
     (user-error "Not in a Lisp-family buffer"))))
 
+(defun sk/lisp--scheme-repl-active-p ()
+  "Return non-nil when this buffer has a live Geiser REPL connection."
+  ;; Geiser 0.33.1 has no public connected predicate.  Keep its non-signaling
+  ;; connection lookup isolated here so package upgrades have one compatibility
+  ;; boundary to exercise.
+  (and (fboundp 'geiser-repl--connection*)
+       (geiser-repl--connection*)))
+
+(defun sk/lisp--common-lisp-repl-active-p ()
+  "Return non-nil when SLY has an open Common Lisp connection."
+  (and (fboundp 'sly-connected-p)
+       (sly-connected-p)))
+
 (defun sk/lisp--call-scheme (command &rest args)
-  "Call Geiser COMMAND with ARGS, or explain that the REPL must be started first."
+  "Call connected Geiser COMMAND with ARGS."
   (unless (fboundp command)
     (user-error "Geiser command is not available: %s" command))
-  (condition-case err
-      (if args
-          (apply command args)
-        (call-interactively command))
-    (error
-     (let ((message (error-message-string err)))
-       (if (string-match-p "No Geiser REPL\\|No Scheme REPL" message)
-           (user-error "No Scheme REPL is active. Run SPC l r first.")
-         (signal (car err) (cdr err)))))))
+  (unless (sk/lisp--scheme-repl-active-p)
+    (user-error "No Scheme REPL is active; run SPC l r first"))
+  (if args
+      (apply command args)
+    (call-interactively command)))
 
 (defun sk/lisp--call-common-lisp (command &rest args)
-  "Call SLY COMMAND with ARGS, or explain that SLY must be started first."
+  "Call connected SLY COMMAND with ARGS."
   (unless (fboundp command)
     (user-error "SLY command is not available: %s" command))
-  (condition-case err
-      (if args
-          (apply command args)
-        (call-interactively command))
-    (error
-     (let ((message (error-message-string err)))
-       (if (string-match-p "No current SLY connection\\|No Common Lisp REPL" message)
-           (user-error "No Common Lisp REPL is active. Run SPC l r first.")
-         (signal (car err) (cdr err)))))))
+  (unless (sk/lisp--common-lisp-repl-active-p)
+    (user-error "No Common Lisp REPL is active; run SPC l r first"))
+  (if args
+      (apply command args)
+    (call-interactively command)))
+
+(defun sk/lisp--symbol-at-point ()
+  "Return the Lisp symbol text at point or signal a clear user error."
+  (or (thing-at-point 'symbol t)
+      (user-error "No symbol at point")))
 
 (defun sk/lisp-repl ()
   "Start or switch to the REPL for the current Lisp dialect."
@@ -111,9 +142,13 @@
     ('elisp
      (ielm))
     ('scheme
-     (if (fboundp 'geiser-repl-switch)
-         (geiser-repl-switch)
-       (run-geiser 'guile)))
+     (cond
+      ((fboundp 'geiser-repl-switch)
+       (geiser-repl-switch))
+      ((fboundp 'geiser)
+       (geiser 'guile))
+      (t
+       (user-error "Geiser is not available"))))
     ('common-lisp
      (if (fboundp 'sly)
          (sly)
@@ -155,15 +190,17 @@
 (defun sk/lisp-docs ()
   "Show docs for the symbol at point using the active Lisp backend."
   (interactive)
-  (pcase (sk/lisp--dialect)
-    ('elisp
-     (if (fboundp 'helpful-at-point)
-         (helpful-at-point)
-       (describe-symbol (symbol-at-point))))
-    ('scheme
-     (sk/lisp--call-scheme #'geiser-doc-symbol-at-point))
-    ('common-lisp
-     (sk/lisp--call-common-lisp #'sly-describe-symbol (symbol-name (symbol-at-point))))))
+  (let ((dialect (sk/lisp--dialect))
+        (symbol (sk/lisp--symbol-at-point)))
+    (pcase dialect
+      ('elisp
+       (if (fboundp 'helpful-at-point)
+           (helpful-at-point)
+         (describe-symbol (intern symbol))))
+      ('scheme
+       (sk/lisp--call-scheme #'geiser-doc-symbol-at-point))
+      ('common-lisp
+       (sk/lisp--call-common-lisp #'sly-describe-symbol symbol)))))
 
 (provide 'sk-lisp)
 

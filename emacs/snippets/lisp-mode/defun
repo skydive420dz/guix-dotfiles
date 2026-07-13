@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: Common Lisp function
+# key: defun
+# --
+(defun ${1:name} (${2:arguments})
+  $0)

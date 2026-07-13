@@ -9,7 +9,12 @@
 (use-package projectile
   :diminish projectile-mode
   :config (projectile-mode)
-  :custom ((projectile-completion-system 'ivy))
+  :custom
+  ((projectile-completion-system 'ivy)
+   (projectile-known-projects-file
+    (expand-file-name "projectile-bookmarks.eld" sk/cache-directory))
+   (projectile-frecency-file
+    (expand-file-name "projectile-frecency.eld" sk/cache-directory)))
   :bind-keymap
   ("C-c p" . projectile-command-map)
   :init
