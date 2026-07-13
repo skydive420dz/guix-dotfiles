@@ -122,11 +122,13 @@ Current next action:
     System 85 at =/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system= with
     Home 35 unchanged.  Strict shell/editor/ownership/session gates pass;
     System 84 remains the immediate rollback.
-  - [ ] Push and activate the forced-command Fish correction as the next Home
-    generation, reboot, and prove bare SSH finds Home-owned ShellCheck/SBCL.
-    Built candidate: =/gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home=.
-  - [ ] Pass the checked fresh-bootstrap sequence and record final Slice 13
-    generations, retention pins, and rollback evidence.
+  - [X] Push and activate the forced-command Fish correction as Home generation
+    36 at =/gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home=, reboot, and prove
+    bare SSH finds Home-owned ShellCheck/SBCL.
+  - [X] Record final runtime generations and rotate exact retention pins to
+    System 85, Home 36, and pull 5, with 84/35/4 as the older recovery tier;
+    verification and the read-only rollback drill pass.
+  - [ ] Pass the checked fresh-bootstrap sequence.
 
 Ordered follow-up:
 

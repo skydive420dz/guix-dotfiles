@@ -70,11 +70,10 @@ next active slice.
   and Home generation 34 now share the exact authenticated channel lock; the
   non-activating package/Home/System gate and read-only retention/rollback
   planner pass from the accepted frontend.
-- [ ] Finish Slice 13.  Reduced System generation 85 and additive Home
-  generation 35 pass fresh desktop/editor/ownership acceptance.  A forced SSH
-  command exposed login-only Home environment loading; its separately gated
-  Home correction is ready for activation before fresh bootstrap and final
-  retention acceptance.
+- [ ] Finish Slice 13.  Reduced System generation 85 and corrected Home
+  generation 36 pass fresh desktop/editor/ownership/forced-SSH acceptance.
+  Exact retention roots are rotated; only the checked fresh-bootstrap sequence
+  remains.
 - [ ] Continue Slices 14 through 19 in audit order after Slice 13.
   Do not expand dialect breadth until the P0/P1 runtime, validation, and
   reproducibility prerequisites close.
@@ -194,7 +193,7 @@ as Home generation 35.  The separately gated subtractive checkpoint makes
 =guix/systems/guixpc.scm= consume the 13 recovery specifications recorded in
 =guix/package-ownership.scm= plus =kitty-latest=.  Reduced System generation 85
 has passed a fresh boot; accepted System generation 84 remains its immediate
-rollback until final Slice 13 retention rotation.
+rollback.
 The System floor is not a second configured desktop: normal EXWM still requires
 the accepted base Home D-Bus services and Home editor profile.  Its independent
 guarantee is the tty shell, Kitty, and =emacs -Q= for repair.
