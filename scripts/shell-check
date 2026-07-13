@@ -3,6 +3,21 @@ set -eu
 
 repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
 
+case $# in
+    0) strict=0 ;;
+    1)
+        [ "$1" = --strict ] || {
+            printf 'usage: %s [--strict]\n' "$0" >&2
+            exit 64
+        }
+        strict=1
+        ;;
+    *)
+        printf 'usage: %s [--strict]\n' "$0" >&2
+        exit 64
+        ;;
+esac
+
 if ! command -v shellcheck >/dev/null 2>&1; then
     printf 'shell-check: missing command: shellcheck\n' >&2
     exit 127
@@ -18,6 +33,7 @@ shellcheck \
     "$repo/scripts/guix-build-gate" \
     "$repo/scripts/guix-entrypoints" \
     "$repo/scripts/guix-generation-retention" \
+    "$repo/scripts/guix-lisp-shell" \
     "$repo/scripts/guix-reconfigure" \
     "$repo/scripts/shell-check" \
     "$repo/shell/bash_profile" \
@@ -28,12 +44,26 @@ shellcheck \
     "$repo/tests/guix-build-gate-check" \
     "$repo/tests/guix-entrypoints-check" \
     "$repo/tests/guix-generation-retention-check" \
+    "$repo/tests/guix-lisp-shell-check" \
     "$repo/tests/guix-home-links-check" \
+    "$repo/tests/guix-package-ownership-check" \
     "$repo/tests/guix-reconfigure-check"
 
 "$repo/tests/exwm-session-check"
 "$repo/tests/guix-build-gate-check"
+"$repo/tests/guix-entrypoints-check"
 "$repo/tests/guix-generation-retention-check"
+if command -v guile >/dev/null 2>&1; then
+    "$repo/tests/guix-home-links-check"
+else
+    if [ "$strict" -eq 1 ]; then
+        printf '%s\n' 'shell-check: strict mode requires guile' >&2
+        exit 127
+    fi
+    printf '%s\n' 'SKIP: Guix Home link fixture (guile unavailable)'
+fi
+"$repo/tests/guix-lisp-shell-check"
+"$repo/tests/guix-package-ownership-check"
 "$repo/tests/guix-reconfigure-check"
 
 printf '%s\n' 'shell-check: PASS'

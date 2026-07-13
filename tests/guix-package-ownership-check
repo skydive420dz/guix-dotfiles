@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+guile=${GUILE:-guile}
+
+if ! command -v "$guile" >/dev/null 2>&1; then
+    printf 'SKIP: guix package ownership check (%s unavailable)\n' "$guile"
+    exit 0
+fi
+
+GUILE_AUTO_COMPILE=0 "$guile" --no-auto-compile \
+    "$repo/tests/guix-package-ownership-check.scm" "$repo"

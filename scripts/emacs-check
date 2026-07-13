@@ -11,7 +11,7 @@ repo="${1:-$real_home/Projects/guix-dotfiles}"
 repo="$(CDPATH='' cd -- "$repo" && pwd -P)" || exit 2
 
 export PATH="$real_home/.guix-home/profile/bin:/run/privileged/bin:$real_home/.config/guix/current/bin:$real_home/.guix-profile/bin:/run/current-system/profile/bin:/run/current-system/profile/sbin:${PATH:-}"
-export EMACSLOADPATH="/run/current-system/profile/share/emacs/site-lisp:"
+export EMACSLOADPATH="$real_home/.guix-home/profile/share/emacs/site-lisp:/run/current-system/profile/share/emacs/site-lisp:"
 
 for command in chmod cp emacs emacsclient env git mkdir mktemp rm sed timeout; do
     if ! command -v "$command" >/dev/null 2>&1; then

@@ -181,8 +181,17 @@ Owns:
 - bootloader
 - filesystems
 - users and groups
-- system packages
+- the Fish/Kitty tty recovery path and a System =emacs -Q=/EXWM package floor
 - system services such as SSH, Bluetooth, Xorg, elogind
+
+Slice 13 uses a two-checkpoint migration.  The additive checkpoint leaves the
+legacy System package superset intact while Home receives its complete package
+profile.  Only after that Home generation is activated, rebooted, and accepted
+may =guix/systems/guixpc.scm= shrink to the recovery specifications recorded in
+=guix/package-ownership.scm=.  Do not run =gsr= for the additive checkpoint.
+The System floor is not a second configured desktop: normal EXWM still requires
+the accepted base Home D-Bus services and Home editor profile.  Its independent
+guarantee is the tty shell, Kitty, and =emacs -Q= for repair.
 
 Apply with:
 
@@ -202,6 +211,8 @@ Owns:
 
 - user-level Guix Home services
 - user-level service profile
+- normal applications, Emacs extensions, fonts, formatters, compilers, and
+  persistent Guile/SBCL tooling
 - session services such as DBus, PipeWire, WirePlumber, PipeWire-Pulse
 - live symlinks from selected dotfiles back into this repo
 - Fish interactive configuration and native prompt
@@ -242,12 +253,15 @@ changes.
 
 Guix Home recreates the live app symlinks to these files during =ghr=. It does
 not replace them with store snapshots, so normal repo edits remain live.
-The project-owned link set is validated completely before it is changed.  A
-regular-file, directory, dangling-link, or missing-source conflict is preserved
-and makes activation nonzero without partially changing another project link.
-This transaction boundary does not include Guix Home's built-in activation
-services: their store-managed links can refresh before the later custom link
-service reports a failure.
+=scripts/guix-reconfigure= now runs a read-only check of all 14 links through
+the fixed System-profile Guile before it invokes Guix.  A regular-file,
+directory, dangling-link, or missing-source conflict present at that preflight
+is preserved and prevents the built-in Home activation services from starting.
+The activation service repeats the same complete validation before changing any
+project link.  A concurrent path race can still reach that later boundary after
+earlier built-in activation, so =ghr= remains the supported path and the
+additive System fallback is retained throughout this checkpoint.  Invoking
+=guix home reconfigure= directly bypasses the early wrapper preflight.
 
 Fish behavior lives in =shell/config.fish= and is installed through Guix Home
 because Fish is the account login shell. Run =ghr= after editing it. The prompt
@@ -422,8 +436,11 @@ tests/guix-home-links-check
   Missing/wrong/blocked/dangling entrypoint and Home activation safety gates.
 #+end_src
 
-Emacs packages are provided by Guix in =guix/systems/guixpc.scm=. Emacs Lisp
-files wire behavior; they should not install packages themselves.
+The normal Emacs executable and its complete extension set are provided by
+Guix Home; System retains Emacs/EXWM as a recovery path.  The live checker
+selects Home Emacs whenever that profile contains it and otherwise accepts the
+System executable during the additive transition.  Emacs Lisp files wire
+behavior; they should not install packages themselves.
 
 ** Emacs language acceptance
 
@@ -993,8 +1010,9 @@ ghr
 Fish, Bash, and Eshell route both aliases through =scripts/guix-reconfigure=.
 The wrapper ignores ambient =PATH= for the important choices: it uses
 =~/.config/guix/current/bin/guix=, =/run/setuid-programs/sudo= for system
-changes, the canonical declaration symlinks, and one substitute list.  Every
-invocation prints the resolved Guix executable and exact Guix channel revision.
+changes, =/run/current-system/profile/bin/guile= for the Home-link preflight,
+the canonical declaration symlinks, and one substitute list.  Every invocation
+prints the resolved executables and exact Guix channel revision.
 Inspect either plan without reconfiguring:
 
 #+begin_src sh
@@ -1046,11 +1064,13 @@ scripts/guix-build-gate
 
 It creates isolated HOME, cache, and trusted-channel state, realizes the exact
 authenticated time-machine profile, verifies provenance and reviewed EXWM 0.35,
-builds Kitty and its maintained Go inputs, evaluates quarantined Fish, then
-builds Home and System.  Guix may reuse already-authenticated immutable store
-objects; the separate isolated clean-clone test verifies the published
-=sk-guix= refs.  The gate never pulls, reconfigures, switches/deletes
-generations, or runs garbage collection.
+builds Kitty and its maintained Go inputs, evaluates quarantined Fish, builds
+each development manifest independently, then builds Home and System.  Full
+mode also enters each pure manifest for isolated runtime and cross-tier leakage
+probes; plan mode remains evaluation-only.  Guix may reuse already-authenticated
+immutable store objects; the separate isolated clean-clone test verifies the
+published =sk-guix= refs.  The gate never pulls, reconfigures,
+switches/deletes generations, or runs garbage collection.
 
 To update channels, change only the recorded commits while retaining each
 introduction, review the diff, and pass the complete gate.  Promote the tested
@@ -1067,6 +1087,39 @@ ghr
 profile differs from the repository lock.  If a new pull frontend regresses,
 switch to the exact protected pull generation before rebuilding from the old
 lock; do not use a relative roll-back when the intended generation is known.
+
+* Lisp development environments
+
+The base workstation keeps normal Emacs, Geiser/SLY, Guile, and SBCL available
+through Home.  Optional dialect runtimes are project shells, not global machine
+packages.  The shared module in =guix/modules/sk/development-tiers.scm=
+composes three independently evaluable manifests:
+
+#+begin_src text
+core    Guile, readline/colorized modules, SBCL, and small shared project tools
+jvm     clojure-tools with its wrapped Clojure/OpenJDK runtime
+racket  full Racket with raco, RackUnit, docs, and GUI/runtime libraries
+#+end_src
+
+List or enter them through the authenticated channel snapshot:
+
+#+begin_src sh
+scripts/guix-lisp-shell list
+scripts/guix-lisp-shell core
+scripts/guix-lisp-shell jvm -- clojure -Sdescribe
+scripts/guix-lisp-shell racket -- raco test fixtures/racket/basic-test.rkt
+#+end_src
+
+The wrapper uses =--pure= and the exact repository channel lock.  It snapshots
+the channel file and supplies isolated trusted-channel state before invoking
+=guix time-machine=.  =--pure= cleans the inherited package environment but
+does not replace =HOME=; project tools may still use deliberate user state such
+as =~/.clojure=.  The full build gate instead supplies isolated HOME/cache/config
+state while proving real Guile/SBCL/Clojure/Racket commands and verifying that
+Racket does not leak into core/JVM and Clojure does not leak into Racket.  An
+ephemeral shell does not modify the already-running EXWM Emacs environment;
+CIDER and Racket editor integration therefore remain the explicit Slices 16
+and 17 work instead of being implied by package presence.
 
 * Generation retention and rollback
 

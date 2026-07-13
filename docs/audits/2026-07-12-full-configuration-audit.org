@@ -1169,6 +1169,91 @@ Acceptance gates:
 - live symlink and rollback semantics are explicitly tested and documented;
 - fresh bootstrap has one checked sequence from channels to System to Home.
 
+*** Additive Home checkpoint
+
+The migration is intentionally split so a failed Home activation cannot remove
+tools from both active profiles.  This first checkpoint leaves the complete
+legacy System package list and accepted System generation 84 unchanged.  It
+adds a 74-specification Home package profile containing the normal Emacs and
+all current extensions, desktop applications, fonts, formatters, compilers,
+language servers, and persistent Guile/SBCL runtimes.
+
+=guix/package-ownership.scm= records the reviewed subtractive target: 13 named
+System recovery packages plus =kitty-latest=.  That floor retains curl/Git,
+the Fish account shell, System-owned Emacs/EXWM/Kitty, Bluetooth CLI, tty
+editing/reset/search tools, and the Xinit display/compositor commands.  Home
+Emacs is the sole deliberate named duplicate because the normal session must
+select a coherent Home editor profile while System retains a working recovery
+executable.  This floor independently guarantees the tty shell, Kitty, and
+=emacs -Q= for repair; configured EXWM still consumes the accepted base Home
+D-Bus services and editor profile.  A fixture rejects duplicate specifications,
+unexpected ownership overlap, or optional Clojure/Racket packages leaking into
+Home.
+
+The shared development-tier module now composes independently evaluable
+=core-lisp=, =jvm-lisp=, and =racket= manifests.  Core adds Guile
+readline/colorized support and SBCL; JVM uses only =clojure-tools= rather than
+competing Clojure/JDK/Leiningen installations; Racket uses the full distribution
+for =raco=, RackUnit, documentation, and later editor parity.  No experimental
+dialect is installed merely to fill a tier.
+
+=scripts/guix-lisp-shell= enters those manifests with =--pure= through a
+snapshot of the authenticated channel lock.  The pinned build gate evaluates
+and builds each manifest independently.  Full mode runs real Guile/SBCL,
+Clojure, and Racket probes plus the complete unique-runtime absence matrix from
+an empty working directory and isolated HOME/cache/config; plan mode remains
+non-building.  Poisoned package/module overrides and non-127 absence errors
+have fixture-backed negative controls.
+
+The final full gate passes on GuixPC and produces:
+
+#+begin_src text
+Additive Home: /gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home
+Home profile:  /gnu/store/kaisng11r2d1f3v9gnc2d35r7skrn9zb-profile
+System:        /gnu/store/yr6x7ssaiwpw48891n7aqbpaa8jrqim1-system (unchanged)
+Guile:         42; readline/colorized modules loaded
+SBCL/ASDF:     3.3.7
+Clojure tools: 1.12.4.1618; evaluation result 42
+Racket:        evaluation result 42; tracked RackUnit fixture 1/1 PASS
+#+end_src
+
+The Home profile exports Home-first =PATH=, =EMACSLOADPATH=, and native-load
+state and contains its own Emacs executable plus the complete external
+site-lisp set.  Profile construction reports deterministic documentation/locale
+collisions between GCC/GDB and built-in/external Emacs Info manuals; ordering
+selects GCC and built-in Info files, while the external site-lisp packages and
+all required executables remain present.  These warnings are recorded but are
+not activation failures.
+
+Home activation safety is tightened before this large package addition.
+=ghr= now runs the same complete 14-link validation used by the activation
+service through the fixed System-profile Guile before invoking Guix at all.
+Missing, blocked, wrong, and dangling fixtures run in the canonical shell gate,
+and real-Guile integration plus a negative wrapper fixture prove that a blocker
+present at preflight never invokes any Guix command.  A concurrent path race
+can still reach only the later activation boundary, which is why the complete
+System fallback remains active in this phase.  Live repo links remain
+source-controlled while store-managed Fish/packages follow the selected Home
+generation.
+
+Activation order for this checkpoint is deliberately Home-only:
+
+#+begin_src text
+1. Push the additive checkpoint; do not run gsr.
+2. Run ghr and retain Home 34 plus System 84.
+3. Reboot so Xinit selects Home Emacs and its Home EMACSLOADPATH.
+4. Pass =scripts/shell-check --strict= plus editor, desktop, application, font,
+   and tool ownership checks; activation evidence must contain no skipped
+   Guile fixture.
+5. Only then create the subtractive System checkpoint and build/reconfigure it.
+#+end_src
+
+If additive Home activation or the fresh session fails, restore this checkpoint's
+parent source and use the immutable pull 5 Guix to switch exactly to Home 34;
+System 84 remains untouched throughout.  Slice 13 stays open until the Home
+generation is accepted, System is reduced in the later checkpoint, the fresh
+bootstrap sequence is checked, and final rollback evidence is recorded.
+
 ** TODO Slice 14: Core Lisp editing correctness and structural editing
 :PROPERTIES:
 :audit_priority: P2

@@ -8,8 +8,13 @@
              (gnu home services desktop)
              (gnu home services shells)
              (gnu home services sound)
+             (gnu packages)
              (gnu services)
-             (guix gexp))
+             (guix gexp)
+             (guix packages))
+
+(load (string-append (dirname (current-filename))
+                     "/../package-ownership.scm"))
 
 (define %repo-root
   (dirname (dirname (dirname (current-filename)))))
@@ -18,30 +23,25 @@
   (local-file (string-append (dirname (current-filename)) "/repo-links.scm")
               "sk-repo-links.scm"))
 
+(define %repo-link-manifest
+  (local-file
+   (string-append (dirname (current-filename)) "/repo-links-manifest.scm")
+   "sk-repo-links-manifest.scm"))
+
 (define %repo-link-activation
   #~(begin
       (define home (getenv "HOME"))
       (define repo #$%repo-root)
       (primitive-load #$%repo-link-helper)
+      (primitive-load #$%repo-link-manifest)
       ((module-ref (current-module) 'sk:activate-repo-links)
        home
        repo
-       '((".bash_profile" "shell/bash_profile")
-         (".bashrc" "shell/bashrc")
-         (".zprofile" "shell/zprofile")
-         (".xinitrc" "shell/xinitrc")
-         (".exwm" "emacs/exwm-loader.el")
-         (".emacs.d/init.el" "emacs/init.el")
-         (".emacs.d/exwm.el" "emacs/exwm.el")
-         (".gdbinit" "gdb/gdbinit")
-         (".guile" "guile/guile")
-         (".Xdefaults" "x11/Xdefaults")
-         (".config/kitty/kitty.conf" "kitty/kitty.conf")
-         (".config/ranger/rc.conf" "ranger/rc.conf")
-         (".config/ranger/rifle.conf" "ranger/rifle.conf")
-         (".config/ranger/scope.sh" "ranger/scope.sh")))))
+       (module-ref (current-module) '%guixpc-repo-links))))
 
 (home-environment
+ (packages
+  (map specification->package %guixpc-home-package-specifications))
  (services
   (list
    (simple-service 'sk-repo-dotfile-links

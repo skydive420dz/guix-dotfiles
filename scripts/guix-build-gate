@@ -22,12 +22,20 @@ repo=$(CDPATH='' cd "$script_dir/.." && pwd -P)
 channels=$repo/guix/channels.scm
 home_config=$repo/guix/home/guixpc.scm
 system_config=$repo/guix/systems/guixpc.scm
+module_dir=$repo/guix/modules
+manifest_dir=$repo/guix/manifests
+racket_fixture=$repo/fixtures/racket/basic-test.rkt
 bootstrap_guix=$home/.config/guix/current/bin/guix
 substitute_urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
 promoted_expression='(list (@ (sk packages terminals) kitty-latest) (@ (sk packages golang) go-github-com-emmansun-base64) (@ (sk packages golang) go-github-com-sgtdi-fswatcher))'
 quarantined_expression='(@ (sk packages shells) fish-latest)'
 
-for file in "$channels" "$home_config" "$system_config"; do
+for file in "$channels" "$home_config" "$system_config" \
+    "$module_dir/sk/development-tiers.scm" \
+    "$manifest_dir/core-lisp.scm" \
+    "$manifest_dir/jvm-lisp.scm" \
+    "$manifest_dir/racket.scm" \
+    "$racket_fixture"; do
     if [ ! -r "$file" ]; then
         printf 'guix-build-gate: unreadable declaration: %s\n' "$file" >&2
         exit 2
@@ -63,6 +71,7 @@ channel_snapshot=$tmp/channels.scm
 isolated_config=$tmp/config
 isolated_cache=$tmp/cache
 isolated_home=$tmp/home
+runtime_work=$tmp/runtime-work
 trusted_channels=$isolated_config/guix/trusted-channels.scm
 cp "$channels" "$channel_snapshot"
 
@@ -106,7 +115,8 @@ if [ "$introduction_count" -ne 3 ]; then
     exit 2
 fi
 
-mkdir -p "$isolated_config/guix" "$isolated_cache" "$isolated_home"
+mkdir -p "$isolated_config/guix" "$isolated_cache" "$isolated_home" \
+    "$runtime_work"
 cp "$channel_snapshot" "$trusted_channels"
 
 export LC_ALL=C
@@ -191,6 +201,60 @@ run_promoted_packages() {
     fi
 }
 
+run_manifest() {
+    manifest=$1
+    if [ "$plan" -eq 1 ]; then
+        "$pinned_guix" build -L "$module_dir" \
+            --dry-run \
+            --substitute-urls="$substitute_urls" \
+            --max-jobs=1 \
+            --cores=4 \
+            --manifest="$manifest"
+    else
+        "$pinned_guix" build -L "$module_dir" \
+            --substitute-urls="$substitute_urls" \
+            --max-jobs=1 \
+            --cores=4 \
+            --manifest="$manifest"
+    fi
+}
+
+run_manifest_command() {
+    manifest=$1
+    shift
+    (
+        cd "$runtime_work"
+        HOME="$isolated_home" \
+            XDG_CACHE_HOME="$isolated_cache" \
+            XDG_CONFIG_HOME="$isolated_config" \
+            "$pinned_guix" shell -L "$module_dir" --pure \
+            --substitute-urls="$substitute_urls" \
+            --max-jobs=1 \
+            --cores=4 \
+            -m "$manifest" -- "$@"
+    )
+}
+
+assert_manifest_absent() {
+    manifest=$1
+    command=$2
+    output=$tmp/absent-$command.out
+    if run_manifest_command "$manifest" "$command" --version \
+        >"$output" 2>&1; then
+        printf 'guix-build-gate: %s leaked into %s\n' \
+            "$command" "$manifest" >&2
+        exit 1
+    else
+        status=$?
+    fi
+    if [ "$status" -ne 127 ]; then
+        printf 'guix-build-gate: %s absence probe in %s was inconclusive (status %s)\n' \
+            "$command" "$manifest" "$status" >&2
+        cat "$output" >&2
+        exit 1
+    fi
+}
+
 run_home() {
     if [ "$plan" -eq 1 ]; then
         "$pinned_guix" home \
@@ -236,6 +300,39 @@ printf '%s\n' '== quarantined sk-guix package evaluation =='
     --max-jobs=1 \
     --cores=4 \
     --expression="$quarantined_expression"
+
+for manifest in core-lisp jvm-lisp racket; do
+    printf '== %s development manifest ==\n' "$manifest"
+    run_manifest "$manifest_dir/$manifest.scm"
+done
+
+if [ "$plan" -eq 0 ]; then
+    printf '%s\n' '== isolated development runtime probes =='
+    run_manifest_command "$manifest_dir/core-lisp.scm" \
+        guile -c \
+        '(use-modules (ice-9 readline) (ice-9 colorized)) (display (+ 20 22)) (newline)'
+    run_manifest_command "$manifest_dir/core-lisp.scm" \
+        sbcl --noinform --non-interactive \
+        --eval '(require :asdf)' \
+        --eval '(format t "~a~%" (asdf:asdf-version))'
+    assert_manifest_absent "$manifest_dir/core-lisp.scm" clojure
+    assert_manifest_absent "$manifest_dir/core-lisp.scm" racket
+
+    run_manifest_command "$manifest_dir/jvm-lisp.scm" clojure -Sdescribe
+    run_manifest_command "$manifest_dir/jvm-lisp.scm" \
+        clojure -M -e '(println (+ 20 22))'
+    assert_manifest_absent "$manifest_dir/jvm-lisp.scm" guile
+    assert_manifest_absent "$manifest_dir/jvm-lisp.scm" sbcl
+    assert_manifest_absent "$manifest_dir/jvm-lisp.scm" racket
+
+    run_manifest_command "$manifest_dir/racket.scm" \
+        racket -e '(displayln (+ 20 22))'
+    run_manifest_command "$manifest_dir/racket.scm" \
+        raco test "$racket_fixture"
+    assert_manifest_absent "$manifest_dir/racket.scm" guile
+    assert_manifest_absent "$manifest_dir/racket.scm" sbcl
+    assert_manifest_absent "$manifest_dir/racket.scm" clojure
+fi
 
 printf '%s\n' '== Guix Home declaration =='
 run_home

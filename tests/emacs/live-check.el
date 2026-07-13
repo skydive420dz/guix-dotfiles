@@ -3,19 +3,48 @@
 ;; This file is sent as one expression to emacsclient.  Keep it observational:
 ;; do not load files, start modes, create buffers, or alter live variables.
 
-(let* ((profile-site-lisp
-        "/run/current-system/profile/share/emacs/site-lisp/")
+(let* ((home-emacs
+        (expand-file-name "~/.guix-home/profile/bin/emacs"))
+       (system-emacs
+        "/run/current-system/profile/bin/emacs")
+       (home-editor-p
+        (file-executable-p home-emacs))
+       (preferred-emacs
+        (if home-editor-p home-emacs system-emacs))
+       (home-bin
+        (file-name-as-directory
+         (expand-file-name "~/.guix-home/profile/bin")))
+       (preferred-site-lisp
+        (if home-editor-p
+            (file-name-as-directory
+             (expand-file-name "~/.guix-home/profile/share/emacs/site-lisp"))
+          "/run/current-system/profile/share/emacs/site-lisp/"))
+       (visible-profile-load-path
+        (seq-find
+         (lambda (entry)
+           (and entry
+                (or
+                 (string-prefix-p
+                  (expand-file-name
+                   "~/.guix-home/profile/share/emacs/site-lisp")
+                  (expand-file-name entry))
+                 (string-prefix-p
+                  "/run/current-system/profile/share/emacs/site-lisp"
+                  (expand-file-name entry)))))
+         load-path))
        (owned-library-p
         (lambda (library package-glob)
           (let ((live-library (locate-library library))
                 (profile-package
                  (car (file-expand-wildcards
-                       (expand-file-name package-glob profile-site-lisp)))))
+                       (expand-file-name package-glob
+                                         preferred-site-lisp)))))
             (and live-library
                  profile-package
                  (file-in-directory-p
                   (file-truename live-library)
-                  (file-name-as-directory (file-truename profile-package)))))))
+                  (file-name-as-directory
+                   (file-truename profile-package)))))))
        (user-elpa-entry
         (catch 'found
           (dolist (entry load-path)
@@ -35,10 +64,25 @@
           nil))
        (checks
         (list
-         (cons "current Emacs executable"
+         (cons "preferred Home/System Emacs executable"
                (file-equal-p
                 (expand-file-name invocation-name invocation-directory)
-                "/run/current-system/profile/bin/emacs"))
+                preferred-emacs))
+         (cons "Home-first editor process environment"
+               (and
+                (if home-editor-p
+                    (string-prefix-p home-bin (or (getenv "PATH") ""))
+                  t)
+                (string-prefix-p
+                                 (concat
+                                  (directory-file-name preferred-site-lisp)
+                                  ":")
+                                 (or (getenv "EMACSLOADPATH") ""))
+                visible-profile-load-path
+                (string=
+                 (directory-file-name
+                  (expand-file-name visible-profile-load-path))
+                 (directory-file-name preferred-site-lisp))))
          (cons "server process"
                (and (boundp 'server-process)
                     (processp server-process)
@@ -135,6 +179,8 @@
       (error "live Emacs checks failed: %S" failures)
     (list :status 'ok
           :emacs emacs-version
+          :path (getenv "PATH")
+          :emacsloadpath (getenv "EMACSLOADPATH")
           :org (locate-library "org")
           :geiser (locate-library "geiser")
           :geiser-guile (locate-library "geiser-guile")

@@ -21,7 +21,14 @@ if ! command -v "$guile" >/dev/null 2>&1; then
 fi
 
 mkdir -p "$tmp/host-home"
-HOME=$tmp/host-home GUILE_AUTO_COMPILE=0 \
+log=$tmp/check.log
+if HOME=$tmp/host-home GUILE_AUTO_COMPILE=0 \
     "$guile" --no-auto-compile \
     -s "$repo/tests/guix-home-links-check.scm" \
-    "$repo/guix/home/repo-links.scm" "$tmp"
+    "$repo/guix/home/repo-links.scm" "$tmp" >"$log" 2>&1; then
+    printf '%s\n' 'guix-home-links-check: PASS'
+else
+    status=$?
+    cat "$log" >&2
+    exit "$status"
+fi

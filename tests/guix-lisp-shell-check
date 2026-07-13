@@ -1,0 +1,92 @@
+#!/bin/sh
+
+set -eu
+
+source_repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+sandbox=$(mktemp -d "${TMPDIR:-/tmp}/guix-lisp-shell-check.XXXXXX")
+trap 'rm -rf -- "$sandbox"' EXIT HUP INT TERM
+
+fail() {
+    printf 'guix-lisp-shell-check: %s\n' "$1" >&2
+    exit 1
+}
+
+repo=$sandbox/repo
+home=$sandbox/home
+fake_guix=$sandbox/fake-guix
+log=$sandbox/guix.log
+wrapper=$repo/scripts/guix-lisp-shell
+
+mkdir -p "$repo/scripts" "$repo/guix/manifests" \
+    "$repo/guix/modules/sk" "$home"
+cp "$source_repo/scripts/guix-lisp-shell" "$wrapper"
+cp "$source_repo/guix/channels.scm" "$repo/guix/channels.scm"
+cp "$source_repo/guix/manifests/"*.scm "$repo/guix/manifests/"
+cp "$source_repo/guix/modules/sk/development-tiers.scm" \
+    "$repo/guix/modules/sk/development-tiers.scm"
+chmod +x "$wrapper"
+
+cat >"$fake_guix" <<'EOF'
+#!/bin/sh
+set -eu
+[ -r "${XDG_CONFIG_HOME:?}/guix/trusted-channels.scm" ] || exit 70
+[ "${GUILE_AUTO_COMPILE:-}" = 0 ] || exit 72
+[ "${LC_ALL:-}" = C ] || exit 73
+[ "${TZ:-}" = UTC ] || exit 74
+[ -z "${GUILE_LOAD_COMPILED_PATH+x}" ] || exit 75
+[ -z "${GUILE_LOAD_PATH+x}" ] || exit 76
+[ -z "${GUIX_BUILD_OPTIONS+x}" ] || exit 77
+[ -z "${GUIX_PACKAGE_PATH+x}" ] || exit 78
+printf 'CALL' >"${SK_FAKE_GUIX_LOG:?}"
+for argument in "$@"; do
+    printf '\t%s' "$argument" >>"$SK_FAKE_GUIX_LOG"
+done
+printf '\n' >>"$SK_FAKE_GUIX_LOG"
+[ "${SK_FAKE_FAIL:-0}" -eq 0 ] || exit 71
+EOF
+chmod +x "$fake_guix"
+
+output=$(HOME=$home GUIX=$fake_guix "$wrapper" list)
+[ "$output" = "core
+jvm
+racket" ] || fail 'tier registry output changed'
+[ ! -e "$log" ] || fail 'list invoked Guix'
+
+: >"$log"
+HOME=$home GUIX=$fake_guix SK_FAKE_GUIX_LOG=$log \
+    GUILE_LOAD_COMPILED_PATH=/poison/compiled \
+    GUILE_LOAD_PATH=/poison/source GUIX_BUILD_OPTIONS=poison \
+    GUIX_PACKAGE_PATH=/poison/packages \
+    "$wrapper" core -- guile --version
+logged=$(cat "$log")
+case $logged in
+    *time-machine*--allow-untrusted-channels=no*shell*"-L"*--pure*core-lisp.scm*--*guile*--version*) ;;
+    *) fail 'core tier did not use the pinned pure manifest command' ;;
+esac
+case $logged in
+    *"$repo/guix/channels.scm"*)
+        fail 'wrapper passed the mutable channel file instead of its snapshot'
+        ;;
+esac
+
+for tier_and_manifest in 'jvm:jvm-lisp.scm' 'racket:racket.scm'; do
+    tier=${tier_and_manifest%%:*}
+    expected=${tier_and_manifest#*:}
+    : >"$log"
+    HOME=$home GUIX=$fake_guix SK_FAKE_GUIX_LOG=$log "$wrapper" "$tier"
+    case $(cat "$log") in
+        *"$expected"*) ;;
+        *) fail "$tier selected the wrong manifest" ;;
+    esac
+done
+
+if HOME=$home GUIX=$fake_guix "$wrapper" unknown >/dev/null 2>&1; then
+    fail 'unknown tier passed'
+fi
+
+if HOME=$home GUIX=$fake_guix SK_FAKE_GUIX_LOG=$log SK_FAKE_FAIL=1 \
+    "$wrapper" core -- guile --version >/dev/null 2>&1; then
+    fail 'Guix failure did not propagate'
+fi
+
+printf '%s\n' 'guix-lisp-shell-check: PASS'

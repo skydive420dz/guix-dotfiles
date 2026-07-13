@@ -24,6 +24,7 @@ fi
 home=${HOME:?HOME must be set}
 script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
 entrypoints_check="$script_dir/guix-entrypoints"
+home_links_preflight="$script_dir/guix-home-links-preflight.scm"
 guix="$home/.config/guix/current/bin/guix"
 channels="$home/.config/guix/channels.scm"
 privileged_sudo=/run/setuid-programs/sudo
@@ -77,6 +78,23 @@ if [ -z "$guix_profile" ] || [ ! -x "$guix_resolved" ]; then
     printf 'guix-reconfigure: could not freeze current Guix profile: %s\n' \
         "$home/.config/guix/current" >&2
     exit 1
+fi
+
+if [ "$mode" = home ]; then
+    guile=${SK_GUIX_RECONFIGURE_GUILE:-/run/current-system/profile/bin/guile}
+    guile_resolved=$(readlink -f "$guile")
+    if [ ! -r "$home_links_preflight" ]; then
+        printf 'guix-reconfigure: Home link preflight is not readable: %s\n' \
+            "$home_links_preflight" >&2
+        exit 1
+    fi
+    if [ -z "$guile_resolved" ] || [ ! -x "$guile_resolved" ]; then
+        printf 'guix-reconfigure: canonical Guile is unavailable for Home preflight: %s\n' \
+            "$guile" >&2
+        exit 1
+    fi
+    GUILE_AUTO_COMPILE=0 "$guile_resolved" --no-auto-compile \
+        "$home_links_preflight" "$script_dir/.."
 fi
 expected_channels=$(
     awk '
@@ -230,6 +248,10 @@ printf 'guix-reconfigure: guix-revision=%s\n' "$guix_revision"
 printf 'guix-reconfigure: source=%s\n' "$source"
 printf 'guix-reconfigure: source-resolved=%s\n' "$source_resolved"
 printf 'guix-reconfigure: substitute-urls=%s\n' "$substitute_urls"
+
+if [ "$mode" = home ]; then
+    printf 'guix-reconfigure: preflight-guile=%s\n' "$guile_resolved"
+fi
 
 if [ "$mode" = system ]; then
     printf 'guix-reconfigure: sudo=%s\n' "$privileged_sudo"

@@ -41,6 +41,13 @@
       #f)
     (lambda _ #t)))
 
+(define (preflight-fails? selected-links)
+  (catch #t
+    (lambda ()
+      (sk:check-repo-links home repo selected-links)
+      #f)
+    (lambda _ #t)))
+
 (define source-one (string-append repo "/source/one"))
 (define source-two (string-append repo "/source/two"))
 (define target-one (string-append home "/.config/example/one"))
@@ -51,6 +58,11 @@
 (sk:mkdir-p home)
 
 ;; Missing links are created only after the complete validation pass.
+(sk:check-repo-links home repo links)
+(assert (not (sk:path-stat target-one))
+        "read-only preflight created the first missing link")
+(assert (not (sk:path-stat target-two))
+        "read-only preflight created the second missing link")
 (sk:activate-repo-links home repo links)
 (assert (string=? (readlink target-one) source-one)
         "first missing link was not created")
@@ -68,6 +80,11 @@
 (delete-path target-one)
 (write-file target-one "preserve me\n")
 (delete-path target-two)
+(assert (preflight-fails? links) "regular-file conflict passed preflight")
+(assert (string=? (read-file target-one) "preserve me\n")
+        "preflight overwrote a regular-file conflict")
+(assert (not (sk:path-stat target-two))
+        "preflight partially created a sibling link")
 (assert (activation-fails? links) "regular-file conflict did not fail activation")
 (assert (string=? (read-file target-one) "preserve me\n")
         "regular-file conflict was overwritten")

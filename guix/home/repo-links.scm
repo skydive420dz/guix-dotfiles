@@ -86,17 +86,26 @@
       ;; The validation/apply boundary was raced.  Fail instead of replacing it.
       (error "repo link became blocked during activation" target-path)))))
 
-(define (sk:activate-repo-links home repo links)
-  "Validate all LINKS, then install them only when no path is blocked/dangling."
+(define (sk:repo-link-problems home repo links)
   (let loop ((remaining links) (problems '()))
     (if (null? remaining)
-        (if (null? problems)
-            (for-each
-             (lambda (link) (sk:install-repo-link home repo link))
-             links)
-            (begin
-              (for-each sk:report-repo-link-problem (reverse problems))
-              (error "repo link activation refused; no links were changed")))
+        (reverse problems)
         (let ((problem (sk:repo-link-problem home repo (car remaining))))
           (loop (cdr remaining)
                 (if problem (cons problem problems) problems))))))
+
+(define (sk:check-repo-links home repo links)
+  "Validate all LINKS without changing any target."
+  (let ((problems (sk:repo-link-problems home repo links)))
+    (if (null? problems)
+        #t
+        (begin
+          (for-each sk:report-repo-link-problem problems)
+          (error "repo link preflight refused; no links were changed")))))
+
+(define (sk:activate-repo-links home repo links)
+  "Validate all LINKS, then install them only when no path is blocked/dangling."
+  (sk:check-repo-links home repo links)
+  (for-each
+   (lambda (link) (sk:install-repo-link home repo link))
+   links))

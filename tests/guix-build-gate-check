@@ -33,12 +33,22 @@ gate=$sandbox_repo/scripts/guix-build-gate
 fake_guix=$sandbox_home/.config/guix/current/bin/guix
 
 mkdir -p "$sandbox_repo/scripts" "$sandbox_repo/guix/home" \
-    "$sandbox_repo/guix/systems" "$(dirname "$fake_guix")" \
+    "$sandbox_repo/guix/systems" "$sandbox_repo/guix/manifests" \
+    "$sandbox_repo/guix/modules/sk" "$sandbox_repo/fixtures/racket" \
+    "$(dirname "$fake_guix")" \
     "$fake_profile/bin"
 cp "$repo/scripts/guix-build-gate" "$gate"
 chmod +x "$gate"
 printf '%s\n' '(home-environment)' >"$sandbox_repo/guix/home/guixpc.scm"
 printf '%s\n' '(operating-system)' >"$sandbox_repo/guix/systems/guixpc.scm"
+printf '%s\n' '(define-module (sk development-tiers))' \
+    >"$sandbox_repo/guix/modules/sk/development-tiers.scm"
+for manifest in core-lisp jvm-lisp racket; do
+    printf '(manifest %s)\n' "$manifest" \
+        >"$sandbox_repo/guix/manifests/$manifest.scm"
+done
+printf '%s\n' '#lang racket/base' \
+    >"$sandbox_repo/fixtures/racket/basic-test.rkt"
 
 write_channels() {
     guix_commit=${1:-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
@@ -79,6 +89,10 @@ for arg in "$@"; do
     printf '\t%s' "$arg" >>"$SK_FAKE_GUIX_LOG"
 done
 printf '\n' >>"$SK_FAKE_GUIX_LOG"
+
+while [ "${1:-}" = -L ]; do
+    shift 2
+done
 
 if [ "${1:-}" = time-machine ]; then
     [ "${SK_FAKE_FAIL:-}" != channels ] || exit 71
@@ -121,6 +135,9 @@ EOF_DESCRIBE
         case $* in
             *kitty-latest*) stage=promoted ;;
             *fish-latest*) stage=fish ;;
+            *core-lisp.scm*) stage=core-manifest ;;
+            *jvm-lisp.scm*) stage=jvm-manifest ;;
+            *racket.scm*) stage=racket-manifest ;;
             *) stage=unknown-build ;;
         esac
         [ "${SK_FAKE_FAIL:-}" != "$stage" ] || exit 72
@@ -133,6 +150,20 @@ EOF_DESCRIBE
     system)
         [ "${SK_FAKE_FAIL:-}" != system ] || exit 74
         printf '%s\n' /gnu/store/fake-system
+        ;;
+    shell)
+        case $* in
+            *core-lisp.scm*clojure*|*core-lisp.scm*racket*|\
+            *jvm-lisp.scm*guile*|*jvm-lisp.scm*sbcl*|*jvm-lisp.scm*racket*|\
+            *racket.scm*guile*|*racket.scm*sbcl*|*racket.scm*clojure*)
+                exit "${SK_FAKE_ABSENT_STATUS:-127}"
+                ;;
+            *core-lisp.scm*) stage=core-runtime ;;
+            *jvm-lisp.scm*) stage=jvm-runtime ;;
+            *racket.scm*) stage=racket-runtime ;;
+            *) stage=unknown-runtime ;;
+        esac
+        [ "${SK_FAKE_FAIL:-}" != "$stage" ] || exit 72
         ;;
     *)
         printf 'unexpected fake Guix command: %s\n' "$*" >&2
@@ -151,6 +182,7 @@ run_gate() {
         SK_FAKE_CHANNELS=$sandbox_repo/guix/channels.scm \
         SK_FAKE_ORIGINAL_HOME=$sandbox_home \
         SK_FAKE_FAIL=${SK_FAKE_FAIL:-} \
+        SK_FAKE_ABSENT_STATUS=${SK_FAKE_ABSENT_STATUS:-127} \
         "$gate" "$@"
 }
 
@@ -188,8 +220,21 @@ contains "$log" 'kitty-latest'
 contains "$log" 'go-github-com-emmansun-base64'
 contains "$log" 'go-github-com-sgtdi-fswatcher'
 contains "$log" 'fish-latest'
+contains "$log" "$sandbox_repo/guix/manifests/core-lisp.scm"
+contains "$log" "$sandbox_repo/guix/manifests/jvm-lisp.scm"
+contains "$log" "$sandbox_repo/guix/manifests/racket.scm"
+contains "$log" 'guile'
+contains "$log" 'sbcl'
+contains "$log" 'clojure'
+contains "$log" 'raco'
 contains "$log" "$sandbox_repo/guix/home/guixpc.scm"
 contains "$log" "$sandbox_repo/guix/systems/guixpc.scm"
+
+if output=$(SK_FAKE_ABSENT_STATUS=70 run_gate 2>&1); then
+    fail 'non-127 absence failure passed the leakage gate'
+fi
+contains "$output" 'absence probe'
+contains "$output" 'inconclusive (status 70)'
 
 for forbidden in pull reconfigure switch-generation delete-generations gc; do
     if logged_argument "$forbidden"; then
@@ -208,15 +253,16 @@ dry_run_count=$(printf '%s\n' "$plan_log" | awk '
     }
     END { print count + 0 }
 ')
-[ "$dry_run_count" -eq 4 ] || \
-    fail "plan used --dry-run $dry_run_count times; expected 4"
+[ "$dry_run_count" -eq 7 ] || \
+    fail "plan used --dry-run $dry_run_count times; expected 7"
 
-for stage in channels provenance exwm promoted fish home system; do
+for stage in channels provenance exwm promoted fish core-manifest jvm-manifest \
+    racket-manifest core-runtime jvm-runtime racket-runtime home system; do
     if output=$(SK_FAKE_FAIL=$stage run_gate 2>&1); then
         fail "$stage failure passed the gate"
     fi
     case $stage in
-        channels|provenance|exwm|promoted|fish)
+        channels|provenance|exwm|promoted|fish|core-manifest|jvm-manifest|racket-manifest|core-runtime|jvm-runtime|racket-runtime)
             if logged_command home; then
                 fail "$stage failure continued into Home"
             fi

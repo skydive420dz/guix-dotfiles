@@ -1,0 +1,84 @@
+#!/bin/sh
+
+set -eu
+
+usage() {
+    printf 'usage: %s list | core|jvm|racket [-- COMMAND ...]\n' "$0" >&2
+    exit 64
+}
+
+[ "$#" -ge 1 ] || usage
+
+script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
+repo=$(CDPATH='' cd "$script_dir/.." && pwd -P)
+channels=$repo/guix/channels.scm
+module_dir=$repo/guix/modules
+home=${HOME:?HOME must be set}
+guix=${GUIX:-$home/.config/guix/current/bin/guix}
+substitute_urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
+
+tier=$1
+shift
+
+case $tier in
+    list)
+        [ "$#" -eq 0 ] || usage
+        printf '%s\n' core jvm racket
+        exit 0
+        ;;
+    core) manifest=$repo/guix/manifests/core-lisp.scm ;;
+    jvm) manifest=$repo/guix/manifests/jvm-lisp.scm ;;
+    racket) manifest=$repo/guix/manifests/racket.scm ;;
+    *) usage ;;
+esac
+
+for path in "$channels" "$module_dir/sk/development-tiers.scm" "$manifest"; do
+    if [ ! -r "$path" ]; then
+        printf 'guix-lisp-shell: unreadable input: %s\n' "$path" >&2
+        exit 2
+    fi
+done
+
+if [ ! -x "$guix" ]; then
+    printf 'guix-lisp-shell: canonical Guix is not executable: %s\n' \
+        "$guix" >&2
+    exit 2
+fi
+
+for command in cp mkdir mktemp rm; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        printf 'guix-lisp-shell: missing command: %s\n' "$command" >&2
+        exit 2
+    fi
+done
+
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/sk-guix-lisp-shell.XXXXXX")
+cleanup() {
+    rm -rf -- "$tmp"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+channel_snapshot=$tmp/channels.scm
+isolated_config=$tmp/config
+trusted_channels=$isolated_config/guix/trusted-channels.scm
+mkdir -p "$isolated_config/guix"
+cp "$channels" "$channel_snapshot"
+cp "$channel_snapshot" "$trusted_channels"
+
+export LC_ALL=C
+export TZ=UTC
+export GUILE_AUTO_COMPILE=0
+unset GUILE_LOAD_COMPILED_PATH GUILE_LOAD_PATH GUIX_BUILD_OPTIONS \
+    GUIX_PACKAGE_PATH
+
+XDG_CONFIG_HOME="$isolated_config" \
+    "$guix" time-machine \
+    -q \
+    -C "$channel_snapshot" \
+    --allow-untrusted-channels=no \
+    --substitute-urls="$substitute_urls" \
+    -- \
+    shell -L "$module_dir" --pure -m "$manifest" "$@"

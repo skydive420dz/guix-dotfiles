@@ -100,6 +100,22 @@ Current next action:
     34.  Fresh shell, editor, desktop, provenance, retention, and rollback
     checks pass.
 - [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 13: Package ownership and per-dialect environments][Slice 13: package ownership and per-dialect environments]].
+  - [X] Record the 13-package-plus-Kitty recovery target and the 74-package
+    Home application/editor/development profile with only Emacs deliberately
+    duplicated.
+  - [X] Add independently pinned core, JVM Clojure, and full Racket manifests
+    plus pure-shell entrypoints and build/runtime/leakage gates.  The final
+    isolated full gate builds Home candidate =7f2lqwx64ixl=, retains the exact
+    System candidate, and passes every runtime and unique-runtime absence probe.
+  - [X] Run the complete 14-link Home preflight before Guix; execute its
+    blocker/dangling and no-reconfigure negative fixtures in =shell-check=.
+  - [ ] Push and activate the additive Home-only checkpoint, reboot, and accept
+    Home Emacs, packages, applications, fonts, and persistent editor tools.
+    Keep System 84 and Home 34; do not run =gsr= in this phase.
+  - [ ] After additive Home acceptance, remove non-recovery packages from
+    System in a separate checkpoint, build/reconfigure, and reboot.
+  - [ ] Pass the checked fresh-bootstrap sequence and record final Slice 13
+    generations, retention pins, and rollback evidence.
 
 Ordered follow-up:
 

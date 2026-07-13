@@ -8,6 +8,7 @@ trap 'rm -rf -- "$sandbox"' EXIT HUP INT TERM
 repo=$sandbox/repo
 home=$sandbox/home
 fake_guix=$sandbox/store/guix-command
+fake_guile=$sandbox/store/guile
 fake_log=$sandbox/reconfigure.log
 wrapper=$repo/scripts/guix-reconfigure
 
@@ -15,10 +16,25 @@ mkdir -p "$repo/scripts" "$repo/guix/home" \
     "$home/.config/guix/current/bin" "$(dirname "$fake_guix")"
 cp "$source_repo/scripts/guix-reconfigure" "$wrapper"
 chmod +x "$wrapper"
+cp "$source_repo/scripts/guix-home-links-preflight.scm" \
+    "$repo/scripts/guix-home-links-preflight.scm"
+cp "$source_repo/guix/home/repo-links.scm" \
+    "$repo/guix/home/repo-links.scm"
+cp "$source_repo/guix/home/repo-links-manifest.scm" \
+    "$repo/guix/home/repo-links-manifest.scm"
 
 printf '%s\n' '#!/bin/sh' 'exit 0' >"$repo/scripts/guix-entrypoints"
 chmod +x "$repo/scripts/guix-entrypoints"
 printf '%s\n' '(home-environment)' >"$repo/guix/home/guixpc.scm"
+
+for source in \
+    shell/bash_profile shell/bashrc shell/zprofile shell/xinitrc \
+    emacs/exwm-loader.el emacs/init.el emacs/exwm.el gdb/gdbinit \
+    guile/guile x11/Xdefaults kitty/kitty.conf ranger/rc.conf \
+    ranger/rifle.conf ranger/scope.sh; do
+    mkdir -p "$repo/$(dirname "$source")"
+    printf 'fixture: %s\n' "$source" >"$repo/$source"
+done
 
 cat >"$repo/guix/channels.scm" <<'EOF'
 (list
@@ -56,6 +72,7 @@ cat >"$fake_guix" <<'EOF'
 set -eu
 
 if [ "${1:-}" = describe ]; then
+    printf '%s\n' DESCRIBE >>"${SK_FAKE_LOG:?}"
     guix_url=https://example.org/guix.git
     guix_branch=master
     guix_commit=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -110,13 +127,25 @@ printf '\n' >>"$SK_FAKE_LOG"
 EOF
 chmod +x "$fake_guix"
 
+cat >"$fake_guile" <<'EOF'
+#!/bin/sh
+set -eu
+printf '%s\n' PREFLIGHT >>"${SK_FAKE_LOG:?}"
+[ "${SK_FAKE_HOME_PREFLIGHT_FAIL:-0}" -eq 0 ] || exit 69
+EOF
+chmod +x "$fake_guile"
+
 ln -s "$fake_guix" "$home/.config/guix/current/bin/guix"
 ln -s "$repo/guix/channels.scm" "$home/.config/guix/channels.scm"
 ln -s "$repo/guix/home/guixpc.scm" "$home/.config/guix/home.scm"
 home_config_resolved=$(readlink -f "$repo/guix/home/guixpc.scm")
 
 run_wrapper() {
-    HOME=$home SK_FAKE_LOG=$fake_log SK_FAKE_MISMATCH=${SK_FAKE_MISMATCH:-} \
+    HOME=$home \
+        SK_GUIX_RECONFIGURE_GUILE=${SK_TEST_GUILE:-$fake_guile} \
+        SK_FAKE_LOG=$fake_log \
+        SK_FAKE_MISMATCH=${SK_FAKE_MISMATCH:-} \
+        SK_FAKE_HOME_PREFLIGHT_FAIL=${SK_FAKE_HOME_PREFLIGHT_FAIL:-0} \
         "$wrapper" home "$@"
 }
 
@@ -131,6 +160,37 @@ for mismatch in url branch commit introduction signer extra; do
     fi
     printf '%s\n' "$output" | grep -q 'current Guix channels differ'
 done
+
+: >"$fake_log"
+if output=$(SK_FAKE_HOME_PREFLIGHT_FAIL=1 run_wrapper 2>&1); then
+    printf '%s\n' 'guix-reconfigure-check: Home link failure passed' >&2
+    exit 1
+fi
+grep -q '^PREFLIGHT$' "$fake_log"
+if grep -q '^CALL' "$fake_log"; then
+    printf '%s\n' 'guix-reconfigure-check: failed preflight invoked reconfigure' >&2
+    exit 1
+fi
+
+if command -v guile >/dev/null 2>&1; then
+    real_guile=$(command -v guile)
+    mkdir -p "$home/.emacs.d"
+    printf '%s\n' 'preserve integration blocker' >"$home/.emacs.d/init.el"
+    : >"$fake_log"
+    if output=$(SK_TEST_GUILE=$real_guile run_wrapper --print 2>&1); then
+        printf '%s\n' \
+            'guix-reconfigure-check: real Home blocker passed preflight' >&2
+        exit 1
+    fi
+    printf '%s\n' "$output" | grep -q 'BLOCKED'
+    if grep -Eq '^(DESCRIBE|CALL)' "$fake_log"; then
+        printf '%s\n' \
+            'guix-reconfigure-check: real blocked preflight invoked Guix' >&2
+        exit 1
+    fi
+    rm "$home/.emacs.d/init.el"
+    SK_TEST_GUILE=$real_guile run_wrapper --print >/dev/null
+fi
 
 : >"$fake_log"
 run_wrapper >/dev/null
