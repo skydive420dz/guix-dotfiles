@@ -1,9 +1,9 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; Home generation 37 accepted the 77-package user/editor base.  Slice 15 adds
-;; package-lint as the 78th package so the tracked Emacs Lisp project can run
-;; its complete candidate-profile check without mutable ELPA state.  The
-;; System list guarantees a tty shell, Kitty, and `emacs -Q'; normal configured
+;; Home generation 38 accepts the 78-package user/editor base.  Package-lint is
+;; package 78 so the tracked Emacs Lisp project can run its complete check
+;; without mutable ELPA state.  The System list guarantees a tty shell, Kitty,
+;; and `emacs -Q'; normal configured
 ;; EXWM still consumes the accepted base Home services and editor profile.
 ;; Optional dialect environments live in guix/manifests and must not be added
 ;; to either list merely for convenience.  Emacs is the sole overlap between

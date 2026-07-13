@@ -45,7 +45,7 @@ Remaining cosmetic issue:
 * TODO 2026-07-12 configuration audit remediation
 :PROPERTIES:
 :created: 2026-07-12
-:next_slice: 15
+:next_slice: 16
 :END:
 
 Canonical evidence, finding status, slice definitions, and acceptance gates:
@@ -142,17 +142,27 @@ Current next action:
     editing, Guile PTY readline/color/completion, and backend acceptance.
   - [X] Rotate the exact Home retention root to generation 37 with generation
     36 as the immediate rollback; retain System 85 and pull 5.
-- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 15: Elisp, Guile, and Common Lisp project/test workflows][Slice 15: Elisp, Guile, and Common Lisp project/test workflows]].
+- [X] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 15: Elisp, Guile, and Common Lisp project/test workflows][Slice 15: Elisp, Guile, and Common Lisp project/test workflows]].
   - [X] Implement real Elisp, Guile, and ASDF project fixtures plus the isolated
     project dispatcher, shared Lisp command/window surface, package-lint
     ownership, strict ASDF policy, and disposable connected-backend checker.
   - [X] Build and pass the complete candidate-profile gate on GuixPC, including
     project checks and asynchronous Geiser/SLY failure recovery.  Candidate
-    results are =aghqh0si8x2p= Home and =6680dpbpy035= System; neither is active.
-  - [ ] Push the implementation checkpoint, run =ghr=, reboot, and accept the
-    fresh editor/project workflow.  System 85 should remain unchanged.
-  - [ ] Record Home generation/store target, rotate its retention pin only after
-    acceptance, and close the Slice 15 findings.
+    results are =aghqh0si8x2p= Home and =6680dpbpy035= System.
+  - [X] Push implementation checkpoint =4169217=, run =ghr=, and reboot into
+    Home generation 38 at =/gnu/store/aghqh0si8x2pr0cmfyir7mgaks217yb6-home=.
+    System generation 85 remains current and booted; the unchanged candidate
+    System =6680dpbpy035= was built but never activated for this slice.
+  - [X] Pass the fresh live Emacs probe, all 37 isolated ERT checks, Elisp,
+    Guile, and Common Lisp project checks, strict shell validation, and
+    disposable asynchronous Geiser/SLY backend acceptance.
+  - [X] Rotate the exact Home retention root to generation 38 with generation
+    37 as the immediate fallback; retain System 85 and pull 5.  Live retention
+    verification and the read-only rollback drill pass.
+
+Next action: begin Slice 16 as one Clojure/JVM runtime, editor, project, REPL,
+test, and validation vertical slice; do not treat a runtime-only install as
+acceptance.
 
 Ordered follow-up:
 

@@ -19,6 +19,21 @@
             (file-name-as-directory
              (expand-file-name "~/.guix-home/profile/share/emacs/site-lisp"))
           "/run/current-system/profile/share/emacs/site-lisp/"))
+       (repo-root
+        (file-name-directory
+         (directory-file-name (file-truename sk/user-directory))))
+       (lisp-fixture-files
+        (mapcar
+         (lambda (relative) (expand-file-name relative repo-root))
+         '("fixtures/elisp/sk-example/.projectile"
+           "fixtures/elisp/sk-example/Makefile"
+           "fixtures/elisp/sk-example/sk-example.el"
+           "fixtures/guile/.projectile"
+           "fixtures/guile/Makefile"
+           "fixtures/guile/src/sk/fixture/math.scm"
+           "fixtures/common-lisp/.projectile"
+           "fixtures/common-lisp/Makefile"
+           "fixtures/common-lisp/sk-fixture.asd")))
        (visible-profile-load-path
         (seq-find
          (lambda (entry)
@@ -157,6 +172,9 @@
                (funcall owned-library-p "sly" "sly-[0-9]*"))
          (cons "Puni package generation"
                (funcall owned-library-p "puni" "puni-[0-9]*"))
+         (cons "package-lint generation"
+               (funcall owned-library-p
+                        "package-lint" "package-lint-[0-9]*"))
          (cons "Yasnippet package generation"
                (funcall owned-library-p "yasnippet" "yasnippet-[0-9]*"))
          (cons "Eshell highlighting package generation"
@@ -209,6 +227,28 @@
          (cons "Lisp structural key"
                (eq (lookup-key evil-normal-state-map (kbd "SPC l ]"))
                    #'puni-slurp-forward))
+         (cons "Lisp project command surface"
+               (and
+                (seq-every-p
+                 (lambda (binding)
+                   (eq (lookup-key evil-normal-state-map
+                                   (kbd (car binding)))
+                       (cdr binding)))
+                 '(("SPC l D" . sk/lisp-debug)
+                   ("SPC l g" . sk/lisp-definition)
+                   ("SPC l m" . sk/lisp-macroexpand)
+                   ("SPC l p" . sk/lisp-project-check)
+                   ("SPC l x" . sk/lisp-references)))
+                (eq geiser-repl-current-project-function
+                    #'sk/lisp--project-root)
+                geiser-repl-per-project-p
+                (equal geiser-repl-add-project-paths '("." "src"))
+                (string= inferior-lisp-program "sbcl")
+                (fboundp 'sk/lisp--start-common-lisp-project)
+                (fboundp 'sk/window-geiser-result-buffer-p)
+                (fboundp 'sk/window-geiser-debugger-buffer-p)
+                (seq-every-p #'file-readable-p lisp-fixture-files)
+                (not (alist-get 'lisp org-babel-load-languages))))
          (cons "no user ELPA load path" (not user-elpa-entry))
          (cons "owned load path" (not unowned-load-path-entry))
          (cons "no breadcrumb library" (not (locate-library "breadcrumb")))

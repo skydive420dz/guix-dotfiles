@@ -79,10 +79,12 @@ next active slice.
   authored snippet set and explicit Geiser/SLY editing contract.  Live editor,
   Guile, structural, and isolated acceptance pass, and the exact Home retention
   root is rotated.
-- [ ] Complete Slice 15.  The three project fixtures, shared command/window
-  surface, strict Common Lisp project policy, and isolated connected-backend
-  harness are implemented, and the complete candidate-profile gate passes;
-  checkpoint, activation, post-reboot acceptance, and retention rotation remain.
+- [X] Activate and accept Slice 15.  Home generation 38 supplies the 78-package
+  profile and package-lint; repository-owned source supplies the tracked Elisp,
+  Guile, and ASDF projects plus the shared project command surface.  The strict
+  Common Lisp environment, three project gates, live editor, and disposable
+  Geiser/SLY backend acceptance pass.  Home 38 is retained with Home 37 as its
+  immediate fallback.
 - [ ] Continue Slices 16 through 19 in audit order.  Do not expand dialect
   breadth ahead of the vertical runtime/editor/project/test acceptance for the
   currently supported dialects.
@@ -201,9 +203,11 @@ Slice 13 uses a staged ownership migration.  Its additive and subtractive
 ownership checkpoints are accepted as Home generation 35 and reduced System
 generation 85; a final forced-SSH environment correction is accepted as Home
 generation 36.  Slice 14's structural-editor packages are accepted as Home
-generation 37.  The reduced System consumes the 13 recovery specifications
-recorded in =guix/package-ownership.scm= plus =kitty-latest=.  System generation
-85 has passed a fresh boot; accepted System generation 84 remains its immediate
+generation 37.  Slice 15's package-lint addition is accepted as Home generation
+38; the repository-linked project/test workflow passes against that profile.
+The reduced System consumes the 13 recovery specifications recorded in
+=guix/package-ownership.scm= plus =kitty-latest=.  System generation 85 has
+passed a fresh boot; accepted System generation 84 remains its immediate
 rollback.
 The System floor is not a second configured desktop: normal EXWM still requires
 the accepted base Home D-Bus services and Home editor profile.  Its independent
