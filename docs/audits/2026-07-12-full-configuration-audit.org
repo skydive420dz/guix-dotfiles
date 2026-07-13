@@ -152,7 +152,7 @@ REPL-, backend-, service-, or workflow-level acceptance tests.
 #+begin_src text
 Source organization:       strong
 Declared/deployed config:  aligned at the authenticated three-channel lock
-Live runtime convergence:  strong; fresh System 84 and Home 34 runtime
+Live runtime convergence:  strong; fresh System 84 and Home 35 runtime
 Display/resource health:   good
 Validation safety:         strong; isolated editor and activation gates
 Lisp foundation:           coherent Elisp/Guile/SBCL base
@@ -173,14 +173,14 @@ expansion can begin with Slice 13.
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
 | O-01 | P0  | CLOSED   | Elogind 255.24 removes command and PTY SSH sessions immediately; no closing session remained through 30 seconds. | 7 |
-| O-02 | P1  | CLOSED   | System generation 84 is both current and booted at the authenticated Slice 12 realization; fresh Home generation 34 services are running. | 7, 10, 11, 12 |
-| O-03 | P1  | CLOSED   | D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse are fresh in Home generation 34 with no replacement pending. | 7, 10, 11, 12 |
+| O-02 | P1  | CLOSED   | System generation 84 is current/booted while fresh Home generation 35 supplies the accepted additive Slice 13 package/editor profile. | 7, 10, 11, 12, 13 |
+| O-03 | P1  | CLOSED   | D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse are fresh in Home generation 35 with no replacement pending. | 7, 10, 11, 12, 13 |
 | O-04 | P1  | CLOSED   | Fresh Emacs 30.2 and the live Org, Geiser, Geiser-Guile, and Projectile paths match the current profile. | 7, 8 |
 | O-05 | P1  | CLOSED   | EXWM, launched applications, PipeWire, WirePlumber, and PipeWire-Pulse share the one canonical Guix Home D-Bus; no =dbus-launch= remains. | 10 |
 | O-06 | P2  | CLOSED   | RTKit is active through system D-Bus/Polkit; PipeWire obtains an RR data-loop with a bounded 200000-microsecond realtime limit. | 10 |
 | O-07 | P2  | CLOSED   | The stale Kitty process is gone and the current launcher is Kitty 0.47.4. | 7 |
 | O-08 | P2  | CLOSED   | Fish, Bash, Eshell, and bare SSH automation route =gsr=/=ghr= through one current-Guix wrapper and explicit setuid sudo path. | 9 |
-| O-09 | P2  | POLICY   | The read-only retention gate protects accepted System 84, Home 34, and pull 5 plus older recovery tiers; it reports 27 System and 17 Home duplicate-link candidates, but implements no deletion or garbage collection. | 12 |
+| O-09 | P2  | POLICY   | The read-only retention gate protects accepted System 84, Home 35, and pull 5 plus older recovery tiers; it reports 27 System and 17 Home duplicate-link candidates, but implements no deletion or garbage collection. | 12, 13 |
 | O-10 | P3  | CLOSED   | X screen blanking and DPMS are explicitly declared and active at 600 seconds; elogind does not suspend the workstation. | 10 |
 | O-11 | P3  | POLICY   | Elogind intentionally retains the startx/PAM login as active local =tty1= with =Type=tty=; fresh-session =IdleHint=no= and EXWM child X11 metadata are correct. | 10 |
 | O-12 | P3  | VERIFIED | Historical Blueman logs show dconf persistence failure; current relevance is unproven. | 19 |
@@ -194,7 +194,7 @@ expansion can begin with Slice 13.
 | C-03 | P1  | CLOSED   | Batch runs from copied sources under =env -i= with isolated HOME/TMP/XDG state and a write boundary. | 8 |
 | C-04 | P1  | CLOSED   | Fixture buffers run real mode hooks and assert LSP registration, Flycheck chains, Company, Geiser, Eldoc, diagnostics, and format routing. | 8 |
 | C-05 | P2  | CLOSED   | Project-owned Home links are validated in two passes; blockers/dangling paths are preserved and make activation nonzero before any project link changes. | 9 |
-| C-06 | P2  | CLOSED   | Fresh Home generation 34 uses a non-=exec= runner with bounded current/previous logs and returns failures to tty1; the strict Fish harness proves retry and exclusion paths. | 11, 12 |
+| C-06 | P2  | CLOSED   | Fresh Home generation 35 uses a non-=exec= runner with bounded current/previous logs and returns failures to tty1; the strict Fish harness proves retry and exclusion paths. | 11, 12, 13 |
 | C-07 | P2  | CLOSED   | Strict JSON keeps jq; JSONC uses =jsonc-mode= with JSON-only Flycheck disabled and comment-preserving clang-format. | 9 |
 | C-08 | P2  | CLOSED   | clang-format, shfmt, and Ruff receive visited filenames, with non-file fallbacks and fixture-backed config discovery. | 9 |
 | C-09 | P2  | CLOSED   | Emacs lockfiles are explicitly enabled for concurrent-edit detection while backups/auto-saves stay centralized. | 9 |
@@ -224,8 +224,8 @@ reported as a confirmed bug without a focused test.
 | R-01 | P1  | CLOSED   | =guix/channels.scm= pins exact Guix, Nonguix, and authenticated sk-guix commits; the isolated time-machine provenance gate matches all three. | 12 |
 | R-02 | P1  | CLOSED   | =sk-guix= publishes a signed introduction, authorized signer, orphan public keyring, and signed target that pass isolated clean-clone Guix authentication. | 12 |
 | R-03 | P2  | POLICY   | Live repo symlinks make edits immediate but Home rollback does not restore application-file contents. | 13 |
-| R-04 | P2  | STATIC   | User applications, Emacs packages, compilers, and language tools are concentrated in the privileged system package list. | 13 |
-| R-05 | P2  | PARTIAL  | The pinned package/Home/System promotion gate is automated; composable per-dialect manifests and dev shells remain Slice 13. | 12, 13 |
+| R-04 | P2  | PARTIAL  | Home 35 now owns the complete normal application/editor/developer profile; the legacy System superset remains only until the separately gated subtractive checkpoint. | 13 |
+| R-05 | P2  | PARTIAL  | Core, JVM Clojure, and Racket manifests build and enter independently; final System ownership and fresh-bootstrap acceptance remain. | 12, 13 |
 | R-06 | P2  | CLOSED   | =scripts/guix-entrypoints= checks or bootstraps every declaration link and refuses blockers/missing sources transactionally. | 9, 13 |
 
 ** Lisp ecosystem findings
@@ -1248,11 +1248,45 @@ Activation order for this checkpoint is deliberately Home-only:
 5. Only then create the subtractive System checkpoint and build/reconfigure it.
 #+end_src
 
-If additive Home activation or the fresh session fails, restore this checkpoint's
-parent source and use the immutable pull 5 Guix to switch exactly to Home 34;
-System 84 remains untouched throughout.  Slice 13 stays open until the Home
-generation is accepted, System is reduced in the later checkpoint, the fresh
-bootstrap sequence is checked, and final rollback evidence is recorded.
+*** Fresh-session acceptance
+
+The additive checkpoint =c826d55= activated as Home generation 35 at
+=/gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home= with profile
+=/gnu/store/kaisng11r2d1f3v9gnc2d35r7skrn9zb-profile=.  A normal reboot left
+System generation 84 both current and booted at
+=/gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system=; no System reconfigure
+occurred.
+
+The fresh EXWM process was invoked through
+=~/.guix-home/profile/bin/emacs=.  Its raw =PATH= and =EMACSLOADPATH= begin with
+the Home profile, its visible profile =load-path= is Home-first, and Org,
+Geiser/Geiser-Guile, Projectile, LSP, SLY, Evil, General, and Use-Package resolve
+to the expected immutable package objects.  The first post-boot checker run
+exposed a delimiter bug in the new visible =PATH= assertion: it compared a
+directory with a trailing slash to the colon-delimited PATH entry.  The check
+now compares the exact =directory:= prefix and passes; this was a validation bug,
+not an activation or environment failure.  The live phase and all 25 isolated
+ERT checks pass with the repository otherwise unchanged.
+
+=scripts/shell-check --strict= passes on GuixPC with no skipped Guile fixture.
+All fifteen persistent editor/runtime commands resolve, normal applications and
+daily Guile/SBCL/compiler tools resolve through the Home profile, while
+Kitty/Picom/xwallpaper remain System recovery/session-floor commands.  Iosevka
+Term and JetBrainsMono Nerd Font resolve through Fontconfig.  The complete
+desktop-session checker passes with no service replacement pending; Bose was
+disconnected, so only the already-accepted Bluetooth hardware gate was skipped.
+
+Retention verification passes with counts System/Home/pull =83/35/5=.  The
+rotated manifest protects Home 35 as the accepted promotion baseline and Home
+34 as immediate rollback; the read-only drill renders that exact fallback and
+performs no switch, deletion, or garbage collection.  The additive phase is
+accepted, so the separately committed System reduction may proceed.
+
+If a later change regresses this accepted Home state, restore this acceptance
+source checkpoint and use the immutable pull 5 Guix to switch exactly to Home
+35.  Home 34 remains the pre-Slice-13 fallback.  Slice 13 stays open until
+System is reduced in the later checkpoint, the fresh bootstrap sequence is
+checked, and final rollback evidence is recorded.
 
 ** TODO Slice 14: Core Lisp editing correctness and structural editing
 :PROPERTIES:

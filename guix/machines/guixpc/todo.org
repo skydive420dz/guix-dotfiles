@@ -109,9 +109,10 @@ Current next action:
     System candidate, and passes every runtime and unique-runtime absence probe.
   - [X] Run the complete 14-link Home preflight before Guix; execute its
     blocker/dangling and no-reconfigure negative fixtures in =shell-check=.
-  - [ ] Push and activate the additive Home-only checkpoint, reboot, and accept
-    Home Emacs, packages, applications, fonts, and persistent editor tools.
-    Keep System 84 and Home 34; do not run =gsr= in this phase.
+  - [X] Push and activate additive checkpoint =c826d55= as Home generation 35,
+    reboot, and accept Home Emacs, packages, applications, fonts, persistent
+    editor tools, strict shell fixtures, and desktop services.  System 84
+    remained current and booted; Home 34 is the immediate fallback.
   - [ ] After additive Home acceptance, remove non-recovery packages from
     System in a separate checkpoint, build/reconfigure, and reboot.
   - [ ] Pass the checked fresh-bootstrap sequence and record final Slice 13

@@ -4,8 +4,9 @@ system	83	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	preferred-rollback	
 system	81	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system	last-known-good	Distinct accepted elogind 255.24 System before Slice 10
 system	80	/gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system	emergency-rollback	Pre-elogind-upgrade recovery only; contains the known 255.17 SSH session defect
 system	75	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	last-known-good	Last observed working pre-slice boot target
-home	34	/gnu/store/xzhsfha3cbbzgs3gddi47iq1fk89fmiq-home	promotion-rollback	Accepted Slice 12 Home baseline for the next promotion
-home	33	/gnu/store/dbmnwmi0jypvpi5kb0xn29wjpdhnjr6z-home	preferred-rollback	Immediate pre-Slice-12 accepted Home
+home	35	/gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home	promotion-rollback	Accepted additive Slice 13 Home ownership baseline
+home	34	/gnu/store/xzhsfha3cbbzgs3gddi47iq1fk89fmiq-home	preferred-rollback	Immediate pre-Slice-13 Home fallback
+home	33	/gnu/store/dbmnwmi0jypvpi5kb0xn29wjpdhnjr6z-home	last-known-good	Accepted Slice 11 Home fallback
 home	32	/gnu/store/5l5rn2alj38qclkj93cybla70jhyx6ls-home	last-known-good	Generated Home fallback for Slice 11
 home	29	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	last-known-good	Pre-sk-guix historical Home fallback
 pull	5	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile	promotion-rollback	Accepted authenticated Slice 12 Guix frontend for the next promotion

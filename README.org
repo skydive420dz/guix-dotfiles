@@ -184,11 +184,11 @@ Owns:
 - the Fish/Kitty tty recovery path and a System =emacs -Q=/EXWM package floor
 - system services such as SSH, Bluetooth, Xorg, elogind
 
-Slice 13 uses a two-checkpoint migration.  The additive checkpoint leaves the
-legacy System package superset intact while Home receives its complete package
-profile.  Only after that Home generation is activated, rebooted, and accepted
-may =guix/systems/guixpc.scm= shrink to the recovery specifications recorded in
-=guix/package-ownership.scm=.  Do not run =gsr= for the additive checkpoint.
+Slice 13 uses a two-checkpoint migration.  The additive checkpoint is accepted
+as Home generation 35 while the legacy System generation 84 package superset
+remains intact.  The next checkpoint may now shrink
+=guix/systems/guixpc.scm= to the recovery specifications recorded in
+=guix/package-ownership.scm=.
 The System floor is not a second configured desktop: normal EXWM still requires
 the accepted base Home D-Bus services and Home editor profile.  Its independent
 guarantee is the tty shell, Kitty, and =emacs -Q= for repair.
@@ -439,7 +439,7 @@ tests/guix-home-links-check
 The normal Emacs executable and its complete extension set are provided by
 Guix Home; System retains Emacs/EXWM as a recovery path.  The live checker
 selects Home Emacs whenever that profile contains it and otherwise accepts the
-System executable during the additive transition.  Emacs Lisp files wire
+System executable during rollback or a staged transition.  Emacs Lisp files wire
 behavior; they should not install packages themselves.
 
 ** Emacs language acceptance

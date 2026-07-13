@@ -71,7 +71,9 @@
          (cons "Home-first editor process environment"
                (and
                 (if home-editor-p
-                    (string-prefix-p home-bin (or (getenv "PATH") ""))
+                    (string-prefix-p
+                     (concat (directory-file-name home-bin) ":")
+                     (or (getenv "PATH") ""))
                   t)
                 (string-prefix-p
                                  (concat
