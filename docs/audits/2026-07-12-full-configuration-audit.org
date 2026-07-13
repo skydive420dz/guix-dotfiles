@@ -152,11 +152,11 @@ REPL-, backend-, service-, or workflow-level acceptance tests.
 #+begin_src text
 Source organization:       strong
 Declared/deployed config:  aligned at the authenticated three-channel lock
-Live runtime convergence:  strong; fresh System 85 and Home 38 runtime passes,
-                           including Lisp project/test and direct SSH workflows
+Live runtime convergence:  strong; fresh System 85 and Home 39 runtime passes,
+                           including four Lisp project/test workflows and direct SSH
 Display/resource health:   good
 Validation safety:         strong; isolated editor and activation gates
-Lisp foundation:           accepted Elisp/Guile/SBCL editing, REPL, and project/test base
+Lisp foundation:           accepted Elisp/Guile/SBCL/Clojure editing, REPL, and project/test base
 Lisp ecosystem breadth:    early; most dialect families absent
 Reproducibility:            strong; clean-clone authentication and build gates pass
 Operational reliability:   restored; bounded SSH cleanup passes
@@ -164,9 +164,9 @@ Operational reliability:   restored; bounded SSH cleanup passes
 
 The project is a credible Guix/EXWM workstation foundation.  It is not yet a
 full Lisp ecosystem.  The P0/P1 runtime, validation, and reproducibility
-prerequisites, package ownership, core editing correctness, and the first three
-project/test workflows are now closed.  The next vertical slice is the
-Clojure/JVM stack in Slice 16.
+prerequisites, package ownership, core editing correctness, and the first four
+project/test workflows are now closed.  The next vertical slice is the Racket
+stack in Slice 17.
 
 * Finding register
 
@@ -175,14 +175,14 @@ Clojure/JVM stack in Slice 16.
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
 | O-01 | P0  | CLOSED   | Elogind 255.24 removes command and PTY SSH sessions immediately; no closing session remained through 30 seconds. | 7 |
-| O-02 | P1  | CLOSED   | Reduced System generation 85 is current/booted while Home generation 38 supplies the accepted application, editor, and forced-SSH tools used by the repository-owned project/test workflows. | 7, 10, 11, 12, 13, 14, 15 |
-| O-03 | P1  | CLOSED   | The accepted D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse declarations persist unchanged in current Home generation 38. | 7, 10, 11, 12, 13, 14, 15 |
-| O-04 | P1  | CLOSED   | Fresh Emacs 30.2 resolves Org, Geiser, Geiser-Guile, Puni, Eshell-highlighting, Projectile, and package-lint from Home 38; its observational probe sees the Slice 15 project keys, fixtures, and policy. | 7, 8, 14, 15 |
+| O-02 | P1  | CLOSED   | Reduced System generation 85 is current/booted while Home generation 39 supplies the accepted application, editor, and forced-SSH tools used by the repository-owned project/test workflows. | 7, 10, 11, 12, 13, 14, 15, 16 |
+| O-03 | P1  | CLOSED   | The accepted D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse declarations persist unchanged in current Home generation 39. | 7, 10, 11, 12, 13, 14, 15, 16 |
+| O-04 | P1  | CLOSED   | Fresh Emacs 30.2 resolves the accepted core Lisp and Clojure libraries from Home 39; its observational probe and 44/44 isolated ERT checks see the Slice 16 project keys, fixtures, backend policy, and no eager JVM/LSP process. | 7, 8, 14, 15, 16 |
 | O-05 | P1  | CLOSED   | EXWM, launched applications, PipeWire, WirePlumber, and PipeWire-Pulse share the one canonical Guix Home D-Bus; no =dbus-launch= remains. | 10 |
 | O-06 | P2  | CLOSED   | RTKit is active through system D-Bus/Polkit; PipeWire obtains an RR data-loop with a bounded 200000-microsecond realtime limit. | 10 |
 | O-07 | P2  | CLOSED   | The stale Kitty process is gone and the current launcher is Kitty 0.47.4. | 7 |
 | O-08 | P2  | CLOSED   | Fish, Bash, Eshell, and bare SSH automation route =gsr=/=ghr= through one current-Guix wrapper and explicit setuid sudo path. | 9 |
-| O-09 | P2  | POLICY   | The read-only retention gate protects accepted System 85, Home 38, and pull 5 plus their immediate and older recovery tiers; it reports duplicate-link candidates but implements no deletion or garbage collection. | 12, 13, 14, 15 |
+| O-09 | P2  | POLICY   | The read-only retention gate protects accepted System 85, Home 39, and pull 5 plus their immediate and older recovery tiers; it reports duplicate-link candidates but implements no deletion or garbage collection. | 12, 13, 14, 15, 16 |
 | O-10 | P3  | CLOSED   | X screen blanking and DPMS are explicitly declared and active at 600 seconds; elogind does not suspend the workstation. | 10 |
 | O-11 | P3  | POLICY   | Elogind intentionally retains the startx/PAM login as active local =tty1= with =Type=tty=; fresh-session =IdleHint=no= and EXWM child X11 metadata are correct. | 10 |
 | O-12 | P3  | VERIFIED | Historical Blueman logs show dconf persistence failure; current relevance is unproven. | 19 |
@@ -227,7 +227,7 @@ reported as a confirmed bug without a focused test.
 | R-01 | P1  | CLOSED   | =guix/channels.scm= pins exact Guix, Nonguix, and authenticated sk-guix commits; the isolated time-machine provenance gate matches all three. | 12 |
 | R-02 | P1  | CLOSED   | =sk-guix= publishes a signed introduction, authorized signer, orphan public keyring, and signed target that pass isolated clean-clone Guix authentication. | 12 |
 | R-03 | P2  | POLICY   | Live repo symlinks make edits immediate but Home rollback does not restore application-file contents. | 13 |
-| R-04 | P2  | VERIFIED | System 85 carries only the recovery floor; Home 38 owns normal tools and supplies them to graphical, login, and direct forced-SSH project/test environments. | 13, 14, 15 |
+| R-04 | P2  | VERIFIED | System 85 carries only the recovery floor; Home 39 owns normal tools and supplies them to graphical, login, and direct forced-SSH project/test environments. | 13, 14, 15, 16 |
 | R-05 | P2  | CLOSED   | Core, JVM Clojure, and Racket manifests build and enter independently; the installed-base configuration bootstrap passes fixtures and isolated GuixPC acceptance. | 12, 13 |
 | R-06 | P2  | CLOSED   | =scripts/guix-entrypoints= checks or bootstraps every declaration link and refuses blockers/missing sources transactionally. | 9, 13 |
 
@@ -235,9 +235,9 @@ reported as a confirmed bug without a focused test.
 
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
-| L-01 | P1  | VERIFIED | Supported families are Emacs Lisp, Guile Scheme, and SBCL Common Lisp only. | 14-18 |
+| L-01 | P1  | VERIFIED | Accepted families are Emacs Lisp, Guile Scheme, SBCL Common Lisp, and Clojure/JVM; later dialect families remain absent. | 14-18 |
 | L-02 | P1  | CLOSED   | Fixture-rooted Geiser/Guile and SLY/SBCL checks cover evaluation, semantic completion, documentation, exact definition navigation, controlled failure, and recovery; SLY also proves ASDF =test-op=, who-calls xref, and debugger abort, while batch gates prove project dispatch and shared window routing. | 8, 14, 15 |
-| L-03 | P2  | CLOSED   | Puni owns balanced structural transforms in the four Lisp-family modes and Org source-edit buffers while Evil retains modal motions. | 14 |
+| L-03 | P2  | CLOSED   | Puni owns balanced structural transforms in the five accepted Lisp-family modes and Org source-edit buffers while Evil retains modal motions. | 14, 16 |
 | L-04 | P2  | CLOSED   | Evaluation guards inspect stable Geiser/SLY connection state and preserve backend errors after dispatch. | 14 |
 | L-05 | P2  | CLOSED   | Scheme startup uses available Geiser commands and Lisp documentation rejects whitespace with a clear no-symbol error. | 14 |
 | L-06 | P2  | CLOSED   | Geiser has one automatic activation path; eagerly loaded SLY owns Common Lisp indentation before and after connection without auto-starting SBCL. | 14 |
@@ -313,11 +313,35 @@ Accepted boundary:
 - Common Lisp Babel remains deliberately disabled because it bypasses the
   accepted SLY project, environment, failure, and cleanup contract.
 
+** Clojure/JVM
+
+Present:
+
+- a pinned Guix JVM manifest containing OpenJDK, the Clojure JAR,
+  clojure-lsp, clj-kondo, and cljfmt;
+- Home-owned =emacs-clojure-mode= 5.23.0, =cljfmt= 0.16.4, and
+  =clj-kondo= 2026.04.15, with no persistent JVM or language server;
+- Puni structural editing and the shared =SPC l=/=SPC c= command surface;
+- a tracked dependency-free source/test fixture with formatting, linting,
+  unit-test, namespace-reload, and negative controls;
+- a project-keyed =clojure.main= comint REPL and explicit
+  =lsp-mode=/=clojure-lsp= startup through the pinned nested project shell;
+- real evaluation, reload, failure recovery, Flycheck/clj-kondo diagnostics,
+  formatting, definition/reference navigation, LSP diagnostics, shutdown,
+  and forced-failure cleanup acceptance.
+
+Accepted boundary:
+
+- =deps.edn= is path metadata only; tools.deps, Maven, Leiningen, Gradle,
+  Babashka, CIDER, nREPL, and cider-nrepl are outside this Guix-only slice;
+- the direct classpath contains the Guix Clojure JAR plus =src= and =test=.
+  Future external libraries require an authenticated, explicitly designed
+  classpath extension rather than mutable dependency downloads.
+
 ** Absent dialect families
 
-The Clojure/JVM runtime/editor/REPL/test slice exists as an unactivated
-candidate and is not yet an accepted live environment.  No complete candidate
-slice exists for:
+The Clojure/JVM runtime/editor/REPL/test slice is accepted.  No complete
+candidate slice exists for:
 
 - ClojureScript, Leiningen, or Babashka;
 - Racket;
@@ -1215,10 +1239,10 @@ independently evaluable
 =core-lisp=, =jvm-lisp=, and =racket= manifests.  Core adds Guile
 readline/colorized support and SBCL; JVM uses only =clojure-tools= rather than
 competing Clojure/JDK/Leiningen installations; Racket uses the full distribution
-for =raco=, RackUnit, documentation, and later editor parity.  The Slice 16
-candidate below deliberately supersedes that historical JVM manifest with its
-direct Guix JAR policy.  No experimental dialect is installed merely to fill a
-tier.
+for =raco=, RackUnit, documentation, and later editor parity.  The accepted
+Slice 16 implementation below deliberately supersedes that historical JVM
+manifest with its direct Guix JAR policy.  No experimental dialect is installed
+merely to fill a tier.
 
 =scripts/guix-lisp-shell= enters those manifests with =--pure= through a
 snapshot of the authenticated channel lock.  The pinned build gate evaluates
@@ -1835,10 +1859,11 @@ immediate fallbacks.
 This closes findings L-02 and L-08, resolves L-09 and L-13 as explicit
 policies, and completes Slice 15.
 
-** TODO Slice 16: Clojure/JVM vertical slice
+** DONE Slice 16: Clojure/JVM vertical slice
 :PROPERTIES:
 :audit_priority: P2
 :depends_on: 7 8 12 13 15
+:completed: 2026-07-13
 :END:
 
 Land together:
@@ -1855,7 +1880,7 @@ Land together:
 Do not mark the slice complete because =clojure= starts.  All listed layers must
 pass in the live editor.
 
-*** 2026-07-13 Slice 16 implementation checkpoint (activation pending)
+*** 2026-07-13 Slice 16 implementation and fresh-boot acceptance
 
 Prepared ownership:
 
@@ -1914,7 +1939,7 @@ Tracked validation:
   formatting, lint, and tests, exercises all three negative controls, checks
   the Make/LSP classpath, rejects project-local cache/build state in that
   CLI-only run, and verifies the tracked fixture is unchanged;
-- =scripts/emacs-clojure-check= runs candidate Home Emacs with the candidate
+- =scripts/emacs-clojure-check= runs the selected Home Emacs with the selected
   Home/System profiles and the pinned Guix executable.  From a copied source
   tree, its real project-keyed comint REPL and clojure-lsp workspace both use
   the production =guix-lisp-shell jvm -- clojure-project= command shape rather
@@ -1953,10 +1978,61 @@ with both backends live and leaves no disposable sandbox or recorded process
 behind.  These are disposable candidate results, not activated or live-session
 evidence.
 
-Checkpoint push, =ghr=, reboot, fresh live editor/project acceptance,
-survivor/cache inspection, and exact Home retention rotation remain pending.
-Until those complete, Home generation 38, System generation 85, and Pull
-generation 5 remain the accepted baseline and Slice 16 remains open.
+Published checkpoint: implementation commit
+=8c96541654a908a058f283e3edd825e2dc2d805b= is the source checkpoint from which
+=ghr= activated Home generation 39 at
+=/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home=.  After the normal reboot,
+System generation 85 is both current and booted at
+=/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system=, and Pull generation 5
+remains current at
+=/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile=.
+
+Fresh live acceptance: the running EXWM Emacs 30.2 resolves
+=emacs-clojure-mode= from Home 39, opens no eager Clojure JVM, REPL, or LSP
+process, and passes all 44/44 copied-source ERT checks.  Existing connected
+Geiser/Guile and SLY/SBCL acceptance still passes.  The active-profile
+=clojure-project-check= passes evaluation and reload at 42, formatter, linter,
+tests, all three negative controls, and =make check=.  The connected
+=emacs-clojure-check= passes its real project-keyed Java/comint REPL, Home
+cljfmt, Flycheck/clj-kondo, clojure-lsp definition/reference/diagnostic
+requests, graceful shutdown, and cleanup.  A separate forced-failure run while
+both REPL and LSP are live exits with the expected failure and leaves no
+sandbox or process behind.  Strict shell validation also passes.
+
+Active ownership and cleanup: Home declares 81 packages and realizes 85; the
+four expected service additions are =fish=, =pipewire=, =wireplumber=, and
+=shepherd-for-home=.  Its only Clojure-side package records are
+=emacs-clojure-mode= 5.23.0, =cljfmt= 0.16.4, and =clj-kondo= 2026.04.15.
+Neither persistent Home nor System exposes =java=, =javac=, =clojure=, =clj=,
+=clojure-lsp=, =bb=, =lein=, =gradle=, or =mvn=.  The tracked fixture has no
+=.cpcache=, =.lsp/.cache=, =.clj-kondo/.cache=, or =target= artifact; the repo
+is clean; and no checker sandbox or Clojure/JVM process survives.  A historical
+=~/.clojure/.cpcache= predates the implementation checkpoint, activation, and
+reboot, was not modified by acceptance, and is not consulted by the direct
+Guix-JAR wrapper.  =~/.m2= and the unscoped user clojure-lsp/clj-kondo cache
+paths are absent.
+
+Retention now promotes exact Home generation 39, keeps Home 38 as the immediate
+pre-Slice-16 fallback, and retains Home 37 and earlier accepted recovery tiers.
+System 85 and Pull 5 remain unchanged.  Inventory, pin verification, read-only
+planning, and rollback drill pass; planning reports only duplicate-link
+candidates and performs no deletion or garbage collection.
+
+Accepted boundary: CIDER remains excluded because the pinned channels do not
+supply the nREPL/cider-nrepl middleware needed for Guix-only jack-in.  The
+direct classpath is deliberately dependency-free: Guix's Clojure JAR plus the
+project's =src= and =test=.  External libraries require a later authenticated
+classpath policy rather than an implicit Maven or tools.deps escape.
+
+Rollback path: restore the accepted pre-Slice-16 source checkpoint
+=5a9a2b5f1a8798e8b563f3a54c405ec2794cec73=, switch exactly to Home generation
+38 at =/gnu/store/aghqh0si8x2pr0cmfyir7mgaks217yb6-home=, and reboot.  System
+generation 85 needs no change; System 84 and Pull generation 4 remain their
+independent immediate fallbacks.
+
+This accepts the explicit non-CIDER alternative, the Guix-only dependency
+policy, and the complete runtime/editor/project/test workflow, and completes
+Slice 16.
 
 ** TODO Slice 17: Racket vertical slice
 :PROPERTIES:

@@ -45,7 +45,7 @@ Remaining cosmetic issue:
 * TODO 2026-07-12 configuration audit remediation
 :PROPERTIES:
 :created: 2026-07-12
-:next_slice: 16
+:next_slice: 17
 :END:
 
 Canonical evidence, finding status, slice definitions, and acceptance gates:
@@ -159,7 +159,7 @@ Current next action:
   - [X] Rotate the exact Home retention root to generation 38 with generation
     37 as the immediate fallback; retain System 85 and pull 5.  Live retention
     verification and the read-only rollback drill pass.
-- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 16: Clojure/JVM vertical slice][Slice 16: Clojure/JVM vertical slice]].
+- [X] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 16: Clojure/JVM vertical slice][Slice 16: Clojure/JVM vertical slice]].
   - [X] Implement explicit ownership: the JVM manifest supplies Guix OpenJDK,
     the Clojure JAR, clojure-lsp, clj-kondo, and cljfmt; Home supplies only
     emacs-clojure-mode, clj-kondo, and cljfmt; System supplies none of the
@@ -177,9 +177,9 @@ Current next action:
   - [X] Pass the final complete candidate gate, including realized package and
     executable leakage checks plus the disposable connected REPL, Home
     cljfmt/Flycheck, and clojure-lsp checker through the production nested-shell
-    path.  The candidate remains unactivated.
-  - [ ] Push the implementation checkpoint.
-  - [ ] Run =ghr=, reboot, and pass fresh live Home/editor/project acceptance;
+    path.  This gate is deliberately non-activating.
+  - [X] Push implementation checkpoint =8c96541=.
+  - [X] Run =ghr=, reboot, and pass fresh live Home/editor/project acceptance;
     verify no checker-owned process, tracked-source mutation, or Maven/
     dependency-HOME state remains.  The candidate gate must launch the
     connected editor checker directly with pinned Guix, while its real REPL and
@@ -187,11 +187,14 @@ Current next action:
     ignored =.lsp/.cache= or =.clj-kondo/.cache= state must remain inside the
     disposable project copy; primary analysis, kondo, and log state must remain
     project-keyed under isolated XDG state.  Then rotate the exact Home
-    retention root.
+    retention root.  Home generation 39 at
+    =/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home=, System generation 85,
+    and Pull generation 5 pass the fresh checks; Home 38 is the immediate
+    fallback.
 
-Next action: push the Slice 16 implementation checkpoint, then run =ghr=,
-reboot, and perform fresh live runtime/editor/project acceptance.  Do not treat
-the passing complete disposable candidate gate as activation or acceptance.
+Next action: implement Slice 17's Racket vertical slice with the same explicit
+runtime/editor/project/test ownership and live acceptance boundary used for
+the accepted Clojure/JVM slice.
 
 Ordered follow-up:
 

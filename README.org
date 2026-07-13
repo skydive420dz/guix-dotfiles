@@ -85,12 +85,13 @@ next active slice.
   Common Lisp environment, three project gates, live editor, and disposable
   Geiser/SLY backend acceptance pass.  Home 38 is retained with Home 37 as its
   immediate fallback.
-- [ ] Activate and accept Slice 16.  Its implementation checkpoint supplies a
-  pinned Guix-only Clojure/JVM environment, tracked project workflow, explicit
-  comint REPL and clojure-lsp integration, and isolated candidate checks.
-  The complete disposable candidate gate passes, including 44/44 ERT and real
-  connected REPL/Flycheck/clojure-lsp checks; checkpoint push, =ghr=, reboot,
-  and fresh live acceptance remain pending.
+- [X] Activate and accept Slice 16.  Home generation 39 supplies 81 explicit
+  packages (85 realized after four Home-service packages), including
+  =emacs-clojure-mode=, =clj-kondo=, and =cljfmt=.  The pinned Guix-only JVM
+  environment, tracked project workflow, project-keyed comint REPL, explicit
+  clojure-lsp integration, 44/44 ERT checks, real connected checks, negative
+  cleanup control, and fresh-boot acceptance all pass.  Home 38 is retained as
+  the immediate fallback.
 - [ ] Continue Slices 17 through 19 in audit order.  Do not expand dialect
   breadth ahead of the vertical runtime/editor/project/test acceptance for the
   currently supported dialects.
@@ -211,9 +212,11 @@ generation 85; a final forced-SSH environment correction is accepted as Home
 generation 36.  Slice 14's structural-editor packages are accepted as Home
 generation 37.  Slice 15's package-lint addition is accepted as Home generation
 38; the repository-linked project/test workflow passes against that profile.
-The unactivated Slice 16 candidate expands the explicit Home set from 78 to 81
-with =emacs-clojure-mode=, =clj-kondo=, and =cljfmt=; those packages are not
-claimed as live until =ghr=, reboot, and acceptance complete.
+Slice 16 is accepted as Home generation 39.  It expands the explicit Home set
+from 78 to 81 with =emacs-clojure-mode=, =clj-kondo=, and =cljfmt=; four
+Home-service packages bring the active realized profile to 85 packages.  The
+JVM, Clojure JAR, and clojure-lsp remain isolated in the pinned project
+environment rather than leaking into persistent Home or System ownership.
 The reduced System consumes the 13 recovery specifications recorded in
 =guix/package-ownership.scm= plus =kitty-latest=.  System generation 85 has
 passed a fresh boot; accepted System generation 84 remains its immediate
@@ -606,7 +609,7 @@ Common Lisp
                strict ASDF source registry plus project-keyed XDG build cache.
                =fixtures/common-lisp= supplies primary/test ASDF systems.
 
-Clojure (Slice 16 candidate; not live-accepted)
+Clojure (Slice 16 accepted)
   Mode:        clojure-mode
   Backend:     project-keyed clojure.main comint REPL; explicit
                lsp-mode + clojure-lsp through =SPC c l=
@@ -1440,7 +1443,7 @@ a local recovery tty:
    Home, and Pull targets in =generation-pins.tsv= and pass retention
    verification plus the rollback drill.
 
-The recorded 85/36/5 generations are this installation's historical rollback
+The recorded 85/39/5 generations are this installation's historical rollback
 evidence and are not valid new-install targets.  Blank-disk partitioning,
 filesystem creation, initial GRUB/EFI installation, initial user/network/
 firmware provisioning, secret restoration, substitute-ACL mutation, and a new
