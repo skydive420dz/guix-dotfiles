@@ -41,7 +41,11 @@
   (let ((file (sk/check-fixture-path relative)))
     (should (file-readable-p file))
     (with-temp-buffer
-      (setq buffer-file-name file)
+      ;; Mirror `find-file' closely enough for project-root hooks: a temporary
+      ;; buffer does not otherwise update `default-directory' when only
+      ;; `buffer-file-name' is assigned.
+      (setq buffer-file-name file
+            default-directory (file-name-directory file))
       (insert-file-contents file)
       (set-auto-mode)
       (funcall function))))
@@ -75,9 +79,10 @@
     (should (memq 1 eldoc-calls))))
 
 (defun sk/check-lisp-runtime-process-p (process)
-  "Return non-nil when PROCESS is a Guile or SBCL runtime."
+  "Return non-nil when PROCESS is a configured Lisp runtime or server."
   (seq-some (lambda (argument)
-              (string-match-p "\\(?:^\\|/\\)\\(?:guile\\|sbcl\\)\\'"
+              (string-match-p
+               "\\(?:^\\|/\\)\\(?:guile\\|sbcl\\|java\\|clojure-lsp\\)\\'"
                               argument))
             (or (process-command process) '())))
 
@@ -213,6 +218,16 @@
   (should (equal lsp-clients-lua-language-server-command
                  '("lua-language-server")))
   (should-not lsp-lua-telemetry-enable)
+  (let ((expected
+         (list (expand-file-name "scripts/guix-lisp-shell"
+                                sk/check-source-root)
+               "jvm" "--"
+               (expand-file-name "scripts/clojure-project"
+                                 sk/check-source-root)
+               "lsp")))
+    (should (equal lsp-clojure-custom-server-command expected))
+    (require 'lsp-clojure)
+    (should (equal (lsp-clojure--build-command) expected)))
   (should (equal company-backends
                  '((company-capf company-yasnippet)
                    company-files
@@ -286,12 +301,51 @@
      (lambda () (should (eq major-mode 'lisp-mode)))))
   (dolist (case '((inferior-emacs-lisp-mode . elisp)
                   (geiser-repl-mode . scheme)
-                  (sly-mrepl-mode . common-lisp)))
+                  (sly-mrepl-mode . common-lisp)
+                  (sk/clojure-repl-mode . clojure)))
     (with-temp-buffer
       ;; Do not start a runtime merely to verify the global leader dispatcher
       ;; recognizes its already-connected REPL modes.
       (setq major-mode (car case))
       (should (eq (sk/lisp--dialect) (cdr case))))))
+
+(ert-deftest sk/check-clojure-editing-and-static-lint-contract ()
+  (let ((lsp-called nil))
+    (cl-letf (((symbol-function 'lsp-deferred)
+               (lambda () (setq lsp-called t))))
+      (sk/check-with-eldoc-fixture
+       "clojure/src/sk/fixture/core.clj"
+       (lambda ()
+         (should (eq major-mode 'clojure-mode))
+         (should (eq (sk/lisp--dialect) 'clojure))
+         (should (bound-and-true-p puni-mode))
+         (should (bound-and-true-p company-mode))
+         (should (bound-and-true-p flycheck-mode))
+         (should (eq flycheck-checker 'sk-clojure-clj-kondo))
+         (should (eq (flycheck-get-checker-for-buffer)
+                     'sk-clojure-clj-kondo))
+         (should
+          (file-equal-p
+           (funcall
+            (flycheck-checker-get
+             'sk-clojure-clj-kondo 'working-directory)
+            'sk-clojure-clj-kondo)
+           (sk/check-fixture-path "clojure"))))))
+    (should-not lsp-called))
+  (should-not (memq #'lsp-deferred clojure-mode-hook))
+  (should (= 1 (cl-count #'sk/clojure-mode-setup clojure-mode-hook
+                          :test #'eq)))
+  (should (= 1 (cl-count #'puni-mode clojure-mode-hook :test #'eq)))
+  (let ((command
+         (flycheck-checker-get 'sk-clojure-clj-kondo 'command)))
+    (should (equal (seq-take command 7)
+                   '("clj-kondo" "--repro" "--cache" "false"
+                     "--lint" "-" "--filename")))
+    (should (flycheck-checker-get 'sk-clojure-clj-kondo
+                                  'standard-input)))
+  (should (file-equal-p sk/clojure-repository-directory
+                        sk/check-source-root))
+  (should-not (seq-some #'sk/check-lisp-runtime-process-p (process-list))))
 
 (ert-deftest sk/check-lisp-activation-and-indent-ownership ()
   (should (= 1 (cl-count #'geiser-mode--maybe-activate scheme-mode-hook
@@ -402,7 +456,8 @@
   (dolist (case '(("elisp/sk-example/test/sk-example-test.el"
                    . "elisp/sk-example")
                   ("guile/src/sk/fixture/math.scm" . "guile")
-                  ("common-lisp/tests/core.lisp" . "common-lisp")))
+                  ("common-lisp/tests/core.lisp" . "common-lisp")
+                  ("clojure/src/sk/fixture/core.clj" . "clojure")))
     (let* ((file (sk/check-fixture-path (car case)))
            (expected (file-name-as-directory
                       (sk/check-fixture-path (cdr case))))
@@ -432,6 +487,155 @@
                      (file-name-as-directory root))))
           (should-error (sk/lisp-project-check) :type 'user-error))
       (delete-directory root t))))
+
+(ert-deftest sk/check-clojure-wrapper-and-project-check-command ()
+  (let ((base
+         (list (expand-file-name "scripts/guix-lisp-shell"
+                                sk/check-source-root)
+               "jvm" "--"
+               (expand-file-name "scripts/clojure-project"
+                                 sk/check-source-root))))
+    (should (equal (sk/clojure--command "lsp")
+                   (append base '("lsp"))))
+    (should (equal (sk/clojure--command "repl")
+                   (append base '("repl"))))
+    (let (command command-directory)
+      (sk/check-with-fixture
+       "clojure/src/sk/fixture/core.clj"
+       (lambda ()
+         (cl-letf (((symbol-function 'compile)
+                    (lambda (value)
+                      (setq command value
+                            command-directory default-directory)
+                      'fixture-compilation)))
+           (should (eq (sk/lisp-project-check) 'fixture-compilation)))))
+      (should
+       (equal
+        command
+        (mapconcat
+         #'shell-quote-argument
+         (list (car base) "jvm" "--" "make" "--no-print-directory"
+               "-C" (file-name-as-directory
+                      (sk/check-fixture-path "clojure"))
+               "check")
+         " ")))
+      (should (file-equal-p command-directory
+                            (sk/check-fixture-path "clojure"))))))
+
+(ert-deftest sk/check-clojure-repl-command-and-project-isolation ()
+  (let* ((root-a (file-name-as-directory
+                  (sk/check-fixture-path "clojure")))
+         (root-b (file-name-as-directory
+                  (make-temp-file "sk-clojure-project-b." t)))
+         (current-root root-a)
+         starts displayed buffers processes)
+    (unwind-protect
+        (cl-letf (((symbol-function 'sk/lisp--project-root)
+                   (lambda (&optional _required) current-root))
+                  ((symbol-function 'file-executable-p) (lambda (_path) t))
+                  ((symbol-function 'make-comint-in-buffer)
+                   (lambda (name buffer program startfile &rest switches)
+                     (push (list name buffer program startfile switches) starts)
+                     (let ((process
+                            (make-pipe-process
+                             :name (format "sk-clojure-test-%s"
+                                           (length starts))
+                             :buffer buffer :noquery t)))
+                       (push process processes)
+                       buffer)))
+                  ((symbol-function 'pop-to-buffer)
+                   (lambda (buffer &rest _arguments)
+                     (setq displayed buffer)
+                     buffer)))
+          (with-temp-buffer
+            (clojure-mode)
+            (sk/clojure-repl)
+            (push displayed buffers)
+            (setq current-root root-b)
+            (sk/clojure-repl)
+            (push displayed buffers)
+            (should (= (length starts) 2))
+            (should-not (eq (car buffers) (cadr buffers)))
+            (setq current-root root-a)
+            (sk/clojure-repl)
+            (should (= (length starts) 2))
+            (should (eq displayed (cadr buffers))))
+          (dolist (start starts)
+            (pcase-let ((`(,_name ,buffer ,program ,startfile ,switches)
+                         start))
+              (should (equal program sk/clojure-guix-shell))
+              (should-not startfile)
+              (should (equal switches
+                             (list "jvm" "--"
+                                   sk/clojure-project-wrapper "repl")))
+              (with-current-buffer buffer
+                (should (eq major-mode 'sk/clojure-repl-mode))
+                (let ((process (get-buffer-process buffer)))
+                  (should (equal
+                           (process-get process 'sk/clojure-project-root)
+                           sk/clojure-project-root)))))))
+      (dolist (process processes)
+        (when (process-live-p process) (delete-process process)))
+      (dolist (buffer buffers)
+        (when (buffer-live-p buffer) (kill-buffer buffer)))
+      (delete-directory root-b t))))
+
+(ert-deftest sk/check-clojure-repl-graceful-stop-and-fallback ()
+  (let* ((root (file-name-as-directory
+                (sk/check-fixture-path "clojure")))
+         (buffer (get-buffer-create (sk/clojure--repl-buffer-name root)))
+         (process (make-pipe-process :name "sk-clojure-stop-test"
+                                     :buffer buffer :noquery t))
+         sent waited)
+    (unwind-protect
+        (progn
+          (with-current-buffer buffer
+            (sk/clojure-repl-mode)
+            (setq-local sk/clojure-project-root root))
+          (process-put process 'sk/clojure-project-root root)
+          (cl-letf (((symbol-function 'sk/lisp--project-root)
+                     (lambda (&optional _required) root))
+                    ((symbol-function 'comint-send-string)
+                     (lambda (target string)
+                       (should (eq target process))
+                       (setq sent string)))
+                    ((symbol-function 'accept-process-output)
+                     (lambda (target &rest _arguments)
+                       (should (eq target process))
+                       (setq waited t)
+                       (delete-process process))))
+            (sk/clojure-stop))
+          (should (equal sent "(System/exit 0)\n"))
+          (should waited)
+          (should-not (buffer-live-p buffer)))
+      (when (process-live-p process) (delete-process process))
+      (when (buffer-live-p buffer) (kill-buffer buffer))))
+  (let* ((root (file-name-as-directory
+                (sk/check-fixture-path "clojure")))
+         (buffer (get-buffer-create (sk/clojure--repl-buffer-name root)))
+         (process (make-pipe-process :name "sk-clojure-stop-fallback"
+                                     :buffer buffer :noquery t))
+         (original-delete (symbol-function 'delete-process))
+         forced)
+    (unwind-protect
+        (progn
+          (with-current-buffer buffer
+            (sk/clojure-repl-mode)
+            (setq-local sk/clojure-project-root root))
+          (process-put process 'sk/clojure-project-root root)
+          (let ((sk/clojure-stop-timeout 0))
+            (cl-letf (((symbol-function 'sk/lisp--project-root)
+                       (lambda (&optional _required) root))
+                      ((symbol-function 'comint-send-string) #'ignore)
+                      ((symbol-function 'delete-process)
+                       (lambda (target)
+                         (setq forced t)
+                         (funcall original-delete target))))
+              (sk/clojure-stop)))
+          (should forced)
+          (should-not (buffer-live-p buffer)))
+      (when (process-live-p process) (funcall original-delete process))
+      (when (buffer-live-p buffer) (kill-buffer buffer)))))
 
 (ert-deftest sk/check-common-lisp-project-environment-policy ()
   (let* ((root (file-name-as-directory
@@ -630,6 +834,90 @@
       (should (equal references "twice"))
       (should macroexpand))))
 
+(ert-deftest sk/check-clojure-evaluation-and-namespace-commands ()
+  (with-temp-buffer
+    (insert "(ns demo.core)\n\n"
+            "(defn twice [value]\n  (* 2 value))\n\n"
+            "(twice 21)\n")
+    (clojure-mode)
+    (let (sent)
+      (cl-letf (((symbol-function 'sk/clojure--require-repl)
+                 (lambda () t))
+                ((symbol-function 'sk/clojure--send-string)
+                 (lambda (expression) (push expression sent))))
+        (sk/lisp-eval-buffer)
+        (should (string-prefix-p "(load-string " (car sent)))
+        (goto-char (point-min))
+        (search-forward "twice [value]")
+        (sk/lisp-eval-defun)
+        (should (string-match-p
+                 (regexp-quote "(defn twice [value]") (car sent)))
+        (goto-char (point-max))
+        (sk/lisp-eval-last-sexp)
+        (should (string-match-p (regexp-quote "(twice 21)") (car sent)))
+        (sk/lisp-macroexpand)
+        (should (string-match-p "macroexpand-1" (car sent)))
+        (sk/clojure-reload-namespace)
+        (should (equal (car sent) "(require 'demo.core :reload)"))))))
+
+(ert-deftest sk/check-clojure-lsp-dispatch-and-cold-guards ()
+  (with-temp-buffer
+    (insert "fixture-add")
+    (goto-char (point-min))
+    (setq major-mode 'clojure-mode)
+    (setq-local lsp-mode t)
+    (let (docs definition references)
+      (cl-letf (((symbol-function 'lsp-workspaces)
+                 (lambda () '(fixture-workspace)))
+                ((symbol-function 'sk/code-docs)
+                 (lambda () (setq docs t)))
+                ((symbol-function 'sk/code-definition)
+                 (lambda () (setq definition t)))
+                ((symbol-function 'sk/code-references)
+                 (lambda () (setq references t))))
+        (sk/lisp-docs)
+        (sk/lisp-definition)
+        (sk/lisp-references))
+      (should docs)
+      (should definition)
+      (should references)))
+  (with-temp-buffer
+    (insert "fixture-add")
+    (goto-char (point-min))
+    (setq major-mode 'clojure-mode)
+    (setq-local lsp-mode t)
+    (cl-letf (((symbol-function 'lsp-workspaces) (lambda () nil)))
+      (dolist (command '(sk/lisp-docs sk/lisp-definition
+                         sk/lisp-references))
+        (let ((condition (should-error (funcall command)
+                                       :type 'user-error)))
+          (should (string-match-p "start it with SPC c l"
+                                  (cadr condition)))))))
+  (with-temp-buffer
+    (insert "(ns demo.core)\n(fixture-add 20 22)\n")
+    (goto-char (point-min))
+    (search-forward "fixture-add")
+    (setq major-mode 'clojure-mode)
+    (setq-local lsp-mode nil)
+    (dolist (command '(sk/lisp-docs sk/lisp-definition sk/lisp-references))
+      (let ((condition (should-error (funcall command) :type 'user-error)))
+        (should (string-match-p "start it with SPC c l"
+                                (cadr condition)))))
+    (let ((condition (should-error (sk/lisp-debug) :type 'user-error)))
+      (should
+       (equal (cadr condition)
+              "Clojure debugging is unsupported in the Guix-only comint workflow")))
+    (goto-char (point-max))
+    (cl-letf (((symbol-function 'sk/clojure--live-repl-buffer)
+               (lambda (&optional _root) nil)))
+      (dolist (command '(sk/lisp-eval-buffer sk/lisp-eval-defun
+                         sk/lisp-eval-last-sexp sk/lisp-macroexpand
+                         sk/clojure-reload-namespace))
+        (let ((condition (should-error (funcall command) :type 'user-error)))
+          (should
+           (equal (cadr condition)
+                  "No project Clojure REPL is active; run SPC l r first")))))))
+
 (ert-deftest sk/check-lisp-debug-dispatch-and-cold-guards ()
   (with-temp-buffer
     (emacs-lisp-mode)
@@ -684,7 +972,8 @@
           (should-error (funcall command) :type 'user-error))))))
 
 (ert-deftest sk/check-puni-lisp-and-org-source-editors ()
-  (dolist (mode '(emacs-lisp-mode lisp-interaction-mode scheme-mode lisp-mode))
+  (dolist (mode '(emacs-lisp-mode lisp-interaction-mode scheme-mode lisp-mode
+                  clojure-mode))
     (sk/check-puni-contract-in-mode mode))
   (dolist (case '(("emacs-lisp" . emacs-lisp-mode)
                   ("scheme" . scheme-mode)
@@ -694,7 +983,7 @@
     (org-mode)
     (should-not (bound-and-true-p puni-mode)))
   (dolist (hook '(emacs-lisp-mode-hook lisp-interaction-mode-hook
-                  scheme-mode-hook lisp-mode-hook))
+                  scheme-mode-hook lisp-mode-hook clojure-mode-hook))
     (should (= 1 (cl-count #'puni-mode (symbol-value hook) :test #'eq)))))
 
 (ert-deftest sk/check-authored-snippets-and-eshell-highlighting ()
@@ -744,7 +1033,9 @@
                      ("SPC l g" . sk/lisp-definition)
                      ("SPC l k" . sk/lisp-docs)
                      ("SPC l m" . sk/lisp-macroexpand)
+                     ("SPC l n" . sk/clojure-reload-namespace)
                      ("SPC l p" . sk/lisp-project-check)
+                     ("SPC l q" . sk/clojure-stop)
                      ("SPC l x" . sk/lisp-references)
                      ("SPC l [" . puni-slurp-backward)
                      ("SPC l ]" . puni-slurp-forward)
@@ -869,9 +1160,49 @@
           (funcall mode)
           (sk/format-buffer))
         (should (eq route 'indent)))))
+  (sk/check-with-fixture
+   "clojure/src/sk/fixture/core.clj"
+   (lambda ()
+     (let (route route-directory)
+       (cl-letf (((symbol-function 'sk/format--external)
+                  (lambda (&rest arguments)
+                    (setq route arguments
+                          route-directory default-directory))))
+         (sk/format-buffer))
+       (let* ((root (file-name-as-directory
+                     (sk/check-fixture-path "clojure")))
+              (config (expand-file-name ".cljfmt.edn" root)))
+         (should (equal route
+                        (list "cljfmt" "fix" "--quiet" "--config" config
+                              "--project-root" root "-")))
+         (should (file-equal-p route-directory root))))))
   (with-temp-buffer
     (fundamental-mode)
     (should-error (sk/format-buffer) :type 'user-error)))
+
+(ert-deftest sk/check-clojure-formatter-failure-preserves-buffer ()
+  (sk/check-with-fixture
+   "clojure/src/sk/fixture/core.clj"
+   (lambda ()
+     (let ((before (buffer-string)))
+       (cl-letf (((symbol-function 'executable-find)
+                  (lambda (_program) "/gnu/store/fake-cljfmt/bin/cljfmt"))
+                 ((symbol-function 'call-process-region)
+                  (lambda (&rest _arguments) 1)))
+         (should-error (sk/format-buffer) :type 'user-error))
+       (should (equal (buffer-string) before)))))
+  (let ((root (file-name-as-directory
+               (make-temp-file "sk-clojure-no-format-config." t))))
+    (unwind-protect
+        (with-temp-buffer
+          (setq major-mode 'clojure-mode)
+          (cl-letf (((symbol-function 'sk/lisp--project-root)
+                     (lambda (&optional _required) root)))
+            (let ((condition
+                   (should-error (sk/format-buffer) :type 'user-error)))
+              (should (string-match-p "no readable cljfmt config"
+                                      (cadr condition))))))
+      (delete-directory root t))))
 
 (ert-deftest sk/check-formatter-visited-filenames-and-config ()
   (dolist (case '(("formatter-config/sample.c" . c)
@@ -954,11 +1285,15 @@
   (save-window-excursion
     (delete-other-windows)
     (dolist (case '(("*sk-geiser-doc*" geiser-doc-mode nil right 1)
+                    ("*sk-clojure-doc*" help-mode nil right 1)
                     ("*sly-description fixture*" lisp-mode nil right 1)
                     ("*sk-geiser-result*" geiser-debug-mode nil right 1)
                     ("*sk-geiser-xref*" geiser-xref-mode nil right 0)
+                    ("*sk-clojure-xref*" xref--xref-buffer-mode nil right 0)
+                    ("*sk-clojure-repl*" sk/clojure-repl-mode nil right 0)
                     ("*sk-sly-mrepl*" sly-mrepl-mode nil right 0)
                     ("*sk-geiser-debug*" geiser-debug-mode t bottom 0)
+                    ("*compilation*" compilation-mode nil bottom 0)
                     ("*sk-sly-db*" sly-db-mode nil bottom 0)))
       (pcase-let ((`(,name ,mode ,debugger-active ,side ,slot) case))
         (let ((buffer (generate-new-buffer name)))

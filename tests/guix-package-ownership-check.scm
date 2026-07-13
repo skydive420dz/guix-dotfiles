@@ -30,8 +30,8 @@
            "ripgrep" "vim" "xset" "xwallpaper" "picom" "xrandr"))
  "reviewed 13-package recovery floor changed")
 
-(assert (= (length home) 78)
-        "reviewed Home ownership list must contain exactly 78 packages")
+(assert (= (length home) 81)
+        "reviewed Home ownership list must contain exactly 81 packages")
 
 (for-each
  (lambda (specification)
@@ -39,7 +39,7 @@
            (string-append "Home ownership lost " specification)))
  '("fish-foreign-env" "emacs" "emacs-use-package" "emacs-geiser" "emacs-sly"
    "emacs-puni" "emacs-eshell-syntax-highlighting" "emacs-yasnippet"
-   "emacs-package-lint"
+   "emacs-package-lint" "emacs-clojure-mode" "cljfmt" "clj-kondo"
    "guile" "sbcl" "python-lsp-server" "lua-language-server"
    "ungoogled-chromium" "ranger" "shellcheck"))
 
@@ -47,8 +47,9 @@
  (lambda (specification)
    (assert (not (member specification home))
            (string-append "optional dialect leaked into Home: " specification)))
- '("clojure" "clojure-tools" "leiningen" "openjdk" "racket"
-   "emacs-cider" "emacs-racket-mode"))
+ '("babashka" "clojure" "clojure-tools" "clojure-lsp" "gradle"
+   "leiningen" "maven" "openjdk" "racket" "emacs-cider"
+   "emacs-flycheck-clj-kondo" "emacs-racket-mode"))
 
 (assert (equal? (sk:intersection recovery home) '("emacs"))
         "Emacs must be the sole overlap in the explicit ownership lists")
@@ -70,13 +71,15 @@
    (assert
     (not (string-contains system-source
                           (string-append "\"" specification "\"")))
-    (string-append "Home-only package leaked into System source: "
+    (string-append "non-System package leaked into System source: "
                    specification)))
  '("ungoogled-chromium" "ranger" "emacs-use-package" "emacs-geiser"
    "emacs-sly" "emacs-puni" "emacs-eshell-syntax-highlighting"
-   "emacs-package-lint"
+   "emacs-package-lint" "emacs-clojure-mode" "cljfmt" "clj-kondo"
    "sbcl" "python-lsp-server" "lua-language-server"
-   "gcc-toolchain" "gdb" "shellcheck"))
+   "gcc-toolchain" "gdb" "shellcheck" "babashka" "clojure"
+   "clojure-tools" "clojure-lsp" "gradle" "leiningen" "maven"
+   "openjdk"))
 
 (format #t "guix-package-ownership-check: PASS (recovery=~a home=~a)~%"
         (length recovery) (length home))

@@ -712,6 +712,7 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
              (derived-mode . magit-mode)
              (derived-mode . eshell-mode)
              (derived-mode . shell-mode)
+             (derived-mode . sk/clojure-repl-mode)
              (derived-mode . sly-mrepl-mode)
              (derived-mode . sly-xref-mode)
              (derived-mode . term-mode)
@@ -724,7 +725,8 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
          (slot . 0)
          (window-width . 0.42)
          (mode . (ibuffer-mode dired-mode geiser-repl-mode geiser-xref-mode
-                  magit-mode eshell-mode shell-mode sly-mrepl-mode
+                  magit-mode eshell-mode shell-mode sk/clojure-repl-mode
+                  sly-mrepl-mode
                   sly-xref-mode term-mode vterm-mode xref--xref-buffer-mode))
          (reusable-frames . nil)
          (inhibit-switch-frame . t)

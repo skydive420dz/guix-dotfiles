@@ -1,0 +1,278 @@
+#!/bin/sh
+
+set -eu
+
+case ${0##*/} in
+    guix-lisp-shell)
+        fake_root=$(CDPATH='' cd "$(dirname "$0")/../.." && pwd -P)
+        [ "$#" -ge 3 ] || exit 70
+        [ "$1" = jvm ] || exit 71
+        [ "$2" = -- ] || exit 72
+        shift 2
+        printf '%s\n' GUIX_SHELL >>"$fake_root/tool.log"
+        GUIX_ENVIRONMENT=$fake_root/profile "$@"
+        exit 0
+        ;;
+    java)
+        fake_root=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+        printf '%s\n' JAVA >>"$fake_root/tool.log"
+        case $* in
+            *'-m sk.fixture.test-runner'*)
+                project=${SK_CLOJURE_PROJECT_CHECK_PROJECT:?}
+                if grep -q intentionally-failing \
+                    "$project/test/sk/fixture/core_test.clj"; then
+                    exit 1
+                fi
+                printf '%s\n' 'Ran 1 tests containing 3 assertions.'
+                ;;
+            *":reload"*) printf '%s\n' 42 ;;
+            *"fixture-answer"*) printf '%s\n' 42 ;;
+            *) exit 73 ;;
+        esac
+        exit 0
+        ;;
+    cljfmt)
+        fake_root=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+        printf '%s\n' CLJFMT >>"$fake_root/tool.log"
+        [ "$1" = check ] || [ "$1" = fix ] || exit 74
+        project=${SK_CLOJURE_PROJECT_CHECK_PROJECT:?}
+        case $* in
+            *"--config $project/.cljfmt.edn"*"--project-root $project"*"src test"*) ;;
+            *) exit 75 ;;
+        esac
+        if grep -q unformatted-negative "$project/src/sk/fixture/core.clj"; then
+            exit 1
+        fi
+        exit 0
+        ;;
+    clj-kondo)
+        fake_root=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+        printf '%s\n' CLJ_KONDO >>"$fake_root/tool.log"
+        project=${SK_CLOJURE_PROJECT_CHECK_PROJECT:?}
+        case $* in
+            *'--repro --cache false'*"--config-dir $project/.clj-kondo"*'--fail-level warning --lint src test'*) ;;
+            *) exit 76 ;;
+        esac
+        if grep -q lint-negative "$project/src/sk/fixture/core.clj"; then
+            exit 1
+        fi
+        exit 0
+        ;;
+    clojure-lsp)
+        fake_root=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+        printf 'CLOJURE_LSP %s\n' "$*" >>"$fake_root/tool.log"
+        log_path=
+        while [ "$#" -gt 0 ]; do
+            if [ "$1" = --log-path ]; then
+                shift
+                [ "$#" -gt 0 ] || exit 83
+                log_path=$1
+            fi
+            shift
+        done
+        [ -n "$log_path" ] || exit 84
+        : >"$log_path"
+        exit 0
+        ;;
+    make)
+        fake_root=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+        printf '%s\n' MAKE >>"$fake_root/tool.log"
+        [ "$#" -eq 5 ] || exit 77
+        [ "$1" = --no-print-directory ] || exit 78
+        [ "$2" = -s ] || exit 79
+        [ "$3" = -C ] || exit 80
+        project=$4
+        case $5 in
+            classpath)
+                printf '%s:%s/src:%s/test\n' \
+                    "$fake_root/profile/share/java/clojure.jar" \
+                    "$project" "$project"
+                ;;
+            eval)
+                "${CLOJURE_PROJECT:?}" clojure "$project" -- -e \
+                    "(require 'sk.fixture.core) (println (sk.fixture.core/fixture-answer))"
+                ;;
+            reload)
+                "${CLOJURE_PROJECT:?}" clojure "$project" -- -e \
+                    "(require 'sk.fixture.core :reload) (println (sk.fixture.core/fixture-answer))"
+                ;;
+            test)
+                "${CLOJURE_PROJECT:?}" clojure "$project" -- \
+                    -m sk.fixture.test-runner
+                ;;
+            check)
+                [ "${CLOJURE_PROJECT:?}" = \
+                    "$fake_root/repo/scripts/clojure-project" ] || exit 81
+                "$CLOJURE_PROJECT" format-check "$project"
+                "$CLOJURE_PROJECT" lint "$project"
+                "$CLOJURE_PROJECT" clojure "$project" -- \
+                    -m sk.fixture.test-runner
+                ;;
+            *) exit 82 ;;
+        esac
+        exit 0
+        ;;
+esac
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+sandbox=$(mktemp -d "${TMPDIR:-/tmp}/clojure-project-check-test.XXXXXX")
+sandbox=$(CDPATH='' cd "$sandbox" && pwd -P)
+trap 'rm -rf -- "$sandbox"' EXIT HUP INT TERM
+
+fail() {
+    printf 'clojure-project-check-test: %s\n' "$1" >&2
+    exit 1
+}
+
+contains() {
+    case $output in
+        *"$1"*) ;;
+        *) fail "acceptance output omitted: $1" ;;
+    esac
+}
+
+fake_repo=$sandbox/repo
+fake_bin=$sandbox/bin
+fake_home=$sandbox/real-home
+outer_tmp=$sandbox/outer-tmp
+log=$sandbox/tool.log
+
+mkdir -p "$fake_repo/scripts" "$fake_repo/fixtures" "$fake_bin" \
+    "$fake_home" "$outer_tmp" "$sandbox/profile/share/java"
+cp "$repo/scripts/clojure-project" "$fake_repo/scripts/clojure-project"
+cp "$repo/scripts/clojure-project-check" \
+    "$fake_repo/scripts/clojure-project-check"
+cp -R "$repo/fixtures/clojure" "$fake_repo/fixtures/clojure"
+cp "$repo/tests/clojure-project-check" \
+    "$fake_repo/scripts/guix-lisp-shell"
+for command in java cljfmt clj-kondo clojure-lsp make; do
+    cp "$repo/tests/clojure-project-check" "$fake_bin/$command"
+done
+chmod +x "$fake_repo/scripts/clojure-project" \
+    "$fake_repo/scripts/clojure-project-check" \
+    "$fake_repo/scripts/guix-lisp-shell" "$fake_bin"/*
+: >"$sandbox/profile/share/java/clojure.jar"
+: >"$sandbox/fake-guix"
+chmod +x "$sandbox/fake-guix"
+: >"$log"
+
+run_check() {
+    HOME=$fake_home TMPDIR=$outer_tmp PATH="$fake_bin:$PATH" \
+        GUIX=$CHECK_GUIX GUIX_ENVIRONMENT=$CHECK_GUIX_ENVIRONMENT \
+        "$fake_repo/scripts/clojure-project-check" "$@"
+}
+
+CHECK_GUIX=$sandbox/fake-guix
+CHECK_GUIX_ENVIRONMENT=
+output=$(run_check "$fake_repo") || \
+    fail 'self-entering acceptance run failed'
+for proof in \
+    'clojure-project-check: evaluation: 42' \
+    'clojure-project-check: reload: 42' \
+    'clojure-project-check: format negative control: PASS' \
+    'clojure-project-check: lint negative control: PASS' \
+    'clojure-project-check: test negative control: PASS' \
+    'clojure-project-check: make check: PASS' \
+    'clojure-project-check: PASS'; do
+    contains "$proof"
+done
+
+[ "$(grep -c '^GUIX_SHELL$' "$log")" -eq 1 ] || \
+    fail 'checker did not enter exactly one JVM shell'
+[ "$(grep -c '^JAVA$' "$log")" -ge 5 ] || \
+    fail 'checker did not exercise evaluation, tests, and reload recovery'
+[ "$(grep -c '^CLJFMT$' "$log")" -ge 3 ] || \
+    fail 'checker did not exercise formatter recovery'
+[ "$(grep -c '^CLJ_KONDO$' "$log")" -ge 3 ] || \
+    fail 'checker did not exercise linter recovery'
+
+: >"$log"
+CHECK_GUIX=/nonexistent
+CHECK_GUIX_ENVIRONMENT=$sandbox/profile
+output=$(run_check "$fake_repo") || fail 'already-inside acceptance run failed'
+contains 'clojure-project-check: PASS'
+if grep -q '^GUIX_SHELL$' "$log"; then
+    fail 'already-inside checker nested another Guix shell'
+fi
+
+if [ -n "$(find "$outer_tmp" -mindepth 1 -print -quit)" ]; then
+    fail 'isolated run directory survived cleanup'
+fi
+for artifact in .cpcache .lsp/.cache .clj-kondo/.cache target; do
+    [ ! -e "$fake_repo/fixtures/clojure/$artifact" ] || \
+        fail "source fixture gained $artifact"
+done
+
+if run_check "$sandbox/missing" >/dev/null 2>&1; then
+    fail 'missing repository passed'
+else
+    [ "$?" -eq 66 ] || fail 'missing repository returned the wrong status'
+fi
+
+if run_check "$fake_repo" extra >/dev/null 2>&1; then
+    fail 'extra argument passed'
+else
+    [ "$?" -eq 64 ] || fail 'extra argument returned the wrong status'
+fi
+
+if HOME=$fake_home PATH="$fake_bin:$PATH" GUIX_ENVIRONMENT='' \
+    "$fake_repo/scripts/clojure-project" classpath \
+        "$fake_repo/fixtures/clojure" >/dev/null 2>&1; then
+    fail 'project command accepted a missing GUIX_ENVIRONMENT'
+else
+    [ "$?" -eq 69 ] || fail 'missing JVM profile returned the wrong status'
+fi
+
+project_key() {
+    canonical=$(CDPATH='' cd "$1" && pwd -P)
+    printf '%s\n' "$canonical" | cksum |
+        while read -r checksum octets _rest; do
+            printf '%s-%s\n' "$checksum" "$octets"
+        done
+}
+
+lsp_cache=$sandbox/lsp-cache
+project_two=$sandbox/project-two
+cp -R "$fake_repo/fixtures/clojure" "$project_two"
+run_lsp() {
+    HOME=$fake_home XDG_CACHE_HOME=$lsp_cache PATH="$fake_bin:$PATH" \
+        GUIX_ENVIRONMENT=$sandbox/profile \
+        "$fake_repo/scripts/clojure-project" lsp "$1"
+}
+
+: >"$log"
+run_lsp "$fake_repo/fixtures/clojure" || fail 'first project LSP run failed'
+run_lsp "$fake_repo/fixtures/clojure" || fail 'stable project LSP rerun failed'
+run_lsp "$project_two" || fail 'second project LSP run failed'
+
+state_root=$lsp_cache/clojure-lsp/projects
+state_a=$state_root/$(project_key "$fake_repo/fixtures/clojure")
+state_b=$state_root/$(project_key "$project_two")
+[ "$state_a" != "$state_b" ] || fail 'two project roots shared one LSP key'
+for state in "$state_a" "$state_b"; do
+    [ -d "$state/analysis" ] || fail "missing keyed analysis state: $state"
+    [ -r "$state/kondo-config/config.edn" ] || \
+        fail "missing keyed kondo config: $state"
+    [ -f "$state/server.log" ] || fail "missing keyed LSP log: $state"
+    grep -F -- "--log-path $state/server.log" "$log" >/dev/null || \
+        fail "LSP command did not use keyed log path: $state"
+    grep -F -- ":cache-path \"$state/analysis\"" "$log" >/dev/null || \
+        fail "LSP command did not use keyed analysis path: $state"
+    grep -F -- ":kondo-config-dir \"$state/kondo-config\"" \
+        "$log" >/dev/null || \
+        fail "LSP command did not use keyed kondo path: $state"
+done
+[ "$(grep -F -c -- "--log-path $state_a/server.log" "$log")" -eq 2 ] || \
+    fail 'same project root did not reuse its stable LSP key'
+[ "$(grep -F -c -- "--log-path $state_b/server.log" "$log")" -eq 1 ] || \
+    fail 'second project did not receive one isolated LSP path'
+for project in "$fake_repo/fixtures/clojure" "$project_two"; do
+    for artifact in .lsp/.cache .clj-kondo/.cache; do
+        [ ! -e "$project/$artifact" ] || \
+            fail "LSP run leaked project-local state: $project/$artifact"
+    done
+done
+
+[ ! -e "$fake_home/.cache" ] || fail 'real HOME gained cache state'
+
+printf '%s\n' 'clojure-project-check-test: PASS'

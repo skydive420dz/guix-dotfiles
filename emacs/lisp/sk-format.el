@@ -5,6 +5,8 @@
 
 (require 'subr-x)
 
+(declare-function sk/lisp--project-root "sk-lisp" (&optional required))
+
 (defun sk/format--source-filename (fallback)
   "Return the visited source filename or FALLBACK under `default-directory'."
   (expand-file-name (or buffer-file-name fallback)))
@@ -89,6 +91,16 @@ parser explicitly through a .json suffix."
                            "-"))
      ((derived-mode-p 'lua-mode)
       (sk/format--indent-buffer))
+     ((derived-mode-p 'clojure-mode)
+      (let* ((root (sk/lisp--project-root t))
+             (config (expand-file-name ".cljfmt.edn" root))
+             (default-directory root))
+        (unless (file-readable-p config)
+          (user-error "Clojure project has no readable cljfmt config: %s"
+                      config))
+        (sk/format--external
+         "cljfmt" "fix" "--quiet" "--config" config
+         "--project-root" root "-")))
      ((derived-mode-p 'emacs-lisp-mode 'lisp-interaction-mode
                       'scheme-mode 'lisp-mode 'common-lisp-mode
                       'org-mode)

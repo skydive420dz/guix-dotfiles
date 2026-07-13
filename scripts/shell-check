@@ -29,12 +29,15 @@ shellcheck \
     "$repo/scripts/editor-tools-check" \
     "$repo/scripts/desktop-session-check" \
     "$repo/scripts/emacs-check" \
+    "$repo/scripts/emacs-clojure-check" \
     "$repo/scripts/exwm-session" \
     "$repo/scripts/guix-bootstrap" \
     "$repo/scripts/guix-build-gate" \
     "$repo/scripts/guix-entrypoints" \
     "$repo/scripts/guix-generation-retention" \
     "$repo/scripts/guix-lisp-shell" \
+    "$repo/scripts/clojure-project" \
+    "$repo/scripts/clojure-project-check" \
     "$repo/scripts/lisp-project-check" \
     "$repo/scripts/guix-reconfigure" \
     "$repo/scripts/shell-check" \
@@ -48,6 +51,7 @@ shellcheck \
     "$repo/tests/guix-entrypoints-check" \
     "$repo/tests/guix-generation-retention-check" \
     "$repo/tests/guix-lisp-shell-check" \
+    "$repo/tests/clojure-project-check" \
     "$repo/tests/lisp-project-check" \
     "$repo/tests/guix-home-links-check" \
     "$repo/tests/guix-package-ownership-check" \
@@ -68,6 +72,7 @@ else
     printf '%s\n' 'SKIP: Guix Home link fixture (guile unavailable)'
 fi
 "$repo/tests/guix-lisp-shell-check"
+"$repo/tests/clojure-project-check"
 "$repo/tests/lisp-project-check"
 "$repo/tests/guix-package-ownership-check"
 "$repo/tests/guix-reconfigure-check"

@@ -2,6 +2,17 @@
 
 (require 'seq)
 
+(declare-function sk/clojure-debug "sk-clojure")
+(declare-function sk/clojure-definition "sk-clojure")
+(declare-function sk/clojure-docs "sk-clojure")
+(declare-function sk/clojure-eval-buffer "sk-clojure")
+(declare-function sk/clojure-eval-defun "sk-clojure")
+(declare-function sk/clojure-eval-last-sexp "sk-clojure")
+(declare-function sk/clojure-macroexpand "sk-clojure")
+(declare-function sk/clojure-project-check "sk-clojure")
+(declare-function sk/clojure-references "sk-clojure")
+(declare-function sk/clojure-repl "sk-clojure")
+
 ;; Emacs Lisp is native to Emacs:
 ;; Eldoc gives signatures/docs at point.  Rich help/eval/navigation come from
 ;; Emacs itself, not from lsp-mode.
@@ -191,7 +202,8 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
   :hook ((emacs-lisp-mode . puni-mode)
          (lisp-interaction-mode . puni-mode)
          (scheme-mode . puni-mode)
-         (lisp-mode . puni-mode)))
+         (lisp-mode . puni-mode)
+         (clojure-mode . puni-mode)))
 
 (defun sk/lisp--dialect ()
   "Return the active Lisp dialect symbol for the current buffer."
@@ -203,6 +215,8 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     'scheme)
    ((derived-mode-p 'lisp-mode 'common-lisp-mode 'sly-mrepl-mode)
     'common-lisp)
+   ((derived-mode-p 'clojure-mode 'sk/clojure-repl-mode)
+    'clojure)
    (t
     (user-error "Not in a Lisp-family buffer"))))
 
@@ -275,17 +289,21 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
          (let ((sly-buffer-connection connection))
            (sly-mrepl #'pop-to-buffer)))
         (t
-         (sk/lisp--start-common-lisp-project root)))))))
+         (sk/lisp--start-common-lisp-project root)))))
+    ('clojure
+     (sk/clojure-repl))))
 
 (defun sk/lisp-project-check ()
   "Run the current Lisp project's warning-fatal `make check' gate."
   (interactive)
-  (let* ((root (sk/lisp--project-root t))
-         (makefile (expand-file-name "Makefile" root))
-         (default-directory root))
-    (unless (file-readable-p makefile)
-      (user-error "Lisp project has no readable Makefile: %s" makefile))
-    (compile "make check")))
+  (if (derived-mode-p 'clojure-mode 'sk/clojure-repl-mode)
+      (sk/clojure-project-check)
+    (let* ((root (sk/lisp--project-root t))
+           (makefile (expand-file-name "Makefile" root))
+           (default-directory root))
+      (unless (file-readable-p makefile)
+        (user-error "Lisp project has no readable Makefile: %s" makefile))
+      (compile "make check"))))
 
 (defun sk/lisp-eval-buffer ()
   "Evaluate the current buffer with the current Lisp dialect backend."
@@ -296,7 +314,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     ('scheme
      (sk/lisp--call-scheme #'geiser-eval-buffer))
     ('common-lisp
-     (sk/lisp--call-common-lisp #'sly-eval-buffer))))
+     (sk/lisp--call-common-lisp #'sly-eval-buffer))
+    ('clojure
+     (sk/clojure-eval-buffer))))
 
 (defun sk/lisp-eval-defun ()
   "Evaluate the current top-level form with the Lisp dialect backend."
@@ -307,7 +327,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     ('scheme
      (sk/lisp--call-scheme #'geiser-eval-definition))
     ('common-lisp
-     (sk/lisp--call-common-lisp #'sly-eval-defun))))
+     (sk/lisp--call-common-lisp #'sly-eval-defun))
+    ('clojure
+     (sk/clojure-eval-defun))))
 
 (defun sk/lisp-eval-last-sexp ()
   "Evaluate the sexp before point with the Lisp dialect backend."
@@ -318,7 +340,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     ('scheme
      (sk/lisp--call-scheme #'geiser-eval-last-sexp))
     ('common-lisp
-     (sk/lisp--call-common-lisp #'sly-eval-last-expression))))
+     (sk/lisp--call-common-lisp #'sly-eval-last-expression))
+    ('clojure
+     (sk/clojure-eval-last-sexp))))
 
 (defun sk/lisp-docs ()
   "Show docs for the symbol at point using the active Lisp backend."
@@ -333,7 +357,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
       ('scheme
        (sk/lisp--call-scheme #'geiser-doc-symbol-at-point))
       ('common-lisp
-       (sk/lisp--call-common-lisp #'sly-describe-symbol symbol)))))
+       (sk/lisp--call-common-lisp #'sly-describe-symbol symbol))
+      ('clojure
+       (sk/clojure-docs)))))
 
 (defun sk/lisp-definition ()
   "Visit the definition at point through the active Lisp backend."
@@ -346,7 +372,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
       ('scheme
        (sk/lisp--call-scheme #'geiser-edit-symbol-at-point))
       ('common-lisp
-       (sk/lisp--call-common-lisp #'sly-edit-definition symbol)))))
+       (sk/lisp--call-common-lisp #'sly-edit-definition symbol))
+      ('clojure
+       (sk/clojure-definition)))))
 
 (defun sk/lisp-references ()
   "Show callers or references at point through the active Lisp backend."
@@ -361,7 +389,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
        ;; reports that limitation without falling through to textual search.
        (sk/lisp--call-scheme #'geiser-xref-callers))
       ('common-lisp
-       (sk/lisp--call-common-lisp #'sly-who-calls symbol)))))
+       (sk/lisp--call-common-lisp #'sly-who-calls symbol))
+      ('clojure
+       (sk/clojure-references)))))
 
 (defun sk/lisp-macroexpand ()
   "Macroexpand the form at point through the active Lisp backend."
@@ -373,7 +403,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     ('scheme
      (sk/lisp--call-scheme #'geiser-expand-last-sexp))
     ('common-lisp
-     (sk/lisp--call-common-lisp #'sly-macroexpand-1))))
+     (sk/lisp--call-common-lisp #'sly-macroexpand-1))
+    ('clojure
+     (sk/clojure-macroexpand))))
 
 (defun sk/lisp-debug ()
   "Instrument Elisp or display an active Geiser/SLY debugger."
@@ -400,7 +432,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
        (let ((buffer (car (sly-db-buffers connection))))
          (unless buffer
            (user-error "No active SLY debugger"))
-         (pop-to-buffer buffer))))))
+         (pop-to-buffer buffer))))
+    ('clojure
+     (sk/clojure-debug))))
 
 (provide 'sk-lisp)
 

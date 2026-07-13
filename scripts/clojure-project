@@ -1,0 +1,179 @@
+#!/bin/sh
+
+set -eu
+
+usage() {
+    printf 'usage: %s classpath|clojure|format|format-check|lint|lsp|repl [PROJECT] [-- CLOJURE-MAIN-ARGUMENT...]\n' \
+        "$0" >&2
+    exit 64
+}
+
+[ "$#" -ge 1 ] || usage
+action=$1
+shift
+
+case $action in
+    classpath|clojure|format|format-check|lint|lsp|repl) ;;
+    *) usage ;;
+esac
+
+project_input=.
+if [ "$#" -gt 0 ] && [ "$1" != -- ]; then
+    project_input=$1
+    shift
+fi
+if [ "$#" -gt 0 ] && [ "$1" = -- ]; then
+    shift
+fi
+if [ "$action" != clojure ] && [ "$#" -ne 0 ]; then
+    usage
+fi
+
+if ! project=$(CDPATH='' cd -- "$project_input" 2>/dev/null && pwd -P); then
+    printf 'clojure-project: project is not a directory: %s\n' \
+        "$project_input" >&2
+    exit 66
+fi
+
+profile=${GUIX_ENVIRONMENT:-}
+if [ -z "$profile" ] || [ ! -d "$profile" ]; then
+    printf '%s\n' \
+        'clojure-project: GUIX_ENVIRONMENT must name the pinned JVM profile' >&2
+    exit 69
+fi
+
+clojure_jar=$profile/share/java/clojure.jar
+if [ ! -r "$clojure_jar" ]; then
+    printf 'clojure-project: missing Guix Clojure JAR: %s\n' \
+        "$clojure_jar" >&2
+    exit 69
+fi
+
+classpath=$clojure_jar
+source_count=0
+for directory in src test; do
+    if [ -d "$project/$directory" ]; then
+        classpath=$classpath:$project/$directory
+        source_count=$((source_count + 1))
+    fi
+done
+if [ "$source_count" -eq 0 ]; then
+    printf 'clojure-project: project lacks both src/ and test/: %s\n' \
+        "$project" >&2
+    exit 66
+fi
+
+need_command() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        printf 'clojure-project: missing JVM-profile command: %s\n' "$1" >&2
+        exit 127
+    fi
+}
+
+run_java() {
+    need_command java
+    java -Djava.io.tmpdir="${TMPDIR:-/tmp}" \
+        -cp "$classpath" clojure.main "$@"
+}
+
+format_project() {
+    mode=$1
+    need_command cljfmt
+    (
+        cd "$project"
+        set -- "$mode" --quiet --config "$project/.cljfmt.edn" \
+            --project-root "$project"
+        for directory in src test; do
+            [ ! -d "$project/$directory" ] || set -- "$@" "$directory"
+        done
+        cljfmt "$@"
+    )
+}
+
+lint_project() {
+    need_command clj-kondo
+    (
+        cd "$project"
+        set -- --repro --cache false \
+            --config-dir "$project/.clj-kondo" \
+            --fail-level warning --lint
+        for directory in src test; do
+            [ ! -d "$project/$directory" ] || set -- "$@" "$directory"
+        done
+        clj-kondo "$@"
+    )
+}
+
+case $action in
+    classpath)
+        printf '%s\n' "$classpath"
+        ;;
+    clojure)
+        run_java "$@"
+        ;;
+    format)
+        format_project fix
+        ;;
+    format-check)
+        format_project check
+        ;;
+    lint)
+        lint_project
+        ;;
+    lsp)
+        need_command clojure-lsp
+        need_command cp
+        need_command cksum
+        need_command mkdir
+        need_command rm
+        cache_base=${XDG_CACHE_HOME:-${HOME:?HOME must be set}/.cache}
+        project_key=$(
+            printf '%s\n' "$project" | cksum |
+                while read -r checksum octets _rest; do
+                    printf '%s-%s\n' "$checksum" "$octets"
+                done
+        )
+        cache=$cache_base/clojure-lsp/projects/$project_key
+        analysis_cache=$cache/analysis
+        kondo_config=$cache/kondo-config
+        mkdir -p "$analysis_cache" "$kondo_config"
+        cache=$(CDPATH='' cd "$cache" && pwd -P)
+        analysis_cache=$(CDPATH='' cd "$analysis_cache" && pwd -P)
+        kondo_config=$(CDPATH='' cd "$kondo_config" && pwd -P)
+        cp "$project/.clj-kondo/config.edn" "$kondo_config/config.edn"
+        log=$cache/server.log
+        project_lsp_cache=$project/.lsp/.cache
+        project_kondo_cache=$project/.clj-kondo/.cache
+        lsp_cache_owned=0
+        kondo_cache_owned=0
+        [ -e "$project_lsp_cache" ] || lsp_cache_owned=1
+        [ -e "$project_kondo_cache" ] || kondo_cache_owned=1
+        cleanup_lsp() {
+            if [ "$lsp_cache_owned" -eq 1 ]; then
+                rm -rf -- "$project_lsp_cache"
+            fi
+            if [ "$kondo_cache_owned" -eq 1 ]; then
+                rm -rf -- "$project_kondo_cache"
+            fi
+        }
+        trap cleanup_lsp EXIT
+        trap 'cleanup_lsp; trap - EXIT; exit 129' HUP
+        trap 'cleanup_lsp; trap - EXIT; exit 130' INT
+        trap 'cleanup_lsp; trap - EXIT; exit 143' TERM
+        cd "$project"
+        clojure-lsp listen \
+            --project-root "$project" \
+            --log-path "$log" \
+            --settings "{:cache-path \"$analysis_cache\"
+                         :kondo-config-dir \"$kondo_config\"
+                         :copy-kondo-configs? false
+                         :java {:download-jdk-source? false
+                                :decompile-jar-as-project? false}}"
+        ;;
+    repl)
+        need_command java
+        cd "$project"
+        exec java -Djava.io.tmpdir="${TMPDIR:-/tmp}" \
+            -cp "$classpath" clojure.main
+        ;;
+esac

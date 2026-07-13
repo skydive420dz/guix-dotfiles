@@ -159,10 +159,39 @@ Current next action:
   - [X] Rotate the exact Home retention root to generation 38 with generation
     37 as the immediate fallback; retain System 85 and pull 5.  Live retention
     verification and the read-only rollback drill pass.
+- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 16: Clojure/JVM vertical slice][Slice 16: Clojure/JVM vertical slice]].
+  - [X] Implement explicit ownership: the JVM manifest supplies Guix OpenJDK,
+    the Clojure JAR, clojure-lsp, clj-kondo, and cljfmt; Home supplies only
+    emacs-clojure-mode, clj-kondo, and cljfmt; System supplies none of the
+    Clojure/JVM stack.
+  - [X] Implement the direct =java ... clojure.main= project wrapper and its
+    generic classpath, Clojure, formatter, linter, REPL, and LSP primitives.
+    Keep test/reload/check policy in the tracked fixture Makefile, keep
+    =deps.edn= metadata-only, and provide a project-keyed comint REPL plus
+    explicit lsp-mode/clojure-lsp startup.  Do not add CIDER or Maven-resolved
+    nREPL middleware at the pinned channels.
+  - [X] Pass the disposable JVM runtime/project checker and its format, lint,
+    and test negative controls; build candidate Home =mhjlpha5ww42= and pass
+    all 44 candidate batch ERT checks.  The unchanged System candidate remains
+    =6680dpbpy035=; neither candidate is activated by this evidence.
+  - [X] Pass the final complete candidate gate, including realized package and
+    executable leakage checks plus the disposable connected REPL, Home
+    cljfmt/Flycheck, and clojure-lsp checker through the production nested-shell
+    path.  The candidate remains unactivated.
+  - [ ] Push the implementation checkpoint.
+  - [ ] Run =ghr=, reboot, and pass fresh live Home/editor/project acceptance;
+    verify no checker-owned process, tracked-source mutation, or Maven/
+    dependency-HOME state remains.  The candidate gate must launch the
+    connected editor checker directly with pinned Guix, while its real REPL and
+    clojure-lsp processes use the production nested JVM-shell path.  Any
+    ignored =.lsp/.cache= or =.clj-kondo/.cache= state must remain inside the
+    disposable project copy; primary analysis, kondo, and log state must remain
+    project-keyed under isolated XDG state.  Then rotate the exact Home
+    retention root.
 
-Next action: begin Slice 16 as one Clojure/JVM runtime, editor, project, REPL,
-test, and validation vertical slice; do not treat a runtime-only install as
-acceptance.
+Next action: push the Slice 16 implementation checkpoint, then run =ghr=,
+reboot, and perform fresh live runtime/editor/project acceptance.  Do not treat
+the passing complete disposable candidate gate as activation or acceptance.
 
 Ordered follow-up:
 

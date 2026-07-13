@@ -78,9 +78,11 @@ live_expression_file="$repo/tests/emacs/live-check.el"
 batch_bootstrap="$repo/tests/emacs/batch-bootstrap.el"
 batch_checks="$repo/tests/emacs/batch-check.el"
 backend_checks="$repo/tests/emacs/backend-check.el"
+guix_lisp_shell="$repo/scripts/guix-lisp-shell"
+clojure_project="$repo/scripts/clojure-project"
 
 for file in "$live_expression_file" "$batch_bootstrap" "$batch_checks" \
-    "$backend_checks"; do
+    "$backend_checks" "$guix_lisp_shell" "$clojure_project"; do
     if [ ! -r "$file" ]; then
         printf 'preflight: unreadable %s\n' "$file" >&2
         exit 2
@@ -125,11 +127,13 @@ run_batch_checks() (
 
     mkdir -p "$source_root" "$isolated_home" "$isolated_tmp" \
         "$isolated_cache" "$isolated_config" "$isolated_data" \
-        "$isolated_state" "$isolated_runtime"
+        "$isolated_state" "$isolated_runtime" "$source_root/scripts"
     chmod 700 "$sandbox" "$isolated_home" "$isolated_tmp" "$isolated_runtime"
 
     cp -R "$repo/emacs" "$source_root/emacs"
     cp -R "$repo/fixtures" "$source_root/fixtures"
+    cp "$guix_lisp_shell" "$source_root/scripts/guix-lisp-shell"
+    cp "$clojure_project" "$source_root/scripts/clojure-project"
 
     env -i \
         HOME="$isolated_home" \

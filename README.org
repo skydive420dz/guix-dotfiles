@@ -85,7 +85,13 @@ next active slice.
   Common Lisp environment, three project gates, live editor, and disposable
   Geiser/SLY backend acceptance pass.  Home 38 is retained with Home 37 as its
   immediate fallback.
-- [ ] Continue Slices 16 through 19 in audit order.  Do not expand dialect
+- [ ] Activate and accept Slice 16.  Its implementation checkpoint supplies a
+  pinned Guix-only Clojure/JVM environment, tracked project workflow, explicit
+  comint REPL and clojure-lsp integration, and isolated candidate checks.
+  The complete disposable candidate gate passes, including 44/44 ERT and real
+  connected REPL/Flycheck/clojure-lsp checks; checkpoint push, =ghr=, reboot,
+  and fresh live acceptance remain pending.
+- [ ] Continue Slices 17 through 19 in audit order.  Do not expand dialect
   breadth ahead of the vertical runtime/editor/project/test acceptance for the
   currently supported dialects.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
@@ -205,6 +211,9 @@ generation 85; a final forced-SSH environment correction is accepted as Home
 generation 36.  Slice 14's structural-editor packages are accepted as Home
 generation 37.  Slice 15's package-lint addition is accepted as Home generation
 38; the repository-linked project/test workflow passes against that profile.
+The unactivated Slice 16 candidate expands the explicit Home set from 78 to 81
+with =emacs-clojure-mode=, =clj-kondo=, and =cljfmt=; those packages are not
+claimed as live until =ghr=, reboot, and acceptance complete.
 The reduced System consumes the 13 recovery specifications recorded in
 =guix/package-ownership.scm= plus =kitty-latest=.  System generation 85 has
 passed a fresh boot; accepted System generation 84 remains its immediate
@@ -218,7 +227,8 @@ Emacs is the sole overlap in the explicit ownership lists.  The realized System
 and Home profiles additionally overlap on Fish from the Home Fish service and
 Guile from System =%base-packages=; all three must resolve to identical store
 objects.  Any other top-level overlap, missing declared package, internal
-duplicate name, missing recovery/Home artifact, or persistent Clojure/Racket
+duplicate name, missing recovery/Home artifact, Clojure/JVM runtime leakage
+beyond the three declared Home editor-side packages, or persistent Racket
 leakage fails the gate.
 
 Apply with:
@@ -595,6 +605,20 @@ Common Lisp
                =SPC l r= starts SLY only from a marked project and supplies a
                strict ASDF source registry plus project-keyed XDG build cache.
                =fixtures/common-lisp= supplies primary/test ASDF systems.
+
+Clojure (Slice 16 candidate; not live-accepted)
+  Mode:        clojure-mode
+  Backend:     project-keyed clojure.main comint REPL; explicit
+               lsp-mode + clojure-lsp through =SPC c l=
+  Diagnostics: Flycheck + clj-kondo before LSP; LSP diagnostics after explicit
+               language-server startup
+  Formatter:   cljfmt through =SPC c f=
+  Notes:       Opening a file starts neither the JVM REPL nor clojure-lsp.
+               =SPC l r= enters the pinned JVM manifest and starts the direct
+               Guix-JAR REPL for the marked project.  =deps.edn= is metadata
+               only; the wrapper does not invoke tools.deps or Maven.
+               =fixtures/clojure= supplies source/tests and tracked formatter,
+               linter, and language-server settings.
 #+end_src
 
 Lisp-family editing has a shared leader surface over the native backend for
@@ -609,7 +633,9 @@ SPC l D  instrument Elisp or show the active Geiser/SLY debugger
 SPC l g  visit definition
 SPC l k  show docs at point
 SPC l m  macroexpand at point
+SPC l n  reload the current Clojure namespace
 SPC l p  run the project's make check gate
+SPC l q  stop the current project's Clojure REPL
 SPC l [ / ]  slurp backward / forward
 SPC l { / }  barf backward / forward
 SPC l (      wrap in round delimiters
@@ -626,12 +652,15 @@ keys:
 Elisp:        native eval/help commands; works in cold buffers
 Scheme:       Geiser commands; richer docs/completion after Guile REPL starts
 Common Lisp:  SLY commands; richer docs/completion after SBCL/SLY connects
+Clojure:      direct comint evaluation; clojure-lsp docs/navigation only after
+              explicit =SPC c l= startup
 #+end_src
 
 Cold Lisp files should provide mode detection, indentation, basic syntax, and
 the correct command surface. Rich semantic completion/docs are REPL-backed for
-Scheme and Common Lisp. Evaluation checks backend connection state before
-dispatch, while backend failures after that check retain their original error.
+Scheme and Common Lisp and explicitly clojure-lsp-backed for Clojure.
+Evaluation checks backend connection state before dispatch, while backend
+failures after that check retain their original error.
 Documentation uniformly reports =No symbol at point= instead of prompting for
 or describing an unintended symbol at whitespace.
 
@@ -640,9 +669,10 @@ slot 1, REPL and xref buffers to right slot 0, and compilation/debugger output
 to the bottom slot.  Opening a source file still never starts a runtime.
 
 =electric-pair-mode= owns delimiter insertion.  Puni is enabled only in Emacs
-Lisp, Lisp Interaction, Scheme, and Common Lisp buffers—including those modes
-inside Org source editing—and owns balanced deletion plus the explicit
-structural commands above.  Evil retains modal state and ordinary motions.
+Lisp, Lisp Interaction, Scheme, Common Lisp, and Clojure buffers—including
+those modes inside Org source editing—and owns balanced deletion plus the
+explicit structural commands above.  Evil retains modal state and ordinary
+motions.
 Puni does not redefine stock Evil =d=, =c=, or =x= as structural operators; use
 the Puni commands when balance preservation is required.
 
@@ -1198,9 +1228,14 @@ builds Kitty and its maintained Go inputs, evaluates quarantined Fish, builds
 each development manifest independently, then builds Home and System.  Full
 mode also enters the core manifest for the real Guile and ASDF project checks,
 runs the Elisp project against candidate Home Emacs/package-lint, executes the
-separate disposable connected Geiser/SLY checker, and performs isolated runtime
-and cross-tier leakage probes.  It validates the realized System/Home ownership
-boundary and critical profile artifacts; plan mode remains evaluation-only.
+separate disposable connected Geiser/SLY checker, and enters the JVM manifest
+for the isolated Clojure project checker.  The connected Clojure editor checker
+runs directly with the pinned Guix and candidate Home/System profiles; its REPL
+and language server must enter the JVM manifest through the copied production
+=guix-lisp-shell jvm -- clojure-project= path.  The gate also performs isolated
+runtime and cross-tier leakage probes.  It validates the realized System/Home
+ownership boundary and critical profile artifacts; plan mode remains
+evaluation-only.
 Guix may reuse already-authenticated
 immutable store objects; the separate isolated clean-clone test verifies the
 published =sk-guix= refs.  The gate never pulls, reconfigures,
@@ -1231,7 +1266,7 @@ composes three independently evaluable manifests:
 
 #+begin_src text
 core    Guile, readline/colorized modules, SBCL, and shared project/core tools
-jvm     clojure-tools with its wrapped Clojure/OpenJDK runtime
+jvm     OpenJDK, the Clojure JAR, clojure-lsp, clj-kondo, and cljfmt
 racket  full Racket with raco, RackUnit, docs, and GUI/runtime libraries
 #+end_src
 
@@ -1240,7 +1275,8 @@ List or enter them through the authenticated channel snapshot:
 #+begin_src sh
 scripts/guix-lisp-shell list
 scripts/guix-lisp-shell core
-scripts/guix-lisp-shell jvm -- clojure -Sdescribe
+scripts/guix-lisp-shell jvm -- make --no-print-directory -C fixtures/clojure check
+scripts/clojure-project-check
 scripts/guix-lisp-shell racket -- raco test fixtures/racket/basic-test.rkt
 scripts/lisp-project-check all
 #+end_src
@@ -1248,13 +1284,29 @@ scripts/lisp-project-check all
 The wrapper uses =--pure= and the exact repository channel lock.  It snapshots
 the channel file and supplies isolated trusted-channel state before invoking
 =guix time-machine=.  =--pure= cleans the inherited package environment but
-does not replace =HOME=; project tools may still use deliberate user state such
-as =~/.clojure=.  The full build gate instead supplies isolated HOME/cache/config
-state while proving real Guile/SBCL/Clojure/Racket commands and verifying that
-Racket does not leak into core/JVM and Clojure does not leak into Racket.  An
-ephemeral shell does not modify the already-running EXWM Emacs environment;
-CIDER and Racket editor integration therefore remain the explicit Slices 16
-and 17 work instead of being implied by package presence.
+does not replace =HOME=; the wrapper explicitly preserves =TMPDIR= and
+=XDG_CACHE_HOME= for bounded project state.  Other project tools may still use
+deliberate user state such as =~/.clojure=.  The Clojure project wrapper does
+not consult that state: it launches =clojure.main= directly with OpenJDK and
+the Guix-owned =share/java/clojure.jar= plus the project's =src= and =test=
+directories.  Its generic surface is =classpath=, =clojure=, =format=,
+=format-check=, =lint=, =repl=, and =lsp=; each project Makefile owns its own
+evaluation, reload, test, and =check= policy.  =deps.edn= records project
+paths/root metadata only; tools.deps and Maven dependency downloads are outside
+this workflow.  The full build gate supplies isolated HOME/cache/config state
+while proving real Guile/SBCL/Clojure/Racket commands and verifying that Racket
+does not leak into core/JVM and Clojure does not leak into Racket.
+
+The persistent Home profile owns =emacs-clojure-mode=, =clj-kondo=, and
+=cljfmt= for editor-side mode, diagnostics, and formatting.  The JVM manifest
+owns the complete runtime/tool closure above, while System owns no Clojure/JVM
+package.  Repository source adds a project-keyed =clojure.main= comint REPL and
+starts =lsp-mode=/=clojure-lsp= only on an explicit command through the same
+project wrapper.  CIDER is intentionally absent: the pinned channels do not
+provide the Guix-packaged nREPL and cider-nrepl middleware needed for its
+standard jack-in flow, and this slice does not permit Maven downloads to fill
+that gap.  Racket editor integration remains Slice 17 work instead of being
+implied by package presence.
 
 All three manifests explicitly include Coreutils because the pure project
 wrappers require =env=, =cp=, =mkdir=, =mktemp=, =rm=, and related primitives;

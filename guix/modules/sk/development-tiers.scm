@@ -24,11 +24,18 @@
             "guile-colorized"
             "sbcl")))
 
-;; clojure-tools already embeds Clojure and wraps the pinned OpenJDK.  Adding a
-;; second Clojure, JDK, or Leiningen would make runtime selection ambiguous.
+;; Keep the JVM path fully inside the pinned Guix closure.  Clojure is consumed
+;; as a JAR through OpenJDK, so no tools.deps command can consult Maven or write
+;; a project-local classpath cache.  The language server is project-shell-only;
+;; the manifest's linter and formatter copies keep CLI checks coherent with the
+;; deliberately Home-owned editor copies without putting any JVM in Home.
 (define %sk-jvm-lisp-specifications
   (append %sk-development-base-specifications
-          '("clojure-tools")))
+          '("openjdk"
+            "clojure"
+            "clojure-lsp"
+            "clj-kondo"
+            "cljfmt")))
 
 ;; Full Racket supplies raco, RackUnit, documentation, and the GUI/runtime
 ;; closure expected by the later editor-integration slice.

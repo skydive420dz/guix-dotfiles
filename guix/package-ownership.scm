@@ -1,12 +1,15 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; Home generation 38 accepts the 78-package user/editor base.  Package-lint is
-;; package 78 so the tracked Emacs Lisp project can run its complete check
-;; without mutable ELPA state.  The System list guarantees a tty shell, Kitty,
-;; and `emacs -Q'; normal configured
-;; EXWM still consumes the accepted base Home services and editor profile.
-;; Optional dialect environments live in guix/manifests and must not be added
-;; to either list merely for convenience.  Emacs is the sole overlap between
+;; The Slice 16 candidate expands the reviewed Home user/editor base to 81
+;; packages; live acceptance remains separate from this declaration.
+;; Package-lint keeps the tracked Emacs Lisp project independent of mutable
+;; ELPA state; Clojure mode, cljfmt, and clj-kondo provide the persistent
+;; editor-side Clojure integration without leaking its JVM runtime into Home.
+;; The System list guarantees a tty shell, Kitty, and `emacs -Q'; normal
+;; configured EXWM still consumes the accepted base Home services and editor
+;; profile.
+;; Optional dialect runtimes live in guix/manifests and must not be added to
+;; either list merely for convenience.  Emacs is the sole overlap between
 ;; the explicit lists below.  The realized profiles also deliberately overlap
 ;; on Fish (Home's Fish service) and Guile (System's %base-packages).
 
@@ -69,6 +72,7 @@
     "emacs-geiser"
     "emacs-geiser-guile"
     "emacs-sly"
+    "emacs-clojure-mode"
     "emacs-lua-mode"
     "emacs-json-mode"
     "emacs-org"
@@ -93,7 +97,9 @@
     "emacs-package-lint"))
 
 (define %guixpc-home-development-package-specifications
-  '("jq"
+  '("cljfmt"
+    "clj-kondo"
+    "jq"
     "guile"
     "sbcl"
     "lua"

@@ -315,9 +315,11 @@ Accepted boundary:
 
 ** Absent dialect families
 
-No complete runtime/editor/REPL/test slice exists for:
+The Clojure/JVM runtime/editor/REPL/test slice exists as an unactivated
+candidate and is not yet an accepted live environment.  No complete candidate
+slice exists for:
 
-- Clojure, ClojureScript, Leiningen, or Babashka;
+- ClojureScript, Leiningen, or Babashka;
 - Racket;
 - Fennel;
 - Janet;
@@ -1172,7 +1174,7 @@ Suggested tiers:
 #+begin_src text
 base workstation  Emacs/EXWM recovery, hardware and session services
 core Lisp         Elisp support, Guile/Geiser, SBCL/SLY, shared editor tools
-JVM Lisp          JDK, Clojure tooling, CIDER stack
+JVM Lisp          JDK, Clojure tooling, and an explicitly accepted editor path
 Racket            Racket runtime, editor integration, formatter/tests/docs
 experimental      optional small dialects, one accepted vertical slice at a time
 #+end_src
@@ -1208,12 +1210,15 @@ D-Bus services and editor profile.  A fixture rejects duplicate specifications,
 unexpected ownership overlap, or optional Clojure/Racket packages leaking into
 Home.
 
-The shared development-tier module now composes independently evaluable
+At the Slice 13 checkpoint, the shared development-tier module composed
+independently evaluable
 =core-lisp=, =jvm-lisp=, and =racket= manifests.  Core adds Guile
 readline/colorized support and SBCL; JVM uses only =clojure-tools= rather than
 competing Clojure/JDK/Leiningen installations; Racket uses the full distribution
-for =raco=, RackUnit, documentation, and later editor parity.  No experimental
-dialect is installed merely to fill a tier.
+for =raco=, RackUnit, documentation, and later editor parity.  The Slice 16
+candidate below deliberately supersedes that historical JVM manifest with its
+direct Guix JAR policy.  No experimental dialect is installed merely to fill a
+tier.
 
 =scripts/guix-lisp-shell= enters those manifests with =--pure= through a
 snapshot of the authenticated channel lock.  The pinned build gate evaluates
@@ -1849,6 +1854,109 @@ Land together:
 
 Do not mark the slice complete because =clojure= starts.  All listed layers must
 pass in the live editor.
+
+*** 2026-07-13 Slice 16 implementation checkpoint (activation pending)
+
+Prepared ownership:
+
+- the isolated JVM manifest owns Guix =openjdk=, the =clojure= JAR,
+  =clojure-lsp=, =clj-kondo=, and =cljfmt=;
+- Home expands from 78 to 81 explicit packages by owning
+  =emacs-clojure-mode=, =clj-kondo=, and =cljfmt= for the persistent editor
+  surface; and
+- System owns no Clojure, JVM, build-tool, language-server, formatter, or
+  linter package.  The ownership/leakage gate rejects =clojure=,
+  =clojure-tools=, =clojure-lsp=, OpenJDK, Leiningen, Gradle, Maven, Babashka,
+  and CIDER middleware in persistent System/Home profiles outside those three
+  deliberate Home editor-side packages.
+
+Runtime and dependency policy: =scripts/clojure-project= constructs one direct
+classpath from the JVM profile's =share/java/clojure.jar= and the selected
+project's =src= and =test= directories, then invokes =java ... clojure.main=.
+Its generic actions are =classpath=, =clojure=, =format=, =format-check=,
+=lint=, =repl=, and =lsp=.  Each project owns its evaluation,
+namespace-reload, test, and =make check= semantics; the tracked fixture defines
+those policies in its Makefile.  Neither layer invokes tools.deps, Leiningen,
+Gradle, Maven, or a mutable dependency resolver.  The fixture's =deps.edn= is
+limited to =src=/=test= path and project-root metadata; it has an empty
+dependency map and is not resolved.  A custom =.lsp/config.edn= classpath
+command calls the tracked Make target, which returns that same Guix-JAR
+classpath.  Primary state for clojure-lsp analysis, clj-kondo configuration,
+and server logs is redirected to isolated, project-keyed XDG cache paths.
+When lsp-mode terminates clojure-lsp, the server may still leave ignored
+=.lsp/.cache= or =.clj-kondo/.cache= state below the copied disposable project;
+any such state remains inside that copy and dies with the checker sandbox.
+The tracked source tree and dependency-resolution HOME state remain clean,
+rather than relying on a claim that every server-created project cache is
+removed during shutdown.
+
+Editor decision: the pinned channels contain =emacs-cider= but do not provide
+Guix-packaged nREPL and cider-nrepl middleware for the standard jack-in flow.
+Downloading that middleware from Maven would violate this slice's authenticated
+Guix-only dependency boundary.  The explicit alternative is therefore
+=emacs-clojure-mode= plus a project-keyed =clojure.main= comint REPL and
+explicit =lsp-mode=/=clojure-lsp= startup through the repository wrapper.
+=SPC l= dispatch covers project check, REPL start/stop, evaluation,
+macroexpansion, namespace reload, definition/reference navigation, and the
+explicitly unsupported debugger boundary; =SPC c l= remains manual LSP
+startup.  The REPL, documentation/xref, diagnostics, and compilation buffers
+reuse the accepted shared window policy.  Formatting is exact =cljfmt= stdin
+dispatch and Flycheck linting uses =clj-kondo=; neither silently starts a JVM
+backend.
+
+Tracked validation:
+
+- =fixtures/clojure= is a marked source/test project with tracked cljfmt,
+  clj-kondo, and clojure-lsp settings, a Make command surface, passing unit
+  tests, and deliberately unformatted, lint-invalid, and failing-test inputs;
+- =scripts/clojure-project-check= copies that fixture into isolated
+  HOME/XDG/TMP state, proves direct evaluation and reload return 42, runs
+  formatting, lint, and tests, exercises all three negative controls, checks
+  the Make/LSP classpath, rejects project-local cache/build state in that
+  CLI-only run, and verifies the tracked fixture is unchanged;
+- =scripts/emacs-clojure-check= runs candidate Home Emacs with the candidate
+  Home/System profiles and the pinned Guix executable.  From a copied source
+  tree, its real project-keyed comint REPL and clojure-lsp workspace both use
+  the production =guix-lisp-shell jvm -- clojure-project= command shape rather
+  than inheriting an outer JVM profile.  It tests evaluation, controlled
+  failure/recovery, namespace reload, definition/reference navigation,
+  diagnostics, and orderly shutdown, then rejects repository mutation,
+  dependency-download state, and checker-owned survivors.  Its forced-failure
+  checkpoint runs while both backends are live, and shell cleanup terminates
+  any process whose command line remains rooted in the disposable sandbox.
+  Ignored =.lsp/.cache=, =.clj-kondo/.cache=, or =target= state is permitted
+  only inside the disposable project copy; and
+- the full =scripts/guix-build-gate= builds the three development manifests and
+  candidate Home/System profiles.  It runs the CLI project checker inside the
+  JVM manifest, but launches the connected editor checker directly with pinned
+  Guix so that checker must exercise the production nested-shell path.  The
+  gate enforces ownership and unique-runtime absence and keeps =--plan=
+  evaluation-only.  Its fixture rejects missing artifacts, failed or reordered
+  Clojure stages, false connected-check success, accidental outer-JVM dispatch,
+  and candidate execution during =--plan=.
+
+Disposable GuixPC evidence: the JVM manifest realizes and the isolated runtime
+project checker passes direct evaluation/reload at 42, formatting, clj-kondo,
+unit tests, and the three negative controls without creating project-local
+state during that CLI-only run.  Candidate Home
+=/gnu/store/mhjlpha5ww42piwr8yvbzd4ski3n2im4-home= builds with the 81-package
+explicit ownership set, the unchanged System candidate remains
+=/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=, and the complete
+authenticated build gate passes.  That gate includes realized package and
+executable leakage checks, all 44/44 candidate batch ERT checks, the existing
+Geiser/SLY connected acceptance, and the real Clojure connected checker through
+the copied production nested-shell path.  The latter proves Java REPL
+evaluation/reload and recovery, Home cljfmt, real Flycheck/clj-kondo,
+clojure-lsp definition/reference/diagnostic requests, orderly shutdown, and no
+checker-owned survivor.  The deliberate failure control also exits nonzero
+with both backends live and leaves no disposable sandbox or recorded process
+behind.  These are disposable candidate results, not activated or live-session
+evidence.
+
+Checkpoint push, =ghr=, reboot, fresh live editor/project acceptance,
+survivor/cache inspection, and exact Home retention rotation remain pending.
+Until those complete, Home generation 38, System generation 85, and Pull
+generation 5 remain the accepted baseline and Slice 16 remains open.
 
 ** TODO Slice 17: Racket vertical slice
 :PROPERTIES:

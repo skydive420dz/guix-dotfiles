@@ -53,7 +53,11 @@ racket" ] || fail 'tier registry output changed'
 [ ! -e "$log" ] || fail 'list invoked Guix'
 
 : >"$log"
-HOME=$home GUIX=$fake_guix SK_FAKE_GUIX_LOG=$log \
+isolated_tmp=$sandbox/tmp
+isolated_cache=$sandbox/cache
+mkdir -p "$isolated_tmp" "$isolated_cache"
+HOME=$home TMPDIR=$isolated_tmp XDG_CACHE_HOME=$isolated_cache \
+    GUIX=$fake_guix SK_FAKE_GUIX_LOG=$log \
     GUILE_LOAD_COMPILED_PATH=/poison/compiled \
     GUILE_LOAD_PATH=/poison/source GUIX_BUILD_OPTIONS=poison \
     GUIX_PACKAGE_PATH=/poison/packages \
@@ -62,6 +66,10 @@ logged=$(cat "$log")
 case $logged in
     *time-machine*--allow-untrusted-channels=no*shell*"-L"*--pure*core-lisp.scm*--*guile*--version*) ;;
     *) fail 'core tier did not use the pinned pure manifest command' ;;
+esac
+case $logged in
+    *--pure*"-E"*"^TMPDIR$"*"-E"*"^XDG_CACHE_HOME$"*) ;;
+    *) fail 'pure shell did not preserve isolated TMPDIR and XDG cache' ;;
 esac
 case $logged in
     *"$repo/guix/channels.scm"*)

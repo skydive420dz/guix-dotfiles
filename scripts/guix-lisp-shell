@@ -81,4 +81,7 @@ XDG_CONFIG_HOME="$isolated_config" \
     --allow-untrusted-channels=no \
     --substitute-urls="$substitute_urls" \
     -- \
-    shell -L "$module_dir" --pure -m "$manifest" "$@"
+    shell -L "$module_dir" --pure \
+    -E '^TMPDIR$' \
+    -E '^XDG_CACHE_HOME$' \
+    -m "$manifest" "$@"

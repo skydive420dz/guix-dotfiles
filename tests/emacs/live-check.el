@@ -14,6 +14,7 @@
        (home-bin
         (file-name-as-directory
          (expand-file-name "~/.guix-home/profile/bin")))
+       (system-bin "/run/current-system/profile/bin/")
        (preferred-site-lisp
         (if home-editor-p
             (file-name-as-directory
@@ -33,7 +34,58 @@
            "fixtures/guile/src/sk/fixture/math.scm"
            "fixtures/common-lisp/.projectile"
            "fixtures/common-lisp/Makefile"
-           "fixtures/common-lisp/sk-fixture.asd")))
+           "fixtures/common-lisp/sk-fixture.asd"
+           "fixtures/clojure/.projectile"
+           "fixtures/clojure/deps.edn"
+           "fixtures/clojure/Makefile"
+           "fixtures/clojure/.lsp/config.edn"
+           "fixtures/clojure/.clj-kondo/config.edn"
+           "fixtures/clojure/.cljfmt.edn"
+           "fixtures/clojure/src/sk/fixture/core.clj"
+           "fixtures/clojure/test/sk/fixture/core_test.clj"
+           "scripts/guix-lisp-shell"
+           "scripts/clojure-project"
+           "scripts/clojure-project-check"
+           "scripts/emacs-clojure-check")))
+       (emacs-descendant-p
+        (lambda (pid)
+          (let ((current pid)
+                seen owned)
+            (while (and current (not owned) (not (memq current seen)))
+              (push current seen)
+              (let* ((attributes (process-attributes current))
+                     (parent (cdr (assq 'ppid attributes))))
+                (cond
+                 ((equal parent (emacs-pid))
+                  (setq owned t))
+                 ((and (integerp parent) (> parent 1))
+                  (setq current parent))
+                 (t
+                  (setq current nil)))))
+            owned)))
+       (clojure-child-process
+        (seq-find
+         (lambda (pid)
+           (let* ((attributes (process-attributes pid))
+                  (command
+                   (format "%s %s"
+                           (or (cdr (assq 'comm attributes)) "")
+                           (or (cdr (assq 'args attributes)) ""))))
+             (and (funcall emacs-descendant-p pid)
+                  (string-match-p
+                   "\\(?:^\\|/\\)\\(?:java\\|clojure-lsp\\)\\(?:[[:space:]]\\|$\\)"
+                   command))))
+         (list-system-processes)))
+       (live-clojure-repl
+        (seq-find
+         (lambda (buffer)
+           (and (buffer-live-p buffer)
+                (with-current-buffer buffer
+                  (let ((process (get-buffer-process buffer)))
+                    (and (derived-mode-p 'sk/clojure-repl-mode)
+                         (processp process)
+                         (process-live-p process))))))
+         (buffer-list)))
        (visible-profile-load-path
         (seq-find
          (lambda (entry)
@@ -143,6 +195,7 @@
          (cons "tracked core modules"
                (and (featurep 'sk-core)
                     (featurep 'sk-lisp)
+                    (featurep 'sk-clojure)
                     (featurep 'sk-format)
                     (featurep 'sk-keys)
                     (featurep 'sk-org)))
@@ -172,6 +225,9 @@
                (funcall owned-library-p "sly" "sly-[0-9]*"))
          (cons "Puni package generation"
                (funcall owned-library-p "puni" "puni-[0-9]*"))
+         (cons "Clojure mode package generation"
+               (funcall owned-library-p
+                        "clojure-mode" "clojure-mode-[0-9]*"))
          (cons "package-lint generation"
                (funcall owned-library-p
                         "package-lint" "package-lint-[0-9]*"))
@@ -207,12 +263,45 @@
                                     :test #'eq))
                     (featurep 'sly)
                     (fboundp 'sly-common-lisp-indent-function)))
+         (cons "Clojure editing ownership"
+               (and
+                (= 1 (cl-count #'sk/clojure-mode-setup clojure-mode-hook
+                               :test #'eq))
+                (not (memq #'lsp-deferred clojure-mode-hook))
+                (file-executable-p (expand-file-name "cljfmt" home-bin))
+                (file-executable-p (expand-file-name "clj-kondo" home-bin))
+                (seq-every-p
+                 (lambda (path) (not (file-executable-p path)))
+                 (list (expand-file-name "java" home-bin)
+                       (expand-file-name "clojure-lsp" home-bin)
+                       (expand-file-name "clojure" home-bin)
+                       (expand-file-name "clj" home-bin)
+                       (expand-file-name "java" system-bin)
+                       (expand-file-name "clojure-lsp" system-bin)
+                       (expand-file-name "clojure" system-bin)
+                       (expand-file-name "clj" system-bin)))))
+         (cons "tracked Clojure wrapper contract"
+               (and
+                (file-equal-p
+                 sk/clojure-guix-shell
+                 (expand-file-name "scripts/guix-lisp-shell" repo-root))
+                (file-equal-p
+                 sk/clojure-project-wrapper
+                 (expand-file-name "scripts/clojure-project" repo-root))
+                (equal
+                 lsp-clojure-custom-server-command
+                 (list sk/clojure-guix-shell "jvm" "--"
+                       sk/clojure-project-wrapper "lsp"))
+                (seq-every-p #'file-readable-p lisp-fixture-files)))
+         (cons "Clojure explicit-start policy"
+               (and (not clojure-child-process)
+                    (not live-clojure-repl)))
          (cons "scoped Puni hooks"
                (seq-every-p
                 (lambda (hook)
                   (= 1 (cl-count #'puni-mode (symbol-value hook) :test #'eq)))
                 '(emacs-lisp-mode-hook lisp-interaction-mode-hook
-                  scheme-mode-hook lisp-mode-hook)))
+                  scheme-mode-hook lisp-mode-hook clojure-mode-hook)))
          (cons "loaded Eshell highlighting"
                (or (not (featurep 'esh-mode))
                    (and (featurep 'eshell-syntax-highlighting)
@@ -227,6 +316,14 @@
          (cons "Lisp structural key"
                (eq (lookup-key evil-normal-state-map (kbd "SPC l ]"))
                    #'puni-slurp-forward))
+         (cons "Clojure explicit command keys"
+               (and
+                (eq (lookup-key evil-normal-state-map (kbd "SPC c l"))
+                    #'lsp)
+                (eq (lookup-key evil-normal-state-map (kbd "SPC l n"))
+                    #'sk/clojure-reload-namespace)
+                (eq (lookup-key evil-normal-state-map (kbd "SPC l q"))
+                    #'sk/clojure-stop)))
          (cons "Lisp project command surface"
                (and
                 (seq-every-p
@@ -275,6 +372,8 @@
           :snippets sk/snippets-directory
           :projectile (locate-library "projectile")
           :lsp (locate-library "lsp-mode")
+          :clojure-mode (locate-library "clojure-mode")
+          :clojure-child clojure-child-process
           :sly (locate-library "sly"))))
 
 ;;; live-check.el ends here

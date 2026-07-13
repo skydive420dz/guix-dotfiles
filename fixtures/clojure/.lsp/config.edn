@@ -1,0 +1,3 @@
+{:project-specs [{:project-path "deps.edn"
+                  :classpath-cmd ["make" "-s" "classpath"]}]
+ :source-paths #{"src" "test"}}

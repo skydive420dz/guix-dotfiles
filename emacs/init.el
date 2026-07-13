@@ -25,6 +25,7 @@
 (require 'sk-project)
 (require 'sk-lsp)
 (require 'sk-lisp)
+(require 'sk-clojure)
 (require 'sk-lua)
 (require 'sk-python)
 (require 'sk-shell)

@@ -1,0 +1,270 @@
+#!/bin/sh
+
+set -eu
+
+fail() {
+    printf 'emacs-clojure-check: %s\n' "$1" >&2
+    exit 1
+}
+
+usage() {
+    printf 'usage: %s [REPOSITORY]\n' "$0" >&2
+    exit 64
+}
+
+case $# in
+    0) repository_input=$(dirname "$0")/.. ;;
+    1) repository_input=$1 ;;
+    *) usage ;;
+esac
+
+if ! repo=$(CDPATH='' cd -- "$repository_input" 2>/dev/null && pwd -P); then
+    printf 'emacs-clojure-check: repository is not a directory: %s\n' \
+        "$repository_input" >&2
+    exit 66
+fi
+
+home_profile=${SK_EMACS_CHECK_HOME_PROFILE:-}
+system_profile=${SK_EMACS_CHECK_SYSTEM_PROFILE:-}
+guix=${GUIX:-}
+caller_cache=${XDG_CACHE_HOME:-}
+
+for pair in \
+    "Home:$home_profile" \
+    "System:$system_profile"; do
+    label=${pair%%:*}
+    profile=${pair#*:}
+    case $profile in
+        /*) ;;
+        *) fail "$label profile must be an absolute path" ;;
+    esac
+    [ -d "$profile" ] || fail "$label profile is not a directory: $profile"
+done
+
+case $guix in
+    /*) ;;
+    *) fail 'GUIX must name the absolute pinned Guix executable' ;;
+esac
+[ -x "$guix" ] || fail "pinned Guix is not executable: $guix"
+
+home_emacs=$home_profile/bin/emacs
+[ -x "$home_emacs" ] || \
+    fail "candidate Home Emacs is not executable: $home_emacs"
+
+for path in \
+    "$home_profile/bin/cljfmt" \
+    "$home_profile/bin/clj-kondo" \
+    "$repo/emacs/init.el" \
+    "$repo/guix/channels.scm" \
+    "$repo/guix/manifests/jvm-lisp.scm" \
+    "$repo/guix/modules/sk/development-tiers.scm" \
+    "$repo/fixtures/clojure/deps.edn" \
+    "$repo/fixtures/clojure/.lsp/config.edn" \
+    "$repo/fixtures/clojure/src/sk/fixture/core.clj" \
+    "$repo/fixtures/clojure/test/sk/fixture/core_test.clj" \
+    "$repo/scripts/guix-lisp-shell" \
+    "$repo/scripts/clojure-project" \
+    "$repo/tests/emacs/clojure-backend-check.el"; do
+    [ -r "$path" ] || fail "unreadable candidate input: $path"
+done
+
+for path in "$repo/scripts/guix-lisp-shell" \
+    "$repo/scripts/clojure-project"; do
+    [ -x "$path" ] || fail "candidate wrapper is not executable: $path"
+done
+
+candidate_path=$home_profile/bin:$system_profile/bin:$system_profile/sbin
+candidate_emacsloadpath=$home_profile/share/emacs/site-lisp:$system_profile/share/emacs/site-lisp:
+export PATH="$candidate_path"
+
+for command in chmod cksum cp dirname env find git ln mkdir mktemp rm sed sleep sort timeout tr; do
+    command -v "$command" >/dev/null 2>&1 || \
+        fail "missing candidate command: $command"
+done
+
+case ${SK_EMACS_CLOJURE_CHECK_BREAK:-0} in
+    0|1) ;;
+    *) fail 'SK_EMACS_CLOJURE_CHECK_BREAK must be 0 or 1' ;;
+esac
+
+fixture_state() {
+    (
+        cd "$repo/fixtures/clojure"
+        {
+            find . -type d -print
+            find . -type f -exec cksum {} \;
+        } | LC_ALL=C sort
+    )
+}
+
+fixture_before=$(fixture_state)
+repository_before=$(git -C "$repo" status --porcelain=v1 --untracked-files=all)
+
+sandbox=$(mktemp -d "${TMPDIR:-/tmp}/sk-emacs-clojure-check.XXXXXX")
+sandbox=$(CDPATH='' cd "$sandbox" && pwd -P)
+
+sandbox_processes() {
+    for process_directory in /proc/[0-9]*; do
+        [ -r "$process_directory/cmdline" ] || continue
+        pid=${process_directory##*/}
+        command_line=$(tr '\000' '\n' <"$process_directory/cmdline" 2>/dev/null) || \
+            continue
+        case $command_line in
+            *"$sandbox"*) printf '%s\n' "$pid" ;;
+        esac
+    done
+}
+
+signal_sandbox_processes() {
+    signal=$1
+    sandbox_processes | while IFS= read -r pid; do
+        kill "-$signal" "$pid" 2>/dev/null || true
+    done
+}
+
+cleanup() {
+    set +e
+    processes=$(sandbox_processes)
+    if [ -n "$processes" ]; then
+        signal_sandbox_processes TERM
+        attempt=0
+        while [ "$attempt" -lt 50 ] && [ -n "$(sandbox_processes)" ]; do
+            sleep 0.1
+            attempt=$((attempt + 1))
+        done
+        processes=$(sandbox_processes)
+        if [ -n "$processes" ]; then
+            signal_sandbox_processes KILL
+            sleep 0.1
+        fi
+        processes=$(sandbox_processes)
+        if [ -n "$processes" ]; then
+            printf 'emacs-clojure-check: unable to reap sandbox processes: %s\n' \
+                "$processes" >&2
+        fi
+    fi
+    rm -rf -- "$sandbox"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+source_root=$sandbox/source
+isolated_home=$sandbox/home
+isolated_tmp=$sandbox/tmp
+isolated_cache=$sandbox/xdg/cache
+isolated_config=$sandbox/xdg/config
+isolated_data=$sandbox/xdg/data
+isolated_state=$sandbox/xdg/state
+isolated_runtime=$sandbox/xdg/runtime
+descendant_pids=$isolated_state/live-descendant-pids
+descendant_details=$isolated_state/live-descendant-details
+
+mkdir -p "$source_root/fixtures/clojure" "$source_root/guix/manifests" \
+    "$source_root/guix/modules/sk" "$source_root/scripts" \
+    "$source_root/tests/emacs" "$isolated_home" "$isolated_tmp" \
+    "$isolated_cache" "$isolated_config" "$isolated_data" \
+    "$isolated_state" "$isolated_runtime"
+chmod 700 "$sandbox" "$isolated_home" "$isolated_tmp" "$isolated_runtime"
+
+# The build gate already owns an isolated, populated Guix cache.  Reuse only
+# that cache namespace when one was supplied; editor and clojure-lsp state
+# remain rooted in this checker's private XDG tree.
+case $caller_cache in
+    /*)
+        if [ -d "$caller_cache/guix" ]; then
+            ln -s "$caller_cache/guix" "$isolated_cache/guix"
+        fi
+        ;;
+esac
+
+cp -R "$repo/emacs" "$source_root/emacs"
+cp -R "$repo/fixtures/clojure/." "$source_root/fixtures/clojure/"
+cp "$repo/guix/channels.scm" "$source_root/guix/channels.scm"
+cp "$repo/guix/manifests/jvm-lisp.scm" \
+    "$source_root/guix/manifests/jvm-lisp.scm"
+cp "$repo/guix/modules/sk/development-tiers.scm" \
+    "$source_root/guix/modules/sk/development-tiers.scm"
+cp "$repo/scripts/guix-lisp-shell" "$source_root/scripts/guix-lisp-shell"
+cp "$repo/scripts/clojure-project" "$source_root/scripts/clojure-project"
+cp "$repo/tests/emacs/clojure-backend-check.el" \
+    "$source_root/tests/emacs/clojure-backend-check.el"
+
+if env -i \
+    HOME="$isolated_home" \
+    TMPDIR="$isolated_tmp" \
+    XDG_CACHE_HOME="$isolated_cache" \
+    XDG_CONFIG_HOME="$isolated_config" \
+    XDG_DATA_HOME="$isolated_data" \
+    XDG_STATE_HOME="$isolated_state" \
+    XDG_RUNTIME_DIR="$isolated_runtime" \
+    GUIX="$guix" \
+    PATH="$candidate_path" \
+    EMACSLOADPATH="$candidate_emacsloadpath" \
+    LANG=en_US.utf8 \
+    LC_ALL=en_US.utf8 \
+    TZ=UTC \
+    SK_EMACS_CLOJURE_SOURCE_ROOT="$source_root" \
+    SK_EMACS_CLOJURE_SANDBOX_ROOT="$sandbox" \
+    SK_EMACS_CLOJURE_HOME_PROFILE="$home_profile" \
+    SK_EMACS_CLOJURE_SYSTEM_PROFILE="$system_profile" \
+    SK_EMACS_CLOJURE_DESCENDANT_PIDS="$descendant_pids" \
+    SK_EMACS_CLOJURE_DESCENDANT_DETAILS="$descendant_details" \
+    SK_EMACS_CLOJURE_CHECK_BREAK="${SK_EMACS_CLOJURE_CHECK_BREAK:-0}" \
+    timeout --signal=TERM --kill-after=10 600 \
+    "$home_emacs" --batch -Q \
+    --eval '(setq user-emacs-directory (file-name-as-directory (expand-file-name ".emacs.d" (getenv "HOME"))))' \
+    --eval '(setq flycheck-check-syntax-automatically nil)' \
+    --load "$source_root/emacs/init.el" \
+    --eval '(run-hooks (quote after-init-hook))' \
+    --load "$source_root/tests/emacs/clojure-backend-check.el"; then
+    editor_status=0
+else
+    editor_status=$?
+fi
+
+fixture_after=$(fixture_state)
+repository_after=$(git -C "$repo" status --porcelain=v1 --untracked-files=all)
+
+[ -s "$descendant_pids" ] || \
+    fail 'connected editor never recorded live Guix/JVM descendants'
+
+survivors=
+if [ -r "$descendant_pids" ]; then
+    attempt=0
+    while [ "$attempt" -lt 100 ]; do
+        survivors=
+        while IFS= read -r pid; do
+            case $pid in
+                ''|*[!0-9]*)
+                    fail "invalid recorded descendant PID: $pid"
+                    ;;
+            esac
+            if kill -0 "$pid" 2>/dev/null; then
+                survivors="$survivors $pid"
+            fi
+        done <"$descendant_pids"
+        [ -n "$survivors" ] || break
+        sleep 0.1
+        attempt=$((attempt + 1))
+    done
+fi
+
+[ -z "$survivors" ] || {
+    [ ! -r "$descendant_details" ] || sed -n '1,200p' "$descendant_details" >&2
+    fail "OS descendants survived editor cleanup:$survivors"
+}
+
+processes=$(sandbox_processes)
+[ -z "$processes" ] || \
+    fail "sandbox processes survived editor cleanup: $processes"
+
+[ "$fixture_after" = "$fixture_before" ] || \
+    fail 'source Clojure fixture changed during the isolated editor check'
+[ "$repository_after" = "$repository_before" ] || \
+    fail 'repository state changed during the isolated editor check'
+[ "$editor_status" -eq 0 ] || \
+    fail "candidate editor process failed with status $editor_status"
+
+printf '%s\n' 'emacs-clojure-check: PASS'

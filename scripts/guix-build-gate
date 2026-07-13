@@ -29,7 +29,9 @@ elisp_fixture=$repo/fixtures/elisp/sk-example
 guile_fixture=$repo/fixtures/guile
 common_lisp_fixture=$repo/fixtures/common-lisp
 emacs_check=$repo/scripts/emacs-check
+emacs_clojure_check=$repo/scripts/emacs-clojure-check
 lisp_project_check=$repo/scripts/lisp-project-check
+clojure_project_check=$repo/scripts/clojure-project-check
 guile_init=$repo/guile/guile
 frontend_input=${SK_GUIX_FRONTEND_PROFILE:-$home/.config/guix/current}
 substitute_urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
@@ -55,7 +57,9 @@ for file in "$channels" "$home_config" "$system_config" \
     "$common_lisp_fixture/tests/package.lisp" \
     "$common_lisp_fixture/tests/core.lisp" \
     "$emacs_check" \
+    "$emacs_clojure_check" \
     "$lisp_project_check" \
+    "$clojure_project_check" \
     "$guile_init"; do
     if [ ! -r "$file" ]; then
         printf 'guix-build-gate: unreadable declaration: %s\n' "$file" >&2
@@ -63,7 +67,8 @@ for file in "$channels" "$home_config" "$system_config" \
     fi
 done
 
-for checker in "$emacs_check" "$lisp_project_check"; do
+for checker in "$emacs_check" "$emacs_clojure_check" "$lisp_project_check" \
+    "$clojure_project_check"; do
     if [ ! -x "$checker" ]; then
         printf 'guix-build-gate: candidate checker is not executable: %s\n' \
             "$checker" >&2
@@ -374,6 +379,15 @@ validate_system_recovery_profile() {
         fi
     done
 
+    for command in bb clj clj-kondo cljfmt clojure clojure-lsp gradle java \
+        javac lein mvn; do
+        if [ -e "$profile/bin/$command" ]; then
+            printf 'guix-build-gate: optional JVM command leaked into System: %s\n' \
+                "$command" >&2
+            exit 1
+        fi
+    done
+
     printf 'System recovery profile: PASS (%s)\n' "$profile"
 }
 
@@ -464,17 +478,17 @@ validate_home_profile_artifacts() {
         exit 1
     fi
 
-    for command in bat btop chafa chromium clang emacs fastfetch fzf gcc gdb \
-        guile jq lua lua-language-server make mediainfo pamixer pipemixer \
-        pylsp ranger ruff sbcl shellcheck shfmt; do
+    for command in bat btop chafa chromium clang cljfmt clj-kondo emacs \
+        fastfetch fzf gcc gdb guile jq lua lua-language-server make \
+        mediainfo pamixer pipemixer pylsp ranger ruff sbcl shellcheck shfmt; do
         if [ ! -x "$profile/bin/$command" ]; then
             printf 'guix-build-gate: Home profile lacks %s\n' "$command" >&2
             exit 1
         fi
     done
 
-    for library in eshell-syntax-highlighting geiser geiser-guile org \
-        package-lint puni sly use-package yasnippet; do
+    for library in clojure-mode eshell-syntax-highlighting geiser geiser-guile \
+        org package-lint puni sly use-package yasnippet; do
         found=0
         for path in "$profile/share/emacs/site-lisp/$library"-*; do
             if [ -e "$path" ]; then
@@ -495,6 +509,18 @@ validate_home_profile_artifacts() {
             'guix-build-gate: Home profile lacks Fish foreign-env support' >&2
         exit 1
     fi
+
+    # cljfmt and clj-kondo are deliberate Home editor tools.  The JVM,
+    # language server, dependency/build clients, and Clojure launchers must
+    # remain confined to the project manifest even when propagated inputs
+    # would not appear as top-level profile package records.
+    for command in bb clj clojure clojure-lsp gradle java javac lein mvn; do
+        if [ -e "$profile/bin/$command" ]; then
+            printf 'guix-build-gate: optional JVM command leaked into Home: %s\n' \
+                "$command" >&2
+            exit 1
+        fi
+    done
 }
 
 validate_nonlogin_fish_environment() {
@@ -579,13 +605,18 @@ validate_realized_package_ownership() {
         fi
     done
 
-    for package in clojure clojure-tools leiningen openjdk racket \
-        emacs-cider emacs-racket-mode; do
+    for package in babashka clojure clojure-tools clojure-lsp clj-kondo \
+        cljfmt gradle leiningen maven openjdk racket emacs-clojure-mode \
+        emacs-cider emacs-flycheck-clj-kondo emacs-racket-mode; do
         if profile_has_package "$system_records" "$package"; then
             printf 'guix-build-gate: optional dialect leaked into System: %s\n' \
                 "$package" >&2
             exit 1
         fi
+    done
+    for package in babashka clojure clojure-tools clojure-lsp gradle \
+        leiningen maven openjdk racket emacs-cider emacs-flycheck-clj-kondo \
+        emacs-racket-mode; do
         if profile_has_package "$home_records" "$package"; then
             printf 'guix-build-gate: optional dialect leaked into Home: %s\n' \
                 "$package" >&2
@@ -720,6 +751,47 @@ validate_core_lisp_project_fixtures() {
     printf '%s\n' 'Common Lisp project fixture: PASS'
 }
 
+assert_no_clojure_cache_escape() {
+    for path in \
+        "$isolated_home/.m2" \
+        "$isolated_home/.clojure" \
+        "$isolated_home/.babashka" \
+        "$isolated_home/.gradle" \
+        "$isolated_home/.lein" \
+        "$repo/fixtures/clojure/.cpcache" \
+        "$repo/fixtures/clojure/.lsp/.cache" \
+        "$repo/fixtures/clojure/.clj-kondo/.cache" \
+        "$repo/fixtures/clojure/target"; do
+        if [ -e "$path" ]; then
+            printf 'guix-build-gate: Clojure cache escaped isolation: %s\n' \
+                "$path" >&2
+            exit 1
+        fi
+    done
+}
+
+validate_jvm_clojure_project() {
+    output=$tmp/clojure-project-check.out
+    assert_no_clojure_cache_escape
+    if ! run_manifest_command "$manifest_dir/jvm-lisp.scm" \
+        env GUIX="$pinned_guix" "$clojure_project_check" "$repo" \
+        >"$output" 2>&1; then
+        cat "$output" >&2
+        printf '%s\n' \
+            'guix-build-gate: Clojure project fixture check failed' >&2
+        exit 1
+    fi
+    cat "$output"
+    if ! awk '$0 == "clojure-project-check: PASS" { pass = 1 }
+              END { exit !pass }' "$output"; then
+        printf '%s\n' \
+            'guix-build-gate: Clojure project fixture omitted its PASS marker' >&2
+        exit 1
+    fi
+    assert_no_clojure_cache_escape
+    printf '%s\n' 'Clojure project fixture: PASS'
+}
+
 validate_candidate_emacs() {
     home_result=$1
     system_result=$2
@@ -733,6 +805,38 @@ validate_candidate_emacs() {
         "$emacs_check" --batch-only "$repo"
 
     printf '%s\n' 'Candidate Emacs batch: PASS'
+}
+
+validate_candidate_emacs_clojure() {
+    home_result=$1
+    system_result=$2
+    output=$tmp/emacs-clojure-check.out
+
+    if ! HOME="$isolated_home" \
+        TMPDIR="$runtime_work" \
+        XDG_CACHE_HOME="$isolated_cache" \
+        XDG_CONFIG_HOME="$isolated_config" \
+        XDG_DATA_HOME="$isolated_data" \
+        XDG_STATE_HOME="$isolated_state" \
+        GUIX_ENVIRONMENT='' \
+        GUIX="$pinned_guix" \
+        SK_EMACS_CHECK_HOME_PROFILE="$home_result/profile" \
+        SK_EMACS_CHECK_SYSTEM_PROFILE="$system_result/profile" \
+        SK_EMACS_CLOJURE_CHECK_BREAK=0 \
+        "$emacs_clojure_check" "$repo" >"$output" 2>&1; then
+        cat "$output" >&2
+        printf '%s\n' \
+            'guix-build-gate: candidate Emacs Clojure backend check failed' >&2
+        exit 1
+    fi
+    cat "$output"
+    if ! awk '$0 == "emacs-clojure-check: PASS" { pass = 1 }
+              END { exit !pass }' "$output"; then
+        printf '%s\n' \
+            'guix-build-gate: candidate Emacs Clojure backend omitted its PASS marker' >&2
+        exit 1
+    fi
+    printf '%s\n' 'Candidate Emacs Clojure backend: PASS'
 }
 
 printf '%s\n' '== promoted sk-guix packages =='
@@ -765,9 +869,17 @@ if [ "$plan" -eq 0 ]; then
     assert_manifest_absent "$manifest_dir/core-lisp.scm" clojure
     assert_manifest_absent "$manifest_dir/core-lisp.scm" racket
 
-    run_manifest_command "$manifest_dir/jvm-lisp.scm" clojure -Sdescribe
-    run_manifest_command "$manifest_dir/jvm-lisp.scm" \
-        clojure -M -e '(println (+ 20 22))'
+    run_manifest_command "$manifest_dir/jvm-lisp.scm" java -version
+    run_manifest_command "$manifest_dir/jvm-lisp.scm" cljfmt --version
+    run_manifest_command "$manifest_dir/jvm-lisp.scm" clj-kondo --version
+    run_manifest_command "$manifest_dir/jvm-lisp.scm" clojure-lsp --version
+    validate_jvm_clojure_project
+    assert_manifest_absent "$manifest_dir/jvm-lisp.scm" bb
+    assert_manifest_absent "$manifest_dir/jvm-lisp.scm" clojure
+    assert_manifest_absent "$manifest_dir/jvm-lisp.scm" clj
+    assert_manifest_absent "$manifest_dir/jvm-lisp.scm" gradle
+    assert_manifest_absent "$manifest_dir/jvm-lisp.scm" lein
+    assert_manifest_absent "$manifest_dir/jvm-lisp.scm" mvn
     assert_manifest_absent "$manifest_dir/jvm-lisp.scm" guile
     assert_manifest_absent "$manifest_dir/jvm-lisp.scm" sbcl
     assert_manifest_absent "$manifest_dir/jvm-lisp.scm" racket
@@ -804,6 +916,7 @@ else
     validate_nonlogin_fish_environment "$system_result" "$home_result"
     validate_elisp_project_fixture "$home_result" "$system_result"
     validate_candidate_emacs "$home_result" "$system_result"
+    validate_candidate_emacs_clojure "$home_result" "$system_result"
 fi
 
 if [ "$plan" -eq 1 ]; then
