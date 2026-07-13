@@ -1663,6 +1663,78 @@ Acceptance gates:
 - Common Lisp Babel is either tested and enabled or remains disabled with a
   precise reason.
 
+*** 2026-07-13 Slice 15 implementation checkpoint (activation pending)
+
+Prepared source:
+
+- =fixtures/elisp/sk-example= is a marked Projectile package whose =make check=
+  runs warning-fatal byte compilation into temporary output, ERT, Checkdoc, and
+  package-lint.  =emacs-package-lint= becomes explicit Home package 78; it is
+  not borrowed from mutable ELPA state.
+- =fixtures/guile= is a marked module project with =guild compile -W3=,
+  SRFI-64 status propagation, commentary lookup, and a debug-VM REPL target.
+- =fixtures/common-lisp= is a marked, dependency-free primary/test ASDF system.
+  CLI tests use an explicit project-only source registry, ignore inherited ASDF
+  configuration, and compile under temporary output state.
+- =scripts/lisp-project-check= copies any selected fixture into an isolated
+  HOME/XDG/TMP tree and runs its =make check= gate.  The pinned full build gate
+  runs Guile and Common Lisp through the core manifest and Elisp through the
+  candidate Home Emacs/package-lint profile.  Coreutils is explicit in the
+  shared pure-manifest base because this wrapper requires its file/state tools.
+- =SPC l p/D/m/g/x= adds project check, debugger, macroexpand, definition, and
+  reference/caller workflows.  Geiser REPLs are project-scoped; SLY startup
+  receives a strict project source registry and project-keyed XDG ASDF cache.
+  Documentation/macroexpand, REPL/xref, and debugger/compilation buffers use the
+  shared right-1, right-0, and bottom-0 policy respectively.
+
+Common Lisp dependency decision: do not add Quicklisp, Qlot, or Roswell state.
+The fixture needs only bundled ASDF.  Future libraries must be =sbcl-*= packages
+in a project-specific authenticated Guix manifest, not additions to base Home
+or mutable user package trees.  Common Lisp Babel remains disabled because
+=ob-lisp= launches an independent inferior-lisp/comint path and therefore
+bypasses the reviewed SLY connection, strict source registry, cache, failure,
+and cleanup contract.  Reconsider it only when an adapter reuses those exact
+boundaries and passes the same acceptance probe.
+
+Validation safety incident: an exploratory connected SLY failure probe used a
+synchronous request against the live EXWM Emacs and wedged that request.  A
+mistaken cleanup signal then targeted the live Emacs PID, ending the graphical
+session.  SSH and tty1 remained healthy, and no repository, Guix declaration,
+or System/Home/Pull generation changed.  Recovery is a normal reboot; no
+reconfigure is required.  This is the reason the committed checker uses a
+second disposable batch Emacs, asynchronous backend requests, an outer timeout,
+and cleanup restricted to processes created by that checker.  The live phase
+remains observational only and never injects a backend failure.
+
+The earlier Geiser API probe also left disposable
+=/tmp/guile-slice15-probe= and a matching path below
+=~/.cache/guile/ccache/.../tmp/guile-slice15-probe/=.  They were not removed
+implicitly; clean them explicitly during the next operator-approved cleanup.
+
+Candidate evidence on GuixPC: the final =scripts/guix-build-gate= invocation
+exits zero from the mirrored tree.  It realizes candidate Home
+=/gnu/store/aghqh0si8x2pr0cmfyir7mgaks217yb6-home= and candidate System
+=/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system= without activation.  The
+three isolated CLI projects pass, including fatal package-lint; candidate batch
+Emacs passes 37/37 ERT checks; real Geiser/Guile and SLY/SBCL connections pass
+evaluation, semantic completion, docs, exact source navigation, caller xref,
+controlled failure/debugger abort, and post-failure recovery.  Repository state
+is unchanged after every disposable backend run.
+
+The runtime gate exposed and then fixed four acceptance-harness assumptions:
+Geiser keeps an uncaught condition's text in retort output, Slynk reads an
+entire evaluation string before ASDF can create a referenced package, SLY's
+printer annotates integers and preserves completion case, and its debugger
+condition is a styled line list rather than one string.  The corrected checks
+assert stable semantic markers and fail early on an unexpected debugger.
+
+Local reader/check-parens, =git diff --check=, shell syntax, ShellCheck,
+=tests/lisp-project-check=, =tests/guix-build-gate-check=, and
+=scripts/shell-check= also pass.  Do not mark Slice 15 complete until the
+implementation checkpoint is pushed, Home is activated, a fresh reboot and
+live project/editor acceptance pass, and the exact Home retention rotation is
+recorded here.
+
 ** TODO Slice 16: Clojure/JVM vertical slice
 :PROPERTIES:
 :audit_priority: P2

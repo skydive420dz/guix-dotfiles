@@ -43,6 +43,7 @@ fake_recovery_names=$tmp/fake-recovery-names
 fake_home_names=$tmp/fake-home-names
 fake_log=$tmp/guix.log
 fake_candidate_log=$tmp/candidate.log
+fake_elisp_failure=$tmp/fail-elisp-fixture
 gate=$sandbox_repo/scripts/guix-build-gate
 fake_emacs_check=$sandbox_repo/scripts/emacs-check
 fake_guix=$sandbox_home/.config/guix/current/bin/guix
@@ -59,10 +60,15 @@ mkdir -p "$sandbox_repo/scripts" "$sandbox_repo/guix/home" \
     "$fake_home/profile/bin" "$fake_home/profile/share/fish/functions" \
     "$fake_home/files/.config/fish"
 cp "$repo/scripts/guix-build-gate" "$gate"
+cp "$repo/scripts/lisp-project-check" \
+    "$sandbox_repo/scripts/lisp-project-check"
 cp "$repo/guile/guile" "$sandbox_repo/guile/guile"
 cp "$repo/guix/package-ownership.scm" \
     "$sandbox_repo/guix/package-ownership.scm"
-chmod +x "$gate"
+cp -R "$repo/fixtures/elisp" "$sandbox_repo/fixtures/elisp"
+cp -R "$repo/fixtures/guile" "$sandbox_repo/fixtures/guile"
+cp -R "$repo/fixtures/common-lisp" "$sandbox_repo/fixtures/common-lisp"
+chmod +x "$gate" "$sandbox_repo/scripts/lisp-project-check"
 cat >"$fake_emacs_check" <<'EOF'
 #!/bin/sh
 set -eu
@@ -74,6 +80,7 @@ set -eu
 [ "$SK_EMACS_CHECK_BREAK_LIVE" = 0 ]
 [ "$SK_EMACS_CHECK_BREAK_BATCH" = 0 ]
 [ "$SK_EMACS_CHECK_BREAK_WARNING" = 0 ]
+[ "$SK_EMACS_CHECK_BREAK_BACKEND" = 0 ]
 printf '%s\n' EMACS >>"$SK_FAKE_CANDIDATE_LOG"
 [ "${SK_FAKE_FAIL:-}" != emacs ] || exit 96
 printf '%s\n' 'emacs-check: PASS'
@@ -99,6 +106,9 @@ for command in bluetoothctl curl dbus-update-activation-environment emacs fish \
     printf '%s\n' '#!/bin/sh' 'exit 0' \
         >"$fake_system/profile/bin/$command"
     chmod +x "$fake_system/profile/bin/$command"
+done
+for command in chmod cp dirname env mkdir mktemp rm; do
+    ln -s "$(command -v "$command")" "$fake_system/profile/bin/$command"
 done
 
 write_fake_fish() {
@@ -127,6 +137,31 @@ for command in bat btop chafa chromium clang emacs fastfetch fzf gcc gdb \
     printf '%s\n' '#!/bin/sh' 'exit 0' >"$fake_home/profile/bin/$command"
     chmod +x "$fake_home/profile/bin/$command"
 done
+cat >"$fake_home/profile/bin/make" <<'EOF'
+#!/bin/sh
+set -eu
+fake_root=$(CDPATH='' cd "$(dirname "$0")/../../.." && pwd -P)
+run_root=${HOME%/home}
+[ "$#" -eq 4 ]
+[ "$1" = --no-print-directory ]
+[ "$2" = -C ]
+[ "$3" = "$run_root/source/elisp" ]
+[ "$4" = check ]
+[ "$TMPDIR" = "$run_root/tmp" ]
+[ "$XDG_CACHE_HOME" = "$run_root/xdg/cache" ]
+[ "$XDG_CONFIG_HOME" = "$run_root/xdg/config" ]
+[ "$XDG_DATA_HOME" = "$run_root/xdg/data" ]
+[ "$XDG_STATE_HOME" = "$run_root/xdg/state" ]
+[ "$XDG_RUNTIME_DIR" = "$run_root/xdg/runtime" ]
+[ "$SK_LISP_PROJECT_DIALECT" = elisp ]
+[ "$GUILE_AUTO_COMPILE" = 0 ]
+[ "$EMACS" = "$fake_root/fake-home/profile/bin/emacs" ]
+[ "$EMACSLOADPATH" = "$fake_root/fake-home/profile/share/emacs/site-lisp:$fake_root/fake-system/profile/share/emacs/site-lisp:" ]
+printf '%s\n' ELISP >>"$fake_root/candidate.log"
+[ ! -e "$fake_root/fail-elisp-fixture" ] || exit 98
+printf '%s\n' 'fixture-elisp-ready'
+EOF
+chmod +x "$fake_home/profile/bin/make"
 cat >"$fake_home/profile/bin/guile" <<'EOF'
 #!/bin/sh
 set -eu
@@ -162,7 +197,7 @@ printf '%s\n' candidate-guile-ready
 EOF
 chmod +x "$fake_home/profile/bin/guile"
 for library in eshell-syntax-highlighting-0 geiser-0 geiser-guile-0 org-0 \
-    puni-0 sly-0 use-package-0 yasnippet-0; do
+    package-lint-0 puni-0 sly-0 use-package-0 yasnippet-0; do
     mkdir -p "$fake_home/profile/share/emacs/site-lisp/$library"
 done
 printf '%s\n' 'function fenv' 'end' \
@@ -177,6 +212,7 @@ printf '%s\n' curl git fish emacs emacs-exwm bluez ncurses ripgrep vim \
     xset xwallpaper picom xrandr >"$fake_recovery_names"
 printf '%s\n' fish-foreign-env emacs emacs-desktop-environment emacs-geiser \
     emacs-sly emacs-puni emacs-eshell-syntax-highlighting emacs-yasnippet \
+    emacs-package-lint \
     guile sbcl lua-language-server python-lsp-server \
     ungoogled-chromium ranger shellcheck >"$fake_home_names"
 
@@ -201,8 +237,8 @@ reset_fake_home_manifest() {
     write_fake_manifest "$fake_home_manifest" \
         emacs emacs-desktop-environment emacs-eshell-syntax-highlighting \
         emacs-geiser emacs-puni emacs-sly emacs-yasnippet fish \
-        fish-foreign-env guile lua-language-server python-lsp-server ranger \
-        sbcl shellcheck ungoogled-chromium
+        emacs-package-lint fish-foreign-env guile lua-language-server \
+        python-lsp-server ranger sbcl shellcheck ungoogled-chromium
 }
 
 remove_fake_manifest_package() {
@@ -349,6 +385,12 @@ EOF_DESCRIBE
         ;;
     shell)
         case $* in
+            *core-lisp.scm*lisp-project-check*guile*)
+                stage=guile-fixture
+                ;;
+            *core-lisp.scm*lisp-project-check*common-lisp*)
+                stage=common-lisp-fixture
+                ;;
             *core-lisp.scm*clojure*|*core-lisp.scm*racket*|\
             *jvm-lisp.scm*guile*|*jvm-lisp.scm*sbcl*|*jvm-lisp.scm*racket*|\
             *racket.scm*guile*|*racket.scm*sbcl*|*racket.scm*clojure*)
@@ -391,6 +433,11 @@ chmod +x "$fake_guix"
 ln -s "$fake_guix" "$fake_profile/bin/guix"
 
 run_gate() {
+    if [ "${SK_FAKE_FAIL:-}" = elisp-fixture ]; then
+        : >"$fake_elisp_failure"
+    else
+        rm -f "$fake_elisp_failure"
+    fi
     : >"$fake_log"
     : >"$fake_candidate_log"
     PATH=$sandbox_home/bin:$PATH \
@@ -454,6 +501,8 @@ contains "$log" "$sandbox_repo/guix/manifests/jvm-lisp.scm"
 contains "$log" "$sandbox_repo/guix/manifests/racket.scm"
 contains "$log" 'guile'
 contains "$log" 'sbcl'
+contains "$log" "$sandbox_repo/scripts/lisp-project-check"
+contains "$log" 'common-lisp'
 contains "$log" 'clojure'
 contains "$log" 'raco'
 contains "$log" "$sandbox_repo/guix/home/guixpc.scm"
@@ -462,9 +511,16 @@ contains "$output" 'System recovery profile: PASS'
 contains "$output" 'Realized package ownership: PASS (overlap=emacs,fish,guile)'
 contains "$output" 'Candidate Guile profile: PASS'
 contains "$output" 'Non-login SSH Fish environment: PASS'
+contains "$output" 'Guile project fixture: PASS'
+contains "$output" 'Common Lisp project fixture: PASS'
+contains "$output" 'Candidate Emacs Lisp fixture: PASS'
 contains "$output" 'Candidate Emacs batch: PASS'
 contains "$(cat "$fake_candidate_log")" 'GUILE'
+contains "$(cat "$fake_candidate_log")" 'ELISP'
 contains "$(cat "$fake_candidate_log")" 'EMACS'
+[ "$(cat "$fake_candidate_log")" = "GUILE
+ELISP
+EMACS" ] || fail 'candidate validators ran out of order'
 
 override_profile=$tmp/override-bootstrap-profile
 mkdir -p "$override_profile/bin"
@@ -513,7 +569,7 @@ printf '%s\n' 'function fenv' 'end' \
 printf '%s\n' 'function fenv.main' 'end' \
     >"$fake_home/profile/share/fish/functions/fenv.main.fish"
 
-for library in eshell-syntax-highlighting puni yasnippet; do
+for library in eshell-syntax-highlighting package-lint puni yasnippet; do
     mv "$fake_home/profile/share/emacs/site-lisp/$library-0" \
         "$tmp/$library-0.absent"
     if output=$(run_gate 2>&1); then
@@ -535,7 +591,8 @@ for module in readline colorized; do
         "$fake_system/profile/share/guile/site/3.0/ice-9/$module.scm"
 done
 
-for package in emacs-eshell-syntax-highlighting emacs-puni emacs-yasnippet; do
+for package in emacs-eshell-syntax-highlighting emacs-package-lint emacs-puni \
+    emacs-yasnippet; do
     remove_fake_manifest_package "$fake_home_manifest" "$package"
     if output=$(run_gate 2>&1); then
         fail "Home manifest missing declared $package passed the gate"
@@ -570,12 +627,22 @@ if output=$(SK_FAKE_FAIL=guile-profile run_gate 2>&1); then
 fi
 contains "$output" 'candidate Guile startup failed'
 contains "$(cat "$fake_candidate_log")" 'GUILE'
+lacks "$(cat "$fake_candidate_log")" 'ELISP'
+lacks "$(cat "$fake_candidate_log")" 'EMACS'
+
+if output=$(SK_FAKE_FAIL=elisp-fixture run_gate 2>&1); then
+    fail 'candidate Emacs Lisp fixture failure passed the gate'
+fi
+contains "$output" 'candidate Emacs Lisp fixture check failed'
+contains "$(cat "$fake_candidate_log")" 'GUILE'
+contains "$(cat "$fake_candidate_log")" 'ELISP'
 lacks "$(cat "$fake_candidate_log")" 'EMACS'
 
 if output=$(SK_FAKE_FAIL=emacs run_gate 2>&1); then
     fail 'candidate Emacs batch failure passed the gate'
 fi
 contains "$(cat "$fake_candidate_log")" 'GUILE'
+contains "$(cat "$fake_candidate_log")" 'ELISP'
 contains "$(cat "$fake_candidate_log")" 'EMACS'
 lacks "$output" 'Candidate Emacs batch: PASS'
 
@@ -643,13 +710,13 @@ dry_run_count=$(printf '%s\n' "$plan_log" | awk '
     fail "plan used --dry-run $dry_run_count times; expected 7"
 
 for stage in channels provenance exwm promoted fish core-manifest jvm-manifest \
-    racket-manifest core-runtime jvm-runtime racket-runtime home system \
-    guile-profile emacs; do
+    racket-manifest core-runtime guile-fixture common-lisp-fixture jvm-runtime \
+    racket-runtime home system guile-profile elisp-fixture emacs; do
     if output=$(SK_FAKE_FAIL=$stage run_gate 2>&1); then
         fail "$stage failure passed the gate"
     fi
     case $stage in
-        channels|provenance|exwm|promoted|fish|core-manifest|jvm-manifest|racket-manifest|core-runtime|jvm-runtime|racket-runtime)
+        channels|provenance|exwm|promoted|fish|core-manifest|jvm-manifest|racket-manifest|core-runtime|guile-fixture|common-lisp-fixture|jvm-runtime|racket-runtime)
             if logged_command home; then
                 fail "$stage failure continued into Home"
             fi
@@ -665,6 +732,10 @@ for stage in channels provenance exwm promoted fish core-manifest jvm-manifest \
             fi
             ;;
         guile-profile)
+            lacks "$(cat "$fake_candidate_log")" 'ELISP'
+            lacks "$(cat "$fake_candidate_log")" 'EMACS'
+            ;;
+        elisp-fixture)
             lacks "$(cat "$fake_candidate_log")" 'EMACS'
             ;;
         emacs) ;;

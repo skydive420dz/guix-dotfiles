@@ -1,0 +1,168 @@
+#!/bin/sh
+set -eu
+
+case ${0##*/} in
+    make)
+        fake_root=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+        run_root=${HOME%/home}
+
+        [ "$HOME" != "$fake_root/real-home" ] || exit 70
+        [ "$TMPDIR" = "$run_root/tmp" ] || exit 71
+        [ "$XDG_CACHE_HOME" = "$run_root/xdg/cache" ] || exit 72
+        [ "$XDG_CONFIG_HOME" = "$run_root/xdg/config" ] || exit 73
+        [ "$XDG_DATA_HOME" = "$run_root/xdg/data" ] || exit 74
+        [ "$XDG_STATE_HOME" = "$run_root/xdg/state" ] || exit 75
+        [ "$XDG_RUNTIME_DIR" = "$run_root/xdg/runtime" ] || exit 76
+        [ "$LANG" = C ] || exit 77
+        [ "$LC_ALL" = C ] || exit 78
+        [ "$TZ" = UTC ] || exit 79
+        [ "$GUILE_AUTO_COMPILE" = 0 ] || exit 80
+        [ "$#" -eq 4 ] || exit 81
+        [ "$1" = --no-print-directory ] || exit 82
+        [ "$2" = -C ] || exit 83
+        project=$3
+        [ "$4" = check ] || exit 84
+        case $project in
+            "$run_root/source/"*) ;;
+            *) exit 85 ;;
+        esac
+        case $project in
+            "$fake_root/repo/"*) exit 86 ;;
+        esac
+
+        printf '%s\t%s\t%s\n' \
+            "${SK_LISP_PROJECT_DIALECT:?}" "$project" "$HOME" \
+            >>"$fake_root/make.log"
+
+        fail_dialect=
+        if [ -r "$fake_root/fail-dialect" ]; then
+            IFS= read -r fail_dialect <"$fake_root/fail-dialect" || :
+        fi
+        if [ "$fail_dialect" = "$SK_LISP_PROJECT_DIALECT" ]; then
+            exit 42
+        fi
+        exit 0
+        ;;
+esac
+
+source_repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+sandbox=$(mktemp -d "${TMPDIR:-/tmp}/lisp-project-check-test.XXXXXX")
+trap 'rm -rf -- "$sandbox"' EXIT HUP INT TERM
+
+fail() {
+    printf 'lisp-project-check-test: %s\n' "$1" >&2
+    exit 1
+}
+
+wrapper=$sandbox/lisp-project-check
+fake_bin=$sandbox/bin
+fake_repo=$sandbox/repo
+real_home=$sandbox/real-home
+outer_tmp=$sandbox/outer-tmp
+log=$sandbox/make.log
+
+mkdir -p "$fake_bin" "$real_home" "$outer_tmp" \
+    "$fake_repo/fixtures/elisp/sk-example" \
+    "$fake_repo/fixtures/guile" \
+    "$fake_repo/fixtures/common-lisp"
+cp "$source_repo/scripts/lisp-project-check" "$wrapper"
+chmod +x "$wrapper"
+ln -s "$source_repo/tests/lisp-project-check" "$fake_bin/make"
+
+for fixture in \
+    "$fake_repo/fixtures/elisp/sk-example" \
+    "$fake_repo/fixtures/guile" \
+    "$fake_repo/fixtures/common-lisp"; do
+    : >"$fixture/Makefile"
+    printf '%s\n' preserved >"$fixture/sentinel"
+done
+
+run_wrapper() {
+    HOME=$real_home TMPDIR=$outer_tmp PATH="$fake_bin:$PATH" \
+        "$wrapper" "$@"
+}
+
+assert_clean_outer_tmp() {
+    if [ -n "$(find "$outer_tmp" -mindepth 1 -print -quit)" ]; then
+        fail 'isolated run directory survived cleanup'
+    fi
+}
+
+assert_repo_unchanged() {
+    for fixture in \
+        "$fake_repo/fixtures/elisp/sk-example" \
+        "$fake_repo/fixtures/guile" \
+        "$fake_repo/fixtures/common-lisp"; do
+        [ "$(sed -n '1p' "$fixture/sentinel")" = preserved ] || \
+            fail "source fixture changed: $fixture"
+        [ "$(find "$fixture" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')" -eq 2 ] || \
+            fail "source fixture gained an artifact: $fixture"
+    done
+}
+
+: >"$log"
+run_wrapper all "$fake_repo" >/dev/null
+[ "$(sed -n '1s/\t.*//p' "$log")" = elisp ] || \
+    fail 'all did not route Elisp first'
+[ "$(sed -n '2s/\t.*//p' "$log")" = guile ] || \
+    fail 'all did not route Guile second'
+[ "$(sed -n '3s/\t.*//p' "$log")" = common-lisp ] || \
+    fail 'all did not route Common Lisp third'
+[ "$(wc -l <"$log" | tr -d ' ')" -eq 3 ] || \
+    fail 'all routed an unexpected number of projects'
+assert_clean_outer_tmp
+assert_repo_unchanged
+
+for dialect in elisp guile common-lisp; do
+    : >"$log"
+    run_wrapper "$dialect" "$fake_repo" >/dev/null
+    [ "$(sed -n '1s/\t.*//p' "$log")" = "$dialect" ] || \
+        fail "$dialect selected the wrong fixture"
+    [ "$(wc -l <"$log" | tr -d ' ')" -eq 1 ] || \
+        fail "$dialect invoked more than one fixture"
+    assert_clean_outer_tmp
+done
+
+printf '%s\n' guile >"$sandbox/fail-dialect"
+: >"$log"
+set +e
+output=$(run_wrapper all "$fake_repo" 2>&1)
+status=$?
+set -e
+[ "$status" -eq 42 ] || fail "fixture failure became status $status"
+case $output in
+    *'lisp-project-check: guile: FAIL (status 42)'*) ;;
+    *) fail 'fixture failure diagnostic was lost' ;;
+esac
+[ "$(sed -n '1s/\t.*//p' "$log")" = elisp ] || \
+    fail 'failure run skipped Elisp'
+[ "$(sed -n '2s/\t.*//p' "$log")" = guile ] || \
+    fail 'failure run did not reach Guile'
+[ "$(wc -l <"$log" | tr -d ' ')" -eq 2 ] || \
+    fail 'failure did not stop before Common Lisp'
+rm "$sandbox/fail-dialect"
+assert_clean_outer_tmp
+assert_repo_unchanged
+
+if run_wrapper unknown "$fake_repo" >/dev/null 2>&1; then
+    fail 'unknown selector passed'
+else
+    [ "$?" -eq 64 ] || fail 'unknown selector returned the wrong status'
+fi
+
+if run_wrapper all "$fake_repo" extra >/dev/null 2>&1; then
+    fail 'extra argument passed'
+else
+    [ "$?" -eq 64 ] || fail 'extra argument returned the wrong status'
+fi
+
+if run_wrapper elisp "$sandbox/missing" >/dev/null 2>&1; then
+    fail 'missing repository passed'
+else
+    [ "$?" -eq 66 ] || fail 'missing repository returned the wrong status'
+fi
+
+[ ! -e "$real_home/.cache" ] || fail 'real HOME gained cache state'
+assert_repo_unchanged
+
+printf '%s\n' 'lisp-project-check-test: PASS'

@@ -1,8 +1,8 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; Home generation 37 accepted the 77-package user/editor base.  The
-;; structural-editing slice added Puni and Eshell syntax highlighting as
-;; packages 76 and 77 after generation 36's 75-package baseline.  The
+;; Home generation 37 accepted the 77-package user/editor base.  Slice 15 adds
+;; package-lint as the 78th package so the tracked Emacs Lisp project can run
+;; its complete candidate-profile check without mutable ELPA state.  The
 ;; System list guarantees a tty shell, Kitty, and `emacs -Q'; normal configured
 ;; EXWM still consumes the accepted base Home services and editor profile.
 ;; Optional dialect environments live in guix/manifests and must not be added
@@ -89,7 +89,8 @@
     "emacs-doom-modeline"
     "emacs-all-the-icons"
     "emacs-all-the-icons-dired"
-    "emacs-all-the-icons-ibuffer"))
+    "emacs-all-the-icons-ibuffer"
+    "emacs-package-lint"))
 
 (define %guixpc-home-development-package-specifications
   '("jq"

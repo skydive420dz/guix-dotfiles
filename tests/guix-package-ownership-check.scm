@@ -30,8 +30,8 @@
            "ripgrep" "vim" "xset" "xwallpaper" "picom" "xrandr"))
  "reviewed 13-package recovery floor changed")
 
-(assert (= (length home) 77)
-        "reviewed Home ownership list must contain exactly 77 packages")
+(assert (= (length home) 78)
+        "reviewed Home ownership list must contain exactly 78 packages")
 
 (for-each
  (lambda (specification)
@@ -39,6 +39,7 @@
            (string-append "Home ownership lost " specification)))
  '("fish-foreign-env" "emacs" "emacs-use-package" "emacs-geiser" "emacs-sly"
    "emacs-puni" "emacs-eshell-syntax-highlighting" "emacs-yasnippet"
+   "emacs-package-lint"
    "guile" "sbcl" "python-lsp-server" "lua-language-server"
    "ungoogled-chromium" "ranger" "shellcheck"))
 
@@ -73,6 +74,7 @@
                    specification)))
  '("ungoogled-chromium" "ranger" "emacs-use-package" "emacs-geiser"
    "emacs-sly" "emacs-puni" "emacs-eshell-syntax-highlighting"
+   "emacs-package-lint"
    "sbcl" "python-lsp-server" "lua-language-server"
    "gcc-toolchain" "gdb" "shellcheck"))
 

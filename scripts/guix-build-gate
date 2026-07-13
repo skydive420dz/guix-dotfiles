@@ -25,7 +25,11 @@ system_config=$repo/guix/systems/guixpc.scm
 module_dir=$repo/guix/modules
 manifest_dir=$repo/guix/manifests
 racket_fixture=$repo/fixtures/racket/basic-test.rkt
+elisp_fixture=$repo/fixtures/elisp/sk-example
+guile_fixture=$repo/fixtures/guile
+common_lisp_fixture=$repo/fixtures/common-lisp
 emacs_check=$repo/scripts/emacs-check
+lisp_project_check=$repo/scripts/lisp-project-check
 guile_init=$repo/guile/guile
 frontend_input=${SK_GUIX_FRONTEND_PROFILE:-$home/.config/guix/current}
 substitute_urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
@@ -38,7 +42,20 @@ for file in "$channels" "$home_config" "$system_config" \
     "$manifest_dir/jvm-lisp.scm" \
     "$manifest_dir/racket.scm" \
     "$racket_fixture" \
+    "$elisp_fixture/Makefile" \
+    "$elisp_fixture/sk-example.el" \
+    "$elisp_fixture/test/sk-example-test.el" \
+    "$guile_fixture/Makefile" \
+    "$guile_fixture/src/sk/fixture/math.scm" \
+    "$guile_fixture/tests/math-test.scm" \
+    "$common_lisp_fixture/Makefile" \
+    "$common_lisp_fixture/sk-fixture.asd" \
+    "$common_lisp_fixture/src/package.lisp" \
+    "$common_lisp_fixture/src/core.lisp" \
+    "$common_lisp_fixture/tests/package.lisp" \
+    "$common_lisp_fixture/tests/core.lisp" \
     "$emacs_check" \
+    "$lisp_project_check" \
     "$guile_init"; do
     if [ ! -r "$file" ]; then
         printf 'guix-build-gate: unreadable declaration: %s\n' "$file" >&2
@@ -46,11 +63,13 @@ for file in "$channels" "$home_config" "$system_config" \
     fi
 done
 
-if [ ! -x "$emacs_check" ]; then
-    printf 'guix-build-gate: candidate Emacs checker is not executable: %s\n' \
-        "$emacs_check" >&2
-    exit 2
-fi
+for checker in "$emacs_check" "$lisp_project_check"; do
+    if [ ! -x "$checker" ]; then
+        printf 'guix-build-gate: candidate checker is not executable: %s\n' \
+            "$checker" >&2
+        exit 2
+    fi
+done
 
 case $frontend_input in
     /*) ;;
@@ -454,8 +473,8 @@ validate_home_profile_artifacts() {
         fi
     done
 
-    for library in eshell-syntax-highlighting geiser geiser-guile org puni sly \
-        use-package yasnippet; do
+    for library in eshell-syntax-highlighting geiser geiser-guile org \
+        package-lint puni sly use-package yasnippet; do
         found=0
         for path in "$profile/share/emacs/site-lisp/$library"-*; do
             if [ -e "$path" ]; then
@@ -663,6 +682,44 @@ validate_guile_profile_environment() {
     printf '%s\n' 'Candidate Guile profile: PASS'
 }
 
+validate_elisp_project_fixture() {
+    home_result=$1
+    system_result=$2
+    home_profile=$home_result/profile
+    system_profile=$system_result/profile
+
+    if ! HOME="$isolated_home" \
+        TMPDIR="$runtime_work" \
+        PATH="$home_profile/bin:$system_profile/bin:$system_profile/sbin" \
+        EMACS="$home_profile/bin/emacs" \
+        EMACSLOADPATH="$home_profile/share/emacs/site-lisp:$system_profile/share/emacs/site-lisp:" \
+        "$lisp_project_check" elisp "$repo"; then
+        printf '%s\n' \
+            'guix-build-gate: candidate Emacs Lisp fixture check failed' >&2
+        exit 1
+    fi
+
+    printf '%s\n' 'Candidate Emacs Lisp fixture: PASS'
+}
+
+validate_core_lisp_project_fixtures() {
+    if ! run_manifest_command "$manifest_dir/core-lisp.scm" \
+        "$lisp_project_check" guile "$repo"; then
+        printf '%s\n' \
+            'guix-build-gate: Guile project fixture check failed' >&2
+        exit 1
+    fi
+    printf '%s\n' 'Guile project fixture: PASS'
+
+    if ! run_manifest_command "$manifest_dir/core-lisp.scm" \
+        "$lisp_project_check" common-lisp "$repo"; then
+        printf '%s\n' \
+            'guix-build-gate: Common Lisp project fixture check failed' >&2
+        exit 1
+    fi
+    printf '%s\n' 'Common Lisp project fixture: PASS'
+}
+
 validate_candidate_emacs() {
     home_result=$1
     system_result=$2
@@ -672,6 +729,7 @@ validate_candidate_emacs() {
         SK_EMACS_CHECK_BREAK_LIVE=0 \
         SK_EMACS_CHECK_BREAK_BATCH=0 \
         SK_EMACS_CHECK_BREAK_WARNING=0 \
+        SK_EMACS_CHECK_BREAK_BACKEND=0 \
         "$emacs_check" --batch-only "$repo"
 
     printf '%s\n' 'Candidate Emacs batch: PASS'
@@ -703,6 +761,7 @@ if [ "$plan" -eq 0 ]; then
         sbcl --noinform --non-interactive \
         --eval '(require :asdf)' \
         --eval '(format t "~a~%" (asdf:asdf-version))'
+    validate_core_lisp_project_fixtures
     assert_manifest_absent "$manifest_dir/core-lisp.scm" clojure
     assert_manifest_absent "$manifest_dir/core-lisp.scm" racket
 
@@ -743,6 +802,7 @@ else
     validate_realized_package_ownership "$system_result" "$home_result"
     validate_guile_profile_environment "$system_result" "$home_result"
     validate_nonlogin_fish_environment "$system_result" "$home_result"
+    validate_elisp_project_fixture "$home_result" "$system_result"
     validate_candidate_emacs "$home_result" "$system_result"
 fi
 

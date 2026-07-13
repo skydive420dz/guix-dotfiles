@@ -79,7 +79,11 @@ next active slice.
   authored snippet set and explicit Geiser/SLY editing contract.  Live editor,
   Guile, structural, and isolated acceptance pass, and the exact Home retention
   root is rotated.
-- [ ] Continue Slices 15 through 19 in audit order.  Do not expand dialect
+- [ ] Complete Slice 15.  The three project fixtures, shared command/window
+  surface, strict Common Lisp project policy, and isolated connected-backend
+  harness are implemented, and the complete candidate-profile gate passes;
+  checkpoint, activation, post-reboot acceptance, and retention rotation remain.
+- [ ] Continue Slices 16 through 19 in audit order.  Do not expand dialect
   breadth ahead of the vertical runtime/editor/project/test acceptance for the
   currently supported dialects.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
@@ -460,7 +464,18 @@ tests/emacs/batch-bootstrap.el
   Batch warning capture and the sandbox write boundary.
 
 tests/emacs/batch-check.el
-  ERT mode/backend/diagnostics/formatter/state and Elisp foundation checks.
+  ERT mode/backend/project/diagnostics/formatter/state checks in an isolated
+  copied source tree.
+
+tests/emacs/backend-check.el
+  A second disposable Emacs process that owns its Guile and SBCL children and
+  exercises asynchronous Geiser/SLY evaluation, completion, docs, navigation,
+  controlled failure, and recovery without contacting live EXWM.
+
+scripts/lisp-project-check
+  Isolated =make check= dispatcher for the tracked Elisp, Guile, and Common
+  Lisp projects.  It copies fixtures under a temporary HOME/XDG tree and
+  propagates the first project failure.
 
 scripts/guix-reconfigure
   Shared current-Guix, privileged-sudo, source, substitute, and revision
@@ -547,7 +562,9 @@ Emacs Lisp
   Mode:        emacs-lisp-mode
   Backend:     Emacs native Eldoc/help/eval/navigation
   Diagnostics: none currently
-  Notes:       Not LSP-backed.
+  Notes:       Not LSP-backed.  =fixtures/elisp/sk-example= supplies a real
+               Projectile package with warning-fatal byte compilation, ERT,
+               Checkdoc, and Home-owned package-lint.
 
 Scheme / Guile
   Mode:        scheme-mode
@@ -558,7 +575,10 @@ Scheme / Guile
                Geiser owns its one scheme-mode activation path and never starts
                Guile merely because a file opens.  Its REPL supplies CAPF
                completion; the CLI .guile enables Readline and colorized output,
-               with colorization suppressed inside Emacs.
+               with colorization suppressed inside Emacs.  REPLs are separated
+               per Projectile root and add only the root and =src= load paths.
+               =fixtures/guile= supplies guild compilation, SRFI-64 tests, docs,
+               and a debug-VM REPL target.
 
 Common Lisp
   Mode:        lisp-mode for .lisp, .cl, and .asd
@@ -568,7 +588,9 @@ Common Lisp
                sly--lisp-indent-function consistently before and after a
                connection.  Loading SLY does not start SBCL.
                =inferior-lisp-program= is =sbcl=.
-               SLY is started manually with =M-x sly=; file open does not auto-start a REPL.
+               =SPC l r= starts SLY only from a marked project and supplies a
+               strict ASDF source registry plus project-keyed XDG build cache.
+               =fixtures/common-lisp= supplies primary/test ASDF systems.
 #+end_src
 
 Lisp-family editing has a shared leader surface over the native backend for
@@ -579,13 +601,18 @@ SPC l r  start or switch REPL
 SPC l b  evaluate buffer
 SPC l d  evaluate defun / top-level form
 SPC l e  evaluate last sexp
+SPC l D  instrument Elisp or show the active Geiser/SLY debugger
+SPC l g  visit definition
 SPC l k  show docs at point
+SPC l m  macroexpand at point
+SPC l p  run the project's make check gate
 SPC l [ / ]  slurp backward / forward
 SPC l { / }  barf backward / forward
 SPC l (      wrap in round delimiters
 SPC l u      unwrap / splice
 SPC l R      raise the current form
 SPC l t      transpose forms
+SPC l x      show callers/references
 #+end_src
 
 These are wrappers over existing commands, not replacements for native Emacs
@@ -603,6 +630,10 @@ Scheme and Common Lisp. Evaluation checks backend connection state before
 dispatch, while backend failures after that check retain their original error.
 Documentation uniformly reports =No symbol at point= instead of prompting for
 or describing an unintended symbol at whitespace.
+
+The shared display policy routes documentation and macroexpansion to right
+slot 1, REPL and xref buffers to right slot 0, and compilation/debugger output
+to the bottom slot.  Opening a source file still never starts a runtime.
 
 =electric-pair-mode= owns delimiter insertion.  Puni is enabled only in Emacs
 Lisp, Lisp Interaction, Scheme, and Common Lisp buffers—including those modes
@@ -896,7 +927,10 @@ Babel execution enabled:
 
 Common Lisp:
   Source blocks are available for notes and editing, but Babel execution is not
-  enabled until the SLY integration path is explicit and tested.
+  enabled.  Org's =ob-lisp= uses a separate inferior-lisp/comint path, bypassing
+  the accepted SLY connection, strict source registry, and project cache.  It
+  remains disabled until a Babel adapter can reuse those exact boundaries and
+  pass the same controlled-failure and cleanup checks.
 #+end_src
 
 Candidate native panels:
@@ -1158,9 +1192,12 @@ It creates isolated HOME, cache, and trusted-channel state, realizes the exact
 authenticated time-machine profile, verifies provenance and reviewed EXWM 0.35,
 builds Kitty and its maintained Go inputs, evaluates quarantined Fish, builds
 each development manifest independently, then builds Home and System.  Full
-mode also enters each pure manifest for isolated runtime and cross-tier leakage
-probes and validates the realized System/Home ownership boundary and critical
-profile artifacts; plan mode remains evaluation-only.  Guix may reuse already-authenticated
+mode also enters the core manifest for the real Guile and ASDF project checks,
+runs the Elisp project against candidate Home Emacs/package-lint, executes the
+separate disposable connected Geiser/SLY checker, and performs isolated runtime
+and cross-tier leakage probes.  It validates the realized System/Home ownership
+boundary and critical profile artifacts; plan mode remains evaluation-only.
+Guix may reuse already-authenticated
 immutable store objects; the separate isolated clean-clone test verifies the
 published =sk-guix= refs.  The gate never pulls, reconfigures,
 switches/deletes generations, or runs garbage collection.
@@ -1189,7 +1226,7 @@ packages.  The shared module in =guix/modules/sk/development-tiers.scm=
 composes three independently evaluable manifests:
 
 #+begin_src text
-core    Guile, readline/colorized modules, SBCL, and small shared project tools
+core    Guile, readline/colorized modules, SBCL, and shared project/core tools
 jvm     clojure-tools with its wrapped Clojure/OpenJDK runtime
 racket  full Racket with raco, RackUnit, docs, and GUI/runtime libraries
 #+end_src
@@ -1201,6 +1238,7 @@ scripts/guix-lisp-shell list
 scripts/guix-lisp-shell core
 scripts/guix-lisp-shell jvm -- clojure -Sdescribe
 scripts/guix-lisp-shell racket -- raco test fixtures/racket/basic-test.rkt
+scripts/lisp-project-check all
 #+end_src
 
 The wrapper uses =--pure= and the exact repository channel lock.  It snapshots
@@ -1213,6 +1251,18 @@ Racket does not leak into core/JVM and Clojure does not leak into Racket.  An
 ephemeral shell does not modify the already-running EXWM Emacs environment;
 CIDER and Racket editor integration therefore remain the explicit Slices 16
 and 17 work instead of being implied by package presence.
+
+All three manifests explicitly include Coreutils because the pure project
+wrappers require =env=, =cp=, =mkdir=, =mktemp=, =rm=, and related primitives;
+they do not rely on an inherited workstation PATH.
+
+The Common Lisp dependency policy is deliberately smaller than a second package
+manager: the tracked ASDF system has no external dependency, discovery uses a
+strict project-only =CL_SOURCE_REGISTRY=, and compiled output goes to temporary
+or project-keyed XDG cache state.  Quicklisp, Qlot, and Roswell are not consulted.
+When a project needs a library, add its =sbcl-*= package to that project's
+authenticated Guix manifest; do not add mutable =~/.quicklisp= or Roswell state
+and do not promote project-only libraries into the base Home profile.
 
 * Generation retention and rollback
 

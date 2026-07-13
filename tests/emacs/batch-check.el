@@ -262,6 +262,10 @@
                          geiser-capf--for-symbol))
        (should (memq function completion-at-point-functions)))
      (should (equal scheme-program-name "guile"))
+     (should (eq geiser-repl-current-project-function
+                 #'sk/lisp--project-root))
+     (should geiser-repl-per-project-p)
+     (should (equal geiser-repl-add-project-paths '("." "src")))
      (should (eq (sk/lisp--dialect) 'scheme))))
   (sk/check-with-eldoc-fixture
    "common-lisp/sample.lisp"
@@ -279,7 +283,15 @@
   (dolist (extension '("cl" "asd"))
     (sk/check-with-eldoc-fixture
      (concat "common-lisp/sample." extension)
-     (lambda () (should (eq major-mode 'lisp-mode))))))
+     (lambda () (should (eq major-mode 'lisp-mode)))))
+  (dolist (case '((inferior-emacs-lisp-mode . elisp)
+                  (geiser-repl-mode . scheme)
+                  (sly-mrepl-mode . common-lisp)))
+    (with-temp-buffer
+      ;; Do not start a runtime merely to verify the global leader dispatcher
+      ;; recognizes its already-connected REPL modes.
+      (setq major-mode (car case))
+      (should (eq (sk/lisp--dialect) (cdr case))))))
 
 (ert-deftest sk/check-lisp-activation-and-indent-ownership ()
   (should (= 1 (cl-count #'geiser-mode--maybe-activate scheme-mode-hook
@@ -326,7 +338,7 @@
                    "No Scheme REPL is active; run SPC l r first")
                   (sk/lisp--call-common-lisp
                    sk/lisp--common-lisp-repl-active-p
-                   "No Common Lisp REPL is active; run SPC l r first")))
+                   "No project SLY REPL is active; run SPC l r from this project")))
     (pcase-let ((`(,dispatcher ,predicate ,message) case))
       (let (called)
         (cl-letf (((symbol-function predicate) (lambda () nil))
@@ -386,6 +398,291 @@
           (should last-called)
           (should buffer-called))))))
 
+(ert-deftest sk/check-lisp-project-discovery-and-check-command ()
+  (dolist (case '(("elisp/sk-example/test/sk-example-test.el"
+                   . "elisp/sk-example")
+                  ("guile/src/sk/fixture/math.scm" . "guile")
+                  ("common-lisp/tests/core.lisp" . "common-lisp")))
+    (let* ((file (sk/check-fixture-path (car case)))
+           (expected (file-name-as-directory
+                      (sk/check-fixture-path (cdr case))))
+           (default-directory (file-name-directory file)))
+      (with-temp-buffer
+        (setq buffer-file-name file)
+        (should (file-equal-p (sk/lisp--project-root t) expected)))))
+  (let* ((file (sk/check-fixture-path "guile/src/sk/fixture/math.scm"))
+         (expected (file-name-as-directory (sk/check-fixture-path "guile")))
+         (default-directory (file-name-directory file))
+         command
+         command-directory)
+    (with-temp-buffer
+      (setq buffer-file-name file)
+      (cl-letf (((symbol-function 'compile)
+                 (lambda (value)
+                   (setq command value
+                         command-directory default-directory)
+                   'fixture-compilation)))
+        (should (eq (sk/lisp-project-check) 'fixture-compilation))))
+    (should (equal command "make check"))
+    (should (file-equal-p command-directory expected)))
+  (let ((root (make-temp-file "sk-lisp-no-makefile." t)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'sk/lisp--project-root)
+                   (lambda (&optional _required)
+                     (file-name-as-directory root))))
+          (should-error (sk/lisp-project-check) :type 'user-error))
+      (delete-directory root t))))
+
+(ert-deftest sk/check-common-lisp-project-environment-policy ()
+  (let* ((root (file-name-as-directory
+                (sk/check-fixture-path "common-lisp")))
+         (environment (sk/lisp--common-lisp-process-environment root))
+         (source-registry
+          (let ((process-environment environment))
+            (getenv "CL_SOURCE_REGISTRY")))
+         (output-translations
+          (let ((process-environment environment))
+            (getenv "ASDF_OUTPUT_TRANSLATIONS"))))
+    (should (string-match-p (regexp-quote root) source-registry))
+    (should (string-match-p ":ignore-inherited-configuration"
+                            source-registry))
+    (should (string-match-p ":ignore-inherited-configuration"
+                            output-translations))
+    (should (string-match-p
+             (regexp-quote
+              (file-name-as-directory
+               (expand-file-name "asdf" sk/cache-directory)))
+             output-translations))
+    (should-not (equal source-registry (getenv "CL_SOURCE_REGISTRY")))
+    (should-not (equal output-translations
+                       (getenv "ASDF_OUTPUT_TRANSLATIONS"))))
+  ;; `ob-lisp' uses an independent inferior-lisp/comint path, not the accepted
+  ;; SLY connection and strict ASDF environment, so Common Lisp Babel stays off.
+  (should-not (alist-get 'lisp org-babel-load-languages)))
+
+(ert-deftest sk/check-common-lisp-project-connection-isolation ()
+  (let* ((root-a (file-name-as-directory
+                  (sk/check-fixture-path "common-lisp")))
+         (root-b (make-temp-file "sk-cl-project-b." t))
+         (root-c (make-temp-file "sk-cl-project-c." t))
+         (connection-a
+          (make-pipe-process :name "sk-sly-project-a" :noquery t))
+         (connection-b
+          (make-pipe-process :name "sk-sly-project-b" :noquery t)))
+    (unwind-protect
+        (progn
+          (dolist (root (list root-b root-c))
+            (with-temp-file (expand-file-name ".projectile" root)))
+          (setq root-b (file-name-as-directory (file-truename root-b))
+                root-c (file-name-as-directory (file-truename root-c)))
+          (process-put connection-a 'sk/lisp-project-root root-a)
+          (process-put connection-b 'sk/lisp-project-root root-b)
+          (let ((sly-net-processes (list connection-a connection-b))
+                (sly-default-connection connection-a)
+                (sly-buffer-connection nil)
+                (default-directory root-b)
+                observed)
+            (with-temp-buffer
+              (setq default-directory root-b)
+              (cl-letf (((symbol-function 'sk/check-sly-project-command)
+                         (lambda ()
+                           (interactive)
+                           (setq observed (sly-current-connection)))))
+                (sk/lisp--call-common-lisp
+                 #'sk/check-sly-project-command))
+              (should (eq observed connection-b))
+              (should-not (eq observed sly-default-connection))))
+          (let ((sly-net-processes (list connection-a connection-b))
+                (sly-default-connection connection-a)
+                (sly-buffer-connection nil)
+                (default-directory root-c)
+                started-root)
+            (with-temp-buffer
+              (setq major-mode 'lisp-mode
+                    default-directory root-c)
+              (cl-letf (((symbol-function 'sk/lisp--start-common-lisp-project)
+                         (lambda (root) (setq started-root root))))
+                (sk/lisp-repl))
+              (should (equal started-root root-c))))
+          (let ((sly-net-processes (list connection-a connection-b))
+                (sly-default-connection connection-a)
+                (sly-buffer-connection nil)
+                (default-directory root-b)
+                switched-connection)
+            (with-temp-buffer
+              (setq major-mode 'lisp-mode
+                    default-directory root-b)
+              (cl-letf (((symbol-function 'sly-mrepl)
+                         (lambda (&optional _display-action)
+                           (setq switched-connection
+                                 (sly-current-connection)))))
+                (sk/lisp-repl))
+              (should (eq switched-connection connection-b))
+              (should (eq sly-buffer-connection connection-b)))))
+      (dolist (connection (list connection-a connection-b))
+        (when (process-live-p connection)
+          (delete-process connection)))
+      (delete-directory root-b t)
+      (delete-directory root-c t))))
+
+(ert-deftest sk/check-common-lisp-project-start-tags-connection ()
+  (let* ((root (file-name-as-directory
+                (sk/check-fixture-path "common-lisp")))
+         (source (generate-new-buffer " *sk-sly-project-source*"))
+         (connection
+          (make-pipe-process :name "sk-sly-project-start" :noquery t))
+         (repl (generate-new-buffer " *sk-sly-project-repl*"))
+         start-arguments
+         mrepl-connection
+         displayed-repl)
+    (unwind-protect
+        (with-current-buffer source
+          (setq default-directory root)
+          (cl-letf (((symbol-function 'executable-find)
+                     (lambda (_program) "/gnu/store/fake-sbcl/bin/sbcl"))
+                    ((symbol-function 'sly-start)
+                     (lambda (&rest arguments)
+                       (setq start-arguments arguments)
+                       (let ((callback (plist-get arguments :init-function)))
+                         (cl-letf (((symbol-function 'sly-current-connection)
+                                    (lambda () connection)))
+                           (funcall callback)))
+                       'fixture-inferior-buffer))
+                    ((symbol-function 'sly-mrepl)
+                     (lambda (&optional _display-action)
+                       (setq mrepl-connection sly-buffer-connection)
+                       repl))
+                    ((symbol-function 'pop-to-buffer)
+                     (lambda (buffer &rest _arguments)
+                       (setq displayed-repl buffer))))
+            (should (eq (sk/lisp--start-common-lisp-project root)
+                        'fixture-inferior-buffer)))
+          (should (equal (plist-get start-arguments :program)
+                         "/gnu/store/fake-sbcl/bin/sbcl"))
+          (should (equal (plist-get start-arguments :directory) root))
+          (should (equal (process-get connection 'sk/lisp-project-root)
+                         root))
+          (should (eq sly-buffer-connection connection))
+          (should (eq mrepl-connection connection))
+          (should (eq displayed-repl repl))
+          (with-current-buffer repl
+            (should (equal default-directory root))
+            (should (eq sly-buffer-connection connection))))
+      (when (process-live-p connection)
+        (delete-process connection))
+      (kill-buffer repl)
+      (kill-buffer source))))
+
+(ert-deftest sk/check-lisp-definition-reference-and-macro-dispatch ()
+  (with-temp-buffer
+    (insert "sk-example-add")
+    (goto-char (point-min))
+    (emacs-lisp-mode)
+    (let (definition references macroexpand)
+      (cl-letf (((symbol-function 'xref-find-definitions)
+                 (lambda (symbol) (setq definition symbol)))
+                ((symbol-function 'xref-find-references)
+                 (lambda (symbol) (setq references symbol)))
+                ((symbol-function 'pp-macroexpand-last-sexp)
+                 (lambda (&optional argument) (setq macroexpand argument))))
+        (sk/lisp-definition)
+        (sk/lisp-references)
+        (sk/lisp-macroexpand))
+      (should (equal definition "sk-example-add"))
+      (should (equal references "sk-example-add"))
+      (should-not macroexpand)))
+  (with-temp-buffer
+    (insert "fixture-add")
+    (goto-char (point-min))
+    (scheme-mode)
+    (let (definition references macroexpand)
+      (cl-letf (((symbol-function 'sk/lisp--scheme-repl-active-p)
+                 (lambda () t))
+                ((symbol-function 'geiser-edit-symbol-at-point)
+                 (lambda () (interactive) (setq definition t)))
+                ((symbol-function 'geiser-xref-callers)
+                 (lambda () (interactive) (setq references t)))
+                ((symbol-function 'geiser-expand-last-sexp)
+                 (lambda () (interactive) (setq macroexpand t))))
+        (sk/lisp-definition)
+        (sk/lisp-references)
+        (sk/lisp-macroexpand))
+      (should definition)
+      (should references)
+      (should macroexpand)))
+  (with-temp-buffer
+    (insert "twice")
+    (goto-char (point-min))
+    (lisp-mode)
+    (let (definition references macroexpand)
+      (cl-letf (((symbol-function 'sk/lisp--common-lisp-repl-active-p)
+                 (lambda () t))
+                ((symbol-function 'sly-edit-definition)
+                 (lambda (symbol) (setq definition symbol)))
+                ((symbol-function 'sly-who-calls)
+                 (lambda (symbol) (setq references symbol)))
+                ((symbol-function 'sly-macroexpand-1)
+                 (lambda () (interactive) (setq macroexpand t))))
+        (sk/lisp-definition)
+        (sk/lisp-references)
+        (sk/lisp-macroexpand))
+      (should (equal definition "twice"))
+      (should (equal references "twice"))
+      (should macroexpand))))
+
+(ert-deftest sk/check-lisp-debug-dispatch-and-cold-guards ()
+  (with-temp-buffer
+    (emacs-lisp-mode)
+    (let (called)
+      (cl-letf (((symbol-function 'edebug-defun)
+                 (lambda () (interactive) (setq called t))))
+        (sk/lisp-debug))
+      (should called)))
+  (let ((source (generate-new-buffer " *sk-geiser-source*"))
+        (debug (get-buffer-create "*Geiser Debug*"))
+        selected)
+    (unwind-protect
+        (progn
+          (with-current-buffer debug
+            (setq-local geiser-debug--debugger-active t
+                        geiser-debug--sender-buffer source))
+          (with-current-buffer source
+            (scheme-mode)
+            (cl-letf (((symbol-function 'sk/lisp--scheme-repl-active-p)
+                       (lambda () t))
+                      ((symbol-function 'pop-to-buffer)
+                       (lambda (buffer &rest _arguments)
+                         (setq selected buffer))))
+              (sk/lisp-debug)))
+          (should (eq selected debug)))
+      (kill-buffer source)
+      (kill-buffer debug)))
+  (let ((debug (generate-new-buffer " *sk-sly-db*"))
+        selected)
+    (unwind-protect
+        (with-temp-buffer
+          (lisp-mode)
+          (cl-letf (((symbol-function 'sk/lisp--common-lisp-repl-active-p)
+                     (lambda () t))
+                    ((symbol-function 'sly-db-buffers)
+                     (lambda (&optional _connection) (list debug)))
+                    ((symbol-function 'pop-to-buffer)
+                     (lambda (buffer &rest _arguments)
+                       (setq selected buffer))))
+            (sk/lisp-debug))
+          (should (eq selected debug)))
+      (kill-buffer debug)))
+  (dolist (case '((scheme-mode . sk/lisp--scheme-repl-active-p)
+                  (lisp-mode . sk/lisp--common-lisp-repl-active-p)))
+    (with-temp-buffer
+      (insert "fixture-symbol")
+      (goto-char (point-min))
+      (funcall (car case))
+      (cl-letf (((symbol-function (cdr case)) (lambda () nil)))
+        (dolist (command '(sk/lisp-definition sk/lisp-references
+                           sk/lisp-macroexpand sk/lisp-debug))
+          (should-error (funcall command) :type 'user-error))))))
+
 (ert-deftest sk/check-puni-lisp-and-org-source-editors ()
   (dolist (mode '(emacs-lisp-mode lisp-interaction-mode scheme-mode lisp-mode))
     (sk/check-puni-contract-in-mode mode))
@@ -443,7 +740,12 @@
                      ("SPC l b" . sk/lisp-eval-buffer)
                      ("SPC l d" . sk/lisp-eval-defun)
                      ("SPC l e" . sk/lisp-eval-last-sexp)
+                     ("SPC l D" . sk/lisp-debug)
+                     ("SPC l g" . sk/lisp-definition)
                      ("SPC l k" . sk/lisp-docs)
+                     ("SPC l m" . sk/lisp-macroexpand)
+                     ("SPC l p" . sk/lisp-project-check)
+                     ("SPC l x" . sk/lisp-references)
                      ("SPC l [" . puni-slurp-backward)
                      ("SPC l ]" . puni-slurp-forward)
                      ("SPC l {" . puni-barf-backward)
@@ -639,7 +941,40 @@
     (checkdoc-file fixture)
     (should (= warnings-before (length sk/check-warning-records)))
     (load fixture nil 'nomessage)
-    (should (= (sk-fixture-add 20 22) 42))))
+    (should (= (sk-fixture-add 20 22) 42)))
+  (let ((project (sk/check-fixture-path "elisp/sk-example")))
+    (should (file-readable-p (expand-file-name ".projectile" project)))
+    (should (file-readable-p (expand-file-name "Makefile" project)))
+    (should (file-readable-p (expand-file-name "sk-example.el" project)))
+    (should (file-readable-p
+             (expand-file-name "test/sk-example-test.el" project)))
+    (should (locate-library "package-lint"))))
+
+(ert-deftest sk/check-lisp-shared-window-routing ()
+  (save-window-excursion
+    (delete-other-windows)
+    (dolist (case '(("*sk-geiser-doc*" geiser-doc-mode nil right 1)
+                    ("*sly-description fixture*" lisp-mode nil right 1)
+                    ("*sk-geiser-result*" geiser-debug-mode nil right 1)
+                    ("*sk-geiser-xref*" geiser-xref-mode nil right 0)
+                    ("*sk-sly-mrepl*" sly-mrepl-mode nil right 0)
+                    ("*sk-geiser-debug*" geiser-debug-mode t bottom 0)
+                    ("*sk-sly-db*" sly-db-mode nil bottom 0)))
+      (pcase-let ((`(,name ,mode ,debugger-active ,side ,slot) case))
+        (let ((buffer (generate-new-buffer name)))
+          (unwind-protect
+              (progn
+                (with-current-buffer buffer
+                  ;; The modes are already defined by the eager Geiser/SLY
+                  ;; setup.  Setting `major-mode' avoids starting a comint REPL.
+                  (setq major-mode mode)
+                  (when (eq mode 'geiser-debug-mode)
+                    (setq-local geiser-debug--debugger-active debugger-active)))
+                (let ((window (display-buffer buffer)))
+                  (should (window-live-p window))
+                  (should (eq (window-parameter window 'window-side) side))
+                  (should (= (window-parameter window 'window-slot) slot))))
+            (kill-buffer buffer)))))))
 
 (ert-deftest sk/check-display-policy-preserves-foreign-rules ()
   (let* ((foreign-rule '("\\*Package-owned\\*" display-buffer-pop-up-window))

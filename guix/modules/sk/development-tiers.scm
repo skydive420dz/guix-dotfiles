@@ -11,7 +11,8 @@
 ;; These are project-shell conveniences, not workstation ownership.  Keeping
 ;; the list small makes each dialect environment independently reviewable.
 (define %sk-development-base-specifications
-  '("git"
+  '("coreutils"
+    "git"
     "make"
     "pkg-config"
     "ripgrep"))

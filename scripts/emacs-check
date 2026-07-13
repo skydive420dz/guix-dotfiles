@@ -77,8 +77,10 @@ done
 live_expression_file="$repo/tests/emacs/live-check.el"
 batch_bootstrap="$repo/tests/emacs/batch-bootstrap.el"
 batch_checks="$repo/tests/emacs/batch-check.el"
+backend_checks="$repo/tests/emacs/backend-check.el"
 
-for file in "$live_expression_file" "$batch_bootstrap" "$batch_checks"; do
+for file in "$live_expression_file" "$batch_bootstrap" "$batch_checks" \
+    "$backend_checks"; do
     if [ ! -r "$file" ]; then
         printf 'preflight: unreadable %s\n' "$file" >&2
         exit 2
@@ -159,6 +161,55 @@ run_batch_checks() (
         --load "$batch_checks"
 )
 
+run_backend_checks() (
+    set -eu
+
+    sandbox="$(mktemp -d "${TMPDIR:-/tmp}/sk-emacs-backend-check.XXXXXX")"
+    trap 'rm -rf -- "$sandbox"' EXIT
+    trap 'rm -rf -- "$sandbox"; trap - EXIT; exit 129' HUP
+    trap 'rm -rf -- "$sandbox"; trap - EXIT; exit 130' INT
+    trap 'rm -rf -- "$sandbox"; trap - EXIT; exit 143' TERM
+
+    source_root="$sandbox/source"
+    isolated_home="$sandbox/home"
+    isolated_tmp="$sandbox/tmp"
+    isolated_cache="$sandbox/xdg/cache"
+    isolated_config="$sandbox/xdg/config"
+    isolated_data="$sandbox/xdg/data"
+    isolated_state="$sandbox/xdg/state"
+    isolated_runtime="$sandbox/xdg/runtime"
+
+    mkdir -p "$source_root" "$isolated_home" "$isolated_tmp" \
+        "$isolated_cache" "$isolated_config" "$isolated_data" \
+        "$isolated_state" "$isolated_runtime"
+    chmod 700 "$sandbox" "$isolated_home" "$isolated_tmp" "$isolated_runtime"
+
+    cp -R "$repo/fixtures" "$source_root/fixtures"
+
+    # GNU timeout runs COMMAND in a process group unless --foreground is
+    # used.  TERM, then KILL, therefore reaches this disposable Emacs and
+    # its Guile/SBCL descendants even if Emacs cannot run unwind cleanup.
+    env -i \
+        HOME="$isolated_home" \
+        TMPDIR="$isolated_tmp" \
+        XDG_CACHE_HOME="$isolated_cache" \
+        XDG_CONFIG_HOME="$isolated_config" \
+        XDG_DATA_HOME="$isolated_data" \
+        XDG_STATE_HOME="$isolated_state" \
+        XDG_RUNTIME_DIR="$isolated_runtime" \
+        PATH="$PATH" \
+        EMACSLOADPATH="$EMACSLOADPATH" \
+        LANG=en_US.utf8 \
+        LC_ALL=en_US.utf8 \
+        GUILE_AUTO_COMPILE=0 \
+        SK_EMACS_CHECK_SOURCE_ROOT="$source_root" \
+        SK_EMACS_CHECK_SANDBOX_ROOT="$sandbox" \
+        SK_EMACS_CHECK_BREAK_BACKEND="${SK_EMACS_CHECK_BREAK_BACKEND:-0}" \
+        timeout --signal=TERM --kill-after=10 180 "$batch_emacs" --batch -Q \
+        --eval '(setq user-emacs-directory (file-name-as-directory (expand-file-name ".emacs.d" (getenv "HOME"))))' \
+        --load "$backend_checks"
+)
+
 printf '%s\n' '== live read-only checks =='
 if [ "$batch_only" -eq 1 ]; then
     live_status=0
@@ -180,6 +231,15 @@ else
     printf 'batch: FAIL (status %s)\n' "$batch_status" >&2
 fi
 
+printf '%s\n' '== isolated connected backend checks =='
+if run_backend_checks; then
+    backend_status=0
+    printf '%s\n' 'backend: PASS'
+else
+    backend_status=$?
+    printf 'backend: FAIL (status %s)\n' "$backend_status" >&2
+fi
+
 repo_status_after="$(git -C "$repo" status --porcelain=v1 --untracked-files=all)"
 if [ "$repo_status_before" = "$repo_status_after" ]; then
     repository_status=0
@@ -192,11 +252,13 @@ fi
 
 if [ "$live_status" -eq 0 ] &&
    [ "$batch_status" -eq 0 ] &&
+   [ "$backend_status" -eq 0 ] &&
    [ "$repository_status" -eq 0 ]; then
     printf '%s\n' 'emacs-check: PASS'
     exit 0
 fi
 
-printf 'emacs-check: FAIL (live=%s batch=%s repository=%s)\n' \
-    "$live_status" "$batch_status" "$repository_status" >&2
+printf 'emacs-check: FAIL (live=%s batch=%s backend=%s repository=%s)\n' \
+    "$live_status" "$batch_status" "$backend_status" \
+    "$repository_status" >&2
 exit 1

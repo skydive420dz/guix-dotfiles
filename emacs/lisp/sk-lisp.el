@@ -1,5 +1,7 @@
 ;;; sk-lisp.el --- Lisp family editing setup -*- lexical-binding: t; -*-
 
+(require 'seq)
+
 ;; Emacs Lisp is native to Emacs:
 ;; Eldoc gives signatures/docs at point.  Rich help/eval/navigation come from
 ;; Emacs itself, not from lsp-mode.
@@ -11,6 +13,18 @@
 (add-hook 'emacs-lisp-mode-hook #'sk/emacs-lisp-mode-setup)
 (add-hook 'lisp-interaction-mode-hook #'sk/emacs-lisp-mode-setup)
 
+(defun sk/lisp--project-root (&optional required)
+  "Return the current Projectile root, or signal when REQUIRED."
+  (let ((projectile-require-project-root nil))
+    (let ((root (and (fboundp 'projectile-project-root)
+                     (ignore-errors (projectile-project-root)))))
+      (cond
+       (root (file-name-as-directory (file-truename root)))
+       (required
+        (user-error
+         "No Lisp project root; add a .projectile marker to the project"))
+       (t nil)))))
+
 ;; Scheme/Guile:
 ;; Geiser provides the REPL, evaluation, docs, and navigation layer.
 (setq scheme-program-name "guile")
@@ -21,6 +35,12 @@
   :commands (geiser geiser-mode geiser-repl-switch)
   :custom
   (geiser-default-implementation 'guile)
+  ;; Keep every Guile project in its own REPL and add only reviewed project
+  ;; paths.  The wrapper returns nil outside Projectile projects, as Geiser's
+  ;; project hook requires.
+  (geiser-repl-current-project-function #'sk/lisp--project-root)
+  (geiser-repl-per-project-p t)
+  (geiser-repl-add-project-paths '("." "src"))
   ;; Geiser's own `scheme-mode-hook' entry is the single activation path.
   ;; Enabling the editing mode must not start Guile implicitly.
   (geiser-mode-auto-p t)
@@ -75,6 +95,94 @@
   :config
   (sly-setup))
 
+(defun sk/lisp--project-key (root)
+  "Return a stable readable cache/connection key for ROOT."
+  (let ((project-name
+         (file-name-nondirectory (directory-file-name root))))
+    (format "%s-%s" project-name (substring (secure-hash 'sha1 root) 0 8))))
+
+(defun sk/lisp--common-lisp-process-environment (root)
+  "Return a strict project-local ASDF process environment for ROOT."
+  (let* ((project-key (sk/lisp--project-key root))
+         (cache-root
+          (file-name-as-directory
+           (expand-file-name project-key
+                             (expand-file-name "asdf" sk/cache-directory))))
+         (environment (copy-sequence process-environment)))
+    (make-directory cache-root t)
+    (let ((process-environment environment))
+      (setenv
+       "CL_SOURCE_REGISTRY"
+       (format
+        "(:source-registry (:directory %S) :ignore-inherited-configuration)"
+        root))
+      (setenv
+       "ASDF_OUTPUT_TRANSLATIONS"
+       (format
+        "(:output-translations (t (%S :implementation)) :ignore-inherited-configuration)"
+        cache-root))
+      process-environment)))
+
+(defun sk/lisp--common-lisp-project-connection (&optional root)
+  "Return the live SLY connection tagged for ROOT.
+When ROOT is nil, use the current project or a tagged buffer-local connection."
+  (let* ((root (or root (sk/lisp--project-root)))
+         (local (and (boundp 'sly-buffer-connection)
+                     sly-buffer-connection))
+         (local-root
+          (and (processp local)
+               (process-get local 'sk/lisp-project-root))))
+    (cond
+     ((and (processp local)
+           (process-live-p local)
+           local-root
+           (or (not root) (equal root local-root)))
+      local)
+     ((and root (boundp 'sly-net-processes))
+      (seq-find
+       (lambda (connection)
+         (and (processp connection)
+              (process-live-p connection)
+              (equal root
+                     (process-get connection 'sk/lisp-project-root))))
+       sly-net-processes)))))
+
+(defun sk/lisp--start-common-lisp-project (root)
+  "Start and tag a SLY connection for project ROOT."
+  (unless (fboundp 'sly-start)
+    (user-error "The SLY start command is not available"))
+  (let* ((program
+          (or (executable-find inferior-lisp-program)
+              (user-error "Common Lisp executable is unavailable: %s"
+                          inferior-lisp-program)))
+         (project-key (sk/lisp--project-key root))
+         (source-buffer (current-buffer))
+         (default-directory root)
+         (process-environment
+          (sk/lisp--common-lisp-process-environment root)))
+    (sly-start
+     :program program
+     :directory root
+     :buffer (format "*sly-%s*" project-key)
+     :name (intern (format "sbcl-%s" project-key))
+     :init-function
+     (lambda ()
+       (let ((connection (sly-current-connection)))
+         (unless (processp connection)
+           (error "SLY connected without a network process"))
+         (process-put connection 'sk/lisp-project-root root)
+         (when (buffer-live-p source-buffer)
+           (with-current-buffer source-buffer
+             (setq-local sly-buffer-connection connection)
+             (when (fboundp 'sly-mrepl)
+               (let ((sly-buffer-connection connection))
+                 (let ((repl (sly-mrepl)))
+                   (when (buffer-live-p repl)
+                     (with-current-buffer repl
+                       (setq default-directory root)
+                       (setq-local sly-buffer-connection connection))
+                     (pop-to-buffer repl))))))))))))
+
 ;; Structural editing:
 ;; Electric Pair owns delimiter insertion globally.  Puni owns balanced
 ;; deletion and explicit structural transforms only in Lisp-family buffers;
@@ -88,11 +196,12 @@
 (defun sk/lisp--dialect ()
   "Return the active Lisp dialect symbol for the current buffer."
   (cond
-   ((derived-mode-p 'emacs-lisp-mode 'lisp-interaction-mode)
+   ((derived-mode-p 'emacs-lisp-mode 'lisp-interaction-mode
+                    'inferior-emacs-lisp-mode)
     'elisp)
-   ((derived-mode-p 'scheme-mode)
+   ((derived-mode-p 'scheme-mode 'geiser-repl-mode)
     'scheme)
-   ((derived-mode-p 'lisp-mode 'common-lisp-mode)
+   ((derived-mode-p 'lisp-mode 'common-lisp-mode 'sly-mrepl-mode)
     'common-lisp)
    (t
     (user-error "Not in a Lisp-family buffer"))))
@@ -106,9 +215,8 @@
        (geiser-repl--connection*)))
 
 (defun sk/lisp--common-lisp-repl-active-p ()
-  "Return non-nil when SLY has an open Common Lisp connection."
-  (and (fboundp 'sly-connected-p)
-       (sly-connected-p)))
+  "Return this buffer's live project-tagged SLY connection, or nil."
+  (sk/lisp--common-lisp-project-connection))
 
 (defun sk/lisp--call-scheme (command &rest args)
   "Call connected Geiser COMMAND with ARGS."
@@ -124,11 +232,15 @@
   "Call connected SLY COMMAND with ARGS."
   (unless (fboundp command)
     (user-error "SLY command is not available: %s" command))
-  (unless (sk/lisp--common-lisp-repl-active-p)
-    (user-error "No Common Lisp REPL is active; run SPC l r first"))
-  (if args
-      (apply command args)
-    (call-interactively command)))
+  (let ((connection (sk/lisp--common-lisp-repl-active-p)))
+    (unless connection
+      (user-error
+       "No project SLY REPL is active; run SPC l r from this project"))
+    ;; Never let SLY fall back to an unrelated default connection.
+    (let ((sly-buffer-connection connection))
+      (if args
+          (apply command args)
+        (call-interactively command)))))
 
 (defun sk/lisp--symbol-at-point ()
   "Return the Lisp symbol text at point or signal a clear user error."
@@ -150,9 +262,30 @@
       (t
        (user-error "Geiser is not available"))))
     ('common-lisp
-     (if (fboundp 'sly)
-         (sly)
-       (user-error "SLY is not available")))))
+     (let* ((root (sk/lisp--project-root t))
+            (connection
+             (sk/lisp--common-lisp-project-connection root)))
+       (cond
+        ((not (fboundp 'sly))
+         (user-error "SLY is not available"))
+        (connection
+         (unless (fboundp 'sly-mrepl)
+           (user-error "The SLY MREPL command is not available"))
+         (setq-local sly-buffer-connection connection)
+         (let ((sly-buffer-connection connection))
+           (sly-mrepl #'pop-to-buffer)))
+        (t
+         (sk/lisp--start-common-lisp-project root)))))))
+
+(defun sk/lisp-project-check ()
+  "Run the current Lisp project's warning-fatal `make check' gate."
+  (interactive)
+  (let* ((root (sk/lisp--project-root t))
+         (makefile (expand-file-name "Makefile" root))
+         (default-directory root))
+    (unless (file-readable-p makefile)
+      (user-error "Lisp project has no readable Makefile: %s" makefile))
+    (compile "make check")))
 
 (defun sk/lisp-eval-buffer ()
   "Evaluate the current buffer with the current Lisp dialect backend."
@@ -201,6 +334,73 @@
        (sk/lisp--call-scheme #'geiser-doc-symbol-at-point))
       ('common-lisp
        (sk/lisp--call-common-lisp #'sly-describe-symbol symbol)))))
+
+(defun sk/lisp-definition ()
+  "Visit the definition at point through the active Lisp backend."
+  (interactive)
+  (let ((dialect (sk/lisp--dialect))
+        (symbol (sk/lisp--symbol-at-point)))
+    (pcase dialect
+      ('elisp
+       (xref-find-definitions symbol))
+      ('scheme
+       (sk/lisp--call-scheme #'geiser-edit-symbol-at-point))
+      ('common-lisp
+       (sk/lisp--call-common-lisp #'sly-edit-definition symbol)))))
+
+(defun sk/lisp-references ()
+  "Show callers or references at point through the active Lisp backend."
+  (interactive)
+  (let ((dialect (sk/lisp--dialect))
+        (symbol (sk/lisp--symbol-at-point)))
+    (pcase dialect
+      ('elisp
+       (xref-find-references symbol))
+      ('scheme
+       ;; Guile can return no caller data; Geiser still owns the request and
+       ;; reports that limitation without falling through to textual search.
+       (sk/lisp--call-scheme #'geiser-xref-callers))
+      ('common-lisp
+       (sk/lisp--call-common-lisp #'sly-who-calls symbol)))))
+
+(defun sk/lisp-macroexpand ()
+  "Macroexpand the form at point through the active Lisp backend."
+  (interactive)
+  (pcase (sk/lisp--dialect)
+    ('elisp
+     (require 'pp)
+     (pp-macroexpand-last-sexp nil))
+    ('scheme
+     (sk/lisp--call-scheme #'geiser-expand-last-sexp))
+    ('common-lisp
+     (sk/lisp--call-common-lisp #'sly-macroexpand-1))))
+
+(defun sk/lisp-debug ()
+  "Instrument Elisp or display an active Geiser/SLY debugger."
+  (interactive)
+  (pcase (sk/lisp--dialect)
+    ('elisp
+     (edebug-defun))
+    ('scheme
+     (sk/lisp--call-scheme #'ignore)
+     (let ((buffer (get-buffer "*Geiser Debug*")))
+       (unless (and buffer
+                    (with-current-buffer buffer
+                      (and (fboundp 'geiser-debug-active-p)
+                           (geiser-debug-active-p))))
+         (user-error "No active Geiser debugger"))
+       (pop-to-buffer buffer)))
+    ('common-lisp
+     (let ((connection (sk/lisp--common-lisp-repl-active-p)))
+       (unless connection
+         (user-error
+          "No project SLY REPL is active; run SPC l r from this project"))
+       (unless (fboundp 'sly-db-buffers)
+         (user-error "The SLY debugger command is not available"))
+       (let ((buffer (car (sly-db-buffers connection))))
+         (unless buffer
+           (user-error "No active SLY debugger"))
+         (pop-to-buffer buffer))))))
 
 (provide 'sk-lisp)
 

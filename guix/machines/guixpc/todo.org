@@ -45,7 +45,7 @@ Remaining cosmetic issue:
 * TODO 2026-07-12 configuration audit remediation
 :PROPERTIES:
 :created: 2026-07-12
-:next_slice: 14
+:next_slice: 15
 :END:
 
 Canonical evidence, finding status, slice definitions, and acceptance gates:
@@ -142,7 +142,17 @@ Current next action:
     editing, Guile PTY readline/color/completion, and backend acceptance.
   - [X] Rotate the exact Home retention root to generation 37 with generation
     36 as the immediate rollback; retain System 85 and pull 5.
-- [ ] Begin [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 15: Elisp, Guile, and Common Lisp project/test workflows][Slice 15: Elisp, Guile, and Common Lisp project/test workflows]].
+- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 15: Elisp, Guile, and Common Lisp project/test workflows][Slice 15: Elisp, Guile, and Common Lisp project/test workflows]].
+  - [X] Implement real Elisp, Guile, and ASDF project fixtures plus the isolated
+    project dispatcher, shared Lisp command/window surface, package-lint
+    ownership, strict ASDF policy, and disposable connected-backend checker.
+  - [X] Build and pass the complete candidate-profile gate on GuixPC, including
+    project checks and asynchronous Geiser/SLY failure recovery.  Candidate
+    results are =aghqh0si8x2p= Home and =6680dpbpy035= System; neither is active.
+  - [ ] Push the implementation checkpoint, run =ghr=, reboot, and accept the
+    fresh editor/project workflow.  System 85 should remain unchanged.
+  - [ ] Record Home generation/store target, rotate its retention pin only after
+    acceptance, and close the Slice 15 findings.
 
 Ordered follow-up:
 

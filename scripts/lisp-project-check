@@ -1,0 +1,150 @@
+#!/bin/sh
+set -eu
+
+usage() {
+    printf 'usage: %s [all|elisp|guile|common-lisp] [REPOSITORY]\n' \
+        "$0" >&2
+}
+
+case $# in
+    0)
+        selection=all
+        repository_input=
+        ;;
+    1)
+        selection=$1
+        repository_input=
+        ;;
+    2)
+        selection=$1
+        repository_input=$2
+        ;;
+    *)
+        usage
+        exit 64
+        ;;
+esac
+
+case $selection in
+    all|elisp|guile|common-lisp) ;;
+    *)
+        usage
+        exit 64
+        ;;
+esac
+
+if [ -n "$repository_input" ]; then
+    if ! repository=$(CDPATH='' cd -- "$repository_input" 2>/dev/null && pwd -P); then
+        printf 'lisp-project-check: repository is not a directory: %s\n' \
+            "$repository_input" >&2
+        exit 66
+    fi
+else
+    repository=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+fi
+
+for command in chmod cp dirname env make mkdir mktemp rm; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        printf 'lisp-project-check: missing command: %s\n' "$command" >&2
+        exit 127
+    fi
+done
+
+sandbox=$(mktemp -d "${TMPDIR:-/tmp}/sk-lisp-project-check.XXXXXX")
+cleanup() {
+    rm -rf -- "$sandbox"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+isolated_home=$sandbox/home
+isolated_tmp=$sandbox/tmp
+isolated_cache=$sandbox/xdg/cache
+isolated_config=$sandbox/xdg/config
+isolated_data=$sandbox/xdg/data
+isolated_state=$sandbox/xdg/state
+isolated_runtime=$sandbox/xdg/runtime
+copied_projects=$sandbox/source
+
+mkdir -p "$isolated_home" "$isolated_tmp" "$isolated_cache" \
+    "$isolated_config" "$isolated_data" "$isolated_state" \
+    "$isolated_runtime" "$copied_projects"
+chmod 700 "$sandbox" "$isolated_home" "$isolated_tmp" "$isolated_runtime"
+
+run_project() {
+    dialect=$1
+    relative=$2
+    source=$repository/$relative
+    destination=$copied_projects/$dialect
+
+    if [ ! -r "$source/Makefile" ]; then
+        printf 'lisp-project-check: %s fixture lacks a readable Makefile: %s\n' \
+            "$dialect" "$source/Makefile" >&2
+        return 66
+    fi
+
+    mkdir -p "$destination"
+    cp -R "$source/." "$destination/"
+
+    printf '== %s project ==\n' "$dialect"
+
+    set -- env -i \
+        "HOME=$isolated_home" \
+        "TMPDIR=$isolated_tmp" \
+        "XDG_CACHE_HOME=$isolated_cache" \
+        "XDG_CONFIG_HOME=$isolated_config" \
+        "XDG_DATA_HOME=$isolated_data" \
+        "XDG_STATE_HOME=$isolated_state" \
+        "XDG_RUNTIME_DIR=$isolated_runtime" \
+        "PATH=$PATH" \
+        "LANG=C" \
+        "LC_ALL=C" \
+        "TZ=UTC" \
+        "GUILE_AUTO_COMPILE=0" \
+        "SK_LISP_PROJECT_DIALECT=$dialect" \
+        "EMACS=${EMACS:-emacs}" \
+        "GUILE=${GUILE:-guile}" \
+        "GUILD=${GUILD:-guild}" \
+        "SBCL=${SBCL:-sbcl}"
+
+    if [ "${EMACSLOADPATH+x}" = x ]; then
+        set -- "$@" "EMACSLOADPATH=$EMACSLOADPATH"
+    fi
+    if [ "${GUILE_LOAD_PATH+x}" = x ]; then
+        set -- "$@" "GUILE_LOAD_PATH=$GUILE_LOAD_PATH"
+    fi
+    if [ "${GUILE_LOAD_COMPILED_PATH+x}" = x ]; then
+        set -- "$@" "GUILE_LOAD_COMPILED_PATH=$GUILE_LOAD_COMPILED_PATH"
+    fi
+
+    set -- "$@" make --no-print-directory -C "$destination" check
+    if "$@"; then
+        printf 'lisp-project-check: %s: PASS\n' "$dialect"
+    else
+        status=$?
+        printf 'lisp-project-check: %s: FAIL (status %s)\n' \
+            "$dialect" "$status" >&2
+        return "$status"
+    fi
+}
+
+case $selection in
+    all)
+        run_project elisp fixtures/elisp/sk-example
+        run_project guile fixtures/guile
+        run_project common-lisp fixtures/common-lisp
+        ;;
+    elisp)
+        run_project elisp fixtures/elisp/sk-example
+        ;;
+    guile)
+        run_project guile fixtures/guile
+        ;;
+    common-lisp)
+        run_project common-lisp fixtures/common-lisp
+        ;;
+esac
+
+printf 'lisp-project-check: PASS (%s)\n' "$selection"

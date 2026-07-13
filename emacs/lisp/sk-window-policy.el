@@ -663,6 +663,22 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
     (setq display-buffer-alist (append rules foreign-rules)))
   (setq sk/window-owned-display-buffer-rules rules))
 
+(defun sk/window-geiser-result-buffer-p (buffer-name _action)
+  "Return non-nil for inactive Geiser result BUFFER-NAME."
+  (let ((buffer (get-buffer buffer-name)))
+    (and buffer
+         (with-current-buffer buffer
+           (and (derived-mode-p 'geiser-debug-mode)
+                (not (bound-and-true-p geiser-debug--debugger-active)))))))
+
+(defun sk/window-geiser-debugger-buffer-p (buffer-name _action)
+  "Return non-nil for an active Geiser debugger BUFFER-NAME."
+  (let ((buffer (get-buffer buffer-name)))
+    (and buffer
+         (with-current-buffer buffer
+           (and (derived-mode-p 'geiser-debug-mode)
+                (bound-and-true-p geiser-debug--debugger-active))))))
+
 (setq sk/window-display-buffer-rules
       `(((derived-mode . treemacs-mode)
          (display-buffer-reuse-window display-buffer-in-side-window)
@@ -673,14 +689,17 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
          (inhibit-switch-frame . t)
          (window-parameters . ((no-delete-other-windows . t))))
         ((or (derived-mode . help-mode)
-             "\\*\\(?:Help\\|Apropos\\|eldoc\\)\\*")
+             (derived-mode . geiser-doc-mode)
+             sk/window-geiser-result-buffer-p
+             "\\*\\(?:Help\\|Apropos\\|eldoc\\|Pp Macroexpand Output\\)\\*"
+             "\\*sly-\\(?:description\\|macroexpansion\\).*\\*")
          (display-buffer-reuse-window
           display-buffer-reuse-mode-window
           display-buffer-in-side-window)
          (side . right)
          (slot . 1)
          (window-width . 0.42)
-         (mode . (help-mode helpful-mode))
+         (mode . (help-mode helpful-mode geiser-doc-mode))
          (reusable-frames . nil)
          (inhibit-switch-frame . t)
          (window-parameters . ((no-delete-other-windows . t))))
@@ -688,23 +707,31 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
              ,(regexp-quote sk/window-xref-buffer-name)
              (derived-mode . ibuffer-mode)
              (derived-mode . dired-mode)
+             (derived-mode . geiser-repl-mode)
+             (derived-mode . geiser-xref-mode)
              (derived-mode . magit-mode)
              (derived-mode . eshell-mode)
              (derived-mode . shell-mode)
+             (derived-mode . sly-mrepl-mode)
+             (derived-mode . sly-xref-mode)
              (derived-mode . term-mode)
-             (derived-mode . vterm-mode))
+             (derived-mode . vterm-mode)
+             (derived-mode . xref--xref-buffer-mode))
          (display-buffer-reuse-window
           display-buffer-reuse-mode-window
           display-buffer-in-side-window)
          (side . right)
          (slot . 0)
          (window-width . 0.42)
-         (mode . (ibuffer-mode dired-mode magit-mode
-                  eshell-mode shell-mode term-mode vterm-mode))
+         (mode . (ibuffer-mode dired-mode geiser-repl-mode geiser-xref-mode
+                  magit-mode eshell-mode shell-mode sly-mrepl-mode
+                  sly-xref-mode term-mode vterm-mode xref--xref-buffer-mode))
          (reusable-frames . nil)
          (inhibit-switch-frame . t)
          (window-parameters . ((no-delete-other-windows . t))))
-        ("\\*\\(?:Warnings\\|Compile-Log\\|compilation\\)\\*"
+        ((or "\\*\\(?:Warnings\\|Compile-Log\\|compilation\\)\\*"
+             sk/window-geiser-debugger-buffer-p
+             (derived-mode . sly-db-mode))
          (display-buffer-reuse-window display-buffer-in-side-window)
          (side . bottom)
          (slot . 0)
