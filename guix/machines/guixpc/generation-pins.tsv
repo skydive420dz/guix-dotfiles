@@ -5,8 +5,9 @@ system	83	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	last-known-good	Acc
 system	81	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system	last-known-good	Distinct accepted elogind 255.24 System before Slice 10
 system	80	/gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system	emergency-rollback	Pre-elogind-upgrade recovery only; contains the known 255.17 SSH session defect
 system	75	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	last-known-good	Last observed working pre-slice boot target
-home	36	/gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home	promotion-rollback	Accepted Slice 13 Home ownership and forced-SSH environment baseline
-home	35	/gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home	preferred-rollback	Immediate pre-forced-SSH additive Home fallback
+home	37	/gnu/store/693n0j3q7ikb8v0bzj76swqg82b6z219-home	promotion-rollback	Accepted Slice 14 structural editing and Lisp runtime baseline
+home	36	/gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home	preferred-rollback	Immediate pre-Slice-14 Home ownership and forced-SSH fallback
+home	35	/gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home	last-known-good	Pre-forced-SSH additive Home fallback
 home	34	/gnu/store/xzhsfha3cbbzgs3gddi47iq1fk89fmiq-home	last-known-good	Immediate pre-Slice-13 Home fallback
 home	33	/gnu/store/dbmnwmi0jypvpi5kb0xn29wjpdhnjr6z-home	last-known-good	Accepted Slice 11 Home fallback
 home	32	/gnu/store/5l5rn2alj38qclkj93cybla70jhyx6ls-home	last-known-good	Generated Home fallback for Slice 11

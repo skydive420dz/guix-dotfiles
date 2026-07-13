@@ -74,9 +74,14 @@ next active slice.
   generation 36 pass fresh desktop/editor/ownership/forced-SSH acceptance.
   Exact retention roots are rotated, and the installed-base configuration
   bootstrap passes both fixture and isolated GuixPC acceptance.
-- [ ] Activate and accept the prepared Slice 14 checkpoint, then continue
-  Slices 15 through 19 in audit order.  Do not expand dialect breadth until the
-  P0/P1 runtime, validation, and reproducibility prerequisites close.
+- [X] Activate and accept Slice 14.  Home generation 37 supplies pinned Puni
+  and Eshell syntax highlighting; repository-linked editor source supplies the
+  authored snippet set and explicit Geiser/SLY editing contract.  Live editor,
+  Guile, structural, and isolated acceptance pass, and the exact Home retention
+  root is rotated.
+- [ ] Continue Slices 15 through 19 in audit order.  Do not expand dialect
+  breadth ahead of the vertical runtime/editor/project/test acceptance for the
+  currently supported dialects.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 - [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
   the GRUB prompt before making more bootloader changes.
@@ -191,7 +196,8 @@ Owns:
 Slice 13 uses a staged ownership migration.  Its additive and subtractive
 ownership checkpoints are accepted as Home generation 35 and reduced System
 generation 85; a final forced-SSH environment correction is accepted as Home
-generation 36.  The reduced System consumes the 13 recovery specifications
+generation 36.  Slice 14's structural-editor packages are accepted as Home
+generation 37.  The reduced System consumes the 13 recovery specifications
 recorded in =guix/package-ownership.scm= plus =kitty-latest=.  System generation
 85 has passed a fresh boot; accepted System generation 84 remains its immediate
 rollback.

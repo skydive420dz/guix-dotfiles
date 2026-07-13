@@ -1,8 +1,8 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; Home generation 36 accepted the 75-package user/editor base before the
-;; System declaration consumed this recovery list.  The structural-editing
-;; slice adds Puni and Eshell syntax highlighting as packages 76 and 77.  The
+;; Home generation 37 accepted the 77-package user/editor base.  The
+;; structural-editing slice added Puni and Eshell syntax highlighting as
+;; packages 76 and 77 after generation 36's 75-package baseline.  The
 ;; System list guarantees a tty shell, Kitty, and `emacs -Q'; normal configured
 ;; EXWM still consumes the accepted base Home services and editor profile.
 ;; Optional dialect environments live in guix/manifests and must not be added

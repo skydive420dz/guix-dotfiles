@@ -132,7 +132,17 @@ Current next action:
     fixture coverage and isolated GuixPC =prepare= acceptance pass without
     changing live System/Home/Pull generations; blank-disk provisioning remains
     explicitly outside this slice.
-- [ ] Begin [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 14: Core Lisp editing correctness and structural editing][Slice 14: core Lisp editing correctness and structural editing]].
+- [X] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 14: Core Lisp editing correctness and structural editing][Slice 14: core Lisp editing correctness and structural editing]].
+  - [X] Build and push implementation checkpoint =448f1aa= with pinned Puni,
+    Eshell highlighting, authored snippets, backend guards, explicit
+    Geiser/SLY ownership, and candidate-profile gates.
+  - [X] Activate Home candidate =693n0j3q7ikb= as generation 37 and reboot;
+    keep current/booted System generation 85 unchanged.
+  - [X] Pass strict ownership, live Home Emacs, 30/30 isolated ERT, structural
+    editing, Guile PTY readline/color/completion, and backend acceptance.
+  - [X] Rotate the exact Home retention root to generation 37 with generation
+    36 as the immediate rollback; retain System 85 and pull 5.
+- [ ] Begin [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 15: Elisp, Guile, and Common Lisp project/test workflows][Slice 15: Elisp, Guile, and Common Lisp project/test workflows]].
 
 Ordered follow-up:
 

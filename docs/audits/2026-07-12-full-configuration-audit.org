@@ -152,11 +152,11 @@ REPL-, backend-, service-, or workflow-level acceptance tests.
 #+begin_src text
 Source organization:       strong
 Declared/deployed config:  aligned at the authenticated three-channel lock
-Live runtime convergence:  strong; fresh System 85 and Home 36 runtime passes,
-                           including direct non-login SSH command environments
+Live runtime convergence:  strong; fresh System 85 and Home 37 runtime passes,
+                           including Lisp editing and direct SSH environments
 Display/resource health:   good
 Validation safety:         strong; isolated editor and activation gates
-Lisp foundation:           coherent Elisp/Guile/SBCL base
+Lisp foundation:           coherent Elisp/Guile/SBCL editing and REPL base
 Lisp ecosystem breadth:    early; most dialect families absent
 Reproducibility:            strong; clean-clone authentication and build gates pass
 Operational reliability:   restored; bounded SSH cleanup passes
@@ -164,8 +164,8 @@ Operational reliability:   restored; bounded SSH cleanup passes
 
 The project is a credible Guix/EXWM workstation foundation.  It is not yet a
 full Lisp ecosystem.  The P0/P1 runtime, validation, and reproducibility
-prerequisites and the package-ownership foundation are now closed, so core Lisp
-editing correctness can begin with Slice 14.
+prerequisites, package ownership, and core editing correctness are now closed,
+so the first project/test vertical slice can begin with Slice 15.
 
 * Finding register
 
@@ -174,17 +174,18 @@ editing correctness can begin with Slice 14.
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
 | O-01 | P0  | CLOSED   | Elogind 255.24 removes command and PTY SSH sessions immediately; no closing session remained through 30 seconds. | 7 |
-| O-02 | P1  | CLOSED   | Reduced System generation 85 is current/booted while Home generation 36 supplies the accepted application/editor/forced-SSH profile. | 7, 10, 11, 12, 13 |
-| O-03 | P1  | CLOSED   | D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse are fresh in Home generation 36 with no replacement pending. | 7, 10, 11, 12, 13 |
-| O-04 | P1  | CLOSED   | Fresh Emacs 30.2 and the live Org, Geiser, Geiser-Guile, and Projectile paths match the current profile. | 7, 8 |
+| O-02 | P1  | CLOSED   | Reduced System generation 85 is current/booted while Home generation 37 supplies the accepted application/editor/forced-SSH profile. | 7, 10, 11, 12, 13, 14 |
+| O-03 | P1  | CLOSED   | D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse are fresh in Home generation 37 with no replacement pending. | 7, 10, 11, 12, 13, 14 |
+| O-04 | P1  | CLOSED   | Fresh Emacs 30.2 and the live Org, Geiser, Geiser-Guile, Puni, Eshell-highlighting, and Projectile paths match the current profile. | 7, 8, 14 |
 | O-05 | P1  | CLOSED   | EXWM, launched applications, PipeWire, WirePlumber, and PipeWire-Pulse share the one canonical Guix Home D-Bus; no =dbus-launch= remains. | 10 |
 | O-06 | P2  | CLOSED   | RTKit is active through system D-Bus/Polkit; PipeWire obtains an RR data-loop with a bounded 200000-microsecond realtime limit. | 10 |
 | O-07 | P2  | CLOSED   | The stale Kitty process is gone and the current launcher is Kitty 0.47.4. | 7 |
 | O-08 | P2  | CLOSED   | Fish, Bash, Eshell, and bare SSH automation route =gsr=/=ghr= through one current-Guix wrapper and explicit setuid sudo path. | 9 |
-| O-09 | P2  | POLICY   | The read-only retention gate protects accepted System 85, Home 36, and pull 5 plus older recovery tiers; it reports 27 System and 17 Home duplicate-link candidates, but implements no deletion or garbage collection. | 12, 13 |
+| O-09 | P2  | POLICY   | The read-only retention gate protects accepted System 85, Home 37, and pull 5 plus older recovery tiers; it reports duplicate-link candidates but implements no deletion or garbage collection. | 12, 13, 14 |
 | O-10 | P3  | CLOSED   | X screen blanking and DPMS are explicitly declared and active at 600 seconds; elogind does not suspend the workstation. | 10 |
 | O-11 | P3  | POLICY   | Elogind intentionally retains the startx/PAM login as active local =tty1= with =Type=tty=; fresh-session =IdleHint=no= and EXWM child X11 metadata are correct. | 10 |
 | O-12 | P3  | VERIFIED | Historical Blueman logs show dconf persistence failure; current relevance is unproven. | 19 |
+| O-13 | P3  | POLICY   | With Bose off and no HDMI audio endpoint connected, PipeWire exposes the ALSA devices but only an =auto_null= sink, so the non-strict desktop checker fails its physical-sink/stream assertions; strict Bluetooth acceptance remains the hardware contract. | 19 |
 
 ** Configuration correctness and validation findings
 
@@ -225,7 +226,7 @@ reported as a confirmed bug without a focused test.
 | R-01 | P1  | CLOSED   | =guix/channels.scm= pins exact Guix, Nonguix, and authenticated sk-guix commits; the isolated time-machine provenance gate matches all three. | 12 |
 | R-02 | P1  | CLOSED   | =sk-guix= publishes a signed introduction, authorized signer, orphan public keyring, and signed target that pass isolated clean-clone Guix authentication. | 12 |
 | R-03 | P2  | POLICY   | Live repo symlinks make edits immediate but Home rollback does not restore application-file contents. | 13 |
-| R-04 | P2  | VERIFIED | System 85 carries only the recovery floor; Home 36 owns normal tools and supplies them to graphical, login, and direct forced-SSH environments. | 13 |
+| R-04 | P2  | VERIFIED | System 85 carries only the recovery floor; Home 37 owns normal tools and supplies them to graphical, login, and direct forced-SSH environments. | 13, 14 |
 | R-05 | P2  | CLOSED   | Core, JVM Clojure, and Racket manifests build and enter independently; the installed-base configuration bootstrap passes fixtures and isolated GuixPC acceptance. | 12, 13 |
 | R-06 | P2  | CLOSED   | =scripts/guix-entrypoints= checks or bootstraps every declaration link and refuses blockers/missing sources transactionally. | 9, 13 |
 
@@ -234,17 +235,17 @@ reported as a confirmed bug without a focused test.
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
 | L-01 | P1  | VERIFIED | Supported families are Emacs Lisp, Guile Scheme, and SBCL Common Lisp only. | 14-18 |
-| L-02 | P1  | PARTIAL  | Cold-buffer Geiser/SLY ownership and completion setup are checked; connected evaluation, docs, xref, tests, and projects remain Slice 15. | 8, 15 |
-| L-03 | P2  | STATIC   | No structural editing layer is configured for Lisp-family modes. | 14 |
-| L-04 | P2  | STATIC   | Backend errors are normalized by regex-matching third-party English messages. | 14 |
-| L-05 | P2  | RISK     | Scheme fallback does not guard missing =run-geiser=; docs at whitespace can operate on nil. | 14 |
-| L-06 | P2  | VERIFIED | Geiser activation is redundant; SLY editing changes indentation before a connection, while ownership docs imply a narrower role. | 14 |
-| L-07 | P2  | VERIFIED | Guile readline/colorized modules and configured Eshell syntax highlighting are unavailable. | 14 |
+| L-02 | P1  | PARTIAL  | Cold-buffer ownership, connected Geiser/SLY evaluation smoke tests, and one Geiser completion smoke test pass; isolated/project-scoped docs, completion, xref, failure, test, and workflow acceptance remains Slice 15. | 8, 14, 15 |
+| L-03 | P2  | CLOSED   | Puni owns balanced structural transforms in the four Lisp-family modes and Org source-edit buffers while Evil retains modal motions. | 14 |
+| L-04 | P2  | CLOSED   | Evaluation guards inspect stable Geiser/SLY connection state and preserve backend errors after dispatch. | 14 |
+| L-05 | P2  | CLOSED   | Scheme startup uses available Geiser commands and Lisp documentation rejects whitespace with a clear no-symbol error. | 14 |
+| L-06 | P2  | CLOSED   | Geiser has one automatic activation path; eagerly loaded SLY owns Common Lisp indentation before and after connection without auto-starting SBCL. | 14 |
+| L-07 | P2  | CLOSED   | Guile readline/colorized startup and Eshell syntax highlighting are package-owned and pass live probes. | 14 |
 | L-08 | P2  | PARTIAL  | ERT, warning-fatal byte compilation, and Checkdoc foundations now exist; package-lint, Guile SRFI-64, and ASDF test workflows remain Slice 15. | 15 |
 | L-09 | P2  | STATIC   | Common Lisp has no declared Qlot/Quicklisp/Roswell/source-registry policy. | 15 |
 | L-10 | P2  | CLOSED   | Projectile discovers direct child Git repositories under the =~/Projects= collection; isolated sibling-repo coverage passes. | 9, 15 |
 | L-11 | P2  | CLOSED   | The unused ELPA tree is quarantined outside =package-user-dir= and no user ELPA path or Breadcrumb registration remains live. | 8 |
-| L-12 | P3  | VERIFIED | Yasnippet is enabled but no snippets are available. | 14 |
+| L-12 | P3  | CLOSED   | Yasnippet eagerly exposes the four reviewed repository-authored templates and no unowned snippet directory. | 14 |
 | L-13 | P3  | POLICY   | Org offers Common Lisp block insertion while Common Lisp Babel execution remains deliberately disabled. | 15 |
 
 * Current Lisp capability matrix
@@ -255,14 +256,14 @@ Present:
 
 - Emacs 30.2 native evaluation;
 - Eldoc, Helpful, xref, native navigation;
-- unified =SPC l= evaluation, REPL, and documentation commands.
+- unified =SPC l= evaluation, REPL, documentation, and Puni structural commands;
+- the repository-authored ERT snippet.
 
 Missing or incomplete:
 
 - ERT project fixture and one-command test workflow;
 - checkdoc, byte-compile, and package-lint acceptance;
-- explicit Edebug/macro-expansion surface;
-- structural editing and authored snippets.
+- explicit Edebug/macro-expansion surface.
 
 ** Guile Scheme
 
@@ -272,13 +273,14 @@ Present:
 - Geiser and Geiser-Guile;
 - Scheme-mode CAPF-first Company configuration;
 - Scheme Babel execution;
-- trivial CLI evaluation verified.
+- Puni structural editing and the authored procedure snippet;
+- live readline, colorized output, and symbol completion.
 
 Missing or incomplete:
 
-- Guile readline/colorized modules;
 - SRFI-64/guild project and test workflow;
-- isolated Geiser evaluation/docs/completion acceptance;
+- isolated/project-scoped Geiser evaluation, docs, completion, xref, and
+  failure-behavior acceptance;
 - broader Scheme implementation policy.
 
 ** SBCL Common Lisp
@@ -289,12 +291,16 @@ Present:
 - SLY 1.0.43;
 - bundled ASDF 3.3.7;
 - =.lisp=, =.cl=, and =.asd= mode ownership;
+- deterministic SLY indentation, Puni structural editing, and the authored
+  function snippet;
+- connected SLY/SBCL evaluation smoke acceptance;
 - trivial SBCL and ASDF evaluation verified.
 
 Missing or incomplete:
 
 - ASDF system fixture and =test-op= workflow;
-- isolated SLY evaluation/docs/completion acceptance;
+- isolated/project-scoped SLY evaluation, docs, completion, xref, and
+  failure-behavior acceptance;
 - dependency/source-registry policy such as Qlot or another explicitly chosen
   approach;
 - Common Lisp Babel execution, intentionally deferred until tested.
@@ -1482,10 +1488,11 @@ filesystem creation, initial GRUB/EFI installation, initial networking or
 firmware, secret restoration, daemon substitute-ACL mutation, or a blank-disk
 first boot; those remain outside the checked configuration-bootstrap scope.
 
-** TODO Slice 14: Core Lisp editing correctness and structural editing
+** DONE Slice 14: Core Lisp editing correctness and structural editing
 :PROPERTIES:
 :audit_priority: P2
 :findings: L-03 L-04 L-05 L-06 L-07 L-12
+:completed: 2026-07-13
 :END:
 
 Scope:
@@ -1548,17 +1555,87 @@ Prepared evidence:
 - candidate Guile startup: pass, and an SSH PTY probe returned
   =(using-readline?) => #t=.
 
-No Guix generation activation or reboot occurred.  System generation 85 and
-Home generation 36 remain current at =m5znrpy...-system= and
-=n0xnfq...-home=.  The repository-owned =.guile= and Emacs entrypoints are live
-symlinks into this checkout, so new Guile processes and an explicit Emacs
-reload can already see source edits.  The running graphical Emacs and its Home
-package generation remain old, however, and cannot load Puni or Eshell syntax
-highlighting yet.  Slice 14 remains open until the prepared commit is pushed,
-=ghr= activates the Home candidate, the graphical Emacs process restarts, and
-live/connected acceptance confirms the runtime contract.  The System
-declaration did not change, so no System reconfigure is required for this
-checkpoint.
+At this prepared checkpoint no Guix generation activation or reboot had
+occurred.  System generation 85 and Home generation 36 remained current at
+=m5znrpy...-system= and =n0xnfq...-home=.  The repository-owned =.guile= and
+Emacs entrypoints were live symlinks into this checkout, so new Guile processes
+and an explicit Emacs reload could already see source edits.  The running
+graphical Emacs and its Home package generation were still old, however, and
+could not load Puni or Eshell syntax highlighting.  Slice 14 remained open
+until the prepared commit was pushed, =ghr= activated the Home candidate, the
+graphical Emacs process restarted, and live/connected acceptance confirmed the
+runtime contract.  The System declaration did not change, so no System
+reconfigure was required for this checkpoint.
+
+*** Fresh Home, structural, and connected-backend acceptance
+
+Commit: =448f1aafae1a13ba83cfcbf588e46242f755eb8f=
+
+System generation: generation 85 remained both current and booted at
+=/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system=.
+
+Home generation: =ghr= activated candidate
+=/gnu/store/693n0j3q7ikb8v0bzj76swqg82b6z219-home= as generation 37, whose
+profile is =/gnu/store/87kc1w2bjxm2inif9lm6ns1llvfv0wgr-profile=.
+
+Channel revisions: Guix =a8391f2=, Nonguix =3b66965=, and authenticated
+=sk-guix= =b84ff24= remained unchanged.
+
+Source/evaluation checks: strict shell and 77-package ownership checks pass.
+The fresh graphical Emacs 30.2 resolves Puni =0-4.fe132f8= and Eshell syntax
+highlighting =0.7= from the active Home profile.  Temporary live buffers pass
+balanced Puni transforms in Emacs Lisp, Lisp Interaction, Scheme, and Common
+Lisp plus Elisp/Scheme/Common-Lisp Org source editors; all eight structural
+leader bindings resolve correctly and ordinary Evil motions/operators remain
+owned by Evil.
+
+Isolated checks: =scripts/emacs-check= passes its observational live phase and
+all 30/30 copied-source ERT tests with an unchanged repository.  The authored
+ERT, Guile procedure, Common Lisp function, and Org source-block snippets are
+available, Eshell highlighting is enabled, Geiser has exactly one automatic
+activation hook, and SLY owns indentation without starting SBCL on file open.
+
+Negative-control result: the candidate gate fixtures reject missing
+Puni/Eshell/Yasnippet/Guile artifacts, fallback execution, candidate-stage
+failure, wrong stage ordering, and candidate execution during =--plan=.
+Backend guard tests also distinguish cold connection errors from unchanged
+post-dispatch backend errors and report =No symbol at point= on whitespace.
+
+Live evidence: a temporary explicit Geiser Guile connection evaluated
+=(+ 20 22)= to 42, returned 121 =str*= completion candidates, and bound REPL
+=TAB= to =geiser-repl-tab-dwim=.  A temporary explicit SLY/SBCL connection
+also evaluated to 42 and retained =sly--lisp-indent-function= before and after
+connection.  Both backends were disconnected and their temporary processes and
+buffers removed.  A real Guile SSH PTY reported readline active, the colorized
+printer selected, a procedure-valued completer, and completion of =define-syntax-parameter=;
+startup emitted neither missing-module nor fallback warnings.
+
+Persistence/restart evidence: after a normal reboot, Home generation 37 is
+current, System generation 85 is still both current and booted, EXWM Emacs is
+Home-first, and no backend probe process remains.  The exact retention manifest
+now promotes Home 37, keeps Home 36 as its immediate fallback, and retains
+System 85 and pull 5; verification and the read-only rollback drill pass.
+
+Residual risks: PATH and Guile load paths contain harmless repeated
+Home/System entries, but live module resolution is deterministic.  Stock Evil
+=d=, =c=, and =x= remain ordinary modal operators rather than structural
+commands.  Full project/test workflows plus isolated/project-scoped evaluation,
+docs, completion, xref, and failure-behavior acceptance remain Slice 15, along
+with the dependency-policy decision.  Repository-backed live links still mean
+a Home generation rollback alone cannot restore source contents.
+The post-reboot desktop regression probe passed every session, Shepherd, EXWM,
+DPMS, RTKit, and key-binding assertion but exited nonzero for its two physical
+audio assertions because Bose was off and no HDMI audio endpoint was connected;
+Slice 14 changed no audio configuration, and the earlier audible Bose and
+volume-key acceptance remains the hardware evidence.
+
+Rollback path: restore source checkpoint =2045023=, switch exactly to Home
+generation 36 at =/gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home=, and
+reboot.  System generation 85 requires no change; System 84 remains its
+independent immediate fallback.
+
+This closes findings L-03, L-04, L-05, L-06, L-07, and L-12 and completes
+Slice 14.
 
 ** TODO Slice 15: Elisp, Guile, and Common Lisp project/test workflows
 :PROPERTIES:
