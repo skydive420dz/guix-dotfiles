@@ -70,9 +70,11 @@ next active slice.
   and Home generation 34 now share the exact authenticated channel lock; the
   non-activating package/Home/System gate and read-only retention/rollback
   planner pass from the accepted frontend.
-- [ ] Finish Slice 13.  The additive Home generation 35 is accepted and the
-  separately built reduced System candidate is ready for activation; fresh
-  bootstrap and final retention acceptance remain.
+- [ ] Finish Slice 13.  Reduced System generation 85 and additive Home
+  generation 35 pass fresh desktop/editor/ownership acceptance.  A forced SSH
+  command exposed login-only Home environment loading; its separately gated
+  Home correction is ready for activation before fresh bootstrap and final
+  retention acceptance.
 - [ ] Continue Slices 14 through 19 in audit order after Slice 13.
   Do not expand dialect breadth until the P0/P1 runtime, validation, and
   reproducibility prerequisites close.
@@ -188,10 +190,11 @@ Owns:
 - system services such as SSH, Bluetooth, Xorg, elogind
 
 Slice 13 uses a two-checkpoint migration.  The additive checkpoint is accepted
-as Home generation 35.  The separately gated subtractive checkpoint now makes
+as Home generation 35.  The separately gated subtractive checkpoint makes
 =guix/systems/guixpc.scm= consume the 13 recovery specifications recorded in
-=guix/package-ownership.scm= plus =kitty-latest=; accepted System generation 84
-remains the immediate rollback until the reduced candidate passes a fresh boot.
+=guix/package-ownership.scm= plus =kitty-latest=.  Reduced System generation 85
+has passed a fresh boot; accepted System generation 84 remains its immediate
+rollback until final Slice 13 retention rotation.
 The System floor is not a second configured desktop: normal EXWM still requires
 the accepted base Home D-Bus services and Home editor profile.  Its independent
 guarantee is the tty shell, Kitty, and =emacs -Q= for repair.
@@ -224,6 +227,8 @@ Owns:
 - user-level service profile
 - normal applications, Emacs extensions, fonts, formatters, compilers, and
   persistent Guile/SBCL tooling
+- the full environment for direct non-login SSH commands, imported when the
+  Home profile is not the first Fish PATH entry
 - session services such as DBus, PipeWire, WirePlumber, PipeWire-Pulse
 - live symlinks from selected dotfiles back into this repo
 - Fish interactive configuration and native prompt
@@ -277,7 +282,11 @@ additive System fallback is retained throughout this checkpoint.  Invoking
 Fish behavior lives in =shell/config.fish= and is installed through Guix Home
 because Fish is the account login shell. Run =ghr= after editing it. The prompt
 is native Fish, not Starship. Fastfetch is used as an interactive shell greeter,
-so it appears in kitty or any other terminal that starts an interactive Fish shell.
+so it appears in kitty or any other terminal that starts an interactive Fish
+shell.  Direct SSH commands start Fish as non-login; when the Home profile is
+not first in PATH, the Fish config imports =~/.profile= through the explicitly
+owned =fish-foreign-env= package.  Local child Fish processes keep their
+inherited environment unchanged.
 
 * Emacs and EXWM baseline
 

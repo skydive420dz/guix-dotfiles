@@ -45,7 +45,8 @@ mkdir -p "$sandbox_repo/scripts" "$sandbox_repo/guix/home" \
     "$(dirname "$fake_guix")" "$(dirname "$fake_guile")" \
     "$fake_profile/bin" "$fake_system/profile/bin" \
     "$fake_system/profile/share/emacs/site-lisp/exwm-0.35" \
-    "$fake_home/profile/bin"
+    "$fake_home/profile/bin" "$fake_home/profile/share/fish/functions" \
+    "$fake_home/files/.config/fish"
 cp "$repo/scripts/guix-build-gate" "$gate"
 cp "$repo/guix/package-ownership.scm" \
     "$sandbox_repo/guix/package-ownership.scm"
@@ -68,6 +69,26 @@ for command in bluetoothctl curl dbus-update-activation-environment emacs fish \
     chmod +x "$fake_system/profile/bin/$command"
 done
 
+write_fake_fish() {
+    cat >"$fake_system/profile/bin/fish" <<'EOF'
+#!/bin/sh
+set -eu
+[ "${1:-}" = --no-config ]
+[ "${2:-}" = --command ]
+[ -n "${3:-}" ]
+[ -r "${SK_FISH_CONFIG:?}" ]
+[ "${SSH_CONNECTION:?}" = build-gate ]
+[ "$PATH" = "$SK_FAKE_SYSTEM/profile/bin" ]
+[ -L "$HOME/.guix-home" ]
+[ -r "$HOME/.profile" ]
+[ -r "${XDG_RUNTIME_DIR:?}/on-first-login-executed" ]
+exit "${SK_FAKE_FISH_STATUS:-0}"
+EOF
+    chmod +x "$fake_system/profile/bin/fish"
+}
+
+write_fake_fish
+
 for command in bat btop chafa chromium clang emacs fastfetch fzf gcc gdb \
     guile jq lua lua-language-server make mediainfo pamixer pipemixer pylsp \
     ranger ruff sbcl shellcheck shfmt; do
@@ -77,12 +98,19 @@ done
 for library in geiser-0 geiser-guile-0 org-0 sly-0 use-package-0; do
     mkdir -p "$fake_home/profile/share/emacs/site-lisp/$library"
 done
+printf '%s\n' 'function fenv' 'end' \
+    >"$fake_home/profile/share/fish/functions/fenv.fish"
+printf '%s\n' 'function fenv.main' 'end' \
+    >"$fake_home/profile/share/fish/functions/fenv.main.fish"
+printf '%s\n' '# fake generated Fish config' \
+    >"$fake_home/files/.config/fish/config.fish"
+printf '%s\n' '# fake generated profile' >"$fake_home/files/.profile"
 
 printf '%s\n' curl git fish emacs emacs-exwm bluez ncurses ripgrep vim \
     xset xwallpaper picom xrandr >"$fake_recovery_names"
-printf '%s\n' emacs emacs-desktop-environment emacs-geiser emacs-sly \
-    guile sbcl lua-language-server python-lsp-server ungoogled-chromium \
-    ranger shellcheck >"$fake_home_names"
+printf '%s\n' fish-foreign-env emacs emacs-desktop-environment emacs-geiser \
+    emacs-sly guile sbcl lua-language-server python-lsp-server \
+    ungoogled-chromium ranger shellcheck >"$fake_home_names"
 
 write_fake_manifest() {
     output=$1
@@ -118,9 +146,9 @@ write_fake_manifest "$fake_system_manifest" \
     bluez curl emacs emacs-exwm fish git guile kitty-latest ncurses picom \
     ripgrep vim xrandr xset xwallpaper
 write_fake_manifest "$fake_home_manifest" \
-    emacs emacs-desktop-environment emacs-geiser emacs-sly fish guile \
-    lua-language-server python-lsp-server ranger sbcl shellcheck \
-    ungoogled-chromium
+    emacs emacs-desktop-environment emacs-geiser emacs-sly fish \
+    fish-foreign-env guile lua-language-server python-lsp-server ranger sbcl \
+    shellcheck ungoogled-chromium
 
 write_channels() {
     guix_commit=${1:-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
@@ -300,6 +328,7 @@ run_gate() {
         SK_FAKE_ORIGINAL_HOME=$sandbox_home \
         SK_FAKE_FAIL=${SK_FAKE_FAIL:-} \
         SK_FAKE_ABSENT_STATUS=${SK_FAKE_ABSENT_STATUS:-127} \
+        SK_FAKE_FISH_STATUS=${SK_FAKE_FISH_STATUS:-0} \
         "$gate" "$@"
 }
 
@@ -348,6 +377,12 @@ contains "$log" "$sandbox_repo/guix/home/guixpc.scm"
 contains "$log" "$sandbox_repo/guix/systems/guixpc.scm"
 contains "$output" 'System recovery profile: PASS'
 contains "$output" 'Realized package ownership: PASS (overlap=emacs,fish,guile)'
+contains "$output" 'Non-login SSH Fish environment: PASS'
+
+if output=$(SK_FAKE_FISH_STATUS=96 run_gate 2>&1); then
+    fail 'non-login Fish validation failure passed the gate'
+fi
+contains "$output" 'non-login SSH Fish lacks Home-first environment'
 
 if output=$(SK_FAKE_ABSENT_STATUS=70 run_gate 2>&1); then
     fail 'non-127 absence failure passed the leakage gate'
@@ -360,8 +395,7 @@ if output=$(run_gate 2>&1); then
     fail 'System profile missing Fish passed the gate'
 fi
 contains "$output" 'System recovery profile lacks fish'
-printf '%s\n' '#!/bin/sh' 'exit 0' >"$fake_system/profile/bin/fish"
-chmod +x "$fake_system/profile/bin/fish"
+write_fake_fish
 
 rm "$fake_home/profile/bin/btop"
 if output=$(run_gate 2>&1); then
@@ -371,15 +405,26 @@ contains "$output" 'Home profile lacks btop'
 printf '%s\n' '#!/bin/sh' 'exit 0' >"$fake_home/profile/bin/btop"
 chmod +x "$fake_home/profile/bin/btop"
 
+rm "$fake_home/profile/share/fish/functions/fenv.fish"
+rm "$fake_home/profile/share/fish/functions/fenv.main.fish"
+if output=$(run_gate 2>&1); then
+    fail 'Home profile missing Fish foreign-env passed the gate'
+fi
+contains "$output" 'Home profile lacks Fish foreign-env support'
+printf '%s\n' 'function fenv' 'end' \
+    >"$fake_home/profile/share/fish/functions/fenv.fish"
+printf '%s\n' 'function fenv.main' 'end' \
+    >"$fake_home/profile/share/fish/functions/fenv.main.fish"
+
 remove_fake_manifest_package "$fake_home_manifest" shellcheck
 if output=$(run_gate 2>&1); then
     fail 'Home manifest missing declared ShellCheck passed the gate'
 fi
 contains "$output" 'Home profile lacks declared package: shellcheck'
 write_fake_manifest "$fake_home_manifest" \
-    emacs emacs-desktop-environment emacs-geiser emacs-sly fish guile \
-    lua-language-server python-lsp-server ranger sbcl shellcheck \
-    ungoogled-chromium
+    emacs emacs-desktop-environment emacs-geiser emacs-sly fish \
+    fish-foreign-env guile lua-language-server python-lsp-server ranger sbcl \
+    shellcheck ungoogled-chromium
 
 printf '%s\t1\tout\t/gnu/store/fake-guile\n' guile \
     >>"$fake_system_manifest"
@@ -398,9 +443,9 @@ if output=$(run_gate 2>&1); then
 fi
 contains "$output" 'overlap package differs between profiles: fish'
 write_fake_manifest "$fake_home_manifest" \
-    emacs emacs-desktop-environment emacs-geiser emacs-sly fish guile \
-    lua-language-server python-lsp-server ranger sbcl shellcheck \
-    ungoogled-chromium
+    emacs emacs-desktop-environment emacs-geiser emacs-sly fish \
+    fish-foreign-env guile lua-language-server python-lsp-server ranger sbcl \
+    shellcheck ungoogled-chromium
 
 printf '%s\t1\tout\t/gnu/store/fake-sbcl\n' sbcl \
     >>"$fake_system_manifest"
@@ -419,9 +464,9 @@ if output=$(run_gate 2>&1); then
 fi
 contains "$output" 'optional dialect leaked into Home: racket'
 write_fake_manifest "$fake_home_manifest" \
-    emacs emacs-desktop-environment emacs-geiser emacs-sly fish guile \
-    lua-language-server python-lsp-server ranger sbcl shellcheck \
-    ungoogled-chromium
+    emacs emacs-desktop-environment emacs-geiser emacs-sly fish \
+    fish-foreign-env guile lua-language-server python-lsp-server ranger sbcl \
+    shellcheck ungoogled-chromium
 
 printf '%s\t1\tout\t/gnu/store/fake-racket\n' racket \
     >>"$fake_system_manifest"

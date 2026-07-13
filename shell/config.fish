@@ -4,6 +4,38 @@ set -gx VISUAL "emacsclient -n -a emacs"
 set -gx BROWSER chromium
 set -gx PAGER less
 
+function __sk_import_home_environment_for_ssh
+    status is-login
+    and return
+
+    set -q SSH_CONNECTION
+    or return
+
+    set -l home_bin "$HOME/.guix-home/profile/bin"
+    set -q PATH[1]
+    and test "$PATH[1]" = "$home_bin"
+    and return
+
+    set -l fenv_functions "$HOME/.guix-home/profile/share/fish/functions"
+    test -r "$HOME/.profile"
+    or return
+    test -r "$fenv_functions/fenv.fish"
+    or return
+    test -r "$fenv_functions/fenv.main.fish"
+    or return
+
+    set --prepend fish_function_path "$fenv_functions"
+    source "$fenv_functions/fenv.main.fish"
+    source "$fenv_functions/fenv.fish"
+    if not fenv source "$HOME/.profile"
+        set -e fish_function_path[1]
+        return 1
+    end
+    set -e fish_function_path[1]
+end
+
+__sk_import_home_environment_for_ssh
+
 function sk-start-exwm
     test -z "$SSH_CONNECTION"
     or begin

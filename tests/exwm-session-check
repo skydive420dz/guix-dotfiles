@@ -90,8 +90,26 @@ if [ "$log_count" -ne 2 ]; then
 fi
 
 if command -v fish >/dev/null 2>&1; then
+    fish_command=$(command -v fish)
     mkdir -p "$home/Projects"
     ln -s "$repo" "$home/Projects/guix-dotfiles"
+    mkdir -p "$home/.guix-home/profile/bin" \
+        "$home/.guix-home/profile/share/fish/functions"
+    : >"$home/.profile"
+    # These single-quoted lines are the literal fake Fish function.
+    # shellcheck disable=SC2016
+    printf '%s\n' \
+        'function fenv' \
+        '    set -gx PATH "$HOME/.guix-home/profile/bin" $PATH' \
+        'end' \
+        >"$home/.guix-home/profile/share/fish/functions/fenv.fish"
+    printf '%s\n' 'function fenv.main' 'end' \
+        >"$home/.guix-home/profile/share/fish/functions/fenv.main.fish"
+    for command in shellcheck sbcl; do
+        printf '%s\n' '#!/bin/sh' 'exit 0' \
+            >"$home/.guix-home/profile/bin/$command"
+        chmod +x "$home/.guix-home/profile/bin/$command"
+    done
     # The single-quoted body is evaluated by Fish, not this POSIX shell.
     # shellcheck disable=SC2016
     if ! fish_output=$(
@@ -168,6 +186,45 @@ if command -v fish >/dev/null 2>&1; then
     grep -q 'fake startx attempt=4' "$current_log"
     if grep -q 'fake startx attempt=5' "$current_log"; then
         printf '%s\n' 'Fish negative control started EXWM unexpectedly' >&2
+        exit 1
+    fi
+
+    # A forced SSH command starts Fish as non-login with the reduced System
+    # PATH.  The Home environment must be imported before its command runs.
+    # The single-quoted body is evaluated by Fish.
+    # shellcheck disable=SC2016
+    if ! nonlogin_output=$(HOME="$home" PATH="$fake_bin" \
+        SSH_CONNECTION=fixture \
+        "$fish_command" --no-config --command '
+            source "$HOME/Projects/guix-dotfiles/shell/config.fish"
+            test "$PATH[1]" = "$HOME/.guix-home/profile/bin"; or exit 90
+            type -q shellcheck; or exit 91
+            type -q sbcl; or exit 92
+            echo FISH_NONLOGIN_HOME_REACHED
+        ' 2>&1); then
+        printf 'Fish non-login SSH Home import failed: %s\n' \
+            "$nonlogin_output" >&2
+        exit 1
+    fi
+    if ! printf '%s\n' "$nonlogin_output" | \
+         grep -q 'FISH_NONLOGIN_HOME_REACHED'; then
+        printf 'Fish non-login SSH marker is absent: %s\n' \
+            "$nonlogin_output" >&2
+        exit 1
+    fi
+
+    # A non-login Fish without SSH inherits its parent environment unchanged.
+    # shellcheck disable=SC2016
+    if ! (
+        unset SSH_CONNECTION
+        HOME="$home" PATH="$fake_bin" SK_FAKE_BIN="$fake_bin" \
+            "$fish_command" --no-config --command '
+                source "$HOME/Projects/guix-dotfiles/shell/config.fish"
+                not type -q shellcheck; or exit 93
+                test "$PATH[1]" = "$SK_FAKE_BIN"; or exit 94
+            '
+    ); then
+        printf '%s\n' 'Fish non-SSH control imported Home unexpectedly' >&2
         exit 1
     fi
 else

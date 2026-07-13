@@ -1,7 +1,8 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; Home generation 35 accepted the complete user/editor package set before the
-;; System declaration consumed this recovery list.  The System list guarantees
+;; Home generation 35 accepted the 74-package user/editor base before the
+;; System declaration consumed this recovery list.  The pending forced-SSH
+;; correction adds fish-foreign-env as package 75.  The System list guarantees
 ;; a tty shell, Kitty, and `emacs -Q'; normal configured EXWM still consumes the
 ;; accepted base Home services and editor profile.  Optional dialect
 ;; environments live in guix/manifests and must not be added to either list
@@ -25,7 +26,8 @@
     "xrandr"))
 
 (define %guixpc-home-desktop-package-specifications
-  '("fastfetch-minimal"
+  '("fish-foreign-env"
+    "fastfetch-minimal"
     "btop"
     "fzf"
     "blueman"

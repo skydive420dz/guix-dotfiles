@@ -30,14 +30,14 @@
            "ripgrep" "vim" "xset" "xwallpaper" "picom" "xrandr"))
  "reviewed 13-package recovery floor changed")
 
-(assert (= (length home) 74)
-        "reviewed Home ownership list must contain exactly 74 packages")
+(assert (= (length home) 75)
+        "reviewed Home ownership list must contain exactly 75 packages")
 
 (for-each
  (lambda (specification)
    (assert (member specification home)
            (string-append "Home ownership lost " specification)))
- '("emacs" "emacs-use-package" "emacs-geiser" "emacs-sly"
+ '("fish-foreign-env" "emacs" "emacs-use-package" "emacs-geiser" "emacs-sly"
    "guile" "sbcl" "python-lsp-server" "lua-language-server"
    "ungoogled-chromium" "ranger" "shellcheck"))
 

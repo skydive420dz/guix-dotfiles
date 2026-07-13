@@ -48,7 +48,7 @@ if [ ! -x "$bootstrap_guix" ]; then
     exit 2
 fi
 
-for command in awk cat cmp comm cp guile mkdir mktemp rm sort; do
+for command in awk cat cmp comm cp guile ln mkdir mktemp rm sort; do
     if ! command -v "$command" >/dev/null 2>&1; then
         printf 'guix-build-gate: missing command: %s\n' "$command" >&2
         exit 2
@@ -433,6 +433,58 @@ validate_home_profile_artifacts() {
             exit 1
         fi
     done
+
+    if [ ! -r "$profile/share/fish/functions/fenv.fish" ] || \
+       [ ! -r "$profile/share/fish/functions/fenv.main.fish" ]; then
+        printf '%s\n' \
+            'guix-build-gate: Home profile lacks Fish foreign-env support' >&2
+        exit 1
+    fi
+}
+
+validate_nonlogin_fish_environment() {
+    system_result=$1
+    home_result=$2
+    fish_home=$tmp/fish-home
+    fish_runtime=$tmp/fish-runtime
+    fish_config=$home_result/files/.config/fish/config.fish
+    fish_profile=$home_result/files/.profile
+
+    if [ ! -r "$fish_config" ] || [ ! -r "$fish_profile" ]; then
+        printf '%s\n' \
+            'guix-build-gate: Home result lacks generated Fish/profile files' >&2
+        exit 1
+    fi
+
+    mkdir -p "$fish_home" "$fish_runtime"
+    ln -s "$home_result" "$fish_home/.guix-home"
+    ln -s "$fish_profile" "$fish_home/.profile"
+    : >"$fish_runtime/on-first-login-executed"
+
+    # The single-quoted command body is evaluated by Fish.
+    # shellcheck disable=SC2016
+    if ! HOME="$fish_home" \
+        PATH="$system_result/profile/bin" \
+        SSH_CONNECTION=build-gate \
+        XDG_RUNTIME_DIR="$fish_runtime" \
+        SK_FISH_CONFIG="$fish_config" \
+        "$system_result/profile/bin/fish" --no-config --command '
+            command -q shellcheck; and exit 90
+            command -q sbcl; and exit 91
+            source "$SK_FISH_CONFIG"
+            test "$PATH[1]" = "$HOME/.guix-home/profile/bin"; or exit 92
+            command -q shellcheck; or exit 93
+            command -q sbcl; or exit 94
+            string match -q \
+                "$HOME/.guix-home/profile/share/emacs/site-lisp*" \
+                "$EMACSLOADPATH"; or exit 95
+        '; then
+        printf '%s\n' \
+            'guix-build-gate: non-login SSH Fish lacks Home-first environment' >&2
+        exit 1
+    fi
+
+    printf '%s\n' 'Non-login SSH Fish environment: PASS'
 }
 
 validate_realized_package_ownership() {
@@ -569,6 +621,7 @@ else
     printf '%s\n' "$system_result"
     validate_system_recovery_profile "$system_result"
     validate_realized_package_ownership "$system_result" "$home_result"
+    validate_nonlogin_fish_environment "$system_result" "$home_result"
 fi
 
 if [ "$plan" -eq 1 ]; then

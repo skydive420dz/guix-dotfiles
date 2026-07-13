@@ -152,7 +152,9 @@ REPL-, backend-, service-, or workflow-level acceptance tests.
 #+begin_src text
 Source organization:       strong
 Declared/deployed config:  aligned at the authenticated three-channel lock
-Live runtime convergence:  strong; fresh System 84 and Home 35 runtime
+Live runtime convergence:  strong; fresh System 85 and Home 35 runtime
+                           passes, with a forced-command Home environment
+                           correction prepared before final Slice 13 acceptance
 Display/resource health:   good
 Validation safety:         strong; isolated editor and activation gates
 Lisp foundation:           coherent Elisp/Guile/SBCL base
@@ -173,7 +175,7 @@ expansion can begin with Slice 13.
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
 | O-01 | P0  | CLOSED   | Elogind 255.24 removes command and PTY SSH sessions immediately; no closing session remained through 30 seconds. | 7 |
-| O-02 | P1  | CLOSED   | System generation 84 is current/booted while fresh Home generation 35 supplies the accepted additive Slice 13 package/editor profile. | 7, 10, 11, 12, 13 |
+| O-02 | P1  | CLOSED   | Reduced System generation 85 is current/booted while Home generation 35 supplies the accepted application/editor profile. | 7, 10, 11, 12, 13 |
 | O-03 | P1  | CLOSED   | D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse are fresh in Home generation 35 with no replacement pending. | 7, 10, 11, 12, 13 |
 | O-04 | P1  | CLOSED   | Fresh Emacs 30.2 and the live Org, Geiser, Geiser-Guile, and Projectile paths match the current profile. | 7, 8 |
 | O-05 | P1  | CLOSED   | EXWM, launched applications, PipeWire, WirePlumber, and PipeWire-Pulse share the one canonical Guix Home D-Bus; no =dbus-launch= remains. | 10 |
@@ -224,7 +226,7 @@ reported as a confirmed bug without a focused test.
 | R-01 | P1  | CLOSED   | =guix/channels.scm= pins exact Guix, Nonguix, and authenticated sk-guix commits; the isolated time-machine provenance gate matches all three. | 12 |
 | R-02 | P1  | CLOSED   | =sk-guix= publishes a signed introduction, authorized signer, orphan public keyring, and signed target that pass isolated clean-clone Guix authentication. | 12 |
 | R-03 | P2  | POLICY   | Live repo symlinks make edits immediate but Home rollback does not restore application-file contents. | 13 |
-| R-04 | P2  | PARTIAL  | Home 35 now owns the complete normal application/editor/developer profile; the legacy System superset remains only until the separately gated subtractive checkpoint. | 13 |
+| R-04 | P2  | PARTIAL  | System 85 now carries only the recovery floor and Home owns normal tools; the forced-command Fish environment correction awaits Home activation. | 13 |
 | R-05 | P2  | PARTIAL  | Core, JVM Clojure, and Racket manifests build and enter independently; final System ownership and fresh-bootstrap acceptance remain. | 12, 13 |
 | R-06 | P2  | CLOSED   | =scripts/guix-entrypoints= checks or bootstraps every declaration link and refuses blockers/missing sources transactionally. | 9, 13 |
 
@@ -1293,9 +1295,9 @@ ripgrep/Vim, and Picom/xrandr/xset/xwallpaper.  Normal applications, the
 coherent configured Emacs profile, fonts, language servers, compilers, Guile,
 and SBCL remain in the already accepted Home generation.
 
-The strict GuixPC suite passes with recovery count 13 and Home count 74.  The final
-authenticated full gate reproduced the accepted Home and built the reduced
-System candidate:
+At the subtractive checkpoint, the strict GuixPC suite passed with recovery
+count 13 and Home count 74.  Its authenticated full gate reproduced the
+accepted Home and built the reduced System candidate:
 
 #+begin_src text
 Home:           /gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home
@@ -1347,10 +1349,60 @@ generation 84.  Home 35 remains active in either path.  A complete source
 rollback also restores the additive acceptance checkpoint =ad33494= before any
 later =gsr=.
 
+*** Fresh System acceptance and forced-command Home correction
+
+Checkpoint =da231e4= activated as System generation 85 at
+=/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system=.  The reconfigure result
+differs from the prebuilt =6680dpb...= path only because it adds configuration
+and channel provenance; profile, kernel, initrd, boot program, parameters, and
+activation are identical.  System 85 is both current and booted.  Home remained
+generation 35 and pull remained generation 5.
+
+The fresh desktop, session bus, EXWM Emacs, PipeWire/WirePlumber, RTKit, Picom,
+DPMS, elogind, networking, Bluetooth service, physical sink, and finite-stream
+checks pass.  Strict shell fixtures pass with recovery count 13 and Home count
+74, the live editor plus 25/25 isolated ERT tests pass, and all fifteen editor
+tools resolve.  The active realized manifests contain 71 unique System and 78
+unique Home rows with exact overlap =emacs/fish/guile=.  Every recovery command,
+Home application/development command, EXWM library, and reviewed Home Emacs
+library is visible.  Clojure/JVM and Racket remain absent from both persistent
+profiles.  Bose was disconnected, so the previously accepted Bluetooth audio
+and physical-volume-key evidence remains the hardware gate.
+
+This fresh boot also exposed a real boundary regression before final
+acceptance.  A direct =ssh host command= invokes Fish as non-login with only
+=/run/current-system/profile/bin=.  System 84 had accidentally masked that
+behavior by duplicating ShellCheck and SBCL; reduced System 85 correctly lacks
+them, so forced commands could not see Home-owned tools.  Login Fish, =sh -lc=,
+and the graphical session already had the correct Home-first environment.
+
+The correction explicitly adds =fish-foreign-env= to Home ownership, bringing
+the reviewed explicit Home list to 75 packages and the realized Home profile to
+79 rows.  Non-login Fish imports =~/.profile= only for SSH when its first PATH
+entry is not the Home profile.  Non-SSH child Fish preserves its inherited
+environment.  Fixtures cover both branches.  The full authenticated gate builds
+and checks the generated Fish config from a System-only PATH and passes:
+
+#+begin_src text
+Home candidate: /gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home
+Home profile:   /gnu/store/l6qmy5lid4hyfwxrgx4nz8icczj8fq64-profile
+Home rows:      79
+System:         /gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system
+Overlap:        emacs, fish, guile
+Forced SSH:     Home-first ShellCheck/SBCL/EMACSLOADPATH PASS
+#+end_src
+
+This follow-up is Home-only: push its checkpoint, run =ghr= without =gsr=,
+reboot, then prove a bare forced SSH command resolves =shellcheck= and =sbcl=
+from =~/.guix-home/profile/bin=.  Rerun strict shell, editor, ownership, desktop,
+retention, and rollback checks.  Retain System 84 and Home 35 until that fresh
+acceptance is recorded.  If it regresses, restore this source to =da231e4=,
+switch exactly to Home generation 35, and reboot.
+
 If a later change regresses this accepted Home state, restore this acceptance
 source checkpoint and use the immutable pull 5 Guix to switch exactly to Home
 35.  Home 34 remains the pre-Slice-13 fallback.  Slice 13 stays open until
-System is reduced in the later checkpoint, the fresh bootstrap sequence is
+the forced-command Home correction is accepted, the fresh bootstrap sequence is
 checked, and final rollback evidence is recorded.
 
 ** TODO Slice 14: Core Lisp editing correctness and structural editing

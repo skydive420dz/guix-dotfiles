@@ -100,9 +100,10 @@ Current next action:
     34.  Fresh shell, editor, desktop, provenance, retention, and rollback
     checks pass.
 - [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 13: Package ownership and per-dialect environments][Slice 13: package ownership and per-dialect environments]].
-  - [X] Record the 13-package-plus-Kitty recovery target and the 74-package
+  - [X] Record the 13-package-plus-Kitty recovery target and the 75-package
     Home application/editor/development profile with only Emacs deliberately
-    duplicated.
+    duplicated in the explicit lists; the final Home package adds
+    =fish-foreign-env= for forced SSH command environment loading.
   - [X] Add independently pinned core, JVM Clojure, and full Racket manifests
     plus pure-shell entrypoints and build/runtime/leakage gates.  The final
     isolated full gate builds Home candidate =7f2lqwx64ixl=, retains the exact
@@ -117,8 +118,13 @@ Current next action:
     System in a separate source checkpoint.  The pinned full gate built
     =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system= and proved the exact
     realized =emacs/fish/guile= overlap plus recovery/Home artifacts.
-  - [ ] Push the subtractive checkpoint, run =gsr= only, reboot, and accept the
-    reduced System while retaining System 84 and Home 35 as rollback roots.
+  - [X] Push subtractive checkpoint =da231e4=, run =gsr= only, and accept fresh
+    System 85 at =/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system= with
+    Home 35 unchanged.  Strict shell/editor/ownership/session gates pass;
+    System 84 remains the immediate rollback.
+  - [ ] Push and activate the forced-command Fish correction as the next Home
+    generation, reboot, and prove bare SSH finds Home-owned ShellCheck/SBCL.
+    Built candidate: =/gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home=.
   - [ ] Pass the checked fresh-bootstrap sequence and record final Slice 13
     generations, retention pins, and rollback evidence.
 
