@@ -70,11 +70,11 @@ next active slice.
   and Home generation 34 now share the exact authenticated channel lock; the
   non-activating package/Home/System gate and read-only retention/rollback
   planner pass from the accepted frontend.
-- [ ] Finish Slice 13.  Reduced System generation 85 and corrected Home
+- [X] Complete Slice 13.  Reduced System generation 85 and corrected Home
   generation 36 pass fresh desktop/editor/ownership/forced-SSH acceptance.
-  Exact retention roots are rotated; only the checked fresh-bootstrap sequence
-  remains.
-- [ ] Continue Slices 14 through 19 in audit order after Slice 13.
+  Exact retention roots are rotated, and the installed-base configuration
+  bootstrap passes both fixture and isolated GuixPC acceptance.
+- [ ] Continue Slices 14 through 19 in audit order, beginning with Slice 14.
   Do not expand dialect breadth until the P0/P1 runtime, validation, and
   reproducibility prerequisites close.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
@@ -188,11 +188,12 @@ Owns:
 - the Fish/Kitty tty recovery path and a System =emacs -Q=/EXWM package floor
 - system services such as SSH, Bluetooth, Xorg, elogind
 
-Slice 13 uses a two-checkpoint migration.  The additive checkpoint is accepted
-as Home generation 35.  The separately gated subtractive checkpoint makes
-=guix/systems/guixpc.scm= consume the 13 recovery specifications recorded in
-=guix/package-ownership.scm= plus =kitty-latest=.  Reduced System generation 85
-has passed a fresh boot; accepted System generation 84 remains its immediate
+Slice 13 uses a staged ownership migration.  Its additive and subtractive
+ownership checkpoints are accepted as Home generation 35 and reduced System
+generation 85; a final forced-SSH environment correction is accepted as Home
+generation 36.  The reduced System consumes the 13 recovery specifications
+recorded in =guix/package-ownership.scm= plus =kitty-latest=.  System generation
+85 has passed a fresh boot; accepted System generation 84 remains its immediate
 rollback.
 The System floor is not a second configured desktop: normal EXWM still requires
 the accepted base Home D-Bus services and Home editor profile.  Its independent
@@ -1067,6 +1068,26 @@ key is on its orphan =keyring= branch.  Main commits from the introduction
 forward must remain signed and authorized; replace/authorize the current key
 before its 2028-07-11 expiry.
 
+Nonguix has two separate trust boundaries.  Its channel introduction is
+=897c1a470da759236cc11798f4e0a5f7d4d59fbc= with OpenPGP fingerprint
+=2A39 3FFF 68F4 EF7A 3D29 12AF 6F51 20A0 22FB B2D5=.  Binary substitutes use
+the daemon ACL key whose Guix =q= value is
+=C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98=.
+The System declaration's =(nonguix-transformation-guix)= adds that substitute
+URL and key only when the resulting System is activated.  Bootstrap never
+edits =/etc/guix/acl=.  If the reviewed key is absent, it fails unless the
+operator explicitly permits proceeding at source-build risk with
+=SK_GUIX_BOOTSTRAP_ALLOW_NONGUIX_SOURCE_BUILD=1=.  That override neither
+authorizes a signature nor removes the Nonguix URL; the daemon can reject an
+unauthorized substitute and a local source build may be required.  Bootstrap
+does not automate manual ACL mutation.  Prefer the declarative System
+transformation; any manual key acquisition and authorization needs its own
+reviewed official procedure.
+
+Generated =/etc/guix/channels.scm= records daemon configuration and can move
+with an activated System.  It is not the project lock and must never replace
+the exact commits and introductions in =guix/channels.scm=.
+
 =sk-guix= owns =kitty-latest= only. The system imports it through =(sk packages
 terminals)= and installs =kitty-latest= directly, instead of resolving =kitty=
 through =specification->package=. Other applications should stay on upstream
@@ -1150,6 +1171,12 @@ The planner aborts on pin/target mismatches, current/runtime divergence, an
 unrooted booted System, or dangling targets.  The rollback drill additionally
 checks recovery artifacts and required GRUB generation references.
 
+Those pins are historical, installation-specific acceptance evidence.  They
+are not bootstrap inputs for a newly configured installation: its generation
+numbers and store targets will differ.  Do not run =verify=, switch to a
+recorded number, or reseed the file until the new System, Home, and Pull
+generations have each passed their live acceptance gates.
+
 #+begin_src sh
 scripts/guix-generation-retention inventory
 scripts/guix-generation-retention verify
@@ -1196,6 +1223,70 @@ scripts/guix-entrypoints bootstrap
 Bootstrap refuses a regular-file/directory blocker or missing managed source and
 does not partially change another entrypoint.  It never overwrites a conflicting
 regular file.
+
+* Installed-base GuixPC configuration bootstrap
+
+The checked bootstrap boundary starts from an already bootable Guix base on
+this GuixPC hardware.  It does not install a blank disk.  Before continuing,
+the operator must have working networking and a Guix daemon, the
+=skydive420dz= account with its declared =wheel/netdev/audio/video= groups, and
+this checkout at
+=/home/skydive420dz/Projects/guix-dotfiles=.  Confirm that the root, Home,
+swap, and EFI UUIDs in =guix/systems/guixpc.scm= match the target machine before
+any System activation.  Review the three channel introductions and make an
+explicit Nonguix substitute-key or source-build-risk decision as described
+above.
+
+A validation-only run may use a stable worktree because bootstrap fingerprints
+the complete repository before and after every gate.  Before using its output
+for live activation, however, commit and push the intended checkpoint, require
+an empty =git status --short=, verify =HEAD= matches the intended remote commit,
+and rerun =prepare= from that exact checkpoint.
+
+From the checkout, run:
+
+#+begin_src sh
+scripts/guix-bootstrap --plan
+scripts/guix-bootstrap prepare
+#+end_src
+
+=--plan= validates the complete channel lock, chooses and freezes a runnable
+immutable user Pull or System Guix profile, plans the three declaration links,
+runs the 14-link Home preflight, and executes the authenticated build-gate
+plan.  Its time-machine evaluation may fetch or add authenticated immutable
+store/cache objects.  It does not activate a live profile or generation, pull,
+reconfigure, reboot, alter retention, or collect garbage.
+
+=prepare= first passes the complete non-activating package, manifest, Home, and
+System build gate.  Only then may it repair the three declaration symlinks and
+create the exact authenticated user Pull generation; it reuses that Pull when
+all six provenance fields already match.  It finally renders both activation
+plans through the frozen post-Pull profile.  It never activates System or Home,
+uses sudo, reboots, changes retention, or runs garbage collection.
+
+Preparation prints exact, Fish-safe =env SK_GUIX_FRONTEND_PROFILE=...=
+commands with the absolute =scripts/guix-reconfigure= path.  Before activating,
+confirm the checkout is still clean at that same checkpoint.  The frontend is
+frozen, but the System and Home declarations remain live repository files;
+rerun =prepare= after any source or commit change.  Then continue manually from
+a local recovery tty:
+
+1. Run the printed System command, then reboot.
+2. Confirm =/var/guix/profiles/system=, =/run/current-system=, and
+   =/run/booted-system= resolve to the same accepted store target.
+3. Run the printed Home command, then reboot again.
+4. Run =scripts/shell-check --strict=, =scripts/emacs-check=,
+   =scripts/editor-tools-check=, and =scripts/desktop-session-check=; also prove
+   a direct SSH command resolves Home-owned ShellCheck and SBCL.
+5. Only after live acceptance, record the new installation's exact System,
+   Home, and Pull targets in =generation-pins.tsv= and pass retention
+   verification plus the rollback drill.
+
+The recorded 85/36/5 generations are this installation's historical rollback
+evidence and are not valid new-install targets.  Blank-disk partitioning,
+filesystem creation, initial GRUB/EFI installation, initial user/network/
+firmware provisioning, secret restoration, substitute-ACL mutation, and a new
+installation's first boot remain outside this checked sequence.
 
 * Generated or local state
 

@@ -316,6 +316,7 @@ run_gate() {
     : >"$fake_log"
     PATH=$sandbox_home/bin:$PATH \
         HOME=$sandbox_home \
+        SK_GUIX_FRONTEND_PROFILE=${SK_TEST_FRONTEND_PROFILE:-} \
         SK_FAKE_GUIX_LOG=$fake_log \
         SK_FAKE_GUIX_PROFILE=$fake_profile \
         SK_FAKE_SYSTEM=$fake_system \
@@ -378,6 +379,16 @@ contains "$log" "$sandbox_repo/guix/systems/guixpc.scm"
 contains "$output" 'System recovery profile: PASS'
 contains "$output" 'Realized package ownership: PASS (overlap=emacs,fish,guile)'
 contains "$output" 'Non-login SSH Fish environment: PASS'
+
+override_profile=$tmp/override-bootstrap-profile
+mkdir -p "$override_profile/bin"
+ln -s "$fake_guix" "$override_profile/bin/guix"
+output=$(SK_TEST_FRONTEND_PROFILE=$override_profile run_gate --plan)
+contains "$output" 'guix-build-gate: PASS (mode=plan)'
+if output=$(SK_TEST_FRONTEND_PROFILE=relative-profile run_gate --plan 2>&1); then
+    fail 'relative frontend profile override passed the gate'
+fi
+contains "$output" 'frontend profile must be absolute'
 
 if output=$(SK_FAKE_FISH_STATUS=96 run_gate 2>&1); then
     fail 'non-login Fish validation failure passed the gate'

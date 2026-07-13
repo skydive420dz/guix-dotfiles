@@ -1,0 +1,556 @@
+#!/bin/sh
+set -eu
+
+source_repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/guix-bootstrap-check.XXXXXX")
+tmp=$(CDPATH='' cd "$tmp" && pwd -P)
+trap 'rm -rf -- "$tmp"' EXIT HUP INT TERM
+
+fail() {
+    printf 'FAIL: %s\n' "$1" >&2
+    exit 1
+}
+
+contains() {
+    case $1 in
+        *"$2"*) ;;
+        *) fail "expected output to contain: $2" ;;
+    esac
+}
+
+sandbox_repo=$tmp/repo
+home=$tmp/home
+store_root=$tmp/store
+bootstrap=$sandbox_repo/scripts/guix-bootstrap
+channels=$sandbox_repo/guix/channels.scm
+system_config=$sandbox_repo/guix/systems/guixpc.scm
+log=$tmp/bootstrap.log
+acl=$tmp/acl
+fake_guile=$tmp/bin/guile
+system_profile=$store_root/system-profile
+user_profile=$store_root/user-profile
+pulled_profile=$store_root/pulled-profile
+poison_profile=$store_root/poison-profile
+outside_profile=$tmp/outside-profile
+
+mkdir -p "$sandbox_repo/scripts" "$sandbox_repo/guix/home" \
+    "$sandbox_repo/guix/systems" "$store_root" "$tmp/bin"
+for profile in "$system_profile" "$user_profile" "$pulled_profile" \
+    "$poison_profile" "$outside_profile"; do
+    mkdir -p "$profile/bin"
+done
+cp "$source_repo/scripts/guix-bootstrap" "$bootstrap"
+cp "$source_repo/scripts/guix-entrypoints" \
+    "$sandbox_repo/scripts/guix-entrypoints-real"
+chmod +x "$bootstrap" "$sandbox_repo/scripts/guix-entrypoints-real"
+printf '%s\n' '(operating-system)' >"$system_config"
+printf '%s\n' '(home-environment)' >"$sandbox_repo/guix/home/guixpc.scm"
+printf '%s\n' '; fixture preflight' \
+    >"$sandbox_repo/scripts/guix-home-links-preflight.scm"
+
+cat >"$channels" <<'EOF'
+(list
+ (channel
+  (name 'guix)
+  (url "https://example.org/guix.git")
+  (branch "master")
+  (commit "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+  (introduction
+   (make-channel-introduction
+    "1111111111111111111111111111111111111111"
+    (openpgp-fingerprint
+     "AAAA AAAA AAAA AAAA AAAA AAAA AAAA AAAA AAAA AAAA"))))
+ (channel
+  (name 'nonguix)
+  (url "https://example.org/nonguix.git")
+  (branch "master")
+  (commit "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+  (introduction
+   (make-channel-introduction
+    "2222222222222222222222222222222222222222"
+    (openpgp-fingerprint
+     "BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB"))))
+ (channel
+  (name 'sk-guix)
+  (url "https://example.org/sk-guix.git")
+  (branch "main")
+  (commit "cccccccccccccccccccccccccccccccccccccccc")
+  (introduction
+   (make-channel-introduction
+    "3333333333333333333333333333333333333333"
+    (openpgp-fingerprint
+     "CCCC CCCC CCCC CCCC CCCC CCCC CCCC CCCC CCCC CCCC")))))
+EOF
+cp "$channels" "$tmp/locked-channels.scm"
+cp "$system_config" "$tmp/locked-system.scm"
+printf '%s\n' \
+    '(acl (q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#))' \
+    >"$acl"
+
+cat >"$sandbox_repo/scripts/guix-entrypoints" <<'EOF'
+#!/bin/sh
+set -eu
+printf 'entrypoints:%s\n' "$1" >>"${SK_FAKE_LOG:?}"
+case ${SK_FAKE_FAIL:-}:$1 in
+    entrypoints-plan:plan | entrypoints:bootstrap) exit 70 ;;
+esac
+script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
+exec "$script_dir/guix-entrypoints-real" "$@"
+EOF
+
+cat >"$sandbox_repo/scripts/guix-build-gate" <<'EOF'
+#!/bin/sh
+set -eu
+case ${1:-} in
+    '') mode=build ;;
+    --plan) mode=plan ;;
+    *) exit 74 ;;
+esac
+printf 'gate:%s:%s\n' "$mode" "${SK_GUIX_FRONTEND_PROFILE:?}" \
+    >>"${SK_FAKE_LOG:?}"
+[ "${SK_FAKE_FAIL:-}" != gate ] || exit 71
+if [ "${SK_FAKE_DRIFT:-}" = system ]; then
+    printf '%s\n' '; simulated concurrent System edit' >>"$SK_FAKE_SYSTEM_CONFIG"
+fi
+EOF
+
+cat >"$sandbox_repo/scripts/guix-reconfigure" <<'EOF'
+#!/bin/sh
+set -eu
+printf 'reconfigure:%s:%s:%s\n' "$1" "$2" \
+    "${SK_GUIX_FRONTEND_PROFILE:?}" >>"${SK_FAKE_LOG:?}"
+[ "$#" -eq 2 ] && [ "$2" = --print ]
+[ "$SK_GUIX_FRONTEND_PROFILE" = "$SK_FAKE_EXPECT_POST_PROFILE" ]
+case $1 in
+    system)
+        [ "${SK_FAKE_FAIL:-}" != system ] || exit 72
+        if [ "${SK_FAKE_REPOINT:-0}" -eq 1 ]; then
+            unlink "$HOME/.config/guix/current"
+            ln -s "$SK_FAKE_POISON_PROFILE" "$HOME/.config/guix/current"
+        fi
+        ;;
+    home) [ "${SK_FAKE_FAIL:-}" != home ] || exit 73 ;;
+    *) exit 74 ;;
+esac
+EOF
+
+cat >"$fake_guile" <<'EOF'
+#!/bin/sh
+set -eu
+printf '%s\n' preflight >>"${SK_FAKE_LOG:?}"
+[ "${SK_FAKE_FAIL:-}" != preflight ] || exit 69
+EOF
+
+for helper in guix-entrypoints guix-build-gate guix-reconfigure; do
+    chmod +x "$sandbox_repo/scripts/$helper"
+done
+chmod +x "$fake_guile"
+
+cat >"$tmp/fake-guix" <<'EOF'
+#!/bin/sh
+set -eu
+profile_dir=$(dirname "$(dirname "$0")")
+role=${profile_dir##*/}
+
+case ${1:-} in
+    --version)
+        printf 'version:%s\n' "$role" >>"${SK_FAKE_LOG:?}"
+        printf '%s\n' 'guix (fixture) 1.0'
+        ;;
+    describe)
+        printf 'describe:%s\n' "$role" >>"${SK_FAKE_LOG:?}"
+        guix_commit=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        if [ "$role" = system-profile ]; then
+            guix_commit=dddddddddddddddddddddddddddddddddddddddd
+        fi
+        if [ "$role" = user-profile ] && \
+            [ "${SK_FAKE_CURRENT_MATCH:-1}" -eq 0 ]; then
+            guix_commit=dddddddddddddddddddddddddddddddddddddddd
+        fi
+        if [ "$role" = pulled-profile ] && \
+            [ "${SK_FAKE_FAIL:-}" = provenance ]; then
+            guix_commit=dddddddddddddddddddddddddddddddddddddddd
+        fi
+        cat <<EOF_DESCRIBE
+name: guix
+url: https://example.org/guix.git
+branch: master
+commit: $guix_commit
+introductioncommit: 1111111111111111111111111111111111111111
+introductionsigner: AAAA AAAA AAAA AAAA AAAA AAAA AAAA AAAA AAAA AAAA
+
+name: nonguix
+url: https://example.org/nonguix.git
+branch: master
+commit: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+introductioncommit: 2222222222222222222222222222222222222222
+introductionsigner: BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB
+
+name: sk-guix
+url: https://example.org/sk-guix.git
+branch: main
+commit: cccccccccccccccccccccccccccccccccccccccc
+introductioncommit: 3333333333333333333333333333333333333333
+introductionsigner: CCCC CCCC CCCC CCCC CCCC CCCC CCCC CCCC CCCC CCCC
+EOF_DESCRIBE
+        ;;
+    pull)
+        printf 'pull:%s' "$role" >>"${SK_FAKE_LOG:?}"
+        profile=
+        channel_file=
+        while [ "$#" -gt 0 ]; do
+            printf ':%s' "$1" >>"$SK_FAKE_LOG"
+            case $1 in
+                -C)
+                    shift
+                    channel_file=$1
+                    printf ':%s' "$1" >>"$SK_FAKE_LOG"
+                    ;;
+                --profile=*) profile=${1#--profile=} ;;
+            esac
+            shift
+        done
+        printf '\n' >>"$SK_FAKE_LOG"
+        [ "$channel_file" != "$SK_FAKE_CHANNELS" ]
+        cmp -s "$channel_file" "$SK_FAKE_CHANNELS"
+        cmp -s "$channel_file" \
+            "${XDG_CONFIG_HOME:?}/guix/trusted-channels.scm"
+        [ -d "${XDG_CACHE_HOME:?}" ]
+        [ "$profile" = "$HOME/.config/guix/current" ]
+        [ "${SK_FAKE_FAIL:-}" != pull ] || exit 75
+        mkdir -p "$(dirname "$profile")"
+        if [ -e "$profile" ] || [ -L "$profile" ]; then
+            unlink "$profile"
+        fi
+        generation=$HOME/.config/guix/current-1-link
+        if [ -e "$generation" ] || [ -L "$generation" ]; then
+            unlink "$generation"
+        fi
+        ln -s "$SK_FAKE_PULLED_PROFILE" "$generation"
+        ln -s "$generation" "$profile"
+        if [ "${SK_FAKE_FAIL:-}" = post-pull ]; then
+            chmod -x "$SK_FAKE_PULLED_PROFILE/bin/guix"
+        fi
+        ;;
+    *)
+        printf 'unexpected:%s:%s\n' "$role" "${1:-missing}" \
+            >>"${SK_FAKE_LOG:?}"
+        exit 76
+        ;;
+esac
+EOF
+chmod +x "$tmp/fake-guix"
+for profile in "$system_profile" "$user_profile" "$pulled_profile" \
+    "$outside_profile"; do
+    cp "$tmp/fake-guix" "$profile/bin/guix"
+done
+cat >"$poison_profile/bin/guix" <<'EOF'
+#!/bin/sh
+set -eu
+printf 'poison:%s\n' "${1:-missing}" >>"${SK_FAKE_LOG:?}"
+exit 97
+EOF
+chmod +x "$poison_profile/bin/guix"
+
+git -C "$sandbox_repo" init -q
+git -C "$sandbox_repo" add .
+git -C "$sandbox_repo" \
+    -c user.name=fixture -c user.email=fixture@example.org \
+    commit -qm fixture
+
+reset_case() {
+    rm -rf -- "$home"
+    mkdir -p "$home"
+    : >"$log"
+    chmod +x "$user_profile/bin/guix" "$pulled_profile/bin/guix" \
+        "$outside_profile/bin/guix"
+    cp "$tmp/locked-channels.scm" "$channels"
+    cp "$tmp/locked-system.scm" "$system_config"
+}
+
+install_user_pull() {
+    mkdir -p "$home/.config/guix"
+    ln -s "$user_profile" "$home/.config/guix/current"
+}
+
+run_bootstrap() {
+    selected_pulled_profile=${SK_TEST_PULLED_PROFILE:-$pulled_profile}
+    HOME=$home \
+        SK_GUIX_BOOTSTRAP_SYSTEM_PROFILE=$system_profile \
+        SK_GUIX_BOOTSTRAP_GUILE=$fake_guile \
+        SK_GUIX_BOOTSTRAP_ACL=${SK_TEST_ACL:-$acl} \
+        SK_GUIX_BOOTSTRAP_STORE_ROOT=$store_root \
+        SK_GUIX_BOOTSTRAP_ALLOW_NONGUIX_SOURCE_BUILD=${SK_TEST_SOURCE_BUILD:-0} \
+        SK_FAKE_LOG=$log \
+        SK_FAKE_CHANNELS=$channels \
+        SK_FAKE_SYSTEM_CONFIG=$system_config \
+        SK_FAKE_PULLED_PROFILE=$selected_pulled_profile \
+        SK_FAKE_EXPECT_POST_PROFILE=${SK_TEST_EXPECT_POST_PROFILE:-$selected_pulled_profile} \
+        SK_FAKE_POISON_PROFILE=$poison_profile \
+        SK_FAKE_CURRENT_MATCH=${SK_FAKE_CURRENT_MATCH:-1} \
+        SK_FAKE_FAIL=${SK_FAKE_FAIL:-} \
+        SK_FAKE_REPOINT=${SK_FAKE_REPOINT:-0} \
+        SK_FAKE_DRIFT=${SK_FAKE_DRIFT:-} \
+        "$bootstrap" "$@"
+}
+
+stage_log() {
+    awk -F : '
+        $1 == "reconfigure" { print $1 ":" $2; next }
+        { print $1 }
+    ' "$log"
+}
+
+assert_stages() {
+    expected=$1
+    actual=$(stage_log)
+    [ "$actual" = "$expected" ] || {
+        printf '%s\n' '-- expected stages --' "$expected" \
+            '-- actual stages --' "$actual" >&2
+        fail 'bootstrap stage order changed'
+    }
+    if grep -Eq 'sudo|reboot|switch-generation|delete-generations|(^|:)gc(:|$)' \
+        "$log"; then
+        fail 'bootstrap invoked a forbidden mutating command'
+    fi
+}
+
+fallback_prepare_stages='version
+entrypoints
+preflight
+gate
+entrypoints
+pull
+describe
+reconfigure:system
+reconfigure:home'
+
+reset_case
+output=$(run_bootstrap --plan 2>&1)
+contains "$output" 'guix-bootstrap: PASS (mode=plan)'
+contains "$output" 'bootstrap-source=system'
+contains "$output" 'pull-action=pull'
+assert_stages 'version
+entrypoints
+preflight
+gate'
+[ ! -e "$home/.config" ] || fail 'plan changed HOME entrypoints or profiles'
+
+reset_case
+output=$(run_bootstrap prepare 2>&1)
+contains "$output" 'guix-bootstrap: PASS (mode=prepare)'
+contains "$output" 'pull-action=pull'
+contains "$output" 'system-home-activation=NOT-PERFORMED'
+contains "$output" "system-command=env SK_GUIX_FRONTEND_PROFILE=$pulled_profile"
+contains "$output" "home-command=env SK_GUIX_FRONTEND_PROFILE=$pulled_profile"
+assert_stages "$fallback_prepare_stages"
+grep -q '^gate:build:.*system-profile$' "$log" ||
+    fail 'full gate did not use frozen System bootstrap profile'
+grep -q '^pull:system-profile:' "$log" ||
+    fail 'System Guix did not create the fresh Pull'
+grep -q ':-C:' "$log" || fail 'pull omitted the private channel snapshot'
+grep -q ':--allow-untrusted-channels=no:' "$log" ||
+    fail 'pull allowed untrusted local channels'
+grep -q "^reconfigure:system:--print:$pulled_profile$" "$log" ||
+    fail 'System plan did not use the post-pull profile'
+grep -q "^reconfigure:home:--print:$pulled_profile$" "$log" ||
+    fail 'Home plan did not follow System with the post-pull profile'
+
+reset_case
+install_user_pull
+output=$(SK_TEST_EXPECT_POST_PROFILE=$user_profile run_bootstrap prepare 2>&1)
+contains "$output" 'pull-action=reuse'
+assert_stages 'version
+describe
+entrypoints
+preflight
+gate
+entrypoints
+describe
+reconfigure:system
+reconfigure:home'
+if grep -q '^pull:' "$log"; then
+    fail 'exact current Pull created a redundant generation'
+fi
+[ ! -e "$home/.config/guix/current-1-link" ] ||
+    fail 'exact current Pull created an adjacent generation link'
+
+reset_case
+mkdir -p "$home/.config/guix"
+ln -s "$outside_profile" "$home/.config/guix/current"
+output=$(run_bootstrap --plan 2>&1)
+contains "$output" 'bootstrap-source=system'
+contains "$output" 'pull-action=pull'
+assert_stages 'version
+entrypoints
+preflight
+gate'
+if grep -q '^version:outside-profile$' "$log"; then
+    fail 'non-store user Pull was executed during fallback'
+fi
+
+reset_case
+install_user_pull
+chmod -x "$user_profile/bin/guix"
+output=$(run_bootstrap --plan 2>&1)
+contains "$output" 'bootstrap-source=system'
+assert_stages 'version
+entrypoints
+preflight
+gate'
+
+reset_case
+mkdir -p "$home/.config/guix"
+ln -s "$poison_profile" "$home/.config/guix/current"
+output=$(run_bootstrap --plan 2>&1)
+contains "$output" 'bootstrap-source=system'
+contains "$output" 'pull-action=pull'
+assert_stages 'poison
+version
+entrypoints
+preflight
+gate'
+[ "$(grep -c '^poison:--version$' "$log")" -eq 1 ] ||
+    fail 'broken store user Pull was not probed exactly once'
+
+reset_case
+mkdir -p "$home/.config/guix"
+printf '%s\n' blocker >"$home/.config/guix/home.scm"
+if output=$(run_bootstrap --plan 2>&1); then
+    fail 'entrypoint blocker passed plan'
+fi
+contains "$output" 'plan refused'
+assert_stages 'version
+entrypoints'
+[ "$(cat "$home/.config/guix/home.scm")" = blocker ] ||
+    fail 'plan changed an entrypoint blocker'
+
+reset_case
+if output=$(SK_FAKE_FAIL=preflight run_bootstrap prepare 2>&1); then
+    fail 'Home preflight failure passed prepare'
+fi
+assert_stages 'version
+entrypoints
+preflight'
+[ ! -e "$home/.config" ] || fail 'Home preflight failure mutated entrypoints'
+
+reset_case
+if output=$(SK_TEST_ACL=$tmp/missing run_bootstrap --plan 2>&1); then
+    fail 'missing Nonguix authorization passed without a source-build decision'
+fi
+contains "$output" 'Nonguix substitute key is not authorized'
+[ ! -s "$log" ] || fail 'missing Nonguix authorization invoked helpers'
+
+reset_case
+output=$(SK_TEST_ACL=$tmp/missing SK_TEST_SOURCE_BUILD=1 \
+    run_bootstrap --plan 2>&1)
+contains "$output" \
+    'nonguix-substitute-key=unauthorized-source-build-risk-accepted'
+
+reset_case
+awk '
+    BEGIN { changed = 0 }
+    /make-channel-introduction/ && !changed {
+        sub(/make-channel-introduction/, "missing-channel-introduction")
+        changed = 1
+    }
+    { print }
+' "$channels" >"$tmp/missing-introduction.scm"
+cp "$tmp/missing-introduction.scm" "$channels"
+if output=$(run_bootstrap prepare 2>&1); then
+    fail 'missing channel introduction passed bootstrap preflight'
+fi
+contains "$output" 'must fully authenticate and pin'
+[ ! -s "$log" ] || fail 'invalid channel lock invoked helpers or Guix'
+
+reset_case
+if output=$(SK_FAKE_DRIFT=system run_bootstrap prepare 2>&1); then
+    fail 'repository input drift passed the full gate'
+fi
+contains "$output" 'repository inputs changed during bootstrap'
+assert_stages 'version
+entrypoints
+preflight
+gate'
+[ ! -e "$home/.config" ] || fail 'gate drift failure mutated entrypoints'
+
+for stage in gate entrypoints pull post-pull provenance system home; do
+    reset_case
+    if output=$(SK_FAKE_FAIL=$stage run_bootstrap prepare 2>&1); then
+        fail "$stage failure passed bootstrap"
+    fi
+    case $stage in
+        gate) expected='version
+entrypoints
+preflight
+gate' ;;
+        entrypoints) expected='version
+entrypoints
+preflight
+gate
+entrypoints' ;;
+        pull) expected='version
+entrypoints
+preflight
+gate
+entrypoints
+pull' ;;
+        post-pull) expected='version
+entrypoints
+preflight
+gate
+entrypoints
+pull' ;;
+        provenance) expected='version
+entrypoints
+preflight
+gate
+entrypoints
+pull
+describe' ;;
+        system) expected='version
+entrypoints
+preflight
+gate
+entrypoints
+pull
+describe
+reconfigure:system' ;;
+        home) expected=$fallback_prepare_stages ;;
+    esac
+    assert_stages "$expected"
+done
+
+reset_case
+if output=$(SK_TEST_PULLED_PROFILE=$outside_profile \
+    run_bootstrap prepare 2>&1); then
+    fail 'non-store post-pull profile passed bootstrap'
+fi
+contains "$output" 'not an immutable store profile'
+assert_stages 'version
+entrypoints
+preflight
+gate
+entrypoints
+pull'
+
+reset_case
+output=$(SK_FAKE_REPOINT=1 run_bootstrap prepare 2>&1)
+contains "$output" 'guix-bootstrap: PASS (mode=prepare)'
+assert_stages "$fallback_prepare_stages"
+[ "$(readlink -f "$home/.config/guix/current")" = "$poison_profile" ] ||
+    fail 'fixture did not repoint current after the System plan'
+grep -q "^reconfigure:home:--print:$pulled_profile$" "$log" ||
+    fail 'current-link drift redirected the Home plan'
+
+reset_case
+if output=$(run_bootstrap unexpected 2>&1); then
+    fail 'unexpected argument passed'
+else
+    status=$?
+fi
+[ "$status" -eq 64 ] || fail "unexpected argument returned $status, expected 64"
+contains "$output" 'usage:'
+[ ! -s "$log" ] || fail 'invalid usage invoked a helper or Guix'
+
+printf '%s\n' 'guix-bootstrap-check: PASS'

@@ -45,7 +45,7 @@ Remaining cosmetic issue:
 * TODO 2026-07-12 configuration audit remediation
 :PROPERTIES:
 :created: 2026-07-12
-:next_slice: 13
+:next_slice: 14
 :END:
 
 Canonical evidence, finding status, slice definitions, and acceptance gates:
@@ -99,7 +99,7 @@ Current next action:
     reboot into Pull generation 5, System generation 84, and Home generation
     34.  Fresh shell, editor, desktop, provenance, retention, and rollback
     checks pass.
-- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 13: Package ownership and per-dialect environments][Slice 13: package ownership and per-dialect environments]].
+- [X] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 13: Package ownership and per-dialect environments][Slice 13: package ownership and per-dialect environments]].
   - [X] Record the 13-package-plus-Kitty recovery target and the 75-package
     Home application/editor/development profile with only Emacs deliberately
     duplicated in the explicit lists; the final Home package adds
@@ -128,7 +128,11 @@ Current next action:
   - [X] Record final runtime generations and rotate exact retention pins to
     System 85, Home 36, and pull 5, with 84/35/4 as the older recovery tier;
     verification and the read-only rollback drill pass.
-  - [ ] Pass the checked fresh-bootstrap sequence.
+  - [X] Pass the checked installed-base configuration-bootstrap sequence.  Both
+    fixture coverage and isolated GuixPC =prepare= acceptance pass without
+    changing live System/Home/Pull generations; blank-disk provisioning remains
+    explicitly outside this slice.
+- [ ] Begin [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 14: Core Lisp editing correctness and structural editing][Slice 14: core Lisp editing correctness and structural editing]].
 
 Ordered follow-up:
 

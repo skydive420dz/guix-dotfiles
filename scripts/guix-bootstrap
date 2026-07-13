@@ -1,0 +1,432 @@
+#!/bin/sh
+set -eu
+
+program=${0##*/}
+
+usage() {
+    printf 'usage: %s --plan|prepare\n' "$program" >&2
+    exit 64
+}
+
+fail() {
+    printf '%s: FAIL: %s\n' "$program" "$*" >&2
+    exit 1
+}
+
+[ "$#" -eq 1 ] || usage
+action=$1
+case $action in
+    --plan | prepare) ;;
+    *) usage ;;
+esac
+
+home=${HOME:?HOME must be set}
+case $home in
+    /*) ;;
+    *) fail "HOME must be absolute: $home" ;;
+esac
+
+script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
+repo=$(CDPATH='' cd "$script_dir/.." && pwd -P)
+channels=$repo/guix/channels.scm
+system_config=$repo/guix/systems/guixpc.scm
+home_config=$repo/guix/home/guixpc.scm
+home_links_preflight=$script_dir/guix-home-links-preflight.scm
+entrypoints=$script_dir/guix-entrypoints
+build_gate=$script_dir/guix-build-gate
+reconfigure=$script_dir/guix-reconfigure
+pull_profile=$home/.config/guix/current
+system_profile_input=${SK_GUIX_BOOTSTRAP_SYSTEM_PROFILE:-/run/current-system/profile}
+guile=${SK_GUIX_BOOTSTRAP_GUILE:-/run/current-system/profile/bin/guile}
+acl=${SK_GUIX_BOOTSTRAP_ACL:-/etc/guix/acl}
+store_root=${SK_GUIX_BOOTSTRAP_STORE_ROOT:-/gnu/store}
+substitute_urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
+nonguix_key_q=C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98
+allow_nonguix_source_build=${SK_GUIX_BOOTSTRAP_ALLOW_NONGUIX_SOURCE_BUILD:-0}
+
+case $allow_nonguix_source_build in
+    0 | 1) ;;
+    *) fail 'SK_GUIX_BOOTSTRAP_ALLOW_NONGUIX_SOURCE_BUILD must be 0 or 1' ;;
+esac
+
+for file in "$channels" "$system_config" "$home_config" \
+    "$home_links_preflight"; do
+    [ -r "$file" ] || fail "unreadable repository input: $file"
+done
+for helper in "$entrypoints" "$build_gate" "$reconfigure"; do
+    [ -x "$helper" ] || fail "helper is not executable: $helper"
+done
+for command in awk cksum cmp cp git grep mkdir mktemp readlink rm sort; do
+    command -v "$command" >/dev/null 2>&1 ||
+        fail "missing command: $command"
+done
+
+case $store_root in
+    /*) ;;
+    *) fail "store root must be absolute: $store_root" ;;
+esac
+[ -d "$store_root" ] || fail "store root is not a directory: $store_root"
+store_root=$(CDPATH='' cd "$store_root" && pwd -P)
+
+case $guile in
+    /*) ;;
+    *) fail "Home preflight Guile must be absolute: $guile" ;;
+esac
+[ -x "$guile" ] || fail "Home preflight Guile is not executable: $guile"
+
+case $acl in
+    /*) ;;
+    *) fail "Guix daemon ACL path must be absolute: $acl" ;;
+esac
+
+work=$(mktemp -d "${TMPDIR:-/tmp}/guix-bootstrap.XXXXXX")
+cleanup() {
+    rm -rf -- "$work"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+channel_snapshot=$work/channels.scm
+pull_config=$work/config
+pull_cache=$work/cache
+repo_snapshot=$work/repo.snapshot
+repo_probe=$work/repo.probe
+mkdir -p "$pull_config/guix" "$pull_cache"
+cp "$channels" "$channel_snapshot"
+cp "$channel_snapshot" "$pull_config/guix/trusted-channels.scm"
+
+write_repo_snapshot() (
+    output=$1
+    cd "$repo"
+    {
+        printf 'HEAD\t'
+        git rev-parse HEAD
+        git status --porcelain=v1 -uall
+        git ls-files --cached --others --exclude-standard | sort |
+            while IFS= read -r path; do
+                if [ -L "$path" ]; then
+                    printf 'LINK\t%s\t%s\n' "$path" "$(readlink "$path")"
+                elif [ -f "$path" ]; then
+                    cksum "$path"
+                else
+                    printf 'MISSING\t%s\n' "$path"
+                fi
+            done
+    } >"$output"
+)
+
+write_repo_snapshot "$repo_snapshot"
+assert_repo_unchanged() {
+    write_repo_snapshot "$repo_probe"
+    cmp -s "$repo_snapshot" "$repo_probe" ||
+        fail 'repository inputs changed during bootstrap; rerun from a stable checkout'
+}
+
+expected_channels=$(
+    awk '
+        function quoted(line, value) {
+            value = line
+            if (value !~ /"/) return ""
+            sub(/^[^"]*"/, "", value)
+            sub(/".*/, "", value)
+            return value
+        }
+        function emit() {
+            if (name == "") return
+            if (url == "") url = "<missing>"
+            if (branch == "") branch = "<missing>"
+            if (commit == "") commit = "<missing>"
+            if (introduction == "") introduction = "<missing>"
+            if (signer == "") signer = "<missing>"
+            print name, url, branch, commit, introduction, signer
+            name = url = branch = commit = introduction = signer = ""
+        }
+        /\(name '\''[^)]*\)/ {
+            emit()
+            name = $0
+            sub(/^.*\(name '\''/, "", name)
+            sub(/\).*/, "", name)
+            next
+        }
+        /\(url "[^"]*"\)/ {
+            url = quoted($0)
+            next
+        }
+        /\(branch "[^"]*"\)/ {
+            branch = quoted($0)
+            next
+        }
+        /\(commit "[^"]*"\)/ && name != "" {
+            commit = quoted($0)
+            next
+        }
+        /\(make-channel-introduction/ {
+            introduction_pending = 1
+            value = quoted($0)
+            if (value != "") {
+                introduction = value
+                introduction_pending = 0
+            }
+            next
+        }
+        introduction_pending {
+            value = quoted($0)
+            if (value != "") {
+                introduction = value
+                introduction_pending = 0
+            }
+            next
+        }
+        /\(openpgp-fingerprint/ {
+            signer_pending = 1
+            value = quoted($0)
+            if (value != "") {
+                signer = value
+                signer_pending = 0
+                gsub(/[[:space:]]/, "", signer)
+            }
+            next
+        }
+        signer_pending {
+            value = quoted($0)
+            if (value != "") {
+                signer = value
+                signer_pending = 0
+                gsub(/[[:space:]]/, "", signer)
+            }
+        }
+        END { emit() }
+    ' "$channel_snapshot" | sort
+)
+
+if ! printf '%s\n' "$expected_channels" | awk '
+    NF != 6 { bad = 1 }
+    length($4) != 40 || $4 ~ /[^0-9a-f]/ { bad = 1 }
+    length($5) != 40 || $5 ~ /[^0-9a-f]/ { bad = 1 }
+    length($6) != 40 || $6 ~ /[^0-9A-Fa-f]/ { bad = 1 }
+    $2 == "<missing>" || $3 == "<missing>" { bad = 1 }
+    $1 == "guix" { guix += 1 }
+    $1 == "nonguix" { nonguix += 1 }
+    $1 == "sk-guix" { sk_guix += 1 }
+    END {
+        exit !(!bad && NR == 3 && guix == 1 && nonguix == 1 && sk_guix == 1)
+    }
+'; then
+    fail 'channels.scm must fully authenticate and pin guix, nonguix, and sk-guix'
+fi
+
+if [ -r "$acl" ] && grep -q "$nonguix_key_q" "$acl"; then
+    nonguix_substitute_key=authorized
+elif [ "$allow_nonguix_source_build" -eq 1 ]; then
+    nonguix_substitute_key=unauthorized-source-build-risk-accepted
+else
+    fail "Nonguix substitute key is not authorized in $acl; use a reviewed authorization path or explicitly accept proceeding at source-build risk"
+fi
+
+freeze_profile() {
+    fp_input=$1
+    fp_label=$2
+    case $fp_input in
+        /*) ;;
+        *) fail "$fp_label profile must be absolute: $fp_input" ;;
+    esac
+    fp_profile=$(readlink -f "$fp_input") ||
+        fail "cannot resolve $fp_label profile: $fp_input"
+    case $fp_profile in
+        "$store_root"/*-profile) ;;
+        *) fail "$fp_label profile is not an immutable store profile: $fp_profile" ;;
+    esac
+    fp_name=${fp_profile#"$store_root"/}
+    case $fp_name in
+        '' | */*) fail "invalid $fp_label store profile: $fp_profile" ;;
+    esac
+    [ -x "$fp_profile/bin/guix" ] ||
+        fail "$fp_label profile has no executable Guix: $fp_profile/bin/guix"
+    printf '%s\n' "$fp_profile"
+}
+
+probe_profile() {
+    pp_input=$1
+    case $pp_input in
+        /*) ;;
+        *) return 1 ;;
+    esac
+    pp_profile=$(readlink -f "$pp_input") || return 1
+    case $pp_profile in
+        "$store_root"/*-profile) ;;
+        *) return 1 ;;
+    esac
+    pp_name=${pp_profile#"$store_root"/}
+    case $pp_name in
+        '' | */*) return 1 ;;
+    esac
+    [ -x "$pp_profile/bin/guix" ] || return 1
+    pp_version=$("$pp_profile/bin/guix" --version 2>/dev/null) || return 1
+    probed_profile=$pp_profile
+    probed_version=$pp_version
+}
+
+describe_profile() {
+    dp_profile=$1
+    "$dp_profile/bin/guix" describe --format=recutils |
+        awk '
+            function emit() {
+                if (name == "") return
+                if (url == "") url = "<missing>"
+                if (branch == "") branch = "<missing>"
+                if (commit == "") commit = "<missing>"
+                if (introduction == "") introduction = "<missing>"
+                if (signer == "") signer = "<missing>"
+                print name, url, branch, commit, introduction, signer
+                name = url = branch = commit = introduction = signer = ""
+            }
+            $1 == "name:" { emit(); name = $2; next }
+            $1 == "url:" { url = $2; next }
+            $1 == "branch:" { branch = $2; next }
+            $1 == "commit:" { commit = $2; next }
+            $1 == "introductioncommit:" { introduction = $2; next }
+            $1 == "introductionsigner:" {
+                signer = $0
+                sub(/^[^:]*:[[:space:]]*/, "", signer)
+                gsub(/[[:space:]]/, "", signer)
+                next
+            }
+            NF == 0 { emit(); next }
+            END { emit() }
+        ' |
+        sort
+}
+
+profile_matches_lock() {
+    pml_profile=$1
+    pml_actual=$(describe_profile "$pml_profile") || return 1
+    [ "$pml_actual" = "$expected_channels" ]
+}
+
+verify_profile_lock() {
+    vpl_profile=$1
+    vpl_actual=$(describe_profile "$vpl_profile") ||
+        fail "cannot describe $vpl_profile"
+    if [ "$vpl_actual" != "$expected_channels" ]; then
+        printf '%s\n' 'guix-bootstrap: expected channels:' \
+            "$expected_channels" 'guix-bootstrap: actual channels:' \
+            "$vpl_actual" >&2
+        fail "channel provenance differs from channels.scm: $vpl_profile"
+    fi
+    printf '%s\n' "$vpl_actual"
+}
+
+user_profile=
+user_profile_version=
+
+if [ -n "${SK_GUIX_BOOTSTRAP_PROFILE:-}" ]; then
+    bootstrap_profile=$(freeze_profile \
+        "$SK_GUIX_BOOTSTRAP_PROFILE" override)
+    bootstrap_source=override
+    bootstrap_guix=$bootstrap_profile/bin/guix
+    guix_version=$("$bootstrap_guix" --version) ||
+        fail "bootstrap Guix cannot run: $bootstrap_guix"
+else
+    if probe_profile "$pull_profile"; then
+        user_profile=$probed_profile
+        user_profile_version=$probed_version
+    fi
+    if [ -n "$user_profile" ]; then
+        bootstrap_profile=$user_profile
+        guix_version=$user_profile_version
+        bootstrap_source=user-pull
+    elif probe_profile "$system_profile_input"; then
+        bootstrap_profile=$probed_profile
+        guix_version=$probed_version
+        bootstrap_source=system
+    else
+        fail "no bootstrap Guix profile: checked $pull_profile and $system_profile_input"
+    fi
+fi
+bootstrap_guix=$bootstrap_profile/bin/guix
+
+pull_action=pull
+if [ "$bootstrap_source" = override ] && probe_profile "$pull_profile"; then
+    user_profile=$probed_profile
+fi
+if [ -n "$user_profile" ]; then
+    if profile_matches_lock "$user_profile"; then
+        pull_action=reuse
+    fi
+fi
+
+printf '%s\n' '== read-only bootstrap preflight =='
+HOME=$home "$entrypoints" plan
+HOME=$home GUILE_AUTO_COMPILE=0 \
+    "$guile" --no-auto-compile "$home_links_preflight" "$repo"
+printf '%s\n' "$guix_version"
+printf 'guix-bootstrap: bootstrap-source=%s\n' "$bootstrap_source"
+printf 'guix-bootstrap: bootstrap-profile=%s\n' "$bootstrap_profile"
+printf 'guix-bootstrap: pull-action=%s\n' "$pull_action"
+printf 'guix-bootstrap: nonguix-substitute-key=%s\n' \
+    "$nonguix_substitute_key"
+
+if [ "$action" = --plan ]; then
+    printf '%s\n' '== non-activating build plan =='
+    HOME=$home SK_GUIX_FRONTEND_PROFILE=$bootstrap_profile \
+        "$build_gate" --plan
+    assert_repo_unchanged
+    printf '%s\n' \
+        'guix-bootstrap: PASS (mode=plan)' \
+        'guix-bootstrap: prepare will gate, repair entrypoints, create/reuse Pull, verify provenance, and render System/Home plans' \
+        'guix-bootstrap: no profile activation, reconfigure, reboot, retention change, or GC was performed'
+    exit 0
+fi
+
+printf '%s\n' '== full non-activating build gate =='
+HOME=$home SK_GUIX_FRONTEND_PROFILE=$bootstrap_profile "$build_gate"
+assert_repo_unchanged
+
+printf '%s\n' '== repository entrypoints =='
+HOME=$home "$entrypoints" bootstrap
+
+if [ "$pull_action" = pull ]; then
+    printf '%s\n' '== exact authenticated pull =='
+    HOME=$home \
+    XDG_CONFIG_HOME=$pull_config \
+    XDG_CACHE_HOME=$pull_cache \
+    "$bootstrap_guix" pull \
+        -q \
+        -C "$channel_snapshot" \
+        --allow-downgrades \
+        --allow-untrusted-channels=no \
+        --profile="$pull_profile" \
+        --substitute-urls="$substitute_urls" \
+        --max-jobs=1 \
+        --cores=4
+else
+    printf '%s\n' '== exact authenticated pull: reuse =='
+fi
+
+post_pull_profile=$(freeze_profile "$pull_profile" post-pull)
+
+printf '%s\n' '== pulled channel provenance =='
+verify_profile_lock "$post_pull_profile"
+assert_repo_unchanged
+
+printf '%s\n' '== System activation plan =='
+HOME=$home SK_GUIX_FRONTEND_PROFILE=$post_pull_profile \
+    "$reconfigure" system --print
+assert_repo_unchanged
+
+printf '%s\n' '== Home activation plan =='
+HOME=$home SK_GUIX_FRONTEND_PROFILE=$post_pull_profile \
+    "$reconfigure" home --print
+assert_repo_unchanged
+
+printf '%s\n' \
+    'guix-bootstrap: PASS (mode=prepare)' \
+    "guix-bootstrap: pull-action=$pull_action" \
+    "guix-bootstrap: frontend-profile=$post_pull_profile" \
+    'guix-bootstrap: system-home-activation=NOT-PERFORMED' \
+    "guix-bootstrap: system-command=env SK_GUIX_FRONTEND_PROFILE=$post_pull_profile $reconfigure system" \
+    'guix-bootstrap: reboot and accept the System before continuing' \
+    "guix-bootstrap: home-command=env SK_GUIX_FRONTEND_PROFILE=$post_pull_profile $reconfigure home" \
+    'guix-bootstrap: no System/Home activation, reboot, retention change, or GC was performed'

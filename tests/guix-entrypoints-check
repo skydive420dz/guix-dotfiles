@@ -45,6 +45,12 @@ contains "$output" 'MISSING channels.scm'
 contains "$output" 'MISSING home.scm'
 contains "$output" 'MISSING systems/guixpc.scm'
 
+output=$(HOME=$sandbox_home "$entrypoints" plan 2>&1) ||
+    fail 'repairable missing links failed plan'
+contains "$output" 'PLAN repairable entrypoints; no links were changed'
+[ ! -e "$sandbox_home/.config/guix/channels.scm" ] ||
+    fail 'entrypoint plan created a missing link'
+
 HOME=$sandbox_home "$entrypoints" bootstrap >/dev/null 2>&1 || \
     fail 'bootstrap did not create missing links'
 HOME=$sandbox_home "$entrypoints" check >/dev/null 2>&1 || \
@@ -71,6 +77,12 @@ HOME=$sandbox_home "$entrypoints" bootstrap >/dev/null 2>&1 || \
 unlink "$sandbox_home/.config/guix/home.scm"
 printf 'preserve me\n' >"$sandbox_home/.config/guix/home.scm"
 unlink "$sandbox_home/.config/guix/channels.scm"
+output=$(HOME=$sandbox_home "$entrypoints" plan 2>&1)
+status=$?
+[ "$status" -ne 0 ] || fail 'regular-file blocker passed plan'
+contains "$output" 'plan refused; blockers require manual repair'
+[ ! -e "$sandbox_home/.config/guix/channels.scm" ] ||
+    fail 'blocked entrypoint plan partially changed another link'
 output=$(HOME=$sandbox_home "$entrypoints" bootstrap 2>&1)
 status=$?
 [ "$status" -ne 0 ] || fail 'regular-file conflict passed bootstrap'

@@ -164,8 +164,8 @@ Operational reliability:   restored; bounded SSH cleanup passes
 
 The project is a credible Guix/EXWM workstation foundation.  It is not yet a
 full Lisp ecosystem.  The P0/P1 runtime, validation, and reproducibility
-prerequisites are now closed, so package ownership and deliberate per-dialect
-expansion can begin with Slice 13.
+prerequisites and the package-ownership foundation are now closed, so core Lisp
+editing correctness can begin with Slice 14.
 
 * Finding register
 
@@ -226,7 +226,7 @@ reported as a confirmed bug without a focused test.
 | R-02 | P1  | CLOSED   | =sk-guix= publishes a signed introduction, authorized signer, orphan public keyring, and signed target that pass isolated clean-clone Guix authentication. | 12 |
 | R-03 | P2  | POLICY   | Live repo symlinks make edits immediate but Home rollback does not restore application-file contents. | 13 |
 | R-04 | P2  | VERIFIED | System 85 carries only the recovery floor; Home 36 owns normal tools and supplies them to graphical, login, and direct forced-SSH environments. | 13 |
-| R-05 | P2  | PARTIAL  | Core, JVM Clojure, and Racket manifests build and enter independently; only fresh-bootstrap acceptance remains. | 12, 13 |
+| R-05 | P2  | CLOSED   | Core, JVM Clojure, and Racket manifests build and enter independently; the installed-base configuration bootstrap passes fixtures and isolated GuixPC acceptance. | 12, 13 |
 | R-06 | P2  | CLOSED   | =scripts/guix-entrypoints= checks or bootstraps every declaration link and refuses blockers/missing sources transactionally. | 9, 13 |
 
 ** Lisp ecosystem findings
@@ -1136,10 +1136,11 @@ checkpoint =6707cbb=, then use the protected pull 4 Guix to switch exactly to
 System 83, Home 33, and pull 4.  Home rollback alone still does not restore
 live-linked application sources.
 
-** TODO Slice 13: Package ownership and per-dialect environments
+** DONE Slice 13: Package ownership and per-dialect environments
 :PROPERTIES:
 :audit_priority: P2
 :findings: R-03 R-04 R-05 R-06
+:completed: 2026-07-13
 :END:
 
 Scope:
@@ -1149,7 +1150,8 @@ Scope:
 - create composable manifests or dev shells for dialect families;
 - preserve the deliberate live-symlink editing model unless rollback semantics
   are explicitly changed;
-- document bootstrap from a fresh machine.
+- document configuration bootstrap from an already installed, bootable Guix
+  base on this exact machine.
 
 Suggested tiers:
 
@@ -1168,7 +1170,8 @@ Acceptance gates:
 - each manifest evaluates and enters independently;
 - Home changes no longer require unnecessary privileged system rebuilds;
 - live symlink and rollback semantics are explicitly tested and documented;
-- fresh bootstrap has one checked sequence from channels to System to Home.
+- installed-base configuration bootstrap has one checked sequence from channels
+  to non-activating System/Home plans and an explicit manual activation handoff.
 
 *** Additive Home checkpoint
 
@@ -1417,8 +1420,67 @@ the older tier =84/35/4= without switching, deleting, or collecting anything.
 For a full forced-SSH rollback, first restore source checkpoint =da231e4=, then
 switch exactly to Home generation 35 and reboot; Home rollback alone does not
 restore live repository files.  System 84 remains the immediate pre-reduction
-boot fallback and Home 34 remains the older pre-Slice-13 fallback.  Slice 13
-stays open only for the checked fresh-bootstrap sequence.
+boot fallback and Home 34 remains the older pre-Slice-13 fallback.
+
+*** Checked installed-base configuration-bootstrap acceptance
+
+=scripts/guix-bootstrap= defines the final Slice 13 boundary.  It starts from
+an already installed, bootable Guix base on this exact GuixPC; it is not a
+blank-disk installer.  Both modes validate all six lock fields for Guix,
+Nonguix, and =sk-guix=, require an explicit Nonguix substitute-key or
+source-build-risk decision, freeze an immutable runnable frontend profile, plan
+the three repository entrypoints, run the complete 14-link Home preflight, and
+abort if any repository input changes underneath the run.
+
+The non-activating =--plan= acceptance used active Pull generation 5 at
+=/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile=.  =--plan= recognized
+the exact provenance and selected =pull-action=reuse=, passed the authenticated
+time-machine plan for promoted Kitty, quarantined Fish, all three Lisp
+manifests, Home, and System, and left the complete live System/Home/Pull pointer
+and adjacent-generation inventory byte-identical.  Time-machine evaluation may
+still add authenticated immutable store/cache objects; the proven boundary is
+no live profile or generation activation, pull, reconfigure, reboot, retention
+change, or garbage collection.
+
+The isolated =prepare= acceptance used an empty HOME/XDG/TMP tree with no user
+Pull.  It correctly fell back to the runnable immutable System profile
+=/gnu/store/3xds4wsbyw4xlmyrpxqh9dzfav6wwvzn-profile=, passed the complete
+non-activating gate, and reproduced:
+
+#+begin_src text
+Pull:   /gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+Home:   /gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home
+System: /gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system
+#+end_src
+
+It installed only the isolated entrypoint links, authenticated the pulled
+Guix/Nonguix/=sk-guix= commits plus their introductions/signers, and rendered
+System then Home with =--print= through the frozen post-Pull profile.  The
+actual live System, current/booted runtime, Home, Pull, every adjacent generation
+link, and repository status were identical before and after.  No sudo,
+activation, reboot, retention mutation, or garbage collection occurred.
+The terminal result is explicitly
+=system-home-activation=NOT-PERFORMED= because =prepare= did create the isolated
+Pull generation.  The real GuixPC acceptance exercised the already-authorized
+Nonguix ACL-key path.
+
+Fixture acceptance additionally covers missing/wrong/dangling repairable
+entrypoints, blockers, invalid or non-store user Pull fallback, strict explicit
+overrides, missing Nonguix authorization, explicit permission to proceed at
+source-build risk, incomplete channel authentication, every staged failure,
+post-Pull provenance, concurrent repository drift, frozen-profile use, and
+current-link repointing.  The missing-ACL override is fixture-only: it does not
+authorize substitutes or remove the Nonguix URL.  The emitted continuation
+commands use Fish-compatible =env= syntax and absolute paths.  The README
+records the operator-owned System activation, reboot convergence check, Home
+activation, second reboot, runtime acceptance, and new-installation pin
+reseeding; those manual activation and reboot steps were not repeated by this
+bootstrap acceptance.
+
+This closes R-05 and Slice 13.  It does not claim proof for partitioning,
+filesystem creation, initial GRUB/EFI installation, initial networking or
+firmware, secret restoration, daemon substitute-ACL mutation, or a blank-disk
+first boot; those remain outside the checked configuration-bootstrap scope.
 
 ** TODO Slice 14: Core Lisp editing correctness and structural editing
 :PROPERTIES:

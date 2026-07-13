@@ -3,14 +3,14 @@
 set -u
 
 usage() {
-    printf 'Usage: %s check|bootstrap\n' "$0" >&2
+    printf 'Usage: %s check|plan|bootstrap\n' "$0" >&2
     exit 2
 }
 
 [ "$#" -eq 1 ] || usage
 mode=$1
 case $mode in
-    check | bootstrap) ;;
+    check | plan | bootstrap) ;;
     *) usage ;;
 esac
 
@@ -160,6 +160,20 @@ inspect_all
 if [ "$mode" = check ]; then
     [ "$problems" -eq 0 ]
     exit $?
+fi
+
+if [ "$mode" = plan ]; then
+    if [ "$fatal" -ne 0 ]; then
+        printf 'guix-entrypoints: plan refused; blockers require manual repair\n' >&2
+        exit 1
+    fi
+    if [ "$problems" -ne 0 ]; then
+        printf '%s\n' \
+            'guix-entrypoints: PLAN repairable entrypoints; no links were changed'
+    else
+        printf '%s\n' 'guix-entrypoints: PLAN entrypoints already match'
+    fi
+    exit 0
 fi
 
 if [ "$fatal" -ne 0 ]; then

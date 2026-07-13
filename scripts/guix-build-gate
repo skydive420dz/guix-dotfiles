@@ -25,7 +25,7 @@ system_config=$repo/guix/systems/guixpc.scm
 module_dir=$repo/guix/modules
 manifest_dir=$repo/guix/manifests
 racket_fixture=$repo/fixtures/racket/basic-test.rkt
-bootstrap_guix=$home/.config/guix/current/bin/guix
+frontend_input=${SK_GUIX_FRONTEND_PROFILE:-$home/.config/guix/current}
 substitute_urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
 promoted_expression='(list (@ (sk packages terminals) kitty-latest) (@ (sk packages golang) go-github-com-emmansun-base64) (@ (sk packages golang) go-github-com-sgtdi-fswatcher))'
 quarantined_expression='(@ (sk packages shells) fish-latest)'
@@ -42,13 +42,27 @@ for file in "$channels" "$home_config" "$system_config" \
     fi
 done
 
+case $frontend_input in
+    /*) ;;
+    *)
+        printf 'guix-build-gate: frontend profile must be absolute: %s\n' \
+            "$frontend_input" >&2
+        exit 2
+        ;;
+esac
+frontend_profile=$(readlink -f "$frontend_input") || {
+    printf 'guix-build-gate: cannot resolve frontend profile: %s\n' \
+        "$frontend_input" >&2
+    exit 2
+}
+bootstrap_guix=$frontend_profile/bin/guix
 if [ ! -x "$bootstrap_guix" ]; then
-    printf 'guix-build-gate: canonical Guix is not executable: %s\n' \
+    printf 'guix-build-gate: frontend Guix is not executable: %s\n' \
         "$bootstrap_guix" >&2
     exit 2
 fi
 
-for command in awk cat cmp comm cp guile ln mkdir mktemp rm sort; do
+for command in awk cat cmp comm cp guile ln mkdir mktemp readlink rm sort; do
     if ! command -v "$command" >/dev/null 2>&1; then
         printf 'guix-build-gate: missing command: %s\n' "$command" >&2
         exit 2
@@ -609,6 +623,7 @@ if [ "$plan" -eq 1 ]; then
     run_home
 else
     home_result=$(run_home)
+    printf 'guix-build-gate: home-result=%s\n' "$home_result"
     printf '%s\n' "$home_result"
     validate_home_profile_artifacts "$home_result"
 fi
@@ -618,6 +633,7 @@ if [ "$plan" -eq 1 ]; then
     run_system
 else
     system_result=$(run_system)
+    printf 'guix-build-gate: system-result=%s\n' "$system_result"
     printf '%s\n' "$system_result"
     validate_system_recovery_profile "$system_result"
     validate_realized_package_ownership "$system_result" "$home_result"

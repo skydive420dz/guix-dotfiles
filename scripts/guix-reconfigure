@@ -25,7 +25,7 @@ home=${HOME:?HOME must be set}
 script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
 entrypoints_check="$script_dir/guix-entrypoints"
 home_links_preflight="$script_dir/guix-home-links-preflight.scm"
-guix="$home/.config/guix/current/bin/guix"
+frontend_input=${SK_GUIX_FRONTEND_PROFILE:-$home/.config/guix/current}
 channels="$home/.config/guix/channels.scm"
 privileged_sudo=/run/setuid-programs/sudo
 substitute_urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
@@ -50,8 +50,23 @@ fi
 
 "$entrypoints_check" check
 
+case $frontend_input in
+    /*) ;;
+    *)
+        printf 'guix-reconfigure: frontend profile must be absolute: %s\n' \
+            "$frontend_input" >&2
+        exit 1
+        ;;
+esac
+
+guix_profile=$(readlink -f "$frontend_input") || {
+    printf 'guix-reconfigure: cannot resolve frontend profile: %s\n' \
+        "$frontend_input" >&2
+    exit 1
+}
+guix=$guix_profile/bin/guix
 if [ ! -x "$guix" ]; then
-    printf 'guix-reconfigure: current Guix is not executable: %s\n' "$guix" >&2
+    printf 'guix-reconfigure: frontend Guix is not executable: %s\n' "$guix" >&2
     exit 1
 fi
 
@@ -71,12 +86,11 @@ if [ "$mode" = system ] && [ ! -x "$privileged_sudo" ]; then
     exit 1
 fi
 
-guix_profile=$(readlink -f "$home/.config/guix/current")
 guix_resolved=$guix_profile/bin/guix
 source_resolved=$(readlink -f "$source")
 if [ -z "$guix_profile" ] || [ ! -x "$guix_resolved" ]; then
-    printf 'guix-reconfigure: could not freeze current Guix profile: %s\n' \
-        "$home/.config/guix/current" >&2
+    printf 'guix-reconfigure: could not freeze frontend Guix profile: %s\n' \
+        "$frontend_input" >&2
     exit 1
 fi
 

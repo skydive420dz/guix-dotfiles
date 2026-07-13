@@ -143,6 +143,7 @@ home_config_resolved=$(readlink -f "$repo/guix/home/guixpc.scm")
 run_wrapper() {
     HOME=$home \
         SK_GUIX_RECONFIGURE_GUILE=${SK_TEST_GUILE:-$fake_guile} \
+        SK_GUIX_FRONTEND_PROFILE=${SK_TEST_FRONTEND_PROFILE:-} \
         SK_FAKE_LOG=$fake_log \
         SK_FAKE_MISMATCH=${SK_FAKE_MISMATCH:-} \
         SK_FAKE_HOME_PREFLIGHT_FAIL=${SK_FAKE_HOME_PREFLIGHT_FAIL:-0} \
@@ -152,6 +153,20 @@ run_wrapper() {
 output=$(run_wrapper --print)
 printf '%s\n' "$output" | grep -q 'guix-reconfigure: mode=home'
 printf '%s\n' "$output" | grep -q 'guix-revision=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+
+frozen_profile=$sandbox/frozen-profile
+mkdir -p "$frozen_profile/bin"
+ln -s "$fake_guix" "$frozen_profile/bin/guix"
+output=$(SK_TEST_FRONTEND_PROFILE=$frozen_profile run_wrapper --print)
+frozen_profile_resolved=$(readlink -f "$frozen_profile")
+printf '%s\n' "$output" |
+    grep -q "guix-resolved=$frozen_profile_resolved/bin/guix"
+if output=$(SK_TEST_FRONTEND_PROFILE=relative-profile run_wrapper --print 2>&1); then
+    printf '%s\n' \
+        'guix-reconfigure-check: relative frontend profile override passed' >&2
+    exit 1
+fi
+printf '%s\n' "$output" | grep -q 'frontend profile must be absolute'
 
 for mismatch in url branch commit introduction signer extra; do
     if output=$(SK_FAKE_MISMATCH=$mismatch run_wrapper --print 2>&1); then
