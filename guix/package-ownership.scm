@@ -1,13 +1,13 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; The recovery list is the reviewed target for the subtractive migration.  It
-;; guarantees a tty shell, Kitty, and `emacs -Q'; normal configured EXWM still
-;; consumes the accepted base Home services and editor profile.
-;; First, Home adds its complete package set while System generation 84 retains
-;; the legacy superset.  Only after that additive Home generation is activated
-;; and accepted may the System declaration consume the recovery list.  Optional
-;; dialect environments live in guix/manifests and must not be added to either
-;; list merely for convenience.
+;; Home generation 35 accepted the complete user/editor package set before the
+;; System declaration consumed this recovery list.  The System list guarantees
+;; a tty shell, Kitty, and `emacs -Q'; normal configured EXWM still consumes the
+;; accepted base Home services and editor profile.  Optional dialect
+;; environments live in guix/manifests and must not be added to either list
+;; merely for convenience.  Emacs is the sole overlap between the explicit
+;; lists below.  The realized profiles also deliberately overlap on Fish
+;; (Home's Fish service) and Guile (System's %base-packages).
 
 (define %guixpc-recovery-package-specifications
   '("curl"
@@ -144,6 +144,8 @@
     (error "duplicate guixpc Home package specifications" home-duplicates))
   ;; The normal session selects Home Emacs through PATH and its coherent
   ;; site-lisp profile.  System deliberately retains the same Emacs package as
-  ;; a tty/EXWM recovery executable, so this is the sole approved duplicate.
+  ;; a tty/EXWM recovery executable, so this is the sole approved overlap in
+  ;; these two explicit specification lists.  The full build gate separately
+  ;; checks the expected implicit Fish and Guile profile overlap.
   (unless (equal? overlap '("emacs"))
     (error "unexpected guixpc System/Home package ownership overlap" overlap)))

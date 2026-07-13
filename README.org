@@ -70,7 +70,10 @@ next active slice.
   and Home generation 34 now share the exact authenticated channel lock; the
   non-activating package/Home/System gate and read-only retention/rollback
   planner pass from the accepted frontend.
-- [ ] Continue Slices 13 through 19 in audit order.
+- [ ] Finish Slice 13.  The additive Home generation 35 is accepted and the
+  separately built reduced System candidate is ready for activation; fresh
+  bootstrap and final retention acceptance remain.
+- [ ] Continue Slices 14 through 19 in audit order after Slice 13.
   Do not expand dialect breadth until the P0/P1 runtime, validation, and
   reproducibility prerequisites close.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
@@ -185,13 +188,21 @@ Owns:
 - system services such as SSH, Bluetooth, Xorg, elogind
 
 Slice 13 uses a two-checkpoint migration.  The additive checkpoint is accepted
-as Home generation 35 while the legacy System generation 84 package superset
-remains intact.  The next checkpoint may now shrink
-=guix/systems/guixpc.scm= to the recovery specifications recorded in
-=guix/package-ownership.scm=.
+as Home generation 35.  The separately gated subtractive checkpoint now makes
+=guix/systems/guixpc.scm= consume the 13 recovery specifications recorded in
+=guix/package-ownership.scm= plus =kitty-latest=; accepted System generation 84
+remains the immediate rollback until the reduced candidate passes a fresh boot.
 The System floor is not a second configured desktop: normal EXWM still requires
 the accepted base Home D-Bus services and Home editor profile.  Its independent
 guarantee is the tty shell, Kitty, and =emacs -Q= for repair.
+
+The full gate checks the realized package manifests, not only the Scheme source.
+Emacs is the sole overlap in the explicit ownership lists.  The realized System
+and Home profiles additionally overlap on Fish from the Home Fish service and
+Guile from System =%base-packages=; all three must resolve to identical store
+objects.  Any other top-level overlap, missing declared package, internal
+duplicate name, missing recovery/Home artifact, or persistent Clojure/Racket
+leakage fails the gate.
 
 Apply with:
 
@@ -1067,7 +1078,8 @@ authenticated time-machine profile, verifies provenance and reviewed EXWM 0.35,
 builds Kitty and its maintained Go inputs, evaluates quarantined Fish, builds
 each development manifest independently, then builds Home and System.  Full
 mode also enters each pure manifest for isolated runtime and cross-tier leakage
-probes; plan mode remains evaluation-only.  Guix may reuse already-authenticated
+probes and validates the realized System/Home ownership boundary and critical
+profile artifacts; plan mode remains evaluation-only.  Guix may reuse already-authenticated
 immutable store objects; the separate isolated clean-clone test verifies the
 published =sk-guix= refs.  The gate never pulls, reconfigures,
 switches/deletes generations, or runs garbage collection.

@@ -113,8 +113,12 @@ Current next action:
     reboot, and accept Home Emacs, packages, applications, fonts, persistent
     editor tools, strict shell fixtures, and desktop services.  System 84
     remained current and booted; Home 34 is the immediate fallback.
-  - [ ] After additive Home acceptance, remove non-recovery packages from
-    System in a separate checkpoint, build/reconfigure, and reboot.
+  - [X] After additive Home acceptance, remove non-recovery packages from
+    System in a separate source checkpoint.  The pinned full gate built
+    =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system= and proved the exact
+    realized =emacs/fish/guile= overlap plus recovery/Home artifacts.
+  - [ ] Push the subtractive checkpoint, run =gsr= only, reboot, and accept the
+    reduced System while retaining System 84 and Home 35 as rollback roots.
   - [ ] Pass the checked fresh-bootstrap sequence and record final Slice 13
     generations, retention pins, and rollback evidence.
 

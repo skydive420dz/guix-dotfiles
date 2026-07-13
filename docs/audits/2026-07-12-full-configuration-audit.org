@@ -1282,6 +1282,71 @@ rotated manifest protects Home 35 as the accepted promotion baseline and Home
 performs no switch, deletion, or garbage collection.  The additive phase is
 accepted, so the separately committed System reduction may proceed.
 
+*** Subtractive System checkpoint (prepared)
+
+After accepting Home 35, the System declaration now consumes the reviewed
+13-package recovery list plus =kitty-latest= instead of the legacy application,
+editor-extension, font, and development superset.  Kernel, boot, user, Xorg,
+Bluetooth, SSH, elogind, RTKit, and desktop-service declarations are unchanged.
+The reduced profile retains Fish, curl/Git, Emacs/EXWM, Kitty, BlueZ, ncurses,
+ripgrep/Vim, and Picom/xrandr/xset/xwallpaper.  Normal applications, the
+coherent configured Emacs profile, fonts, language servers, compilers, Guile,
+and SBCL remain in the already accepted Home generation.
+
+The strict GuixPC suite passes with recovery count 13 and Home count 74.  The final
+authenticated full gate reproduced the accepted Home and built the reduced
+System candidate:
+
+#+begin_src text
+Home:           /gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home
+Reduced System: /gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system
+System rows:    71 top-level manifest entries
+Home rows:      78 top-level manifest entries
+Overlap:        emacs, fish, guile; identical output and store path in both
+#+end_src
+
+Emacs is the sole overlap between the two explicit specification lists.  Fish
+also appears in the realized Home profile through =home-fish-service-type=,
+while Guile appears in the realized System profile through =%base-packages=.
+The gate now captures both built profiles, rejects duplicate top-level names,
+requires every declared recovery/Home package in its realized manifest, checks
+critical executables and Emacs libraries, rejects persistent optional-dialect
+packages, and requires the exact three-name overlap with identical store
+objects.  This semantic gate covers fonts and Emacs libraries that executable
+sentinels or lexical source checks alone cannot prove.
+
+Activation is System-only:
+
+#+begin_src text
+1. Push the subtractive checkpoint.
+2. Run gsr; do not run ghr.
+3. Reboot normally.
+4. Confirm the new System is both current and booted and Home remains 35.
+5. Run scripts/shell-check --strict, scripts/emacs-check,
+   scripts/editor-tools-check, and scripts/desktop-session-check.  Power and
+   connect the Bose speaker first so the physical-output gate has a real sink;
+   unused HDMI audio is not an acceptance requirement.
+6. Only after fresh-session acceptance, rotate retention pins to the new
+   System generation while retaining System 84 and Home 35.
+#+end_src
+
+If the candidate cannot boot, select System generation 84 in GRUB.  That is a
+one-boot recovery, not a persistent default: once generation 84 is running, use
+the recovery console to switch exactly to System 84 and reboot again.  Use the
+same command if the candidate boots but desktop acceptance fails; do not use a
+relative roll-back:
+
+#+begin_src sh
+/run/setuid-programs/sudo /run/current-system/profile/bin/sh -c \
+  '/home/skydive420dz/.config/guix/current/bin/guix system switch-generation 84 &&
+   /run/current-system/profile/sbin/reboot'
+#+end_src
+
+After the second boot, verify that current and booted System both resolve to
+generation 84.  Home 35 remains active in either path.  A complete source
+rollback also restores the additive acceptance checkpoint =ad33494= before any
+later =gsr=.
+
 If a later change regresses this accepted Home state, restore this acceptance
 source checkpoint and use the immutable pull 5 Guix to switch exactly to Home
 35.  Home 34 remains the pre-Slice-13 fallback.  Slice 13 stays open until

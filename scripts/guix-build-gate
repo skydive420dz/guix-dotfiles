@@ -48,7 +48,7 @@ if [ ! -x "$bootstrap_guix" ]; then
     exit 2
 fi
 
-for command in awk cat cmp cp mkdir mktemp rm sort; do
+for command in awk cat cmp comm cp guile mkdir mktemp rm sort; do
     if ! command -v "$command" >/dev/null 2>&1; then
         printf 'guix-build-gate: missing command: %s\n' "$command" >&2
         exit 2
@@ -289,6 +289,224 @@ run_system() {
     fi
 }
 
+validate_system_recovery_profile() {
+    system=$1
+    profile=$system/profile
+    if [ ! -d "$profile" ]; then
+        printf 'guix-build-gate: System result has no profile: %s\n' \
+            "$system" >&2
+        exit 1
+    fi
+
+    for command in bluetoothctl curl dbus-update-activation-environment emacs \
+        fish git kitty picom reset rg startx vim xrandr xset xwallpaper; do
+        if [ ! -x "$profile/bin/$command" ]; then
+            printf 'guix-build-gate: System recovery profile lacks %s\n' \
+                "$command" >&2
+            exit 1
+        fi
+    done
+
+    exwm_found=0
+    for path in "$profile"/share/emacs/site-lisp/exwm-*; do
+        if [ -d "$path" ]; then
+            exwm_found=1
+            break
+        fi
+    done
+    if [ "$exwm_found" -ne 1 ]; then
+        printf '%s\n' \
+            'guix-build-gate: System recovery profile lacks EXWM site-lisp' >&2
+        exit 1
+    fi
+
+    printf 'System recovery profile: PASS (%s)\n' "$profile"
+}
+
+write_declared_package_names() {
+    variable=$1
+    output=$2
+    raw=$tmp/$variable-raw
+    if ! guile -c '
+        (let ((source (cadr (command-line)))
+              (variable (string->symbol (caddr (command-line)))))
+          (primitive-load source)
+          (for-each (lambda (name) (display name) (newline))
+                    (module-ref (current-module) variable)))
+    ' "$repo/guix/package-ownership.scm" "$variable" >"$raw"; then
+        printf 'guix-build-gate: cannot read ownership variable: %s\n' \
+            "$variable" >&2
+        exit 1
+    fi
+    sort -u "$raw" >"$output"
+    if [ ! -s "$output" ]; then
+        printf 'guix-build-gate: ownership variable is empty: %s\n' \
+            "$variable" >&2
+        exit 1
+    fi
+}
+
+write_profile_package_records() {
+    profile=$1
+    label=$2
+    output=$3
+    raw=$tmp/$label-installed
+    unsorted=$tmp/$label-records-unsorted
+
+    "$pinned_guix" package -p "$profile" --list-installed >"$raw"
+    if ! awk -v label="$label" '
+        NF < 4 {
+            printf "guix-build-gate: malformed %s profile row: %s\n", \
+                label, $0 > "/dev/stderr"
+            bad = 1
+            next
+        }
+        seen[$1]++ {
+            printf "guix-build-gate: duplicate %s profile package: %s\n", \
+                label, $1 > "/dev/stderr"
+            bad = 1
+        }
+        { print $1 "\t" $3 "\t" $4 }
+        END { exit bad }
+    ' "$raw" >"$unsorted"; then
+        exit 1
+    fi
+    sort "$unsorted" >"$output"
+    if [ ! -s "$output" ]; then
+        printf 'guix-build-gate: %s profile manifest is empty\n' "$label" >&2
+        exit 1
+    fi
+}
+
+profile_has_package() {
+    records=$1
+    package=$2
+    awk -F '\t' -v package="$package" '
+        $1 == package { found = 1 }
+        END { exit !found }
+    ' "$records"
+}
+
+require_profile_packages() {
+    records=$1
+    label=$2
+    names=$3
+    while IFS= read -r package; do
+        [ -n "$package" ] || continue
+        if ! profile_has_package "$records" "$package"; then
+            printf 'guix-build-gate: %s profile lacks declared package: %s\n' \
+                "$label" "$package" >&2
+            exit 1
+        fi
+    done <"$names"
+}
+
+validate_home_profile_artifacts() {
+    home_result=$1
+    profile=$home_result/profile
+    if [ ! -d "$profile" ]; then
+        printf 'guix-build-gate: Home result has no profile: %s\n' \
+            "$home_result" >&2
+        exit 1
+    fi
+
+    for command in bat btop chafa chromium clang emacs fastfetch fzf gcc gdb \
+        guile jq lua lua-language-server make mediainfo pamixer pipemixer \
+        pylsp ranger ruff sbcl shellcheck shfmt; do
+        if [ ! -x "$profile/bin/$command" ]; then
+            printf 'guix-build-gate: Home profile lacks %s\n' "$command" >&2
+            exit 1
+        fi
+    done
+
+    for library in geiser geiser-guile org sly use-package; do
+        found=0
+        for path in "$profile/share/emacs/site-lisp/$library"-*; do
+            if [ -e "$path" ]; then
+                found=1
+                break
+            fi
+        done
+        if [ "$found" -ne 1 ]; then
+            printf 'guix-build-gate: Home profile lacks %s site-lisp\n' \
+                "$library" >&2
+            exit 1
+        fi
+    done
+}
+
+validate_realized_package_ownership() {
+    system_result=$1
+    home_result=$2
+    system_records=$tmp/system-package-records
+    home_records=$tmp/home-package-records
+    system_names=$tmp/system-package-names
+    home_names=$tmp/home-package-names
+    declared_recovery=$tmp/declared-recovery-names
+    declared_home=$tmp/declared-home-names
+    expected_overlap=$tmp/expected-profile-overlap
+    actual_overlap=$tmp/actual-profile-overlap
+
+    write_profile_package_records \
+        "$system_result/profile" System "$system_records"
+    write_profile_package_records "$home_result/profile" Home "$home_records"
+    awk -F '\t' '{ print $1 }' "$system_records" >"$system_names"
+    awk -F '\t' '{ print $1 }' "$home_records" >"$home_names"
+
+    write_declared_package_names \
+        %guixpc-recovery-package-specifications "$declared_recovery"
+    write_declared_package_names \
+        %guixpc-home-package-specifications "$declared_home"
+    require_profile_packages "$system_records" System "$declared_recovery"
+    require_profile_packages "$home_records" Home "$declared_home"
+    if ! profile_has_package "$system_records" kitty-latest; then
+        printf '%s\n' \
+            'guix-build-gate: System profile lacks declared package: kitty-latest' >&2
+        exit 1
+    fi
+
+    for package in clojure clojure-tools leiningen openjdk racket \
+        emacs-cider emacs-racket-mode; do
+        if profile_has_package "$system_records" "$package"; then
+            printf 'guix-build-gate: optional dialect leaked into System: %s\n' \
+                "$package" >&2
+            exit 1
+        fi
+        if profile_has_package "$home_records" "$package"; then
+            printf 'guix-build-gate: optional dialect leaked into Home: %s\n' \
+                "$package" >&2
+            exit 1
+        fi
+    done
+
+    printf '%s\n' emacs fish guile >"$expected_overlap"
+    comm -12 "$system_names" "$home_names" >"$actual_overlap"
+    if ! cmp -s "$expected_overlap" "$actual_overlap"; then
+        printf '%s\n' \
+            'guix-build-gate: realized System/Home package overlap changed' >&2
+        printf '%s\n' '-- expected --' >&2
+        cat "$expected_overlap" >&2
+        printf '%s\n' '-- actual --' >&2
+        cat "$actual_overlap" >&2
+        exit 1
+    fi
+
+    for package in emacs fish guile; do
+        system_record=$(awk -F '\t' -v package="$package" \
+            '$1 == package { print; exit }' "$system_records")
+        home_record=$(awk -F '\t' -v package="$package" \
+            '$1 == package { print; exit }' "$home_records")
+        if [ "$system_record" != "$home_record" ]; then
+            printf 'guix-build-gate: overlap package differs between profiles: %s\n' \
+                "$package" >&2
+            exit 1
+        fi
+    done
+
+    printf '%s\n' \
+        'Realized package ownership: PASS (overlap=emacs,fish,guile)'
+}
+
 printf '%s\n' '== promoted sk-guix packages =='
 run_promoted_packages
 
@@ -335,10 +553,23 @@ if [ "$plan" -eq 0 ]; then
 fi
 
 printf '%s\n' '== Guix Home declaration =='
-run_home
+if [ "$plan" -eq 1 ]; then
+    run_home
+else
+    home_result=$(run_home)
+    printf '%s\n' "$home_result"
+    validate_home_profile_artifacts "$home_result"
+fi
 
 printf '%s\n' '== Guix System declaration =='
-run_system
+if [ "$plan" -eq 1 ]; then
+    run_system
+else
+    system_result=$(run_system)
+    printf '%s\n' "$system_result"
+    validate_system_recovery_profile "$system_result"
+    validate_realized_package_ownership "$system_result" "$home_result"
+fi
 
 if [ "$plan" -eq 1 ]; then
     mode=plan

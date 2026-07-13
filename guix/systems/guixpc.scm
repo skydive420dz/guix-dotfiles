@@ -10,6 +10,9 @@
              (sk packages terminals))
 (use-service-modules cups dbus desktop networking ssh sound xorg)
 
+(load (string-append (dirname (current-filename))
+                     "/../package-ownership.scm"))
+
 ;; Elogind 255.17 can leave completed SSH sessions leaderless and stuck in
 ;; "closing".  255.24 contains the upstream session-GC fixes for FIFO EOF,
 ;; leader exit, and release timeout handling.
@@ -64,94 +67,10 @@ EndSection")
 
     (packages
      (append
-      ;; Keep this order stable: Guix profile collisions are resolved by order.
+      ;; Kitty stays in the System recovery floor because EXWM's terminal
+      ;; launcher requires it.  Home owns normal applications and tooling.
       (list kitty-latest)
-      (map specification->package
-           '("curl"
-             "fastfetch-minimal"
-             "btop"
-             "emacs"
-             "emacs-exwm"
-             "emacs-desktop-environment"
-             "xset"
-             "fzf"
-             "git"
-             "bluez"
-             "blueman"
-             "bzmenu"
-             "pipemixer"
-             "pamixer"
-             "fish"
-             "ranger"
-             "ungoogled-chromium"
-             "xdg-utils"
-             "file"
-             "bat"
-             "chafa"
-             "mediainfo"
-             "ffmpegthumbnailer"
-             "poppler"
-             "atool"
-             "unzip"
-             "odt2txt"
-             "jq"
-             "emacs-rainbow-delimiters"
-             "emacs-visual-fill-column"
-             "emacs-lsp-mode"
-             "emacs-company"
-             "emacs-flycheck"
-             "emacs-lsp-ui"
-             "emacs-lsp-ivy"
-             "emacs-vterm"
-             "emacs-lsp-treemacs"
-             "emacs-yasnippet"
-             "emacs-geiser"
-             "emacs-geiser-guile"
-             "emacs-sly"
-             "emacs-lua-mode"
-             "emacs-json-mode"
-             "emacs-org"
-             "emacs-org-bullets"
-             "emacs-evil"
-             "emacs-projectile"
-             "emacs-counsel-projectile"
-             "emacs-evil-collection"
-             "emacs-magit"
-             "emacs-helpful"
-             "emacs-general"
-             "emacs-use-package"
-             "emacs-which-key"
-             "emacs-ivy-rich"
-             "emacs-counsel"
-             "emacs-diminish"
-             "emacs-ivy"
-             "emacs-doom-modeline"
-             "ncurses"
-             "ripgrep"
-             "vim"
-             "font-iosevka-term"
-             "font-nerd-symbols"
-             "font-google-noto-emoji"
-             "font-nerd-jetbrains-mono"
-             "emacs-all-the-icons"
-             "emacs-all-the-icons-dired"
-             "sbcl"
-             "lua"
-             "lua-language-server"
-             "python"
-             "python-lsp-server"
-             "ruff"
-             "shellcheck"
-             "shfmt"
-             "clang"
-             "gcc-toolchain"
-             "make"
-             "gdb"
-             "pkg-config"
-             "emacs-all-the-icons-ibuffer"
-             "xwallpaper"
-             "picom"
-             "xrandr"))
+      (map specification->package %guixpc-recovery-package-specifications)
 
       %base-packages))
 
