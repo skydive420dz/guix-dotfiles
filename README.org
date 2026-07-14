@@ -109,14 +109,18 @@ next active slice.
   =7476b05= as Home generation 42 at
   =/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home=.  Fresh EXWM Emacs uses
   Guix Home Org 9.8.7 with the package-profile-keyed XDG cache first, no legacy
-  fallback, and no mismatch warning; the old cache remains quarantined.  Editor
-  gates pass after one bounded Fennel retry, while desktop/session gates pass
-  for available hardware with Bluetooth explicitly skipped.  Retention-pin
-  rotation passes the read-only suite without deletion or garbage collection.
-  One initial Fennel acceptance run exposed a diagnosed
-  Fennel Mode 0.9.2 newline-framing bug; cleanup and a bounded retry passed, so
-  its repair remains explicit work alongside the remaining trust, audio, and
-  policy scope.
+  fallback, and no mismatch warning; the old cache remains quarantined.  At
+  that earlier native-cache acceptance, editor gates passed after one bounded
+  Fennel retry, while desktop/session gates passed for available hardware with
+  Bluetooth explicitly skipped.  Retention-pin rotation passes the read-only
+  suite without deletion or garbage collection.
+  One initial Fennel acceptance run exposed a diagnosed Fennel Mode 0.9.2
+  newline-framing bug.  A source-only correction candidate now replaces only
+  the faulty private splitter, adds deterministic fragmentation coverage, and
+  preserves the primary editor error in checker failures.  Its 56/56 isolated
+  tests, failure-order fixture, strict gate, and one no-retry connected run
+  pass; publication, live reload, and acceptance remain explicit work alongside
+  the remaining trust, audio, and policy scope.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 - [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
   the GRUB prompt before making more bootloader changes.
@@ -1534,6 +1538,16 @@ control; =SK_FENNEL_PROJECT_CHECK_BREAK=1= returns exact status 91 and cleanup
 passes.  Connected two-root REPL/LSP and deliberate-failure cleanup pass,
 =scripts/shell-check --strict= reports =recovery=13 home=83 explicit=1=, and neither
 Home nor System exposes a Fennel runtime executable.
+The Slice 19 source candidate corrects Fennel Mode 0.9.2's private buffered
+line splitter without changing the package or runtime boundary.  A
+deterministic regression covers newline-only completion, adjacent records,
+retained partial records, and every split point of complete and incomplete
+protocol payloads.
+The isolated suite passes 56/56; the checker-order fixture proves an early
+editor exit is reported before missing descendant metadata while final residue
+checks still run; and one serialized connected run passes both normal and
+deliberate-failure phases without retry.  Publication and live reload remain
+pending before this correction is accepted.
 Pinned fennel-ls emits the exact compatibility warning =--WARNING: plugin
 fennel-ls does not support Fennel version 1.6.1=.  Only that warning is allowed;
 imported-macro LSP navigation or semantic analysis is not claimed.

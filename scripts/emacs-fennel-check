@@ -2,8 +2,15 @@
 
 set -eu
 
-fail() {
+check_failed=0
+
+record_failure() {
     printf 'emacs-fennel-check: %s\n' "$1" >&2
+    check_failed=1
+}
+
+fail() {
+    record_failure "$1"
     exit 1
 }
 
@@ -202,13 +209,23 @@ cp "$repo/tests/emacs/fennel-backend-check.el" \
 phase_processes_gone() {
     pids_file=$1
     details_file=$2
-    [ -s "$pids_file" ] || fail "phase recorded no live descendants: $pids_file"
+    if [ ! -s "$pids_file" ]; then
+        record_failure "phase recorded no live descendants: $pids_file"
+        return
+    fi
+    while IFS= read -r pid; do
+        case $pid in
+            ''|*[!0-9]*)
+                record_failure "invalid recorded descendant PID: $pid"
+                ;;
+        esac
+    done <"$pids_file"
     attempt=0
     while [ "$attempt" -lt 100 ]; do
         survivors=
         while IFS= read -r pid; do
             case $pid in
-                ''|*[!0-9]*) fail "invalid recorded descendant PID: $pid" ;;
+                ''|*[!0-9]*) continue ;;
             esac
             if kill -0 "$pid" 2>/dev/null; then
                 survivors="$survivors $pid"
@@ -219,7 +236,7 @@ phase_processes_gone() {
         attempt=$((attempt + 1))
     done
     [ ! -r "$details_file" ] || sed -n '1,200p' "$details_file" >&2
-    fail "OS descendants survived editor cleanup:$survivors"
+    record_failure "OS descendants survived editor cleanup:$survivors"
 }
 
 run_editor() {
@@ -262,44 +279,47 @@ run_editor() {
     editor_status=$?
     set -e
 
-    phase_processes_gone "$pids_file" "$details_file"
-    processes=$(sandbox_processes)
-    [ -z "$processes" ] || \
-        fail "$phase sandbox processes survived editor cleanup: $processes"
-
     case $phase in
         success)
             [ "$editor_status" -eq 0 ] || \
-                fail "connected success phase exited $editor_status"
+                record_failure "connected success phase exited $editor_status"
             [ ! -e "$failure_marker" ] || \
-                fail 'success phase created deliberate-failure marker'
+                record_failure 'success phase created deliberate-failure marker'
             ;;
         deliberate-failure)
             [ "$editor_status" -ne 0 ] || \
-                fail 'deliberate connected failure unexpectedly passed'
+                record_failure 'deliberate connected failure unexpectedly passed'
             [ -s "$failure_marker" ] || \
-                fail 'deliberate failure did not reach its live checkpoint'
+                record_failure 'deliberate failure did not reach its live checkpoint'
             ;;
-        *) fail "unknown checker phase: $phase" ;;
+        *) record_failure "unknown checker phase: $phase" ;;
     esac
+
+    phase_processes_gone "$pids_file" "$details_file"
+    processes=$(sandbox_processes)
+    [ -z "$processes" ] || record_failure \
+        "$phase sandbox processes survived editor cleanup: $processes"
 }
 
 run_editor success
-run_editor deliberate-failure
+[ "$check_failed" -ne 0 ] || run_editor deliberate-failure
 
 fixture_after=$(fixture_state)
 repository_after=$(repository_state)
 [ "$fixture_after" = "$fixture_before" ] || \
-    fail 'source Fennel fixture changed during isolated editor checks'
+    record_failure 'source Fennel fixture changed during isolated editor checks'
 [ "$repository_after" = "$repository_before" ] || \
-    fail 'repository state changed during isolated editor checks'
+    record_failure 'repository state changed during isolated editor checks'
 
 for project in "$source_root/fixtures/fennel" "$second_project"; do
     for artifact in .fennel .fnx .luarocks target; do
         [ ! -e "$project/$artifact" ] || \
-            fail "connected tooling leaked project state: $project/$artifact"
+            record_failure \
+                "connected tooling leaked project state: $project/$artifact"
     done
 done
+
+[ "$check_failed" -eq 0 ] || exit 1
 
 printf '%s\n' 'emacs-fennel-check: deliberate failure cleanup PASS'
 printf '%s\n' 'emacs-fennel-check: PASS'

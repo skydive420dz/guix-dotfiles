@@ -32,6 +32,8 @@
        (error "SK_EMACS_CHECK_REAL_HOME is required")))
   "Real user home that must not own batch state or package paths.")
 
+(defvar fennel-proto-repl--message-buf)
+
 (defun sk/check-fixture-path (relative)
   "Return the copied fixture path for RELATIVE."
   (expand-file-name (concat "fixtures/" relative) sk/check-source-root))
@@ -548,6 +550,56 @@
                 (file-name-as-directory (sk/check-fixture-path "fennel")))
     (should-error (sk/fennel-repl) :type 'user-error))
   (should-not (seq-some #'sk/check-lisp-runtime-process-p (process-list))))
+
+(ert-deftest sk/check-fennel-protocol-splitter-edge-cases ()
+  (should
+   (advice-member-p #'sk/fennel--buffered-split-string
+                    #'fennel-proto-repl--buffered-split-string))
+  (let ((advice-count 0))
+    (advice-mapc
+     (lambda (advice _properties)
+       (when (eq advice #'sk/fennel--buffered-split-string)
+         (setq advice-count (1+ advice-count))))
+     #'fennel-proto-repl--buffered-split-string)
+    (should (= advice-count 1)))
+  (dolist (case '((nil "" nil nil)
+                  (nil "\n" nil nil)
+                  (nil "one\n" ("one") nil)
+                  (nil "one\ntwo" ("one") "two")
+                  ("one" "" nil "one")
+                  ("one" " continued" nil "one continued")
+                  ("one" "\n" ("one") nil)
+                  ("one" "\ntwo\n" ("one" "two") nil)
+                  ("one" "\ntwo" ("one") "two")
+                  ("one" "\n\ntwo\n" ("one" "two") nil)))
+    (pcase-let ((`(,initial ,chunk ,expected-lines ,expected-buffer) case))
+      (with-temp-buffer
+        (setq-local fennel-proto-repl--message-buf initial)
+        (should
+         (equal
+          (fennel-proto-repl--buffered-split-string chunk)
+          expected-lines))
+        (should
+         (equal fennel-proto-repl--message-buf expected-buffer))))))
+
+(ert-deftest sk/check-fennel-protocol-splitter-is-chunking-invariant ()
+  (dolist (case '(("(:id 1)\n(:id 2)\n(:id 3)\n"
+                   ("(:id 1)" "(:id 2)" "(:id 3)") nil)
+                  ("(:id 1)\n(:id 2)\n(:id 3)"
+                   ("(:id 1)" "(:id 2)") "(:id 3)")))
+    (pcase-let ((`(,payload ,expected-lines ,expected-buffer) case))
+      (dotimes (split (1+ (length payload)))
+        (with-temp-buffer
+          (setq-local fennel-proto-repl--message-buf nil)
+          (let ((lines
+                 (append
+                  (fennel-proto-repl--buffered-split-string
+                   (substring payload 0 split))
+                  (fennel-proto-repl--buffered-split-string
+                   (substring payload split)))))
+            (should (equal lines expected-lines))
+            (should
+             (equal fennel-proto-repl--message-buf expected-buffer))))))))
 
 (ert-deftest sk/check-fennel-keymaps-preserve-project-boundaries ()
   (dolist (binding

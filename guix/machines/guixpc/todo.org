@@ -318,21 +318,28 @@ Current next action:
   - [ ] Correct the diagnosed Fennel Mode 0.9.2 framing bug from the one-shot
     acceptance failure.  Its buffered splitter calls =setcar= on =nil= when a
     final newline arrives as its own process chunk and can merge a buffered
-    partial record with the next record.  Add a narrow repository-owned
-    compatibility override, deterministic fragmented-chunk ERT coverage, and
-    checker ordering that reports the primary editor failure before a missing
-    descendant marker.  Do not hide protocol corruption with retries.
-  - [X] Record rollback for the correction: restore source checkpoint
-    =e69644a98a32e1c63eb7ea9b5bb313849c7c6d87= first, remove the
+    partial record with the next record.  The source candidate adds a narrow
+    repository-owned compatibility override, deterministic edge/split-point
+    ERT coverage, and checker ordering that reports the primary editor failure
+    before a missing descendant marker while still running residue checks.
+    Batch 56/56, the synthetic early-exit fixture, strict shell validation, and
+    one no-retry connected normal/deliberate-failure run pass.  Publish it, then
+    reload or restart Emacs and accept the live override before checking this
+    item; do not hide protocol corruption with retries.  L-18 rollback restores
+    source checkpoint =f52778c0c8a5a1364f139adfeda396eb235ead54= and reloads
+    or restarts Emacs only; it needs no =ghr= or reboot.
+  - [X] Record rollback for the native-comp correction: restore source
+    checkpoint =e69644a98a32e1c63eb7ea9b5bb313849c7c6d87= first, remove the
     correction-only managed live early-init link if it remains, switch exactly
     to retained Home 41, and reboot.  Keep the known-stale cache quarantined;
     System 85 and Pull 5 do not change.
 
-Next action: publish the post-reboot native-comp acceptance and retention-pin
-checkpoint, then correct L-18 before completing the remaining Slice 19 local
-trust, Kitty remote-control, Blueman/dconf, audio-absence, visual/power, and
-historical-documentation decisions.  Keep the accepted Fennel runtime/tool
-boundary and documented fennel-ls version limitation intact.
+Next action: publish the validated L-18 source correction, reload the running
+Emacs only after publication, and accept its live singleton override.  Then
+complete the remaining Slice 19 local trust, Kitty remote-control,
+Blueman/dconf, audio-absence, visual/power, and historical-documentation
+decisions.  Keep the accepted Fennel runtime/tool boundary and documented
+fennel-ls version limitation intact.
 
 Ordered follow-up:
 

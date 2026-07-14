@@ -30,6 +30,7 @@ shellcheck \
     "$repo/scripts/desktop-session-check" \
     "$repo/scripts/emacs-check" \
     "$repo/scripts/emacs-clojure-check" \
+    "$repo/scripts/emacs-fennel-check" \
     "$repo/scripts/exwm-session" \
     "$repo/scripts/guix-bootstrap" \
     "$repo/scripts/guix-build-gate" \
@@ -46,6 +47,7 @@ shellcheck \
     "$repo/shell/xinitrc" \
     "$repo/shell/zprofile" \
     "$repo/tests/exwm-session-check" \
+    "$repo/tests/emacs-fennel-check" \
     "$repo/tests/guix-bootstrap-check" \
     "$repo/tests/guix-build-gate-check" \
     "$repo/tests/guix-entrypoints-check" \
@@ -58,6 +60,7 @@ shellcheck \
     "$repo/tests/guix-reconfigure-check"
 
 "$repo/tests/exwm-session-check"
+"$repo/tests/emacs-fennel-check"
 "$repo/tests/guix-bootstrap-check"
 "$repo/tests/guix-build-gate-check"
 "$repo/tests/guix-entrypoints-check"

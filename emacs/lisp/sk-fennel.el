@@ -19,6 +19,7 @@
 (defvar fennel-mode-map)
 (defvar fennel-program)
 (defvar fennel-proto-repl--buffer)
+(defvar fennel-proto-repl--message-buf)
 (defvar fennel-proto-repl--process-buffer)
 (defvar fennel-proto-repl-kill-process-buffers)
 (defvar fennel-proto-repl-minor-mode)
@@ -31,6 +32,8 @@
 
 (declare-function fennel-proto-repl "fennel-proto-repl")
 (declare-function fennel--xref-backend "fennel-mode")
+(declare-function fennel-proto-repl--buffered-split-string
+                  "fennel-proto-repl")
 (declare-function fennel-proto-repl--link-buffer "fennel-proto-repl")
 (declare-function fennel-proto-repl--process-buffer "fennel-proto-repl")
 (declare-function fennel-proto-repl-eval-buffer "fennel-proto-repl")
@@ -172,6 +175,19 @@
                 fennel-program (sk/fennel--command-string root "repl")
                 inferior-lisp-program fennel-program)))
 
+(defun sk/fennel--buffered-split-string (string)
+  "Split protocol STRING while retaining an incomplete final record.
+This is a compatibility correction for Fennel Mode 0.9.2, whose splitter
+fails when a buffered record's newline arrives in a separate process chunk."
+  (let* ((input (concat (or fennel-proto-repl--message-buf "") string))
+         (strings (split-string input "\n" t))
+         (partial-p (not (string-suffix-p "\n" input))))
+    (setq fennel-proto-repl--message-buf
+          (and partial-p (car (last strings))))
+    (if partial-p
+        (nbutlast strings)
+      strings)))
+
 ;; This fallback still crosses the tracked wrapper if an upstream command is
 ;; invoked outside a marked source buffer.  Project buffers replace "." with
 ;; their canonical root, and the reviewed keymap below replaces every classic
@@ -186,6 +202,14 @@
   :hook (fennel-mode . sk/fennel-mode-setup)
   :config
   (require 'fennel-proto-repl)
+  ;; Process filters may receive a final newline in its own OS chunk.  Keep the
+  ;; pinned package's public protocol surface while replacing only its faulty
+  ;; private line assembler.
+  (unless (advice-member-p
+           #'sk/fennel--buffered-split-string
+           #'fennel-proto-repl--buffered-split-string)
+    (advice-add #'fennel-proto-repl--buffered-split-string
+                :override #'sk/fennel--buffered-split-string))
   (setq fennel-proto-repl-project-integration nil
         fennel-proto-repl-kill-process-buffers t
         fennel-proto-repl-sync-timeout 2.0)

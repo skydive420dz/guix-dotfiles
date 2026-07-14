@@ -1,0 +1,137 @@
+#!/bin/sh
+
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/sk-emacs-fennel-check-test.XXXXXX")
+tmp=$(CDPATH='' cd "$tmp" && pwd -P)
+
+cleanup() {
+    rm -rf -- "$tmp"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+fail() {
+    printf 'FAIL: %s\n' "$1" >&2
+    exit 1
+}
+
+contains() {
+    case $1 in
+        *"$2"*) ;;
+        *) fail "expected output to contain: $2" ;;
+    esac
+}
+
+lacks() {
+    case $1 in
+        *"$2"*) fail "expected output to omit: $2" ;;
+        *) ;;
+    esac
+}
+
+repository_state() {
+    printf '%s\n' '== status =='
+    git -C "$repo" status --porcelain=v1 --untracked-files=all
+    printf '%s\n' '== worktree diff =='
+    git -C "$repo" diff --no-ext-diff --binary
+    printf '%s\n' '== index diff =='
+    git -C "$repo" diff --cached --no-ext-diff --binary
+    printf '%s\n' '== untracked content =='
+    git -C "$repo" ls-files --others --exclude-standard | sort |
+        while IFS= read -r relative; do
+            [ -n "$relative" ] || continue
+            cksum "$repo/$relative" || printf 'UNREADABLE %s\n' "$relative"
+        done
+}
+
+home_profile=$tmp/home-profile
+system_profile=$tmp/system-profile
+runtime=$tmp/runtime
+output_file=$tmp/output
+fake_emacs=$home_profile/bin/emacs
+fake_guix=$system_profile/bin/guix
+
+mkdir -p "$home_profile/bin" "$home_profile/share/emacs/site-lisp" \
+    "$system_profile/bin" "$system_profile/sbin" \
+    "$system_profile/share/emacs/site-lisp" "$runtime"
+
+for command in chmod cksum cp dirname env find git kill ln mkdir mktemp rm \
+    sed sleep sort timeout tr; do
+    command_path=$(command -v "$command") || \
+        fail "missing fixture command: $command"
+    ln -s "$command_path" "$system_profile/bin/$command"
+done
+
+cat >"$fake_emacs" <<'EOF'
+#!/bin/sh
+
+set -eu
+
+printf 'fake-emacs: phase=%s primary injected failure\n' \
+    "$SK_EMACS_FENNEL_PHASE" >&2
+: >"$SK_EMACS_FENNEL_SOURCE_ROOT/fixtures/fennel/.fennel"
+exit 255
+EOF
+
+cat >"$fake_guix" <<'EOF'
+#!/bin/sh
+
+printf '%s\n' 'fake guix must not run in the ordering fixture' >&2
+exit 99
+EOF
+
+chmod +x "$fake_emacs" "$fake_guix"
+
+repository_before=$(repository_state)
+status=0
+TMPDIR="$runtime" \
+GUIX="$fake_guix" \
+SK_EMACS_CHECK_HOME_PROFILE="$home_profile" \
+SK_EMACS_CHECK_SYSTEM_PROFILE="$system_profile" \
+    "$repo/scripts/emacs-fennel-check" "$repo" \
+    >"$output_file" 2>&1 || status=$?
+output=$(cat "$output_file")
+repository_after=$(repository_state)
+
+[ "$status" -eq 1 ] || {
+    printf '%s\n' "$output" >&2
+    fail "failure-order fixture returned status $status, expected 1"
+}
+
+contains "$output" 'fake-emacs: phase=success primary injected failure'
+contains "$output" 'emacs-fennel-check: connected success phase exited 255'
+contains "$output" 'emacs-fennel-check: phase recorded no live descendants:'
+contains "$output" 'emacs-fennel-check: connected tooling leaked project state:'
+contains "$output" '/.fennel'
+lacks "$output" 'fake-emacs: phase=deliberate-failure'
+lacks "$output" 'emacs-fennel-check: PASS'
+
+if ! awk '
+    index($0, "emacs-fennel-check: connected success phase exited 255") {
+        primary = NR
+        primary_count++
+    }
+    index($0, "emacs-fennel-check: phase recorded no live descendants:") {
+        missing = NR
+        missing_count++
+    }
+    END {
+        exit !(primary_count == 1 && missing_count == 1 && primary < missing)
+    }
+' "$output_file"; then
+    printf '%s\n' "$output" >&2
+    fail 'editor-status diagnostic did not precede missing-PID diagnostic'
+fi
+
+[ "$repository_after" = "$repository_before" ] || \
+    fail 'source repository changed during the isolated failure-order fixture'
+
+runtime_residue=$(find "$runtime" -mindepth 1 -print -quit)
+[ -z "$runtime_residue" ] || \
+    fail "checker sandbox survived EXIT cleanup: $runtime_residue"
+
+printf '%s\n' 'emacs-fennel-check fixture: PASS'
