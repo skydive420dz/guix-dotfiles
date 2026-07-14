@@ -29,7 +29,8 @@ printf '%s\n' '(home-environment)' >"$repo/guix/home/guixpc.scm"
 
 for source in \
     shell/bash_profile shell/bashrc shell/zprofile shell/xinitrc \
-    emacs/exwm-loader.el emacs/init.el emacs/exwm.el gdb/gdbinit \
+    emacs/exwm-loader.el emacs/early-init.el emacs/init.el emacs/exwm.el \
+    gdb/gdbinit \
     guile/guile x11/Xdefaults kitty/kitty.conf ranger/rc.conf \
     ranger/rifle.conf ranger/scope.sh; do
     mkdir -p "$repo/$(dirname "$source")"

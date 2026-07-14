@@ -6,6 +6,7 @@
     (".zprofile" "shell/zprofile")
     (".xinitrc" "shell/xinitrc")
     (".exwm" "emacs/exwm-loader.el")
+    (".emacs.d/early-init.el" "emacs/early-init.el")
     (".emacs.d/init.el" "emacs/init.el")
     (".emacs.d/exwm.el" "emacs/exwm.el")
     (".gdbinit" "gdb/gdbinit")

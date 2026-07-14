@@ -20,6 +20,41 @@
             (file-name-as-directory
              (expand-file-name "~/.guix-home/profile/share/emacs/site-lisp"))
           "/run/current-system/profile/share/emacs/site-lisp/"))
+       (home-profile
+        (file-name-as-directory
+         (file-truename (expand-file-name "~/.guix-home/profile"))))
+       (expected-native-profile-key
+        (file-name-nondirectory
+         (directory-file-name home-profile)))
+       (expected-native-cache
+        (file-name-as-directory
+         (expand-file-name
+          expected-native-profile-key
+          (expand-file-name
+           "emacs/eln-cache/"
+           (let ((xdg-cache-home (getenv "XDG_CACHE_HOME")))
+             (if (and xdg-cache-home
+                      (file-name-absolute-p xdg-cache-home))
+                 xdg-cache-home
+               "~/.cache/"))))))
+       (expected-legacy-native-cache
+        (file-name-as-directory
+         (expand-file-name "eln-cache" user-emacs-directory)))
+       (org-package
+        (car (file-expand-wildcards
+              (expand-file-name "org-[0-9]*" preferred-site-lisp) t)))
+       (expected-org-version
+        (and org-package
+             (string-remove-prefix
+              "org-"
+              (file-name-nondirectory
+               (directory-file-name org-package)))))
+       (org-version-mismatch-warning
+        (when-let ((warnings-buffer (get-buffer "*Warnings*")))
+          (with-current-buffer warnings-buffer
+            (save-excursion
+              (goto-char (point-min))
+              (search-forward "Org version mismatch" nil t)))))
        (repo-root
         (file-name-directory
          (directory-file-name (file-truename sk/user-directory))))
@@ -300,6 +335,54 @@
                     authored-snippets-loaded-p))
          (cons "Org package generation"
                (funcall owned-library-p "org" "org-[0-9]*"))
+         (cons "profile-keyed native compilation cache"
+               (and
+                (boundp 'sk/native-comp-profile-key)
+                (boundp 'sk/native-comp-cache-directory)
+                (boundp 'sk/native-comp-legacy-cache-directory)
+                (equal sk/native-comp-profile-key
+                       expected-native-profile-key)
+                (equal
+                 (file-name-as-directory
+                  (file-truename sk/native-comp-cache-directory))
+                 (file-name-as-directory
+                  (file-truename expected-native-cache)))
+                (equal
+                 (file-name-as-directory
+                  (file-truename sk/native-comp-legacy-cache-directory))
+                 (file-name-as-directory
+                  (file-truename expected-legacy-native-cache)))
+                native-comp-eln-load-path
+                (equal
+                 (file-name-as-directory
+                  (file-truename (car native-comp-eln-load-path)))
+                 (file-name-as-directory
+                  (file-truename expected-native-cache)))
+                (not
+                 (seq-some
+                  (lambda (entry)
+                    (and entry
+                         (equal
+                          (file-name-as-directory (file-truename entry))
+                          (file-name-as-directory
+                           (file-truename expected-legacy-native-cache)))))
+                  native-comp-eln-load-path))
+                (seq-some
+                 (lambda (entry)
+                   (and entry
+                        (string-prefix-p "/gnu/store/"
+                                         (file-truename entry))))
+                 native-comp-eln-load-path)))
+         (cons "current Home Org version without stale native code"
+               (and org-package
+                    expected-org-version
+                    (file-in-directory-p
+                     (file-truename (locate-library "org"))
+                     (file-name-as-directory
+                      (file-truename org-package)))
+                    (equal (org-version) expected-org-version)
+                    (not (boundp 'sk/check-stale-org-native-code))
+                    (not org-version-mismatch-warning)))
          (cons "Geiser package generation"
                (funcall owned-library-p "geiser" "geiser-[0-9]*"))
          (cons "Geiser Guile package generation"
@@ -508,6 +591,10 @@
           :path (getenv "PATH")
           :emacsloadpath (getenv "EMACSLOADPATH")
           :org (locate-library "org")
+          :org-version (org-version)
+          :native-comp-cache
+          (and (boundp 'sk/native-comp-cache-directory)
+               sk/native-comp-cache-directory)
           :geiser (locate-library "geiser")
           :geiser-guile (locate-library "geiser-guile")
           :puni (locate-library "puni")

@@ -63,7 +63,7 @@ else
 fi
 export EMACSLOADPATH="$candidate_emacsloadpath"
 
-required_commands='chmod cksum cp env git mkdir mktemp rm sort timeout'
+required_commands='chmod cksum cp env git ln mkdir mktemp rm sort timeout'
 if [ "$batch_only" -eq 0 ]; then
     required_commands="$required_commands emacsclient sed"
 fi
@@ -75,6 +75,7 @@ for command in $required_commands; do
 done
 
 live_expression_file="$repo/tests/emacs/live-check.el"
+early_init="$repo/emacs/early-init.el"
 batch_bootstrap="$repo/tests/emacs/batch-bootstrap.el"
 batch_checks="$repo/tests/emacs/batch-check.el"
 backend_checks="$repo/tests/emacs/backend-check.el"
@@ -83,8 +84,8 @@ clojure_project="$repo/scripts/clojure-project"
 racket_project="$repo/scripts/racket-project"
 fennel_project="$repo/scripts/fennel-project"
 
-for file in "$live_expression_file" "$batch_bootstrap" "$batch_checks" \
-    "$backend_checks" "$guix_lisp_shell" "$clojure_project" \
+for file in "$live_expression_file" "$early_init" "$batch_bootstrap" \
+    "$batch_checks" "$backend_checks" "$guix_lisp_shell" "$clojure_project" \
     "$racket_project" "$fennel_project"; do
     if [ ! -r "$file" ]; then
         printf 'preflight: unreadable %s\n' "$file" >&2
@@ -144,10 +145,15 @@ run_batch_checks() (
     isolated_state="$sandbox/xdg/state"
     isolated_runtime="$sandbox/xdg/runtime"
 
-    mkdir -p "$source_root" "$isolated_home" "$isolated_tmp" \
+    mkdir -p "$source_root" "$isolated_home/.guix-home" "$isolated_tmp" \
         "$isolated_cache" "$isolated_config" "$isolated_data" \
         "$isolated_state" "$isolated_runtime" "$source_root/scripts"
     chmod 700 "$sandbox" "$isolated_home" "$isolated_tmp" "$isolated_runtime"
+
+    # Under -Q Emacs neither discovers early-init.el nor the real Guix Home
+    # profile.  Reproduce both pieces explicitly while keeping all mutable
+    # state inside the disposable HOME.
+    ln -s "$home_profile" "$isolated_home/.guix-home/profile"
 
     cp -R "$repo/emacs" "$source_root/emacs"
     cp -R "$repo/fixtures" "$source_root/fixtures"
@@ -179,8 +185,9 @@ run_batch_checks() (
         SK_EMACS_CHECK_BREAK_WARNING="${SK_EMACS_CHECK_BREAK_WARNING:-0}" \
         timeout 120 "$batch_emacs" --batch -Q \
         --eval '(setq user-emacs-directory (file-name-as-directory (expand-file-name ".emacs.d" (getenv "HOME"))))' \
-        --eval '(setq flycheck-check-syntax-automatically nil)' \
         --load "$batch_bootstrap" \
+        --load "$source_root/emacs/early-init.el" \
+        --eval '(setq flycheck-check-syntax-automatically nil)' \
         --load "$source_root/emacs/init.el" \
         --eval '(run-hooks (quote after-init-hook))' \
         --load "$batch_checks"

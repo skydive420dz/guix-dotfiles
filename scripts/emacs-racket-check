@@ -52,6 +52,7 @@ home_emacs=$home_profile/bin/emacs
     fail "candidate Home Emacs is not executable: $home_emacs"
 
 for path in \
+    "$repo/emacs/early-init.el" \
     "$repo/emacs/init.el" \
     "$repo/emacs/lisp/sk-racket.el" \
     "$repo/guix/channels.scm" \
@@ -185,8 +186,13 @@ mkdir -p "$source_root/fixtures/racket" "$second_project" \
     "$source_root/guix/modules/sk" "$source_root/scripts" \
     "$source_root/tests/emacs" "$isolated_home/.emacs.d" "$isolated_tmp" \
     "$isolated_cache" "$isolated_config" "$isolated_data" \
-    "$isolated_state" "$isolated_runtime"
+    "$isolated_state" "$isolated_runtime" "$isolated_home/.guix-home"
 chmod 700 "$sandbox" "$isolated_home" "$isolated_tmp" "$isolated_runtime"
+
+# Model the production Guix Home identity inside the isolated HOME.  The
+# candidate profile remains immutable; only the profile link and caches live
+# below this checker's private sandbox.
+ln -s "$home_profile" "$isolated_home/.guix-home/profile"
 
 # Reuse only an already-populated Guix cache from the outer build gate.  All
 # editor, Racket user, compiled, and documentation state stays private here.
@@ -236,6 +242,7 @@ if env -i \
     timeout --signal=TERM --kill-after=10 900 \
     "$home_emacs" --batch -Q \
     --eval '(setq user-emacs-directory (file-name-as-directory (expand-file-name ".emacs.d" (getenv "HOME"))))' \
+    --load "$source_root/emacs/early-init.el" \
     --load "$source_root/emacs/init.el" \
     --eval '(require (quote sk-racket))' \
     --eval '(run-hooks (quote after-init-hook))' \

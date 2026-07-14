@@ -67,6 +67,10 @@
   (cl-letf (((symbol-function 'lsp-deferred) #'ignore))
     (funcall mode)))
 
+(defun sk/check-canonical-directory (directory)
+  "Return DIRECTORY as a canonical directory name."
+  (file-name-as-directory (file-truename directory)))
+
 (defun sk/check-with-eldoc-fixture (relative function)
   "Run RELATIVE hooks, call FUNCTION, and verify they enable Eldoc."
   (let ((eldoc-calls nil)
@@ -196,6 +200,113 @@
       (let ((canonical (file-truename entry)))
         (should (or (string-prefix-p "/gnu/store/" canonical)
                     (string-prefix-p sk/check-sandbox-root canonical)))))))
+
+(ert-deftest sk/check-profile-keyed-native-comp-and-org-generation ()
+  (let* ((profile-link
+          (expand-file-name ".guix-home/profile" (getenv "HOME")))
+         (resolved-profile
+          (sk/check-canonical-directory profile-link))
+         (expected-key
+          (file-name-nondirectory
+           (directory-file-name resolved-profile)))
+         (expected-cache
+          (expand-file-name
+           (concat "emacs/eln-cache/" expected-key "/")
+           (getenv "XDG_CACHE_HOME")))
+         (legacy-cache
+          (expand-file-name "eln-cache/" user-emacs-directory))
+         (home-site-lisp
+          (expand-file-name "share/emacs/site-lisp" profile-link))
+         (org-package
+          (car (file-expand-wildcards
+                (expand-file-name "org-[0-9]*" home-site-lisp) t)))
+         (org-library (locate-library "org"))
+         (org-source
+          (and org-library
+               (if (string-suffix-p ".elc" org-library)
+                   (string-remove-suffix "c" org-library)
+                 org-library)))
+         (expected-org-version
+          (and org-package
+               (string-remove-prefix
+                "org-"
+                (file-name-nondirectory
+                 (directory-file-name org-package))))))
+    (should (boundp 'sk/native-comp-profile-key))
+    (should (boundp 'sk/native-comp-cache-directory))
+    (should (boundp 'sk/native-comp-legacy-cache-directory))
+    (should (equal sk/native-comp-profile-key expected-key))
+    (should (equal (sk/native-comp--cache-key) expected-key))
+    (should (equal
+             (sk/check-canonical-directory sk/native-comp-cache-directory)
+             (sk/check-canonical-directory expected-cache)))
+    (should (equal
+             (sk/check-canonical-directory
+              sk/native-comp-legacy-cache-directory)
+             (sk/check-canonical-directory legacy-cache)))
+    (should native-comp-eln-load-path)
+    (should (equal
+             (sk/check-canonical-directory
+              (car native-comp-eln-load-path))
+             (sk/check-canonical-directory expected-cache)))
+    (should-not
+     (seq-some
+      (lambda (entry)
+        (and entry
+             (equal (sk/check-canonical-directory entry)
+                    (sk/check-canonical-directory legacy-cache))))
+      native-comp-eln-load-path))
+    ;; Redirection may add only the selected cache and remove only the legacy
+    ;; fallback.  Every immutable native-site entry must survive byte-for-byte
+    ;; and in its original order.
+    (should
+     (equal
+      (cdr native-comp-eln-load-path)
+      (seq-remove
+       (lambda (entry)
+         (and entry
+              (equal (sk/check-canonical-directory entry)
+                     (sk/check-canonical-directory legacy-cache))))
+       sk/check-native-comp-eln-load-path-before-early-init)))
+    (should
+     (seq-some
+      (lambda (entry)
+        (and entry
+             (string-prefix-p
+              "/gnu/store/"
+              (sk/check-canonical-directory entry))))
+      (cdr native-comp-eln-load-path)))
+    (should org-package)
+    (should org-library)
+    (should
+     (file-in-directory-p (file-truename org-library)
+                          (sk/check-canonical-directory org-package)))
+    (should (equal (org-version) expected-org-version))
+    (should-not (boundp 'sk/check-stale-org-native-code))
+    (require 'comp)
+    (let ((native-comp-eln-load-path (list legacy-cache)))
+      (should
+       (file-equal-p (comp-lookup-eln org-source)
+                     sk/check-stale-org-eln)))
+    (should-not
+     (let ((selected (comp-lookup-eln org-source)))
+       (and selected
+            (file-equal-p selected sk/check-stale-org-eln))))
+    ;; Exercise the real recovery branch against an absent profile without
+    ;; disturbing the production-parity profile link used by the rest of the
+    ;; suite.
+    (let ((missing-profile
+           (expand-file-name ".guix-home/missing-profile" (getenv "HOME"))))
+      (should-not (sk/native-comp--profile-key missing-profile))
+      (should
+       (equal (sk/native-comp--cache-key missing-profile)
+              (sk/native-comp--running-emacs-key))))
+    (should-not
+     (seq-some
+      (lambda (record)
+        (string-match-p "Org version mismatch"
+                        (format "%s" (nth 1 record))))
+      sk/check-warning-records))))
 
 (ert-deftest sk/check-lsp-hooks-and-shared-policy ()
   (sk/check-lsp-fixture "c/hello.c" 'c-mode)

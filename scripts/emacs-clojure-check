@@ -52,6 +52,7 @@ home_emacs=$home_profile/bin/emacs
     fail "candidate Home Emacs is not executable: $home_emacs"
 
 for path in \
+    "$repo/emacs/early-init.el" \
     "$home_profile/bin/cljfmt" \
     "$home_profile/bin/clj-kondo" \
     "$repo/emacs/init.el" \
@@ -165,8 +166,13 @@ mkdir -p "$source_root/fixtures/clojure" "$source_root/guix/manifests" \
     "$source_root/guix/modules/sk" "$source_root/scripts" \
     "$source_root/tests/emacs" "$isolated_home" "$isolated_tmp" \
     "$isolated_cache" "$isolated_config" "$isolated_data" \
-    "$isolated_state" "$isolated_runtime"
+    "$isolated_state" "$isolated_runtime" "$isolated_home/.guix-home"
 chmod 700 "$sandbox" "$isolated_home" "$isolated_tmp" "$isolated_runtime"
+
+# Model the production Guix Home identity inside the isolated HOME.  The
+# candidate profile remains immutable; only the profile link and caches live
+# below this checker's private sandbox.
+ln -s "$home_profile" "$isolated_home/.guix-home/profile"
 
 # The build gate already owns an isolated, populated Guix cache.  Reuse only
 # that cache namespace when one was supplied; editor and clojure-lsp state
@@ -215,6 +221,7 @@ if env -i \
     timeout --signal=TERM --kill-after=10 600 \
     "$home_emacs" --batch -Q \
     --eval '(setq user-emacs-directory (file-name-as-directory (expand-file-name ".emacs.d" (getenv "HOME"))))' \
+    --load "$source_root/emacs/early-init.el" \
     --eval '(setq flycheck-check-syntax-automatically nil)' \
     --load "$source_root/emacs/init.el" \
     --eval '(run-hooks (quote after-init-hook))' \

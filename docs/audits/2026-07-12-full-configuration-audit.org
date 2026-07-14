@@ -260,6 +260,7 @@ reported as a confirmed bug without a focused test.
 | L-14 | P2  | CLOSED   | Slice 17 keeps full Racket 9.1 in its authenticated project manifest and adds only a local runtime-detached =emacs-racket-mode= object to Home.  Its 44.0 MiB closure has no full/minimal/VM/docs Racket requisite, and fresh Home 40 acceptance proves persistent System/Home package and executable absence while avoiding the upstream recipe's hidden 2.135 GiB runtime closure. | 17 |
 | L-15 | P2  | CLOSED   | The reusable marked Racket project contract, project-keyed PLT wrapper, native-indentation policy, strict =check-requires= lint, RackUnit, Scribble, macro expansion, shared keys/windows, and explicit backend/XP path pass fresh project and connected-editor gates.  Syntax/lint/test/docs and connected-process failures clean up; native debugger recovery and process-group-scoped stop pass.  No =raco pkg=, catalog mutation, or fake formatter is allowed. | 17 |
 | L-16 | P3  | CLOSED   | Fennel 1.6.1, fnlfmt 0.3.0, fennel-ls 0.2.3, a marked fixture, authenticated SHA-256-keyed wrapper, runtime-free Home editor mode, explicit protocol REPL/LSP integration, and normal/negative cleanup gates pass both the full non-activating build and fresh Home 41 acceptance.  The pinned server's exact version warning and its basic non-macro semantic boundary remain explicit. | 18 |
+| L-17 | P2  | VERIFIED | Fresh Home 41 Emacs loads native Org 9.8.3 artifacts from the legacy user ELN cache ahead of Guix Home Org 9.8.7, so Org's version assertion warns repeatedly even though final library lookup names the current store package.  An isolated load without that legacy cache is warning-free. | 19 |
 
 * Current Lisp capability matrix
 
@@ -2467,26 +2468,88 @@ general newer-package dumping ground for later dialects.
 ** TODO Slice 19: Final desktop, security, and documentation polish
 :PROPERTIES:
 :audit_priority: P3
-:findings: O-10 O-12 X-05 X-06
+:findings: O-10 O-12 O-13 X-05 X-06 L-17
 :END:
 
 Scope:
 
+- close native-comp cache ownership by selecting an XDG cache keyed to the
+  resolved immutable Guix Home package profile before normal Emacs startup,
+  while excluding the unversioned legacy user cache from fallback lookup;
 - document accepted physical-autologin and local X trust assumptions;
 - disable or constrain Kitty remote control if unused;
 - decide Blueman/dconf ownership if the GUI remains part of the workflow;
+- reconcile strict Bluetooth acceptance with the expected =auto_null= state
+  when the Bose device is off and no used physical audio endpoint is present;
 - align screen blanking, compositor, transparency, and power policy;
 - convert dated handoffs to clearly historical records;
 - reconcile README, this audit, machine TODO, and actual accepted behavior.
 
 Acceptance gates:
 
+- a cold Emacs/EXWM start selects the cache for the exact current Home package
+  profile, never searches the legacy =~/.emacs.d/eln-cache/= fallback, resolves
+  Org from the current Guix Home package, and emits no Org version mismatch;
+- isolated validation proves a deliberately stale legacy native artifact cannot
+  load, and a retained rollback profile selects only its own cache identity;
 - every expanded trust boundary has an explicit keep/change decision;
 - no historical note reads as current activation status;
 - the README describes accepted current behavior while this file retains audit
   evidence and slice history;
 - all open findings are closed, explicitly deferred, or moved into a dated
   successor audit.
+
+*** Native-comp cache correction candidate (2026-07-13)
+
+Live diagnosis found that Home already owns the intended package: Org 9.8.7 at
+=/gnu/store/9nwq0a2hng15ppn556lsqym8ik8s6kk5-emacs-org-9.8.7=.  Emacs 30.2's
+user cache at =~/.emacs.d/eln-cache/30.2-8de1fdd7/= instead contains native
+=org*=, =ob-*=, =oc-*=, and =ol-*= artifacts compiled against Org 9.8.3.  The
+cache is searched first, and its normalized source/cache timestamps allow the
+old native artifacts to survive Guix profile changes.  A clean =emacs -Q=
+process with the current Home package paths reproduces the warning when that
+cache is visible and loads Org 9.8.7 without warnings when it is excluded.
+The grouped =[37 times]= report is therefore one mismatch repeated by many Org
+components, not 37 unrelated faults and not a Fish, Fennel, ELPA, Straight, or
+literate-configuration problem.
+
+The candidate adds a tracked =emacs/early-init.el=.  Before normal init and
+package loading, it resolves =~/.guix-home/profile= to its immutable store
+target, selects
+=~/.cache/emacs/eln-cache/<resolved-profile-store-name>/=, prepends that path
+through Emacs's supported =startup-redirect-eln-cache= entrypoint, and
+explicitly removes =~/.emacs.d/eln-cache/= from the remaining search path.
+The explicit removal matters because the entrypoint prepends rather than
+replaces: retaining the old directory as a fallback would let a cold, empty
+profile cache load stale native code again.  Immutable Guix native-site-lisp
+paths and JIT native compilation remain intact.  A fallback identity derived
+from the exact running Emacs covers recovery sessions where the Home profile is
+unavailable.
+
+The candidate also makes =early-init.el= the fifteenth validated live repository
+link and loads it explicitly in every isolated =-Q= editor gate.  The 54/54
+batch suite proves the exact profile key, XDG cache root, absence of the legacy
+fallback, preservation of Guix native-site paths, current Home Org
+source/version, warning-free initialization, and rejection of a deliberately
+stale but valid legacy =org.eln=.  Geiser/Guile, SLY/SBCL, Clojure, Racket, and
+Fennel connected-editor gates pass with the same candidate profile identity;
+the Racket and Fennel deliberate-failure controls also prove process cleanup.
+
+The complete pinned non-activating build gate passes at Guix
+=a8391f2d7451c2463ba253ffa9872fa6f27485d7=, Nonguix
+=3b66965566fe8c96edb5a41fd39a9e5a90ad9b61=, and =sk-guix=
+=b84ff24a515b2b6d0db85c0da30960c96e20ad22=.  Its exact gate-only Home result
+is =/gnu/store/rq1q8wnqjk3s3w0q2adiz31g80n5s98i-home=; System remains
+=/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=.  The managed-link and
+reconfigure fixtures pass, every checker reports the candidate repository
+unchanged, and none of these gates activates a generation or modifies live
+cache state.
+
+Activation remains intentionally pending.  Publish the reviewed checkpoint,
+run =ghr=, quarantine the complete legacy cache, and reboot so already-loaded
+9.8.3 native code leaves the EXWM process.  Fresh live checks must then prove
+the new cache boundary and warning-free Org 9.8.7 before the quarantine is
+deleted or Home retention pins are rotated.  System 85 and Pull 5 do not change.
 
 * Deferred work
 

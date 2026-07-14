@@ -105,6 +105,13 @@ next active slice.
   strict shell/ownership/runtime-absence gates, residue cleanup, and retention
   rotation all pass.  Home 40 is retained as the immediate Racket fallback.
 - [ ] Execute Slice 19 desktop, security, and documentation polish.
+  Its opening candidate corrects stale native-comp ownership: tracked early
+  init selects an XDG ELN cache keyed to the resolved Guix Home package profile
+  and excludes the legacy unversioned user cache.  The full pinned,
+  non-activating gate passes with Home candidate
+  =/gnu/store/rq1q8wnqjk3s3w0q2adiz31g80n5s98i-home= and unchanged System 85.
+  Publication, =ghr=, cache quarantine, reboot, fresh Org 9.8.7 acceptance, and
+  retention rotation remain pending.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 - [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
   the GRUB prompt before making more bootloader changes.
@@ -340,7 +347,7 @@ changes.
 
 Guix Home recreates the live app symlinks to these files during =ghr=. It does
 not replace them with store snapshots, so normal repo edits remain live.
-=scripts/guix-reconfigure= now runs a read-only check of all 14 links through
+=scripts/guix-reconfigure= now runs a read-only check of all 15 links through
 the fixed System-profile Guile before it invokes Guix.  A regular-file,
 directory, dangling-link, or missing-source conflict present at that preflight
 is preserved and prevents the built-in Home activation services from starting.
@@ -380,6 +387,7 @@ tty1 mingetty autologin
 -> emacs/exwm.el
 
 Regular Emacs init:
+~/.emacs.d/early-init.el -> emacs/early-init.el
 ~/.emacs.d/init.el -> emacs/init.el
 #+end_src
 
@@ -1585,6 +1593,10 @@ The important live files are symlinks back into this repo:
 ~/.emacs.d/exwm.el                -> emacs/exwm.el
 #+end_src
 
+The validated Slice 19 candidate adds
+=~/.emacs.d/early-init.el -> emacs/early-init.el=, but that link is not live
+until the published checkpoint is activated with =ghr=.
+
 The app and shell symlinks are managed by =guix/home/guixpc.scm=. The Guix
 entrypoint symlinks under =~/.config/guix= are bootstrap links and intentionally
 stay outside the Guix Home activation service so =gsr= and =ghr= always read the
@@ -1680,7 +1692,8 @@ These paths are not source configuration:
 #+begin_src text
 ~/.guix-home
 ~/.emacs.d/auto-save-list/
-~/.emacs.d/eln-cache/
+~/.cache/emacs/eln-cache/<resolved-Guix-Home-profile>/
+~/.emacs.d/eln-cache/                  # legacy; quarantine after activation
 ~/.emacs.d/eshell/
 ~/.emacs.d/transient/
 ~/.emacs.d/url/
@@ -1696,6 +1709,16 @@ These paths are not source configuration:
 
 They may be useful for recovery or runtime behavior, but they should not become
 the place where new config is written.
+
+The Slice 19 native-comp candidate keeps Guix Home as the sole Org package
+owner and moves writable native artifacts out of =~/.emacs.d=.  The cache key
+is the immutable store basename reached through =~/.guix-home/profile=, not the
+stable symlink spelling or mutable generation number.  A package-profile
+change therefore gets a cold cache, while an exact retained rollback profile
+can reuse only its matching cache.  =emacs/early-init.el= also removes the old
+=~/.emacs.d/eln-cache/= entry from fallback lookup; merely prepending a new
+directory would not isolate a cold start from stale native files.  Do not
+suppress Org's version assertion or install a second Org through ELPA.
 
 The following files currently exist as accepted local application state, not as
 core system ownership:

@@ -281,10 +281,42 @@ Current next action:
   - [X] Record complete rollback: restore source checkpoint
     =81ebb249e299e4e6bd840971d084ab21521d1e27= first, use protected Pull 5 to
     switch exactly to Home 40, and reboot.  System 85 needs no change.
+- [ ] Complete [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 19: Final desktop, security, and documentation polish][Slice 19: desktop, security, and documentation polish]].
+  - [X] Diagnose the post-reboot Org warning as stale native Org 9.8.3 code in
+    =~/.emacs.d/eln-cache/30.2-8de1fdd7/= shadowing Home-owned Org 9.8.7.
+    The warning reproduces under clean =emacs -Q= with that cache and disappears
+    when it is excluded; Fish, Fennel, ELPA, Straight, and config load order are
+    not causal.
+  - [X] Implement the non-activating correction candidate: tracked early init,
+    a profile-store-keyed XDG ELN cache, explicit removal of the legacy fallback,
+    preserved Guix native-site paths and JIT, a fifteenth managed repository
+    link, and production-parity loading in the generic/Clojure/Racket/Fennel
+    isolated editor gates.
+  - [X] Pass the causal stale-ELN regression, full isolated editor suite,
+    dialect editor gates, Home candidate build, link/reconfigure checks, and
+    repository non-mutation checks before publication.  The pinned build gate
+    passes with 54/54 ERT checks, Geiser/Guile, SLY/SBCL, Clojure, Racket, and
+    Fennel connected backends plus Racket/Fennel deliberate cleanup controls.
+    Its exact gate-only paths are Home
+    =/gnu/store/rq1q8wnqjk3s3w0q2adiz31g80n5s98i-home= and unchanged System
+    =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=.
+  - [ ] Publish the implementation checkpoint, run =ghr=, quarantine the whole
+    legacy =~/.emacs.d/eln-cache/= tree, and reboot.  Already-loaded native code
+    cannot be repaired by config reload.
+  - [ ] Accept a fresh EXWM process with current Home Org, no version mismatch,
+    the exact profile-keyed cache first, the legacy path absent, and all normal
+    editor/session checks passing; then rotate Home retention without deleting
+    generations or garbage collecting.
+  - [X] Record rollback for the correction: restore source checkpoint
+    =e69644a98a32e1c63eb7ea9b5bb313849c7c6d87= first, remove the candidate-only
+    live early-init link if it remains, switch exactly to retained Home 41, and
+    reboot.  Keep the known-stale cache quarantined; System 85 and Pull 5 do not
+    change.
 
-Next action: proceed to Slice 19 desktop, security, and documentation polish.
-Keep the accepted Fennel runtime/tool boundary and the documented fennel-ls
-version limitation intact.
+Next action: publish the validated non-activating Slice 19 native-comp cache
+correction checkpoint.  Do not activate it or quarantine live state before the
+checkpoint is published.  Keep the accepted Fennel runtime/tool boundary and
+the documented fennel-ls version limitation intact.
 
 Ordered follow-up:
 
