@@ -300,23 +300,39 @@ Current next action:
     Its exact gate-only paths are Home
     =/gnu/store/rq1q8wnqjk3s3w0q2adiz31g80n5s98i-home= and unchanged System
     =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=.
-  - [ ] Publish the implementation checkpoint, run =ghr=, quarantine the whole
-    legacy =~/.emacs.d/eln-cache/= tree, and reboot.  Already-loaded native code
-    cannot be repaired by config reload.
-  - [ ] Accept a fresh EXWM process with current Home Org, no version mismatch,
-    the exact profile-keyed cache first, the legacy path absent, and all normal
-    editor/session checks passing; then rotate Home retention without deleting
-    generations or garbage collecting.
+  - [X] Publish implementation checkpoint
+    =7476b0527caacb92a6fc1fdd4e05ea4cddd5a794=, activate Home generation 42 at
+    =/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home=, quarantine the complete
+    36 MiB/342-file legacy tree at
+    =~/.emacs.d/eln-cache.quarantine-20260713-slice19/=, and reboot.  System 85
+    and Pull 5 remain unchanged.
+  - [X] Accept fresh EXWM Emacs with Home Org 9.8.7, zero mismatch warnings, the
+    exact =bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile= cache first, and the legacy
+    path absent.  Live plus 54/54 isolated editor checks, Geiser/SLY, Clojure,
+    Racket, available-hardware desktop/session/audio, entrypoint, editor-tool,
+    ownership, and repository non-mutation gates pass; Bose Bluetooth is
+    accurately skipped.  Rotate the exact pins to Home 42 as promotion, Home 41
+    as preferred pre-correction rollback, and Home 40 as last-known-good Racket
+    rollback; inventory, verify, plan, and rollback drill pass without
+    generation deletion or garbage collection.
+  - [ ] Correct the diagnosed Fennel Mode 0.9.2 framing bug from the one-shot
+    acceptance failure.  Its buffered splitter calls =setcar= on =nil= when a
+    final newline arrives as its own process chunk and can merge a buffered
+    partial record with the next record.  Add a narrow repository-owned
+    compatibility override, deterministic fragmented-chunk ERT coverage, and
+    checker ordering that reports the primary editor failure before a missing
+    descendant marker.  Do not hide protocol corruption with retries.
   - [X] Record rollback for the correction: restore source checkpoint
-    =e69644a98a32e1c63eb7ea9b5bb313849c7c6d87= first, remove the candidate-only
-    live early-init link if it remains, switch exactly to retained Home 41, and
-    reboot.  Keep the known-stale cache quarantined; System 85 and Pull 5 do not
-    change.
+    =e69644a98a32e1c63eb7ea9b5bb313849c7c6d87= first, remove the
+    correction-only managed live early-init link if it remains, switch exactly
+    to retained Home 41, and reboot.  Keep the known-stale cache quarantined;
+    System 85 and Pull 5 do not change.
 
-Next action: publish the validated non-activating Slice 19 native-comp cache
-correction checkpoint.  Do not activate it or quarantine live state before the
-checkpoint is published.  Keep the accepted Fennel runtime/tool boundary and
-the documented fennel-ls version limitation intact.
+Next action: publish the post-reboot native-comp acceptance and retention-pin
+checkpoint, then correct L-18 before completing the remaining Slice 19 local
+trust, Kitty remote-control, Blueman/dconf, audio-absence, visual/power, and
+historical-documentation decisions.  Keep the accepted Fennel runtime/tool
+boundary and documented fennel-ls version limitation intact.
 
 Ordered follow-up:
 

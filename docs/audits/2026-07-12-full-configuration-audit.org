@@ -153,13 +153,14 @@ REPL-, backend-, service-, or workflow-level acceptance tests.
 #+begin_src text
 Source organization:       strong
 Declared/deployed config:  aligned at the authenticated three-channel lock
-Live runtime convergence:  strong; fresh System 85 and Home 41 runtime passes,
+Live runtime convergence:  strong; fresh System 85 and Home 42 runtime passes,
                            including six Lisp project/test workflows and direct SSH
 Display/resource health:   good
 Validation safety:         strong; isolated editor and activation gates
 Lisp foundation:           accepted Elisp/Guile/SBCL/Clojure/Racket/Fennel editing, REPL, and project/test base
 Slice 17 Racket workflow:   accepted after published checkpoint, Home 40 activation, reboot, and fresh live gates
 Slice 18 Fennel workflow:   accepted after published checkpoints, Home 41 activation, reboot, and fresh live gates
+Slice 19 native cache:      accepted after published checkpoint, Home 42 activation, quarantine, reboot, and fresh Org 9.8.7 gates
 Lisp ecosystem breadth:    early; six families are accepted, while most families remain absent
 Reproducibility:            strong; clean-clone authentication and build gates pass
 Operational reliability:   restored; bounded SSH cleanup passes
@@ -176,6 +177,13 @@ Slice 18's published Fennel implementation is accepted after Home generation 41
 activation, a normal reboot, fresh live editor/project/backend checks, deliberate
 cleanup controls, runtime-absence checks, residue cleanup, and read-only
 retention rotation.
+Slice 19's published native-comp correction is accepted after Home generation
+42 activation, complete legacy-cache quarantine, a normal reboot, fresh Org
+9.8.7 and profile-keyed-cache checks, editor gates, available-hardware
+desktop/session gates, and retention-pin rotation validated by the read-only
+retention suite.  A one-shot Fennel process-filter failure exposed a pinned
+Fennel Mode 0.9.2 newline-framing bug before a bounded retry passed; its repair
+remains tracked rather than being reported as an unqualified clean run.
 
 * Finding register
 
@@ -184,18 +192,18 @@ retention rotation.
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
 | O-01 | P0  | CLOSED   | Elogind 255.24 removes command and PTY SSH sessions immediately; no closing session remained through 30 seconds. | 7 |
-| O-02 | P1  | CLOSED   | Reduced System generation 85 is current/booted while Home generation 41 supplies the accepted application, editor, and forced-SSH tools used by the repository-owned project/test workflows. | 7, 10, 11, 12, 13, 14, 15, 16, 17, 18 |
-| O-03 | P1  | CLOSED   | The accepted D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse declarations persist unchanged in current Home generation 41. | 7, 10, 11, 12, 13, 14, 15, 16, 17, 18 |
-| O-04 | P1  | CLOSED   | Fresh Emacs 30.2 resolves the accepted core Lisp, Clojure, runtime-detached Racket, and runtime-free Fennel libraries from Home 41; its observational probe and 53/53 isolated ERT checks see the accepted project keys, fixtures, backend policies, and cold-open process boundaries. | 7, 8, 14, 15, 16, 17, 18 |
+| O-02 | P1  | CLOSED   | Reduced System generation 85 is current/booted while Home generation 42 supplies the accepted application, editor, and forced-SSH tools used by the repository-owned project/test workflows. | 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 |
+| O-03 | P1  | CLOSED   | The accepted D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse declarations persist unchanged in current Home generation 42. | 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 |
+| O-04 | P1  | CLOSED   | Fresh Emacs 30.2 resolves the accepted core Lisp, Clojure, runtime-detached Racket, runtime-free Fennel, and Org 9.8.7 libraries from Home 42; its observational probe and 54/54 isolated ERT checks see the accepted project keys, fixtures, backend policies, cold-open boundaries, and profile-scoped native cache. | 7, 8, 14, 15, 16, 17, 18, 19 |
 | O-05 | P1  | CLOSED   | EXWM, launched applications, PipeWire, WirePlumber, and PipeWire-Pulse share the one canonical Guix Home D-Bus; no =dbus-launch= remains. | 10 |
 | O-06 | P2  | CLOSED   | RTKit is active through system D-Bus/Polkit; PipeWire obtains an RR data-loop with a bounded 200000-microsecond realtime limit. | 10 |
 | O-07 | P2  | CLOSED   | The stale Kitty process is gone and the current launcher is Kitty 0.47.4. | 7 |
 | O-08 | P2  | CLOSED   | Fish, Bash, Eshell, and bare SSH automation route =gsr=/=ghr= through one current-Guix wrapper and explicit setuid sudo path. | 9 |
-| O-09 | P2  | POLICY   | The read-only retention gate protects accepted System 85, Home 41, and Pull 5 plus their immediate and older recovery tiers; Home 40 is the preferred Racket rollback and Home 39 the last-known-good Clojure fallback.  It reports duplicate-link candidates but implements no deletion or garbage collection. | 12, 13, 14, 15, 16, 17, 18 |
+| O-09 | P2  | POLICY   | The read-only retention gate protects accepted System 85, Home 42, and Pull 5 plus their immediate and older recovery tiers; Home 41 is the preferred pre-correction rollback and Home 40 the last-known-good Racket fallback.  It reports duplicate-link candidates but implements no deletion or garbage collection. | 12, 13, 14, 15, 16, 17, 18, 19 |
 | O-10 | P3  | CLOSED   | X screen blanking and DPMS are explicitly declared and active at 600 seconds; elogind does not suspend the workstation. | 10 |
 | O-11 | P3  | POLICY   | Elogind intentionally retains the startx/PAM login as active local =tty1= with =Type=tty=; fresh-session =IdleHint=no= and EXWM child X11 metadata are correct. | 10 |
 | O-12 | P3  | VERIFIED | Historical Blueman logs show dconf persistence failure; current relevance is unproven. | 19 |
-| O-13 | P3  | POLICY   | With Bose off and no HDMI audio endpoint connected, PipeWire exposes the ALSA devices but only an =auto_null= sink, so the non-strict desktop checker fails its physical-sink/stream assertions; strict Bluetooth acceptance remains the hardware contract. | 19 |
+| O-13 | P3  | POLICY   | Audio acceptance is hardware-conditional: an earlier Bose-off/no-endpoint boot exposed only =auto_null=, while the fresh post-reboot session under Home 42 exposed the AMD Raven HDMI sink and passed finite playback with Bose disconnected.  Bluetooth remains an explicit skip until its hardware is connected; Slice 19 must state which absence states are accepted. | 19 |
 
 ** Configuration correctness and validation findings
 
@@ -236,7 +244,7 @@ reported as a confirmed bug without a focused test.
 | R-01 | P1  | CLOSED   | =guix/channels.scm= pins exact Guix, Nonguix, and authenticated sk-guix commits; the isolated time-machine provenance gate matches all three. | 12 |
 | R-02 | P1  | CLOSED   | =sk-guix= publishes a signed introduction, authorized signer, orphan public keyring, and signed target that pass isolated clean-clone Guix authentication. | 12 |
 | R-03 | P2  | POLICY   | Live repo symlinks make edits immediate but Home rollback does not restore application-file contents. | 13 |
-| R-04 | P2  | VERIFIED | System 85 carries only the recovery floor; Home 41 owns normal tools and supplies them to graphical, login, and direct forced-SSH project/test environments. | 13, 14, 15, 16, 17, 18 |
+| R-04 | P2  | VERIFIED | System 85 carries only the recovery floor; Home 42 owns normal tools and supplies them to graphical, login, and direct forced-SSH project/test environments. | 13, 14, 15, 16, 17, 18, 19 |
 | R-05 | P2  | CLOSED   | Core, JVM Clojure, Racket, and Fennel manifests build and enter independently; the installed-base configuration bootstrap passes fixtures and isolated GuixPC acceptance. | 12, 13, 17, 18 |
 | R-06 | P2  | CLOSED   | =scripts/guix-entrypoints= checks or bootstraps every declaration link and refuses blockers/missing sources transactionally. | 9, 13 |
 
@@ -260,7 +268,8 @@ reported as a confirmed bug without a focused test.
 | L-14 | P2  | CLOSED   | Slice 17 keeps full Racket 9.1 in its authenticated project manifest and adds only a local runtime-detached =emacs-racket-mode= object to Home.  Its 44.0 MiB closure has no full/minimal/VM/docs Racket requisite, and fresh Home 40 acceptance proves persistent System/Home package and executable absence while avoiding the upstream recipe's hidden 2.135 GiB runtime closure. | 17 |
 | L-15 | P2  | CLOSED   | The reusable marked Racket project contract, project-keyed PLT wrapper, native-indentation policy, strict =check-requires= lint, RackUnit, Scribble, macro expansion, shared keys/windows, and explicit backend/XP path pass fresh project and connected-editor gates.  Syntax/lint/test/docs and connected-process failures clean up; native debugger recovery and process-group-scoped stop pass.  No =raco pkg=, catalog mutation, or fake formatter is allowed. | 17 |
 | L-16 | P3  | CLOSED   | Fennel 1.6.1, fnlfmt 0.3.0, fennel-ls 0.2.3, a marked fixture, authenticated SHA-256-keyed wrapper, runtime-free Home editor mode, explicit protocol REPL/LSP integration, and normal/negative cleanup gates pass both the full non-activating build and fresh Home 41 acceptance.  The pinned server's exact version warning and its basic non-macro semantic boundary remain explicit. | 18 |
-| L-17 | P2  | VERIFIED | Fresh Home 41 Emacs loads native Org 9.8.3 artifacts from the legacy user ELN cache ahead of Guix Home Org 9.8.7, so Org's version assertion warns repeatedly even though final library lookup names the current store package.  An isolated load without that legacy cache is warning-free. | 19 |
+| L-17 | P2  | CLOSED   | Published checkpoint =7476b05= activated Home 42 with tracked early init and a package-profile-keyed XDG cache.  After complete legacy-cache quarantine and reboot, fresh EXWM Emacs loads Home Org 9.8.7, searches no legacy cache, emits zero mismatch warnings, and passes the live plus 54/54 isolated editor gates. | 19 |
+| L-18 | P2  | VERIFIED | The first exact post-reboot Fennel acceptance attempt hit =Wrong type argument: consp, nil= in its REPL process filter.  Pinned Fennel Mode 0.9.2's =fennel-proto-repl--buffered-split-string= omits an empty field for a newline-only process chunk, then calls =setcar= on the resulting =nil= list; it can also merge a buffered partial record with the next record.  The shell checker then masks that primary editor failure behind its absent live-descendant marker.  Cleanup left no process, temp, cache, or repo residue, and one bounded retry passed, but arbitrary process chunking makes retry/serialization mitigation insufficient. | 19 |
 
 * Current Lisp capability matrix
 
@@ -2468,7 +2477,7 @@ general newer-package dumping ground for later dialects.
 ** TODO Slice 19: Final desktop, security, and documentation polish
 :PROPERTIES:
 :audit_priority: P3
-:findings: O-10 O-12 O-13 X-05 X-06 L-17
+:findings: O-10 O-12 O-13 X-05 X-06 L-17 L-18
 :END:
 
 Scope:
@@ -2499,7 +2508,7 @@ Acceptance gates:
 - all open findings are closed, explicitly deferred, or moved into a dated
   successor audit.
 
-*** Native-comp cache correction candidate (2026-07-13)
+*** Native-comp cache correction accepted (2026-07-14)
 
 Live diagnosis found that Home already owns the intended package: Org 9.8.7 at
 =/gnu/store/9nwq0a2hng15ppn556lsqym8ik8s6kk5-emacs-org-9.8.7=.  Emacs 30.2's
@@ -2513,7 +2522,7 @@ The grouped =[37 times]= report is therefore one mismatch repeated by many Org
 components, not 37 unrelated faults and not a Fish, Fennel, ELPA, Straight, or
 literate-configuration problem.
 
-The candidate adds a tracked =emacs/early-init.el=.  Before normal init and
+The implementation adds a tracked =emacs/early-init.el=.  Before normal init and
 package loading, it resolves =~/.guix-home/profile= to its immutable store
 target, selects
 =~/.cache/emacs/eln-cache/<resolved-profile-store-name>/=, prepends that path
@@ -2526,10 +2535,10 @@ paths and JIT native compilation remain intact.  A fallback identity derived
 from the exact running Emacs covers recovery sessions where the Home profile is
 unavailable.
 
-The candidate also makes =early-init.el= the fifteenth validated live repository
-link and loads it explicitly in every isolated =-Q= editor gate.  The 54/54
-batch suite proves the exact profile key, XDG cache root, absence of the legacy
-fallback, preservation of Guix native-site paths, current Home Org
+The implementation also makes =early-init.el= the fifteenth validated live
+repository link and loads it explicitly in every isolated =-Q= editor gate.
+The 54/54 batch suite proves the exact profile key, XDG cache root, absence of
+the legacy fallback, preservation of Guix native-site paths, current Home Org
 source/version, warning-free initialization, and rejection of a deliberately
 stale but valid legacy =org.eln=.  Geiser/Guile, SLY/SBCL, Clojure, Racket, and
 Fennel connected-editor gates pass with the same candidate profile identity;
@@ -2545,11 +2554,42 @@ reconfigure fixtures pass, every checker reports the candidate repository
 unchanged, and none of these gates activates a generation or modifies live
 cache state.
 
-Activation remains intentionally pending.  Publish the reviewed checkpoint,
-run =ghr=, quarantine the complete legacy cache, and reboot so already-loaded
-9.8.3 native code leaves the EXWM process.  Fresh live checks must then prove
-the new cache boundary and warning-free Org 9.8.7 before the quarantine is
-deleted or Home retention pins are rotated.  System 85 and Pull 5 do not change.
+Published checkpoint =7476b0527caacb92a6fc1fdd4e05ea4cddd5a794= activated
+Home generation 42 at =/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home=.
+The package profile remains
+=/gnu/store/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile=, so its exact store
+basename is the selected cache identity.  The complete 36 MiB/342-file legacy
+tree is retained at
+=~/.emacs.d/eln-cache.quarantine-20260713-slice19/=; the active legacy path is
+absent.
+
+Fresh EXWM Emacs PID 500 started nine seconds after boot.  It resolves Org from
+the Home-owned 9.8.7 store package, selects
+=~/.cache/emacs/eln-cache/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile/= first,
+finds no legacy fallback, and has no Org mismatch warning.  Live observation,
+54/54 ERT checks, Geiser/Guile, SLY/SBCL, Clojure, Racket, entrypoint,
+editor-tool, desktop-session, audio playback, ownership, and strict shell gates
+pass.  Bose Bluetooth was disconnected and is accurately reported as a skip.
+The first Fennel attempt exposed L-18; cleanup passed and the bounded retry
+passed both normal and deliberate-failure paths.  Read-only diagnosis locates
+the fault in Fennel Mode 0.9.2's buffered line splitter, not the native-cache
+policy.  The planned bounded repair is a repository-owned compatibility
+override with deterministic fragmented-chunk ERT coverage plus checker
+failure-ordering that reports the primary editor error before an absent
+descendant marker.
+
+The accepted inventory is System/Home/Pull =84/42/5=.  Exact pins
+promote Home 42, retain Home 41 as the preferred pre-correction fallback, and
+retain Home 40 as the last-known-good Racket fallback.  Inventory, verification,
+read-only plan, and rollback drill pass.  No generation was deleted and no
+garbage collection ran.  System 85 and Pull 5 remain unchanged.
+
+Rollback for this correction begins by restoring source checkpoint
+=e69644a98a32e1c63eb7ea9b5bb313849c7c6d87= because Home switching does not
+revert live repository links.  Remove the correction-only managed early-init
+link if it remains, switch exactly to retained Home 41 through protected Pull
+5, and reboot.  Do not restore the known-stale cache from quarantine; System
+85 and Pull 5 need no change.
 
 * Deferred work
 
