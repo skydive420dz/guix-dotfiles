@@ -115,12 +115,12 @@ next active slice.
   Bluetooth explicitly skipped.  Retention-pin rotation passes the read-only
   suite without deletion or garbage collection.
   One initial Fennel acceptance run exposed a diagnosed Fennel Mode 0.9.2
-  newline-framing bug.  A source-only correction candidate now replaces only
-  the faulty private splitter, adds deterministic fragmentation coverage, and
-  preserves the primary editor error in checker failures.  Its 56/56 isolated
-  tests, failure-order fixture, strict gate, and one no-retry connected run
-  pass; publication, live reload, and acceptance remain explicit work alongside
-  the remaining trust, audio, and policy scope.
+  newline-framing bug.  Published checkpoint =a8d8222= replaces only the faulty
+  private splitter, adds deterministic fragmentation coverage, and preserves
+  the primary editor error in checker failures.  The supported live reload,
+  singleton advice proof, 56/56 isolated tests, failure-order fixture, strict
+  gate, and one no-retry connected run pass.  L-18 is closed; the remaining
+  trust, audio, and policy scope stays explicit.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 - [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
   the GRUB prompt before making more bootloader changes.
@@ -1538,16 +1538,17 @@ control; =SK_FENNEL_PROJECT_CHECK_BREAK=1= returns exact status 91 and cleanup
 passes.  Connected two-root REPL/LSP and deliberate-failure cleanup pass,
 =scripts/shell-check --strict= reports =recovery=13 home=83 explicit=1=, and neither
 Home nor System exposes a Fennel runtime executable.
-The Slice 19 source candidate corrects Fennel Mode 0.9.2's private buffered
-line splitter without changing the package or runtime boundary.  A
+The accepted L-18 correction within Slice 19 fixes Fennel Mode 0.9.2's private
+buffered line splitter without changing the package or runtime boundary.  A
 deterministic regression covers newline-only completion, adjacent records,
 retained partial records, and every split point of complete and incomplete
 protocol payloads.
 The isolated suite passes 56/56; the checker-order fixture proves an early
 editor exit is reported before missing descendant metadata while final residue
 checks still run; and one serialized connected run passes both normal and
-deliberate-failure phases without retry.  Publication and live reload remain
-pending before this correction is accepted.
+deliberate-failure phases without retry.  Published checkpoint =a8d8222= loaded
+through the supported config reload in live EXWM Emacs with exactly one
+override; both formerly broken fragments pass and no Fennel child remains.
 Pinned fennel-ls emits the exact compatibility warning =--WARNING: plugin
 fennel-ls does not support Fennel version 1.6.1=.  Only that warning is allowed;
 imported-macro LSP navigation or semantic analysis is not claimed.
@@ -1716,6 +1717,10 @@ For the accepted Slice 19 native-comp correction, restore source checkpoint
 exactly to Home generation 41, and reboot.  Keep the known-stale cache in its
 quarantine instead of restoring it to the native lookup path.  System 85 and
 Pull 5 need no change.
+
+For the accepted L-18 Fennel framing correction within Slice 19, restore source
+checkpoint =f52778c0c8a5a1364f139adfeda396eb235ead54= and reload or restart
+Emacs.  This source-only rollback needs no =ghr=, Home rollback, or reboot.
 
 * Generated or local state
 

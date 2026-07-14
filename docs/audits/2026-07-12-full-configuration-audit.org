@@ -182,8 +182,9 @@ Slice 19's published native-comp correction is accepted after Home generation
 9.8.7 and profile-keyed-cache checks, editor gates, available-hardware
 desktop/session gates, and retention-pin rotation validated by the read-only
 retention suite.  A one-shot Fennel process-filter failure exposed a pinned
-Fennel Mode 0.9.2 newline-framing bug before a bounded retry passed; its repair
-remains tracked rather than being reported as an unqualified clean run.
+Fennel Mode 0.9.2 newline-framing bug before a bounded retry passed.  Its
+published source-only repair subsequently passed live singleton/framing
+acceptance, full editor and connected gates, and residue checks without retry.
 
 * Finding register
 
@@ -269,7 +270,7 @@ reported as a confirmed bug without a focused test.
 | L-15 | P2  | CLOSED   | The reusable marked Racket project contract, project-keyed PLT wrapper, native-indentation policy, strict =check-requires= lint, RackUnit, Scribble, macro expansion, shared keys/windows, and explicit backend/XP path pass fresh project and connected-editor gates.  Syntax/lint/test/docs and connected-process failures clean up; native debugger recovery and process-group-scoped stop pass.  No =raco pkg=, catalog mutation, or fake formatter is allowed. | 17 |
 | L-16 | P3  | CLOSED   | Fennel 1.6.1, fnlfmt 0.3.0, fennel-ls 0.2.3, a marked fixture, authenticated SHA-256-keyed wrapper, runtime-free Home editor mode, explicit protocol REPL/LSP integration, and normal/negative cleanup gates pass both the full non-activating build and fresh Home 41 acceptance.  The pinned server's exact version warning and its basic non-macro semantic boundary remain explicit. | 18 |
 | L-17 | P2  | CLOSED   | Published checkpoint =7476b05= activated Home 42 with tracked early init and a package-profile-keyed XDG cache.  After complete legacy-cache quarantine and reboot, fresh EXWM Emacs loads Home Org 9.8.7, searches no legacy cache, emits zero mismatch warnings, and passes the live plus 54/54 isolated editor gates. | 19 |
-| L-18 | P2  | CANDIDATE | The first exact post-reboot Fennel acceptance attempt hit =Wrong type argument: consp, nil= in its REPL process filter.  Pinned Fennel Mode 0.9.2's private splitter drops the empty field for a newline-only process chunk, then calls =setcar= on =nil=; it also merges a buffered partial record with the next record.  A source-only compatibility override, two deterministic fragmentation ERTs, and corrected checker failure ordering pass 56/56 isolated tests, the synthetic early-exit fixture, strict shell validation, and one no-retry connected normal/deliberate-failure run.  Publication, live reload, and acceptance remain pending. | 19 |
+| L-18 | P2  | CLOSED   | Published checkpoint =a8d8222= corrects Fennel Mode 0.9.2's newline-only crash and adjacent-record merge with a source-only compatibility override.  After a supported live reload, EXWM Emacs has exactly one override and both formerly broken fragments pass.  Two deterministic fragmentation ERTs, 56/56 isolated tests, the synthetic early-exit fixture, strict shell validation, and one no-retry connected normal/deliberate-failure run pass without process, project, temp, cache, or repository residue. | 19 |
 
 * Current Lisp capability matrix
 
@@ -2573,7 +2574,7 @@ pass.  Bose Bluetooth was disconnected and is accurately reported as a skip.
 The first Fennel attempt exposed L-18; cleanup passed and the bounded retry
 passed both normal and deliberate-failure paths.  Read-only diagnosis locates
 the fault in Fennel Mode 0.9.2's buffered line splitter, not the native-cache
-policy.  The implemented candidate described below follows that bounded design:
+policy.  The accepted correction described below follows that bounded design:
 a repository-owned compatibility override, deterministic fragmented-chunk ERT
 coverage, and checker failure-ordering that reports the primary editor error
 before an absent descendant marker.
@@ -2591,7 +2592,7 @@ link if it remains, switch exactly to retained Home 41 through protected Pull
 5, and reboot.  Do not restore the known-stale cache from quarantine; System
 85 and Pull 5 need no change.
 
-*** Fennel protocol framing correction candidate (2026-07-14)
+*** Fennel protocol framing correction accepted (2026-07-14)
 
 The installed Fennel Mode 0.9.2 failure is deterministic without starting a
 backend.  With =fennel-proto-repl--message-buf= set to ="partial"=, a
@@ -2600,8 +2601,8 @@ newline-only chunk raises =(wrong-type-argument consp nil)=.  Feeding
 splits the new OS chunk before joining its buffered fragment; process filters
 cannot assume where the kernel divides writes.
 
-The candidate keeps the authenticated package and every public protocol entry
-point unchanged.  Guarded =:override= advice replaces only
+The implementation keeps the authenticated package and every public protocol
+entry point unchanged.  Guarded =:override= advice replaces only
 =fennel-proto-repl--buffered-split-string= with a compatibility function that
 joins buffered and incoming bytes before splitting, returns complete non-empty
 records in order, and retains only an incomplete final record.  The advice is
@@ -2623,14 +2624,25 @@ after an unexpected success-phase failure, final project-residue checks still
 run, the sandbox is removed, and the source repository is unchanged.  The
 strict shell suite passes with this fixture included.
 
-This is source-only: no package, manifest, Home, System, channel, generation,
-or retention pin changes.  Publish the checkpoint before activating it.  Then
-stop any active Fennel backends and run the supported config reload, or let the
-next normal Emacs restart load it.  Live acceptance must prove the override is
-installed once and the fragmented inputs remain correct before L-18 closes.
-Rollback restores source checkpoint
-=f52778c0c8a5a1364f139adfeda396eb235ead54= and reloads or restarts Emacs; no
-=ghr=, Home rollback, or reboot is involved.
+Published checkpoint =a8d8222ebed06f2d53c4340d445941b49d268d3e= was on
+=origin/main= and checked out as =HEAD= before live acceptance.  Live EXWM
+Emacs PID 500 had no Fennel backend before activation; =sk/reload-config=
+returned =t=.  The helper resolves from the published repository while the
+advised target remains Fennel Mode 0.9.2 in the Guix store.  Exactly one
+override is installed.  Buffered ="partial"= plus a newline now returns
+=("partial")=, and plus =\nnext\n= returns =("partial" "next")=; both clear the
+partial buffer.
+
+The full live probe, 56/56 isolated ERT suite, Geiser/Guile, SLY/SBCL, connected
+Fennel normal and deliberate-failure phases, failure-order fixture, and strict
+shell suite pass after reload.  No Fennel child, project artifact, temporary
+checker tree, or repository mutation remains.  Org stays at 9.8.7 with zero
+version-mismatch warnings.  Home 42 and System 85 are unchanged.
+
+This correction is source-only: no package, manifest, Home, System, channel,
+generation, or retention pin changed, and no =ghr= or reboot ran.  Rollback
+restores source checkpoint =f52778c0c8a5a1364f139adfeda396eb235ead54=
+and reloads or restarts Emacs; no Home rollback is involved.
 
 * Deferred work
 
