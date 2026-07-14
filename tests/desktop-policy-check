@@ -2,6 +2,21 @@
 set -eu
 
 repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+system_config=$repo/guix/systems/guixpc.scm
+
+bluetooth_service_count=$(grep -Fxc \
+    "        (service bluetooth-service-type" "$system_config" || true)
+bluetooth_config_count=$(grep -Fxc \
+    "                 (bluetooth-configuration" "$system_config" || true)
+bluetooth_auto_count=$(grep -Fxc \
+    "                  (auto-enable? #t)))" "$system_config" || true)
+if [ "$bluetooth_service_count:$bluetooth_config_count:$bluetooth_auto_count" != \
+    1:1:1 ]; then
+    printf 'desktop-policy-check: Bluetooth auto-enable policy counts are %s:%s:%s; expected 1:1:1\n' \
+        "$bluetooth_service_count" "$bluetooth_config_count" \
+        "$bluetooth_auto_count" >&2
+    exit 1
+fi
 
 kitty_policy=$(awk '
     $1 == "allow_remote_control" {

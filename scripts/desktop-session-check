@@ -184,6 +184,30 @@ else
     fail "Picom process/policy counts are $picom_count/$expected_picom_count; expected 1/1"
 fi
 
+bluetooth_controller_status=0
+bluetooth_controller=$(LC_ALL=C bluetoothctl show 2>&1) || \
+    bluetooth_controller_status=$?
+bluetooth_controller_counts=$(printf '%s\n' "$bluetooth_controller" | awk '
+    $1 == "Controller" { controllers += 1 }
+    $1 == "Powered:" { power_fields += 1 }
+    $1 == "Powered:" && $2 == "yes" { powered += 1 }
+    END { print controllers + 0, power_fields + 0, powered + 0 }
+')
+bluetooth_controller_count=$(printf '%s\n' "$bluetooth_controller_counts" |
+    awk '{ print $1 }')
+bluetooth_power_field_count=$(printf '%s\n' "$bluetooth_controller_counts" |
+    awk '{ print $2 }')
+bluetooth_powered_count=$(printf '%s\n' "$bluetooth_controller_counts" |
+    awk '{ print $3 }')
+if [ "$bluetooth_controller_status" -eq 0 ] && \
+   [ "$bluetooth_controller_count" -eq 1 ] && \
+   [ "$bluetooth_power_field_count" -eq 1 ] && \
+   [ "$bluetooth_powered_count" -eq 1 ]; then
+    pass 'the default Bluetooth controller is powered'
+else
+    fail "Bluetooth controller query/status is $bluetooth_controller_status/$bluetooth_controller_count/$bluetooth_power_field_count/$bluetooth_powered_count; expected 0/1/1/1"
+fi
+
 rtkit_priority_property=$(busctl --system get-property \
     org.freedesktop.RealtimeKit1 /org/freedesktop/RealtimeKit1 \
     org.freedesktop.RealtimeKit1 MaxRealtimePriority 2>&1)

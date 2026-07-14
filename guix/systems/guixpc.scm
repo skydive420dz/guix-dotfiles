@@ -79,7 +79,12 @@ EndSection")
       (append
        (list
         (service openssh-service-type)
-        (service bluetooth-service-type)
+        ;; Keep the controller available before a paired speaker powers on.
+        ;; Guix defaults this to false, so the adapter can still be off during
+        ;; the Bose's startup reconnect attempt.
+        (service bluetooth-service-type
+                 (bluetooth-configuration
+                  (auto-enable? #t)))
         ;; Give PipeWire bounded realtime scheduling through the standard
         ;; system D-Bus/Polkit service instead of broad CAP_SYS_NICE grants.
         (service rtkit-service-type)
