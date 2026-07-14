@@ -153,12 +153,12 @@ REPL-, backend-, service-, or workflow-level acceptance tests.
 #+begin_src text
 Source organization:       strong
 Declared/deployed config:  aligned at the authenticated three-channel lock
-Live runtime convergence:  strong; fresh System 85 and Home 39 runtime passes,
-                           including four Lisp project/test workflows and direct SSH
+Live runtime convergence:  strong; fresh System 85 and Home 40 runtime passes,
+                           including five Lisp project/test workflows and direct SSH
 Display/resource health:   good
 Validation safety:         strong; isolated editor and activation gates
-Lisp foundation:           accepted Elisp/Guile/SBCL/Clojure editing, REPL, and project/test base
-Slice 17 Racket candidate:  complete non-activating gate passes; checkpoint, activation, live, and reboot pending
+Lisp foundation:           accepted Elisp/Guile/SBCL/Clojure/Racket editing, REPL, and project/test base
+Slice 17 Racket workflow:   accepted after published checkpoint, Home 40 activation, reboot, and fresh live gates
 Lisp ecosystem breadth:    early; most dialect families absent
 Reproducibility:            strong; clean-clone authentication and build gates pass
 Operational reliability:   restored; bounded SSH cleanup passes
@@ -166,11 +166,11 @@ Operational reliability:   restored; bounded SSH cleanup passes
 
 The project is a credible Guix/EXWM workstation foundation.  It is not yet a
 full Lisp ecosystem.  The P0/P1 runtime, validation, and reproducibility
-prerequisites, package ownership, core editing correctness, and the first four
+prerequisites, package ownership, core editing correctness, and the first five
 project/test workflows are now closed.  Slice 17's exact Racket implementation
-candidate passes its complete non-activating gate, but the accepted baseline
-remains unchanged until the checkpoint is published, activated, exercised by
-fresh live checks and cleanup, and rebooted.
+checkpoint is published and accepted after Home generation 40 activation, a
+normal reboot, fresh live editor/project/backend checks, deliberate cleanup
+controls, and read-only retention rotation.
 
 * Finding register
 
@@ -179,14 +179,14 @@ fresh live checks and cleanup, and rebooted.
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
 | O-01 | P0  | CLOSED   | Elogind 255.24 removes command and PTY SSH sessions immediately; no closing session remained through 30 seconds. | 7 |
-| O-02 | P1  | CLOSED   | Reduced System generation 85 is current/booted while Home generation 39 supplies the accepted application, editor, and forced-SSH tools used by the repository-owned project/test workflows. | 7, 10, 11, 12, 13, 14, 15, 16 |
-| O-03 | P1  | CLOSED   | The accepted D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse declarations persist unchanged in current Home generation 39. | 7, 10, 11, 12, 13, 14, 15, 16 |
-| O-04 | P1  | CLOSED   | Fresh Emacs 30.2 resolves the accepted core Lisp and Clojure libraries from Home 39; its observational probe and 44/44 isolated ERT checks see the Slice 16 project keys, fixtures, backend policy, and no eager JVM/LSP process. | 7, 8, 14, 15, 16 |
+| O-02 | P1  | CLOSED   | Reduced System generation 85 is current/booted while Home generation 40 supplies the accepted application, editor, and forced-SSH tools used by the repository-owned project/test workflows. | 7, 10, 11, 12, 13, 14, 15, 16, 17 |
+| O-03 | P1  | CLOSED   | The accepted D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse declarations persist unchanged in current Home generation 40. | 7, 10, 11, 12, 13, 14, 15, 16, 17 |
+| O-04 | P1  | CLOSED   | Fresh Emacs 30.2 resolves the accepted core Lisp, Clojure, and runtime-detached Racket libraries from Home 40; its observational probe and 49/49 isolated ERT checks see the accepted project keys, fixtures, backend policies, and cold-open process boundaries. | 7, 8, 14, 15, 16, 17 |
 | O-05 | P1  | CLOSED   | EXWM, launched applications, PipeWire, WirePlumber, and PipeWire-Pulse share the one canonical Guix Home D-Bus; no =dbus-launch= remains. | 10 |
 | O-06 | P2  | CLOSED   | RTKit is active through system D-Bus/Polkit; PipeWire obtains an RR data-loop with a bounded 200000-microsecond realtime limit. | 10 |
 | O-07 | P2  | CLOSED   | The stale Kitty process is gone and the current launcher is Kitty 0.47.4. | 7 |
 | O-08 | P2  | CLOSED   | Fish, Bash, Eshell, and bare SSH automation route =gsr=/=ghr= through one current-Guix wrapper and explicit setuid sudo path. | 9 |
-| O-09 | P2  | POLICY   | The read-only retention gate protects accepted System 85, Home 39, and pull 5 plus their immediate and older recovery tiers; it reports duplicate-link candidates but implements no deletion or garbage collection. | 12, 13, 14, 15, 16 |
+| O-09 | P2  | POLICY   | The read-only retention gate protects accepted System 85, Home 40, and Pull 5 plus their immediate and older recovery tiers; Home 39 is the preferred Racket rollback.  It reports duplicate-link candidates but implements no deletion or garbage collection. | 12, 13, 14, 15, 16, 17 |
 | O-10 | P3  | CLOSED   | X screen blanking and DPMS are explicitly declared and active at 600 seconds; elogind does not suspend the workstation. | 10 |
 | O-11 | P3  | POLICY   | Elogind intentionally retains the startx/PAM login as active local =tty1= with =Type=tty=; fresh-session =IdleHint=no= and EXWM child X11 metadata are correct. | 10 |
 | O-12 | P3  | VERIFIED | Historical Blueman logs show dconf persistence failure; current relevance is unproven. | 19 |
@@ -231,7 +231,7 @@ reported as a confirmed bug without a focused test.
 | R-01 | P1  | CLOSED   | =guix/channels.scm= pins exact Guix, Nonguix, and authenticated sk-guix commits; the isolated time-machine provenance gate matches all three. | 12 |
 | R-02 | P1  | CLOSED   | =sk-guix= publishes a signed introduction, authorized signer, orphan public keyring, and signed target that pass isolated clean-clone Guix authentication. | 12 |
 | R-03 | P2  | POLICY   | Live repo symlinks make edits immediate but Home rollback does not restore application-file contents. | 13 |
-| R-04 | P2  | VERIFIED | System 85 carries only the recovery floor; Home 39 owns normal tools and supplies them to graphical, login, and direct forced-SSH project/test environments. | 13, 14, 15, 16 |
+| R-04 | P2  | VERIFIED | System 85 carries only the recovery floor; Home 40 owns normal tools and supplies them to graphical, login, and direct forced-SSH project/test environments. | 13, 14, 15, 16, 17 |
 | R-05 | P2  | CLOSED   | Core, JVM Clojure, and Racket manifests build and enter independently; the installed-base configuration bootstrap passes fixtures and isolated GuixPC acceptance. | 12, 13 |
 | R-06 | P2  | CLOSED   | =scripts/guix-entrypoints= checks or bootstraps every declaration link and refuses blockers/missing sources transactionally. | 9, 13 |
 
@@ -239,7 +239,7 @@ reported as a confirmed bug without a focused test.
 
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
-| L-01 | P1  | VERIFIED | Accepted families are Emacs Lisp, Guile Scheme, SBCL Common Lisp, and Clojure/JVM; later dialect families remain absent. | 14-18 |
+| L-01 | P1  | VERIFIED | Accepted families are Emacs Lisp, Guile Scheme, SBCL Common Lisp, Clojure/JVM, and Racket; later dialect families remain absent. | 14-18 |
 | L-02 | P1  | CLOSED   | Fixture-rooted Geiser/Guile and SLY/SBCL checks cover evaluation, semantic completion, documentation, exact definition navigation, controlled failure, and recovery; SLY also proves ASDF =test-op=, who-calls xref, and debugger abort, while batch gates prove project dispatch and shared window routing. | 8, 14, 15 |
 | L-03 | P2  | CLOSED   | Puni owns balanced structural transforms in the five accepted Lisp-family modes and Org source-edit buffers while Evil retains modal motions. | 14, 16 |
 | L-04 | P2  | CLOSED   | Evaluation guards inspect stable Geiser/SLY connection state and preserve backend errors after dispatch. | 14 |
@@ -252,8 +252,8 @@ reported as a confirmed bug without a focused test.
 | L-11 | P2  | CLOSED   | The unused ELPA tree is quarantined outside =package-user-dir= and no user ELPA path or Breadcrumb registration remains live. | 8 |
 | L-12 | P3  | CLOSED   | Yasnippet eagerly exposes the four reviewed repository-authored templates and no unowned snippet directory. | 14 |
 | L-13 | P3  | POLICY   | Org offers Common Lisp block insertion, but Babel execution stays disabled because =ob-lisp= starts an independent comint process that bypasses the accepted project-tagged SLY environment, failure handling, and cleanup boundaries. | 15 |
-| L-14 | P2  | CANDIDATE | Slice 17 keeps full Racket 9.1 in its authenticated project manifest and adds only a local runtime-detached =emacs-racket-mode= object to Home.  Its 44.0 MiB closure has no full/minimal/VM/docs Racket requisite, and the complete candidate gate proves System/Home package and executable absence while avoiding the upstream recipe's hidden 2.135 GiB runtime closure.  Activation and fresh-live proof remain pending. | 17 |
-| L-15 | P2  | CANDIDATE | The reusable marked Racket project contract, project-keyed PLT wrapper, native-indentation policy, strict =check-requires= lint, RackUnit, Scribble, macro expansion, shared keys/windows, and explicit backend/XP path pass the complete candidate gate.  Syntax/lint/test/docs and connected-process failures clean up; native debugger recovery and process-group-scoped stop pass.  No =raco pkg=, catalog mutation, or fake formatter is allowed.  Activation, live, and reboot evidence remain pending. | 17 |
+| L-14 | P2  | CLOSED   | Slice 17 keeps full Racket 9.1 in its authenticated project manifest and adds only a local runtime-detached =emacs-racket-mode= object to Home.  Its 44.0 MiB closure has no full/minimal/VM/docs Racket requisite, and fresh Home 40 acceptance proves persistent System/Home package and executable absence while avoiding the upstream recipe's hidden 2.135 GiB runtime closure. | 17 |
+| L-15 | P2  | CLOSED   | The reusable marked Racket project contract, project-keyed PLT wrapper, native-indentation policy, strict =check-requires= lint, RackUnit, Scribble, macro expansion, shared keys/windows, and explicit backend/XP path pass fresh project and connected-editor gates.  Syntax/lint/test/docs and connected-process failures clean up; native debugger recovery and process-group-scoped stop pass.  No =raco pkg=, catalog mutation, or fake formatter is allowed. | 17 |
 
 * Current Lisp capability matrix
 
@@ -344,9 +344,9 @@ Accepted boundary:
   Future external libraries require an authenticated, explicitly designed
   classpath extension rather than mutable dependency downloads.
 
-** Racket implementation candidate
+** Racket
 
-Present in source, but not accepted:
+Present and accepted:
 
 - the authenticated =racket= manifest owns the full Racket 9.1 distribution,
   including =raco=, RackUnit, Scribble, local documentation, macro expansion,
@@ -392,7 +392,7 @@ Present in source, but not accepted:
   absence of source, repository, real-Home, and project-local artifact writes.
   Negative fixtures cover syntax, unused require, failing RackUnit, and broken
   Scribble, plus a deliberate checker failure;
-- the complete non-activating gate realizes candidate Home
+- the complete non-activating gate preserves separate candidate evidence at Home
   =/gnu/store/0qslq27g81snh836mpw4g4n3wgadjq59-home= and unchanged System
   =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=.  It passes 49/49
   candidate batch tests, cold-open and two-root isolation, real evaluation and
@@ -401,26 +401,43 @@ Present in source, but not accepted:
   process-group-scoped stop that preserves an unrelated canary.  The deliberate
   live failure returns outer status 1 with exact inner Emacs status 255; every
   recorded descendant and sandbox-token process is gone before the gate accepts
-  the cleanup proof.
+  the cleanup proof.  These two store paths remain non-activating candidate-gate
+  evidence and are not descriptions of the accepted live profiles;
+- published implementation checkpoint
+  =18bdc800668070b444c21c5f3f3c0d6b6084e290= produced activated Home
+  generation 40 at
+  =/gnu/store/by5c2mcdhmxf456q7imb6j56kv2y9s4w-home=.  After reboot, current
+  and booted System generation 85 remains unchanged at
+  =/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system=, with Pull generation
+  5 at =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile=;
+- the fresh project gate passes every normal and negative control.  Live and
+  copied-source Emacs checks pass 49/49 ERT tests, and the accepted connected
+  Geiser/Guile and SLY/SBCL checks still pass;
+- the fresh connected Racket checker passes cold-open no-process behavior,
+  two-root isolation, evaluation and recovery, XP diagnostics, definition and
+  reference xref, documentation, macro stepping, native debugging, project
+  checking, and project-scoped stop.  Its deliberate control returns exact
+  inner status 255 and outer status 1, then passes descendant and sandbox-token
+  cleanup; and
+- persistent Home/System Racket executables and runtime closure leakage,
+  user-global package/catalog state, checker sandboxes and processes, and
+  source/repository mutation are absent after acceptance.
 
-Pending acceptance boundary:
+Accepted boundary:
 
-- publish the exact implementation checkpoint that passed the complete
-  non-activating gate;
-- activate with =ghr= only after that checkpoint is available, reboot, and repeat fresh live
-  editor/project/backend/XP and cleanup checks;
-- prove that Home/System expose no Racket runtime executable or package, no
-  user-global Racket package/catalog state is installed or changed, and no
-  checker-owned process, sandbox, or source-tree artifact survives; deliberate
-  project-keyed cache state remains allowed;
-- rotate retention only after the fresh run.  Until then Home generation 39,
-  System generation 85, and Pull generation 5 remain the accepted baseline.
+- runtime ownership stays in the authenticated disposable project shell;
+- Classic Racket Mode remains cold until an explicit project command, and
+  =racket-hash-lang-mode= stays deferred because it violates that boundary;
+- native indentation is not a formatter, and mutable =raco pkg= or catalog
+  state remains forbidden; and
+- read-only retention inventory, pin verification, planning, fixture, and
+  rollback drill promote Home 40 while preserving Home 39 as the preferred
+  immediate rollback.  System 85 and Pull 5 remain unchanged.
 
 ** Absent dialect families
 
-The Clojure/JVM runtime/editor/REPL/test slice is accepted.  Racket has the
-unaccepted implementation candidate above.  No complete candidate slice exists
-for:
+The Clojure/JVM and Racket runtime/editor/REPL/test slices are accepted.  No
+complete candidate slice exists for:
 
 - ClojureScript, Leiningen, or Babashka;
 - Fennel;
@@ -1311,8 +1328,8 @@ executable.  This floor independently guarantees the tty shell, Kitty, and
 D-Bus services and editor profile.  A fixture rejects duplicate specifications,
 unexpected ownership overlap, or optional Clojure/Racket packages leaking into
 Home.  This is historical Slice 13 ownership evidence; the accepted Slice 16
-and candidate Slice 17 records below supersede the source lists without
-rewriting what this checkpoint built.
+and Slice 17 records below supersede the source lists without rewriting what
+this checkpoint built.
 
 At the Slice 13 checkpoint, the shared development-tier module composed
 independently evaluable
@@ -1324,11 +1341,10 @@ Slice 16 implementation below deliberately supersedes that historical JVM
 manifest with its direct Guix JAR policy.  No experimental dialect is installed
 merely to fill a tier.
 
-The Slice 17 implementation candidate below now supersedes “later editor
-parity” in source: it adds only the runtime-detached Racket Mode object to Home
-and retains the complete runtime in this manifest.  It does not supersede this
-accepted historical evidence or change the live baseline until activation and
-fresh live/reboot acceptance pass; its non-activating gate now passes.
+The accepted Slice 17 implementation below supersedes “later editor parity” in
+source: it adds only the runtime-detached Racket Mode object to Home and retains
+the complete runtime in this manifest.  Its non-activating candidate evidence
+and later Home 40 live acceptance do not rewrite this historical checkpoint.
 
 =scripts/guix-lisp-shell= enters those manifests with =--pure= through a
 snapshot of the authenticated channel lock.  The pinned build gate evaluates
@@ -2120,14 +2136,14 @@ This accepts the explicit non-CIDER alternative, the Guix-only dependency
 policy, and the complete runtime/editor/project/test workflow, and completes
 Slice 16.
 
-** TODO Slice 17: Racket vertical slice
+** DONE Slice 17: Racket vertical slice
 :PROPERTIES:
 :audit_priority: P2
 :depends_on: 7 8 12 13 15
-:candidate_status: complete-gate-passed-activation-pending
+:completed: 2026-07-13
 :END:
 
-Implementation candidate:
+Accepted implementation:
 
 - runtime ownership remains entirely in the existing authenticated full Racket
   9.1 manifest.  Neither System nor persistent Home may contain =racket=,
@@ -2135,8 +2151,9 @@ Implementation candidate:
   =plt-help=;
 - Home adds one explicit package object instead of resolving its name through
   =specification->package=: =emacs-racket-mode/runtime-detached=.  This brings
-  candidate declarative Home ownership from 81 ordinary specifications to 82
-  total packages while keeping the accepted Home 39 baseline unchanged;
+  declarative Home ownership from 81 ordinary specifications to 82 total
+  packages.  During the non-activating gate, accepted Home 39 remained
+  unchanged;
 - the local inherited package lets the pinned upstream configure phase run,
   then restores =racket-program= to plain ="racket"= before compilation.  A
   focused pinned build produced
@@ -2176,8 +2193,7 @@ Implementation candidate:
   =raco pkg= is never invoked; mutable package installation and catalog
   mutation remain forbidden.
 
-Current evidence remains candidate-only but now includes the complete GuixPC
-non-activating gate.  It realizes candidate Home
+The complete GuixPC non-activating gate realized candidate Home
 =/gnu/store/0qslq27g81snh836mpw4g4n3wgadjq59-home= and unchanged candidate
 System =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system= without switching
 either profile.  Realized ownership, Home/System executable absence, and the
@@ -2197,22 +2213,72 @@ stepper, native debugger break/go/recovery, project checking, and scoped
 process-group stop while an unrelated canary survives.  Its deliberate live
 failure returns outer status 1 and exact inner Emacs status 255, then proves all
 recorded descendants and sandbox-token processes are gone.  This evidence does
-not activate or accept a new generation.  A post-gate read-only check still
-resolves live Home to
+not describe an activated generation.  The candidate paths remain explicit
+non-activating build-gate evidence.  A post-gate read-only check still resolved
+then-live Home to
 =/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home= and live System to
 =/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system=; no build-gate, Racket
 project-check, or connected-editor sandbox/process remains.
 
-Pending activation controls:
+Published and activated checkpoint: implementation commit
+=18bdc800668070b444c21c5f3f3c0d6b6084e290= was published before activation.
+=ghr= activated Home generation 40 at
+=/gnu/store/by5c2mcdhmxf456q7imb6j56kv2y9s4w-home=.  The normal reboot started
+the fresh session at =2026-07-13T20:24:15-04:00=.  System generation 85 is both
+current and booted at the unchanged
+=/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system=; Pull generation 5
+remains current at
+=/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile=.
 
-- push the exact implementation checkpoint that produced the candidate evidence;
-- run =ghr=, reboot, and repeat the fresh live Home/editor/project/backend/XP,
-  native-debugger, scoped-stop, and cleanup checks;
-- re-prove the activated Home/System expose no Racket runtime and that no
-  user-global package/catalog state, source-tree artifact, sandbox, or process
-  residue appears;
-- rotate the exact Home retention root only after fresh acceptance.  Preserve
-  Home 39 as the immediate rollback until that record exists.
+Fresh live acceptance:
+
+- =racket-project-check= passes evaluation/backend at 42, keyed PLT state,
+  compilation, strict require lint, RackUnit, Scribble, macro expansion, direct
+  and Makefile checks, and every syntax/lint/test/docs/deliberate negative
+  control without persistent artifacts.  Its deliberate control emits the
+  exact trigger and exits 91;
+- =emacs-check= passes the live observational probe and all 49/49 isolated
+  batch ERT checks.  The established connected Geiser/Guile and SLY/SBCL
+  acceptance checks also pass from the activated profiles.  A separate probe
+  inside the actual rebooted EXWM server opens the tracked =.rkt= source as
+  classic =racket-mode= with XP disabled and no new process;
+- the normal =emacs-racket-check= passes cold-open no-process behavior,
+  two-root backend/REPL isolation, whole-module/sexp/defun evaluation,
+  exception recovery, XP diagnostics and recovery, definition/reference xref
+  in both directions, native documentation, macro stepping, debugger
+  break/go/recovery, project checking while connected, and scoped
+  process-group stop while its unrelated canary survives; and
+- the connected deliberate failure returns exact inner Emacs status 255 and
+  outer checker status 1.  Cleanup accounts for every recorded descendant and
+  sandbox-token process before accepting the failure path.
+
+Active ownership and cleanup: active Home package records contain only
+=emacs-racket-mode= among the Racket names; active System contains none.
+Neither profile exposes a Racket runtime executable, and the runtime-detached
+editor closure has no full/minimal/VM/docs Racket requisite.  No user-global Racket package or
+catalog state, checker sandbox, recorded process, source-tree artifact, or
+repository mutation survives the fresh checks.  The checkout is clean.
+
+Retention now promotes exact Home generation 40 and keeps Home generation 39
+at =/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home= as the preferred
+pre-Slice-17 rollback.  The retention fixture, inventory, pin verification,
+read-only plan, and rollback drill pass.  System 85 and Pull 5 remain protected
+and unchanged; no deletion or garbage collection was performed.
+
+Accepted boundary: full Racket remains disposable and authenticated through
+the project manifest.  Persistent Home owns only the runtime-detached editor;
+System owns no Racket component.  Classic Racket Mode starts its backend and XP
+analysis explicitly, =racket-hash-lang-mode= remains deferred, native
+indentation is not represented as formatting, and mutable package/catalog
+operations remain forbidden.
+
+Rollback path: first restore the accepted pre-Slice-17 source checkpoint
+=2d6587fe707892acc9dd33f605ccba6ab839c161=.  Then use protected Pull
+generation 5 at =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile= to run
+=guix home switch-generation 39= and reboot.  System generation 85 needs no
+change.
+
+This closes findings L-14 and L-15 and completes Slice 17.
 
 ** TODO Slice 18: Optional dialect incubation
 :PROPERTIES:

@@ -191,7 +191,7 @@ Current next action:
     =/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home=, System generation 85,
     and Pull generation 5 pass the fresh checks; Home 38 is the immediate
     fallback.
-- [ ] Accept [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 17: Racket vertical slice][Slice 17: Racket vertical slice]].
+- [X] Accept [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 17: Racket vertical slice][Slice 17: Racket vertical slice]].
   - [X] Assemble the implementation candidate with manifest-only full Racket
     9.1, the explicit runtime-detached Home Racket Mode object, the marked
     source/test/docs fixture, project-keyed PLT wrapper, copied checker, native
@@ -226,17 +226,30 @@ Current next action:
     paths return project status 91 and connected outer/inner statuses 1/255.
     Post-gate live links remain accepted Home =n2hzw6qmz431= and System
     =m5znrpyizvkk=, with no checker sandbox or process residue.
-  - [ ] Push the exact implementation checkpoint only after the complete gate
-    passes; record candidate Home/System store paths without calling them live
-    or accepted.
-  - [ ] Run =ghr=, reboot, and repeat fresh live Home/editor/project/backend/XP
-    acceptance and cleanup.  Verify persistent Home/System still expose no
-    Racket runtime, rotate the exact Home retention root, and keep Home 39 as
-    the immediate fallback until this step passes.
+  - [X] Publish exact implementation checkpoint
+    =18bdc800668070b444c21c5f3f3c0d6b6084e290=.  The historical gate-only
+    candidates remain Home =0qslq27g81sn= and System =6680dpbpy035=; neither was
+    activated by the gate.
+  - [X] Run =ghr= and reboot into Home generation 40 at
+    =/gnu/store/by5c2mcdhmxf456q7imb6j56kv2y9s4w-home=.  System generation 85
+    remains current and booted at =/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system=;
+    Pull generation 5 remains =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile=.
+    The project normal path and deliberate status-91 control, live and 49/49
+    batch editor checks, Geiser/SLY connected regression, actual EXWM cold
+    =.rkt= open, connected Racket normal markers, and deliberate inner-255/
+    outer-1 cleanup all pass.  Persistent runtime/closure leakage, global Racket
+    state, checker sandboxes/processes, and repository mutation are absent.
+    Retention inventory, fixture, verification, read-only plan, and rollback
+    drill pass with Home 40 promoted and Home 39 retained as the immediate
+    fallback.
+  - [X] Record complete rollback: restore source checkpoint
+    =2d6587fe707892acc9dd33f605ccba6ab839c161= first, switch exactly to Home 39
+    through the protected Pull 5 Guix, and reboot.  Home rollback alone does not
+    restore repository-linked source; System 85 needs no change.
 
-Next action: push the exact Slice 17 implementation checkpoint, then run =ghr=,
-reboot, and perform the fresh live acceptance and cleanup checks.  Do not rotate
-retention or call the slice accepted before those checks pass.
+Next action: begin Slice 18 optional dialect incubation.  Evaluate one dialect
+at a time behind a written value proposition and the same complete vertical
+acceptance contract; do not broaden =sk-guix= package ownership by default.
 
 Ordered follow-up:
 
@@ -249,7 +262,7 @@ Slice 13  package ownership and per-dialect environments
 Slice 14  core Lisp editing correctness and structural editing
 Slice 15  Elisp, Guile, and Common Lisp project/test workflows
 Slice 16  Clojure/JVM vertical slice
-Slice 17  Racket candidate gate, activation, and live acceptance
+Slice 17  Racket vertical slice
 Slice 18  optional dialect incubation
 Slice 19  final desktop, security, and documentation polish
 #+end_src

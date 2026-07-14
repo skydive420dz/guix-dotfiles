@@ -5,8 +5,9 @@ system	83	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	last-known-good	Acc
 system	81	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system	last-known-good	Distinct accepted elogind 255.24 System before Slice 10
 system	80	/gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system	emergency-rollback	Pre-elogind-upgrade recovery only; contains the known 255.17 SSH session defect
 system	75	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	last-known-good	Last observed working pre-slice boot target
-home	39	/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home	promotion-rollback	Accepted Slice 16 Guix-only Clojure/JVM workflow
-home	38	/gnu/store/aghqh0si8x2pr0cmfyir7mgaks217yb6-home	preferred-rollback	Immediate pre-Slice-16 Lisp project and test workflow fallback
+home	40	/gnu/store/by5c2mcdhmxf456q7imb6j56kv2y9s4w-home	promotion-rollback	Accepted Slice 17 Guix-only Racket workflow
+home	39	/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home	preferred-rollback	Immediate pre-Slice-17 Guix-only Clojure/JVM fallback
+home	38	/gnu/store/aghqh0si8x2pr0cmfyir7mgaks217yb6-home	last-known-good	Accepted Slice 15 Lisp project and test workflow fallback
 home	37	/gnu/store/693n0j3q7ikb8v0bzj76swqg82b6z219-home	last-known-good	Accepted Slice 14 structural editing fallback
 home	36	/gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home	last-known-good	Pre-Slice-14 Home ownership and forced-SSH fallback
 home	35	/gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home	last-known-good	Pre-forced-SSH additive Home fallback

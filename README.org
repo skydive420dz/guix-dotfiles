@@ -92,15 +92,15 @@ next active slice.
   clojure-lsp integration, 44/44 ERT checks, real connected checks, negative
   cleanup control, and fresh-boot acceptance all pass.  Home 38 is retained as
   the immediate fallback.
-- [ ] Accept Slice 17.  The Racket implementation checkpoint now passes the
-  complete non-activating gate with manifest-only runtime ownership, a
-  runtime-detached Home editor package, a reusable tracked project contract,
-  and real editor/backend/cleanup checks.  It is not accepted until the
-  checkpoint is pushed, =ghr=, reboot, fresh live editor/project checks,
-  cleanup, and retention rotation all pass.
-- [ ] Continue Slices 18 and 19 only after Slice 17 acceptance.  Do not expand
-  dialect breadth ahead of the vertical runtime/editor/project/test acceptance
-  for the currently supported dialects.
+- [X] Activate and accept Slice 17.  Published checkpoint =18bdc80= activated
+  Home generation 40 with 82 declared packages and the runtime-detached Racket
+  Mode package.  After reboot, the project gate and its status-91 control,
+  49/49 editor tests, live cold-open probe, connected backend/XP/debugger checks,
+  deliberate 1/255 cleanup control, runtime-absence checks, and exact retention
+  rotation all pass.  Home 39 is retained as the immediate fallback.
+- [ ] Begin Slice 18 optional dialect incubation, then Slice 19 polish.  Keep
+  each additional dialect behind the same vertical runtime/editor/project/test
+  acceptance contract.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 - [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
   the GRUB prompt before making more bootloader changes.
@@ -223,18 +223,22 @@ from 78 to 81 with =emacs-clojure-mode=, =clj-kondo=, and =cljfmt=; four
 Home-service packages bring the active realized profile to 85 packages.  The
 JVM, Clojure JAR, and clojure-lsp remain isolated in the pinned project
 environment rather than leaking into persistent Home or System ownership.
-The unactivated Slice 17 implementation candidate keeps those 81 specification-resolved
-packages and adds one explicit package object, for 82 declared Home packages:
-the local =emacs-racket-mode/runtime-detached= variant.  Upstream Guix patches
-Racket Mode to contain an absolute =racket= store path; the local variant
-restores the plain ="racket"= command after that phase.  Its verified output
-closure is 44.0 MiB, and its complete requisites contain no full, minimal, VM,
-documentation, or other Racket runtime output, avoiding retention of the full
-2.135 GiB Racket 9.1 closure.  The complete non-activating gate realizes Home
-=/gnu/store/0qslq27g81snh836mpw4g4n3wgadjq59-home= and unchanged System
-=/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system= with no persistent Racket
-runtime/package/executable leakage.  The accepted live baseline remains Home
-generation 39 until activation, fresh live, and reboot checks pass.
+Slice 17 is accepted as Home generation 40 at
+=/gnu/store/by5c2mcdhmxf456q7imb6j56kv2y9s4w-home= from published implementation
+checkpoint =18bdc800668070b444c21c5f3f3c0d6b6084e290=.  It keeps those 81
+specification-resolved packages and adds one explicit package object, for 82
+declared Home packages: the local =emacs-racket-mode/runtime-detached= variant.
+Upstream Guix patches Racket Mode to contain an absolute =racket= store path;
+the local variant restores the plain ="racket"= command after that phase.  Its
+verified output closure is 44.0 MiB, and its complete requisites contain no
+full, minimal, VM, documentation, or other Racket runtime output, avoiding
+retention of the full 2.135 GiB Racket 9.1 closure.  The historical
+non-activating gate realized candidate Home
+=/gnu/store/0qslq27g81snh836mpw4g4n3wgadjq59-home= and unchanged candidate
+System =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=; neither gate-only
+path was activated.  Fresh live checks prove the active Home and System expose
+no persistent Racket runtime/package/executable leakage.  Home generation 39 at
+=/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home= is the immediate fallback.
 The reduced System consumes the 13 recovery specifications recorded in
 =guix/package-ownership.scm= plus =kitty-latest=.  System generation 85 has
 passed a fresh boot; accepted System generation 84 remains its immediate
@@ -644,7 +648,7 @@ Clojure (Slice 16 accepted)
                =fixtures/clojure= supplies source/tests and tracked formatter,
                linter, and language-server settings.
 
-Racket (Slice 17 implementation candidate; not accepted)
+Racket (accepted Slice 17)
   Mode:        classic racket-mode only
   Backend:     explicit project-keyed Racket Mode backend/REPL and XP analysis
                through =scripts/racket-project=
@@ -706,7 +710,7 @@ Racket:       Racket Mode commands; semantic XP analysis and the backend start
 Cold Lisp files should provide mode detection, indentation, basic syntax, and
 the correct command surface. Rich semantic completion/docs are REPL-backed for
 Scheme and Common Lisp, explicitly clojure-lsp-backed for Clojure, and
-explicitly XP/backend-backed for the Racket candidate.
+explicitly XP/backend-backed for Racket.
 Evaluation checks backend connection state before dispatch, while backend
 failures after that check retain their original error.
 Documentation uniformly reports =No symbol at point= instead of prompting for
@@ -1290,13 +1294,13 @@ and language server must enter the JVM manifest through the copied production
 runtime and cross-tier leakage probes.  It validates the realized System/Home
 ownership boundary and critical profile artifacts; plan mode remains
 evaluation-only.
-The Slice 17 candidate extends that non-activating contract with the copied
+The Slice 17 gate extends that non-activating contract with the copied
 Racket project checker, the connected Racket Mode backend/XP checker, strict
 Home/System Racket executable absence, and a full-requisite check proving that
 Home's editor package does not retain the manifest-only Racket runtime.  The
-complete gate passes from the exact source candidate before publication; the
-next boundary is the pushed checkpoint followed by activation and fresh-boot
-acceptance.
+complete gate passed from the exact source candidate before publication;
+checkpoint =18bdc80= was then published, activated as Home 40, rebooted, and
+accepted through the corresponding fresh-live checks.
 Guix may reuse already-authenticated
 immutable store objects; the separate isolated clean-clone test verifies the
 published =sk-guix= refs.  The gate never pulls, reconfigures,
@@ -1388,13 +1392,12 @@ starts =lsp-mode=/=clojure-lsp= only on an explicit command through the same
 project wrapper.  CIDER is intentionally absent: the pinned channels do not
 provide the Guix-packaged nREPL and cider-nrepl middleware needed for its
 standard jack-in flow, and this slice does not permit Maven downloads to fill
-that gap.  The Slice 17 source candidate similarly gives persistent Home only
+that gap.  The accepted Slice 17 source similarly gives persistent Home only
 the runtime-detached Racket Mode package; the runtime, =raco= tools, package
 collections, and documentation stay in the project manifest.  Repository
 source configures Racket Mode to use the project wrapper only after explicit
-backend/XP startup.  This ownership and editor path remain unaccepted until the
-checkpoint is activated and its fresh live and reboot evidence exists; the
-complete non-activating gate now passes.
+backend/XP startup.  The complete non-activating gate and the activated,
+fresh-reboot Home/editor/backend acceptance both pass.
 
 The disposable Racket checker proves evaluation at 42, the backend command,
 project-keyed PLT environment, compilation, strict require-recommendation lint, RackUnit,
@@ -1541,11 +1544,18 @@ a local recovery tty:
    Home, and Pull targets in =generation-pins.tsv= and pass retention
    verification plus the rollback drill.
 
-The recorded 85/39/5 generations are this installation's historical rollback
+The recorded 85/40/5 generations are this installation's historical rollback
 evidence and are not valid new-install targets.  Blank-disk partitioning,
 filesystem creation, initial GRUB/EFI installation, initial user/network/
 firmware provisioning, secret restoration, substitute-ACL mutation, and a new
 installation's first boot remain outside this checked sequence.
+
+For a complete Slice 17 rollback, first restore source checkpoint
+=2d6587fe707892acc9dd33f605ccba6ab839c161= because the live repository links
+are not changed by a Home generation switch.  Then use the protected Pull 5
+Guix at =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile/bin/guix= to
+switch exactly to Home generation 39 and reboot.  System generation 85 needs no
+change.
 
 * Generated or local state
 

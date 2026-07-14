@@ -1,7 +1,6 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; The Slice 17 candidate expands the reviewed Home user/editor base to 82
-;; packages; live acceptance remains separate from this declaration.
+;; Accepted Slice 17 expands the reviewed Home user/editor base to 82 packages.
 ;; Package-lint keeps the tracked Emacs Lisp project independent of mutable
 ;; ELPA state; Clojure mode, cljfmt, and clj-kondo provide the persistent
 ;; editor-side Clojure integration without leaking its JVM runtime into Home.
