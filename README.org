@@ -4,14 +4,16 @@ Source of truth for the guixpc experiment machine.
 
 * Current progress
 
-This section tracks the active stabilization pass. Keep it current when a slice
-is accepted so the repo records intent, not only implementation commits.
+The numbered stabilization pass is complete through Slice 19.  Keep this
+section aligned with accepted machine state so the repo records intent, not
+only implementation commits.
 
 The current machine-wide baseline and canonical slice status live in
 [[file:docs/audits/2026-07-12-full-configuration-audit.org][the 2026-07-12 full configuration audit]].  It records verified state,
 confirmed defects, qualified risks, strengths, Lisp coverage, and acceptance
-gates.  [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue and points to the
-next active slice.
+gates.  [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred
+work.  There is no successor stabilization slice; the audit remains active only
+for its explicitly privileged system-Shepherd/root-owned-log follow-up.
 
 ** Completed
 
@@ -41,7 +43,7 @@ next active slice.
   =3440x1440_100= modeline, changed =xrandr= to fallback-only, and starts
   wallpaper/Picom before launching fullscreen Emacs/EXWM.
 
-** Next
+** Audit remediation history and remaining independent work
 
 - [X] Extend =scripts/emacs-check= with batch probes for mode detection,
   keybindings, and formatting dispatch.  This implementation landed, but the
@@ -104,7 +106,7 @@ next active slice.
   the real project checker, two-root REPL/LSP checks, deliberate cleanup,
   strict shell/ownership/runtime-absence gates, residue cleanup, and retention
   rotation all pass.  Home 40 is retained as the immediate Racket fallback.
-- [ ] Execute Slice 19 desktop, security, and documentation polish.
+- [X] Activate and accept Slice 19 desktop, security, and documentation polish.
   Its opening native-comp correction is accepted from published checkpoint
   =7476b05= as Home generation 42 at
   =/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home=.  Fresh EXWM Emacs uses
@@ -119,8 +121,18 @@ next active slice.
   private splitter, adds deterministic fragmentation coverage, and preserves
   the primary editor error in checker failures.  The supported live reload,
   singleton advice proof, 56/56 isolated tests, failure-order fixture, strict
-  gate, and one no-retry connected run pass.  L-18 is closed; the remaining
-  trust, audio, and policy scope stays explicit.
+  gate, and one no-retry connected run pass.  Published checkpoints =ba6bc65=,
+  =5b39af8=, and =b10bca3= then close the desktop policy: cookie-only local X
+  trust, disabled Kitty remote control, one ambient-config-free Picom with
+  serialized restarts, explicit ordinary/strict audio gates, and Bluetooth
+  controller auto-enable.  The final 58/58 editor suite and strict source gates
+  pass.  Cold acceptance booted System generation 86 at
+  =/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system=; with the Bose initially
+  off, the controller was already powered, non-discoverable, and non-pairable.
+  Pressing only the speaker's power button connected it automatically, selected
+  =bluez_output.04_52_C7_86_93_08.1= as the default sink, and passed finite
+  low-volume playback.  Home 42 and Pull 5 remain current.  All Slice 19
+  findings are closed; no Slice 20 is planned.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 - [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
   the GRUB prompt before making more bootloader changes.
@@ -268,9 +280,9 @@ checker-only Findutils remain outside persistent profiles in the disposable
 =fennel= manifest.  The historical non-activating gate realized candidate Home
 =/gnu/store/8q8dki5ka0b7ayby2kg1c7gk1cc9mrfh-home= and unchanged candidate
 System =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=; neither gate-only
-path describes the active generation.  Fresh acceptance leaves System
-generation 85 current and booted at
-=/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system= and proves that neither
+path describes the active generation.  Slice 18 fresh acceptance left System
+generation 85 current and booted at that time, at
+=/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system=, and proved that neither
 persistent profile exposes a Fennel runtime executable.
 The opening Slice 19 native-comp correction is accepted from published
 checkpoint =7476b0527caacb92a6fc1fdd4e05ea4cddd5a794= as Home generation 42 at
@@ -281,9 +293,10 @@ immutable profile and excludes the legacy user cache from lookup.  Fresh Emacs
 loads Org 9.8.7 without a version warning; the 36 MiB legacy cache is retained
 only at =~/.emacs.d/eln-cache.quarantine-20260713-slice19/=.
 The reduced System consumes the 13 recovery specifications recorded in
-=guix/package-ownership.scm= plus =kitty-latest=.  System generation 85 has
-passed a fresh boot; accepted System generation 84 remains its immediate
-rollback.
+=guix/package-ownership.scm= plus =kitty-latest=.  System generation 86 is
+current and booted at
+=/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system=; accepted System
+generation 85 remains its immediate rollback.
 The System floor is not a second configured desktop: normal EXWM still requires
 the accepted base Home D-Bus services and Home editor profile.  Its independent
 guarantee is the tty shell, Kitty, and =emacs -Q= for repair.
@@ -867,7 +880,7 @@ XF86AudioLowerVolume  lower default sink volume through wpctl
 Picom is intentionally scoped to Emacs frame transparency only:
 
 #+begin_src text
-picom --backend glx --vsync --opacity-rule '85:class_g = "Emacs"'
+picom --config /dev/null --backend glx --vsync --opacity-rule '85:class_g = "Emacs"'
 #+end_src
 
 The X session starts the wallpaper and Picom before launching Emacs/EXWM so the
@@ -877,7 +890,10 @@ maximized-frame startup can briefly draw a small pre-maximized frame.  Xinit is
 the only automatic wallpaper/Picom owner; EXWM startup and reload never repeat
 either operation.  =M-x sk/start-picom= and =M-x sk/set-wallpaper= remain
 explicit maintenance commands.  Browser and terminal transparency are not
-managed through global active/inactive opacity rules.
+managed through global active/inactive opacity rules.  =/dev/null= deliberately
+excludes ambient Picom configuration.  The manual restart path stops only this
+user's Picom, waits boundedly for both the old process and compositor selection
+to clear, and fails closed rather than starting a second compositor.
 
 ** Application placement and reload policy
 
@@ -1185,6 +1201,13 @@ blueman-manager
 If Blueman opens with icon warnings, that is a GTK/icon-theme issue, not the
 app launcher path.
 
+Blueman 2.4.6 persists its GUI geometry and recent-connection list through
+GLib's keyfile settings backend at
+=~/.config/glib-2.0/settings/keyfile=.  This user-owned mode-0600 file is local
+application state, not core system configuration.  No repository-owned dconf
+service or declaration is needed; the historical dconf warnings do not describe
+the current persistence path.
+
 ** Keyboard repeat
 
 Keyboard repeat is intentionally aligned with the MSI profile:
@@ -1226,8 +1249,13 @@ variables, without =--all= or systemd integration, then starts Emacs directly.
 The machine never suspends itself through elogind.  X independently blanks and
 powers down the monitor after 600 seconds of X input inactivity, with standby,
 suspend, and off all set to 600 seconds.  This preserves the observed desktop
-behavior and protects the panel; it is not a screen lock.  Tty1 autologin
-remains a separate Slice 19 trust decision.
+behavior and protects the panel; it is not a screen lock.  Tty1 autologin is an
+explicitly accepted policy for this trusted, physically controlled single-user
+workstation: physical access implies access to the local desktop session.  X
+access control remains enabled through the user-owned mode-0600 Xauthority
+cookie, Xorg does not listen on TCP, and Xinit never expands access with
+=xhost=.  Kitty remote control is disabled; no remote-control socket, password,
+or imported policy is configured.
 
 The graphical login is intentionally still represented by elogind as the
 active local =tty1= session with =Type=tty= and a tty-derived idle hint.  EXWM
@@ -1235,25 +1263,37 @@ children receive correct =DISPLAY=:0=, =XDG_SESSION_TYPE=x11=, and desktop
 metadata.  Correcting login1's type would require changing how the PAM session
 is created, not an Xinit environment tweak, and is outside this slice.
 
+The System declaration explicitly enables BlueZ controller auto-enable so the
+adapter is ready before a paired speaker performs its startup reconnect.  A
+cold boot with the Bose powered off proved =AutoEnable = true= and
+=Powered: yes= without any manual Bluetooth command; the controller remained
+non-discoverable and non-pairable.
+
 After a fresh system/session activation, validate the automated boundary with:
 
 #+begin_src sh
 scripts/desktop-session-check
 #+end_src
 
-The stricter Bluetooth gate expects the paired Bose speaker to be powered and
-connected:
+The ordinary audio gate accepts an ALSA or BlueZ physical default sink and sends
+it a finite low-volume stream.  When the Bose query succeeds and reports it
+disconnected, =auto_null= is also an accepted hardware-absence skip if no used
+physical endpoint is available.  Query failures, =auto_null= while Bluetooth is
+connected, unsupported sinks, and failed playback remain errors.
+
+The stricter gate requires the paired Bose speaker to be connected, visible to
+PipeWire, selected as the expected default BlueZ sink, and able to consume the
+finite stream:
 
 #+begin_src sh
 scripts/desktop-session-check --require-bluetooth
 #+end_src
 
-The accepted run used the strict Bluetooth gate with the Bose Mini II as the
-default sink, then manually confirmed audible Bluetooth output and both XF86
-volume keys.  A real Kitty launch through EXWM's desktop-entry fallback inherited
-the canonical bus.  The HDMI endpoint and targeted automated stream remain
-healthy, but audible HDMI output is intentionally outside this machine's
-acceptance policy because no HDMI audio device is used.
+Cold acceptance powered the Bose with only its power button; it reconnected
+automatically and became =bluez_output.04_52_C7_86_93_08.1=.  Audible Bose
+output and both XF86 volume keys remain manually accepted.  A real Kitty launch
+through EXWM's desktop-entry fallback inherited the canonical bus.  Audible
+HDMI is outside this workstation's policy because no HDMI audio device is used.
 
 * Apply
 
@@ -1305,7 +1345,7 @@ nonguix  nonfree kernel/firmware transformation and substitutes
 sk-guix  personal package channel; only promoted top-level package is kitty-latest
 #+end_src
 
-The prepared Slice 12 lock is:
+The accepted Slice 12 lock is:
 
 #+begin_src text
 guix     a8391f2d7451c2463ba253ffa9872fa6f27485d7
@@ -1383,7 +1423,7 @@ complete non-activating gate passes with candidate Home
 gate-only paths.  Published implementation =c1bbf39= and candidate
 documentation =81ebb24= were then activated as Home generation 41, rebooted,
 and accepted through fresh project/editor/backend, ownership, cleanup, and
-retention gates; System 85 and Pull 5 remain unchanged.
+retention gates; System 85 and Pull 5 remained unchanged at that acceptance.
 Guix may reuse already-authenticated
 immutable store objects; the separate isolated clean-clone test verifies the
 published =sk-guix= refs.  The gate never pulls, reconfigures,
@@ -1602,11 +1642,13 @@ read-only tool currently proves retention of the booted closure; an apply
 implementation must additionally identify and protect the exact booted
 generation-number link before deleting anything.
 
-The accepted Slice 19 inventory counts are System/Home/Pull =84/42/5=.  Exact
-pins promote Home 42, retain Home 41 as the preferred immediate pre-correction
-fallback, and retain Home 40 as the last-known-good Racket fallback; older pins
-remain in place.  System 85 and Pull 5 are unchanged.  Acceptance left no
-checker residue and performed no generation deletion or garbage collection.
+The final Slice 19 inventory counts are System/Home/Pull =85/42/5=.  Exact pins
+promote current/booted System 86 and retain System 85 as its immediate fallback;
+System 84 remains an older accepted fallback.  Home 42 remains promoted, Home
+41 remains the preferred pre-native-cache fallback, and Home 40 remains the
+last-known-good Racket fallback.  Pull 5 and older pins remain protected.
+Acceptance left no checker residue and performed no generation deletion or
+garbage collection.
 
 * Live symlinks
 
@@ -1698,8 +1740,9 @@ a local recovery tty:
    Home, and Pull targets in =generation-pins.tsv= and pass retention
    verification plus the rollback drill.
 
-The recorded 85/42/5 generations are this installation's historical rollback
-evidence and are not valid new-install targets.  Blank-disk partitioning,
+The recorded 86/42/5 generation identities and their older retained tiers are
+this installation's historical rollback evidence and are not valid new-install
+targets.  Blank-disk partitioning,
 filesystem creation, initial GRUB/EFI installation, initial user/network/
 firmware provisioning, secret restoration, substitute-ACL mutation, and a new
 installation's first boot remain outside this checked sequence.
@@ -1715,12 +1758,17 @@ For the accepted Slice 19 native-comp correction, restore source checkpoint
 =e69644a98a32e1c63eb7ea9b5bb313849c7c6d87= first, remove the managed
 =~/.emacs.d/early-init.el= link if it remains, use protected Pull 5 to switch
 exactly to Home generation 41, and reboot.  Keep the known-stale cache in its
-quarantine instead of restoring it to the native lookup path.  System 85 and
-Pull 5 need no change.
+quarantine instead of restoring it to the native lookup path.  The System and
+Pull generations need no change for that cache-only rollback.
 
 For the accepted L-18 Fennel framing correction within Slice 19, restore source
 checkpoint =f52778c0c8a5a1364f139adfeda396eb235ead54= and reload or restart
 Emacs.  This source-only rollback needs no =ghr=, Home rollback, or reboot.
+
+To roll back the final desktop policy and Bluetooth boot-order corrections,
+restore source checkpoint =abb0518399daf3047862f96099cf6f9fa048f73b=, use
+protected Pull 5 to switch exactly to System generation 85, and reboot.  Home
+42 and Pull 5 need no change.
 
 * Generated or local state
 
@@ -1739,6 +1787,7 @@ These paths are not source configuration:
 ~/.config/chromium/
 ~/.config/pulse/
 ~/.config/fish/fish_variables
+~/.config/glib-2.0/settings/keyfile
 ~/.config/alsa/
 ~/.config/fontconfig/
 ~/.config/shepherd/
@@ -1746,6 +1795,10 @@ These paths are not source configuration:
 
 They may be useful for recovery or runtime behavior, but they should not become
 the place where new config is written.
+
+The GLib keyfile is accepted mutable Blueman GUI state.  Keep it user-owned and
+private; do not promote recent-device history or window geometry into the
+declarative Home configuration.
 
 The accepted Slice 19 native-comp policy keeps Guix Home as the sole Org package
 owner and moves writable native artifacts out of =~/.emacs.d=.  The cache key

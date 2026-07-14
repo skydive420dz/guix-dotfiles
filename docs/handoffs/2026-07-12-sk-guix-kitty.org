@@ -3,19 +3,21 @@
 #+status: historical
 
 #+begin_quote
-Historical handoff.  Its push, activation, and next-step sections describe the
-state at handoff time; they are not the active execution queue.  A later audit
-verified System generation 80 and current-profile Kitty 0.47.4 while one
-pre-reconfigure Kitty 0.46.2 process remained alive pending runtime convergence.
-Continue from [[file:../audits/2026-07-12-full-configuration-audit.org][the 2026-07-12 full configuration audit and slice roadmap]].
+Historical snapshot recorded on 2026-07-12.  Revisions, machine state, push
+status, activation instructions, and next steps below describe handoff-time
+evidence; they are not present-state claims or the active execution queue.  An
+early follow-up audit observed System generation 80 and profile-selected Kitty
+0.47.4 while one pre-reconfigure Kitty 0.46.2 process remained alive; later
+audit slices supersede that observation.  Continue from
+[[file:../audits/2026-07-12-full-configuration-audit.org][the 2026-07-12 full configuration audit and slice roadmap]].
 #+end_quote
 
 * Scope
 
-This note records the current GuixPC channel/package work so a new thread can
-continue without rediscovering context.
+This note recorded the GuixPC channel/package state so later work could continue
+without rediscovering the handoff-time context.
 
-The active change is narrow:
+The handoff-time change was narrow:
 
 - create and publish a personal Guix channel, =sk-guix=;
 - use that channel for =kitty-latest= only;
@@ -49,7 +51,8 @@ latest handoff state.
 
 * Channel state
 
-=guix-dotfiles/guix/channels.scm= now includes:
+At handoff time, =guix-dotfiles/guix/channels.scm= included this unpinned
+declaration:
 
 #+begin_src scheme
 (channel
@@ -58,13 +61,14 @@ latest handoff state.
  (branch "main"))
 #+end_src
 
-The URL is HTTPS because =guix pull= failed with the SSH URL in this context:
+HTTPS was selected because =guix pull= had failed with the SSH URL in that
+context:
 
 #+begin_src text
 guix pull: error: Git error: remote rejected authentication: Failed getting response
 #+end_src
 
-The current pulled Guix channels on GuixPC are:
+The pulled Guix-channel revision snapshot recorded at handoff time was:
 
 #+begin_src text
 guix     2232e2cf53cb46a7afc397a622efc4b1478f1ff7
@@ -72,16 +76,17 @@ nonguix  3b66965566fe8c96edb5a41fd39a9e5a90ad9b61
 sk-guix  b006225faf6835f858128690e35a60475f620639
 #+end_src
 
-Important: =sk-guix= currently has no channel introduction/signing setup. Guix
-can pull it, but it is not authenticated like Guix/Nonguix. Treat channel
-signing as a later hardening task, not as part of the current Kitty activation.
+At handoff time, =sk-guix= had no channel introduction or signing setup.  That
+observation was later superseded: authenticated history was established at
+introductory commit =eaade3680892ce74ebae68f4922cd0eb4a463a17= with signer
+=6B094D15B02E54B0F6B5E9E86F83FC62D232E5EC=.  Current trust state is defined
+by =guix/channels.scm= and verified in the full configuration audit.
 
-* Package state
+* Package scope at handoff time
 
-=sk-guix= currently contains:
-
-- =kitty-latest=, viable and promoted to GuixPC;
-- =fish-latest=, intentionally not promoted.
+The maintained and promoted =sk-guix= scope was =kitty-latest= only.  An
+evaluation-only =fish-latest= experiment existed, but it was neither promoted
+nor part of the maintained package scope.
 
 =kitty-latest=:
 
@@ -105,22 +110,22 @@ The package inherits Guix upstream =kitty= and adds only the deltas needed for
     by the Guix Kitty package;
   - =tools/utils/machine_id/api_test.go= assumes =/etc/machine-id= exists.
 
-=fish-latest=:
+The handoff-time =fish-latest= experiment:
 
-- stays on mainstream Guix for now;
-- recipe evaluation exists in =sk-guix= but it is not wired into GuixPC;
-- build blocker noted in =sk-guix/README.org=: newer Fish needs additional Rust
+- left GuixPC on upstream Guix Fish;
+- existed only as an unwired recipe evaluation in =sk-guix=;
+- had a known blocker recorded in =sk-guix/README.org=: newer Fish required
   crate/vendor work, including unresolved =unic-langid= at the time of testing.
 
-* System wiring
+* Historical system wiring
 
-=guix-dotfiles/guix/systems/guixpc.scm= now imports:
+At handoff time, =guix-dotfiles/guix/systems/guixpc.scm= imported:
 
 #+begin_src scheme
 (sk packages terminals)
 #+end_src
 
-The package list now installs =kitty-latest= directly before the regular
+The package list installed =kitty-latest= directly before the regular
 =specification->package= list:
 
 #+begin_src scheme
@@ -132,9 +137,9 @@ The package list now installs =kitty-latest= directly before the regular
        '(...))))
 #+end_src
 
-The old mainstream =kitty= string was removed from the package list.
+The old mainstream =kitty= string had been removed from the package list.
 
-* Verification already completed
+* Historical verification completed before handoff
 
 Channel pull completed:
 
@@ -168,23 +173,24 @@ kitty 0.47.4 created by Kovid Goyal
 
 * Historical activation state at handoff time
 
-The system has been build-verified but not activated from the assistant side.
-Remote activation was not attempted because sudo requires the user's password.
+At handoff time, the candidate had been build-verified but had not yet been
+activated.  Activation was left to the user because sudo required the user's
+password.
 
-To activate on GuixPC:
+The handoff-time activation instruction was:
 
 #+begin_src sh
 gsr
 #+end_src
 
-Then verify in a normal GuixPC shell/session:
+The requested check after that activation was:
 
 #+begin_src sh
 command -v kitty
 kitty --version
 #+end_src
 
-Expected:
+The handoff-time expected output was:
 
 #+begin_src text
 kitty 0.47.4 created by Kovid Goyal
@@ -223,17 +229,20 @@ kitty 0.47.4 created by Kovid Goyal
    guix describe
    #+end_src
 
-6. Later hardening options:
+6. Later hardening items recorded at handoff time:
 
-   - add a proper channel introduction/signing setup for =sk-guix=;
-   - pin channel commits if we want =guix pull= to stop advancing Guix/Nonguix
-     unexpectedly;
-   - decide whether =fish-latest= is worth solving;
+   - establish authenticated channel history (completed later at introductory
+     commit =eaade3680892ce74ebae68f4922cd0eb4a463a17= with signer
+     =6B094D15B02E54B0F6B5E9E86F83FC62D232E5EC=);
+   - pin channel revisions (completed later; see =guix/channels.scm=);
+   - keep the evaluation-only =fish-latest= experiment outside the promoted
+     channel scope unless explicitly reconsidered;
    - do not add Brave to =sk-guix= unless explicitly deciding to maintain a
      browser package.
 
-* Current policy
+* Current package-ownership policy
 
-=sk-guix= is not a dumping ground for everything newer than Guix. It is only for
-packages we intentionally decide to maintain. As of this note, that means
-=kitty-latest= only.
+The current maintained and promoted scope of =sk-guix= is =kitty-latest= only.
+Other packages remain on upstream Guix/Nonguix unless explicitly accepted for
+maintenance.  The =fish-latest= recipe is a quarantined evaluation, not a
+promoted or owned package in the current channel scope.

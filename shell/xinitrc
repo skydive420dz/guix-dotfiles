@@ -52,7 +52,8 @@ dbus-update-activation-environment \
 
 # This desktop never auto-suspends, but X blanks and powers down the monitor
 # after ten minutes of X input inactivity.  This is display protection, not a
-# screen lock; tty1 autologin remains a separate trust-policy decision.
+# screen lock; tty1 autologin is accepted for this trusted physical single-user
+# workstation.
 if command -v xset >/dev/null 2>&1; then
     xset s blank || printf '%s\n' 'EXWM: failed to enable X blanking' >&2
     xset s 600 600 || printf '%s\n' 'EXWM: failed to set X blanking timeout' >&2

@@ -84,7 +84,7 @@ authentication is required:
 Core processes were observed, but that is not evidence that every system service
 is healthy.
 
-* Verified baseline
+* Initial verified baseline (historical 2026-07-12 snapshot)
 
 ** Repository and deployment
 
@@ -153,7 +153,7 @@ REPL-, backend-, service-, or workflow-level acceptance tests.
 #+begin_src text
 Source organization:       strong
 Declared/deployed config:  aligned at the authenticated three-channel lock
-Live runtime convergence:  strong; fresh System 85 and Home 42 runtime passes,
+Live runtime convergence:  strong; fresh System 86 and Home 42 runtime passes,
                            including six Lisp project/test workflows and direct SSH
 Display/resource health:   good
 Validation safety:         strong; isolated editor and activation gates
@@ -161,6 +161,7 @@ Lisp foundation:           accepted Elisp/Guile/SBCL/Clojure/Racket/Fennel editi
 Slice 17 Racket workflow:   accepted after published checkpoint, Home 40 activation, reboot, and fresh live gates
 Slice 18 Fennel workflow:   accepted after published checkpoints, Home 41 activation, reboot, and fresh live gates
 Slice 19 native cache:      accepted after published checkpoint, Home 42 activation, quarantine, reboot, and fresh Org 9.8.7 gates
+Slice 19 final polish:      accepted after published checkpoints, System 86 activation, cold reboots, and fresh desktop, trust, and audio gates
 Lisp ecosystem breadth:    early; six families are accepted, while most families remain absent
 Reproducibility:            strong; clean-clone authentication and build gates pass
 Operational reliability:   restored; bounded SSH cleanup passes
@@ -186,6 +187,15 @@ Fennel Mode 0.9.2 newline-framing bug before a bounded retry passed.  Its
 published source-only repair subsequently passed live singleton/framing
 acceptance, full editor and connected gates, and residue checks without retry.
 
+The final published desktop/security checkpoints disable Kitty remote control,
+retain cookie-only X access without an =xhost= grant or X TCP listener, isolate
+Picom from ambient configuration and serialize its restarts, formalize ordinary
+and strict audio acceptance, and enable the Bluetooth controller at boot.  Fresh
+System generation 86 cold acceptance proved the controller powered before the
+speaker, remained non-discoverable and non-pairable, and automatically connected
+the trusted Bose after only its power button was pressed.  PipeWire selected the
+Bose BlueZ sink and finite playback passed.  This completes Slice 19.
+
 * Finding register
 
 ** Operational and live-state findings
@@ -193,18 +203,18 @@ acceptance, full editor and connected gates, and residue checks without retry.
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
 | O-01 | P0  | CLOSED   | Elogind 255.24 removes command and PTY SSH sessions immediately; no closing session remained through 30 seconds. | 7 |
-| O-02 | P1  | CLOSED   | Reduced System generation 85 is current/booted while Home generation 42 supplies the accepted application, editor, and forced-SSH tools used by the repository-owned project/test workflows. | 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 |
+| O-02 | P1  | CLOSED   | Reduced System generation 86 is current/booted while Home generation 42 supplies the accepted application, editor, and forced-SSH tools used by the repository-owned project/test workflows. | 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 |
 | O-03 | P1  | CLOSED   | The accepted D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse declarations persist unchanged in current Home generation 42. | 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 |
-| O-04 | P1  | CLOSED   | Fresh Emacs 30.2 resolves the accepted core Lisp, Clojure, runtime-detached Racket, runtime-free Fennel, and Org 9.8.7 libraries from Home 42; its observational probe and 54/54 isolated ERT checks see the accepted project keys, fixtures, backend policies, cold-open boundaries, and profile-scoped native cache. | 7, 8, 14, 15, 16, 17, 18, 19 |
+| O-04 | P1  | CLOSED   | Fresh Emacs 30.2 resolves the accepted core Lisp, Clojure, runtime-detached Racket, runtime-free Fennel, and Org 9.8.7 libraries from Home 42; its observational probe and 58/58 isolated ERT checks see the accepted project keys, fixtures, backend policies, cold-open boundaries, profile-scoped native cache, and serialized Picom policy. | 7, 8, 14, 15, 16, 17, 18, 19 |
 | O-05 | P1  | CLOSED   | EXWM, launched applications, PipeWire, WirePlumber, and PipeWire-Pulse share the one canonical Guix Home D-Bus; no =dbus-launch= remains. | 10 |
 | O-06 | P2  | CLOSED   | RTKit is active through system D-Bus/Polkit; PipeWire obtains an RR data-loop with a bounded 200000-microsecond realtime limit. | 10 |
 | O-07 | P2  | CLOSED   | The stale Kitty process is gone and the current launcher is Kitty 0.47.4. | 7 |
 | O-08 | P2  | CLOSED   | Fish, Bash, Eshell, and bare SSH automation route =gsr=/=ghr= through one current-Guix wrapper and explicit setuid sudo path. | 9 |
-| O-09 | P2  | POLICY   | The read-only retention gate protects accepted System 85, Home 42, and Pull 5 plus their immediate and older recovery tiers; Home 41 is the preferred pre-correction rollback and Home 40 the last-known-good Racket fallback.  It reports duplicate-link candidates but implements no deletion or garbage collection. | 12, 13, 14, 15, 16, 17, 18, 19 |
+| O-09 | P2  | POLICY   | The read-only retention gate protects current/booted System 86, Home 42, and Pull 5 plus their immediate and older recovery tiers; System 85 is the immediate system fallback, Home 41 the preferred pre-correction fallback, and Home 40 the last-known-good Racket fallback.  It reports duplicate-link candidates but implements no deletion or garbage collection. | 12, 13, 14, 15, 16, 17, 18, 19 |
 | O-10 | P3  | CLOSED   | X screen blanking and DPMS are explicitly declared and active at 600 seconds; elogind does not suspend the workstation. | 10 |
 | O-11 | P3  | POLICY   | Elogind intentionally retains the startx/PAM login as active local =tty1= with =Type=tty=; fresh-session =IdleHint=no= and EXWM child X11 metadata are correct. | 10 |
-| O-12 | P3  | VERIFIED | Historical Blueman logs show dconf persistence failure; current relevance is unproven. | 19 |
-| O-13 | P3  | POLICY   | Audio acceptance is hardware-conditional: an earlier Bose-off/no-endpoint boot exposed only =auto_null=, while the fresh post-reboot session under Home 42 exposed the AMD Raven HDMI sink and passed finite playback with Bose disconnected.  Bluetooth remains an explicit skip until its hardware is connected; Slice 19 must state which absence states are accepted. | 19 |
+| O-12 | P3  | CLOSED   | Blueman 2.4.6 persists its mutable GUI state through GLib's per-user keyfile backend at =~/.config/glib-2.0/settings/keyfile=, owned by the user with mode 0600.  The historical dconf failures predate the accepted activations, no current failure recurs, and no Home dconf service is required. | 19 |
+| O-13 | P3  | CLOSED   | Ordinary audio acceptance permits =auto_null= only when the Bose is disconnected and no used physical endpoint exists, skips playback only in that absence state, and fails closed on query errors.  Strict mode requires the connected Bose as the default =bluez_output.*= sink and finite playback.  System 86 cold acceptance auto-powered the controller; powering on only the Bose automatically selected =bluez_output.04_52_C7_86_93_08.1= and passed finite playback. | 19 |
 
 ** Configuration correctness and validation findings
 
@@ -235,8 +245,8 @@ reported as a confirmed bug without a focused test.
 | X-02 | P2  | CLOSED   | PID/class-matched launch intents place delayed and fast clients on their origin workspaces while unrelated clients remain independent. | 11 |
 | X-03 | P2  | CLOSED   | Visible/simple desktop entries and executables validate before launch; failure and timeout leave no intent, dispatcher, process, or speculative split. | 11 |
 | X-04 | P2  | CLOSED   | The remaining private EXWM adapters are isolated behind an exact 0.35 gate, and all three authenticated channel commits are repository-pinned. | 11, 12 |
-| X-05 | P2  | POLICY   | Tty1 autologin, =xhost= access, and Kitty remote control broaden the local trust boundary. | 19 |
-| X-06 | P3  | POLICY   | Full transparency, compositor behavior, and screen blanking need one documented visual/power policy. | 19 |
+| X-05 | P2  | CLOSED   | Tty1 autologin is accepted for this trusted physical single-user workstation.  X remains cookie-authorized with access control enabled, no =xhost= grant, no TCP listener, and a user-owned mode-0600 =~/.Xauthority=.  Kitty remote control is disabled; its hidden-client probe fails closed without process residue. | 19 |
+| X-06 | P3  | CLOSED   | Xinit remains the sole automatic wallpaper/Picom owner.  Kitty retains full background transparency; Picom ignores ambient configuration, runs one GLX/VSync process with the declared 85-percent Emacs opacity, and serialized restarts wait for both the old process and compositor selection to clear.  Screen blanking and DPMS remain 600 seconds and elogind does not suspend the workstation. | 19 |
 
 ** Reproducibility and package-architecture findings
 
@@ -245,7 +255,7 @@ reported as a confirmed bug without a focused test.
 | R-01 | P1  | CLOSED   | =guix/channels.scm= pins exact Guix, Nonguix, and authenticated sk-guix commits; the isolated time-machine provenance gate matches all three. | 12 |
 | R-02 | P1  | CLOSED   | =sk-guix= publishes a signed introduction, authorized signer, orphan public keyring, and signed target that pass isolated clean-clone Guix authentication. | 12 |
 | R-03 | P2  | POLICY   | Live repo symlinks make edits immediate but Home rollback does not restore application-file contents. | 13 |
-| R-04 | P2  | VERIFIED | System 85 carries only the recovery floor; Home 42 owns normal tools and supplies them to graphical, login, and direct forced-SSH project/test environments. | 13, 14, 15, 16, 17, 18, 19 |
+| R-04 | P2  | VERIFIED | System 86 carries only the recovery floor; Home 42 owns normal tools and supplies them to graphical, login, and direct forced-SSH project/test environments. | 13, 14, 15, 16, 17, 18, 19 |
 | R-05 | P2  | CLOSED   | Core, JVM Clojure, Racket, and Fennel manifests build and enter independently; the installed-base configuration bootstrap passes fixtures and isolated GuixPC acceptance. | 12, 13, 17, 18 |
 | R-06 | P2  | CLOSED   | =scripts/guix-entrypoints= checks or bootstraps every declaration link and refuses blockers/missing sources transactionally. | 9, 13 |
 
@@ -2475,10 +2485,11 @@ change.
 This closes finding L-16 and completes Slice 18.  Do not turn =sk-guix= into a
 general newer-package dumping ground for later dialects.
 
-** TODO Slice 19: Final desktop, security, and documentation polish
+** DONE Slice 19: Final desktop, security, and documentation polish
 :PROPERTIES:
 :audit_priority: P3
 :findings: O-10 O-12 O-13 X-05 X-06 L-17 L-18
+:completed: 2026-07-14
 :END:
 
 Scope:
@@ -2644,6 +2655,61 @@ generation, or retention pin changed, and no =ghr= or reboot ran.  Rollback
 restores source checkpoint =f52778c0c8a5a1364f139adfeda396eb235ead54=
 and reloads or restarts Emacs; no Home rollback is involved.
 
+*** Final desktop, trust, and audio policy accepted (2026-07-14)
+
+Published checkpoints
+=ba6bc65806688d57f8ee21e93d77cd0f41966b75=,
+=5b39af83be9b796b959664c5933b8402a57712af=, and
+=b10bca32b6edd1a2e394f59e065a6ec1d1361ecb= are on =origin/main=.  They
+disable Kitty remote control, remove the Xinit =xhost= grant, isolate Picom from
+ambient configuration, serialize Picom restarts, define ordinary and strict
+audio policies, and explicitly enable the BlueZ controller at boot.
+
+Cold acceptance booted System generation 86 at
+=/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system=.  Home generation 42
+remains =/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home= and Pull generation
+5 remains unchanged.  Before any Bluetooth mutation, the generated policy
+contained exactly one =AutoEnable = true= and no false value; the sole controller
+reported =Powered: yes=, =Discoverable: no=, and =Pairable: no= while the
+powered-off Bose remained disconnected.  Pressing only the Bose power button
+then connected it automatically.  PipeWire selected
+=bluez_output.04_52_C7_86_93_08.1= as the default sink, finite low-volume
+playback passed, and =scripts/desktop-session-check --require-bluetooth= passed.
+
+Cookie-only X access remained enabled with no TCP listener or =xhost= expansion.
+The hidden Kitty remote-control probe failed with =Remote control is disabled=
+and left no process residue.  Two immediate Picom restarts serialized correctly,
+and the cold session retained exactly one
+=picom --config /dev/null --backend glx --vsync= process with the declared Emacs
+opacity rule.  Screen blanking and DPMS remained =600/600= and =600/600/600=.
+
+Blueman's current mutable state is a user-owned mode-0600 GLib keyfile; no dconf
+declaration is needed.  The ordinary audio gate accepts an absent physical
+endpoint only when Bluetooth is disconnected, while strict mode requires the
+connected Bose as the exact default BlueZ sink and performs finite playback.
+Unused HDMI audio is outside the accepted physical-output scope.
+
+The final retention rotation promotes System 86 and retains System 85 as its
+immediate fallback.  Inventory, verification, the read-only plan, and the
+rollback drill pass without deleting a generation or collecting garbage.
+
+#+begin_src text
+Commits: ba6bc65806688d57f8ee21e93d77cd0f41966b75, 5b39af83be9b796b959664c5933b8402a57712af, b10bca32b6edd1a2e394f59e065a6ec1d1361ecb
+System generation: 86 at /gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system
+Home generation: 42 at /gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home
+Channel revisions: Guix a8391f2, Nonguix 3b66965, sk-guix b84ff24
+Source/evaluation checks: desktop policy, current-Guix System build, and strict shell gates PASS
+Isolated checks: 58/58 ERT and desktop audio policy fixtures PASS
+Negative controls: Kitty remote access and timed-out Picom replacement fail closed; audio query and target mismatches remain fatal
+Live evidence: X trust, one isolated Picom, controller auto-power, exact Bose BlueZ default, and finite playback PASS
+Persistence/restart evidence: serialized hot Picom restarts and cold System 86 Bluetooth/session acceptance PASS
+Residual risks: physical tty1 autologin and a boot-auto-enabled Bluetooth controller are accepted local policies; privileged system-Shepherd and root-owned-log health remain unaudited
+Rollback path: restore source checkpoint abb0518399daf3047862f96099cf6f9fa048f73b and switch exactly to retained System generation 85; Home 42 and Pull 5 need no change
+#+end_src
+
+This closes O-12, O-13, X-05, and X-06 and completes Slice 19.  The numbered
+stabilization roadmap has no successor slice.
+
 * Deferred work
 
 The existing custom-kernel inventory and plan remain separate from this roadmap.
@@ -2666,3 +2732,7 @@ This audit can be marked complete when:
   deliberately rejected with recorded reasons;
 - README and machine TODO point to the final accepted state;
 - a privileged follow-up confirms system Shepherd and root-owned log health.
+
+All roadmap slices are complete.  This audit remains =active= because the final
+privileged system-Shepherd and root-owned-log health check is still unavailable;
+Slice 19 completion is not evidence for that explicitly excluded boundary.
