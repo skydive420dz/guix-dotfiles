@@ -5,6 +5,7 @@
             %sk-core-lisp-specifications
             %sk-jvm-lisp-specifications
             %sk-racket-specifications
+            %sk-fennel-specifications
             %sk-development-tier-registry
             sk:development-manifest))
 
@@ -46,10 +47,23 @@
           '("findutils"
             "racket")))
 
+;; Fennel stays a disposable Lisp-on-Lua project environment.  Its runtime,
+;; formatter, and language server travel together so CLI and editor processes
+;; consume one authenticated tool set.  Findutils is checker-only: the
+;; containment gate inventories files, directories, and links without
+;; borrowing `find' from the workstation.
+(define %sk-fennel-specifications
+  (append %sk-development-base-specifications
+          '("findutils"
+            "fennel"
+            "fnlfmt"
+            "fennel-ls")))
+
 (define %sk-development-tier-registry
   `((core-lisp . ,%sk-core-lisp-specifications)
     (jvm-lisp . ,%sk-jvm-lisp-specifications)
-    (racket . ,%sk-racket-specifications)))
+    (racket . ,%sk-racket-specifications)
+    (fennel . ,%sk-fennel-specifications)))
 
 (define (sk:development-manifest tier)
   (let ((entry (assq tier %sk-development-tier-registry)))

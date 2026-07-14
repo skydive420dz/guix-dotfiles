@@ -1,5 +1,18 @@
 ;;; sk-lsp.el --- Language server setup -*- lexical-binding: t; -*-
 
+;; `use-package' autoloads the public `lsp' entry point in clean -Q sessions,
+;; but that path does not load lsp-mode-autoloads.el.  Pinned lsp-mode 10.0.0
+;; installs the following private functions on configure hooks before their
+;; implementation libraries are loaded.  Recreate its reviewed lazy boundary
+;; so an explicitly started server cannot log void-function errors; this does
+;; not load lsp-mode or start a process on the cold editing path.
+(autoload 'lsp-headerline-breadcrumb-mode "lsp-headerline" nil t)
+(autoload 'lsp-lens--enable "lsp-lens" nil nil)
+(autoload 'lsp-modeline-code-actions-mode "lsp-modeline" nil t)
+(autoload 'lsp-modeline-diagnostics-mode "lsp-modeline" nil t)
+(autoload 'lsp-modeline-workspace-status-mode "lsp-modeline" nil t)
+(autoload 'lsp-semantic-tokens--enable "lsp-semantic-tokens" nil nil)
+
 ;; In-buffer completion frontend:
 ;; Company displays completion candidates.  Language servers feed it through
 ;; completion-at-point via lsp-mode, while non-LSP modes can still use Company.

@@ -49,13 +49,23 @@
            "fixtures/racket/src/sk/fixture/main.rkt"
            "fixtures/racket/test/sk/fixture/main-test.rkt"
            "fixtures/racket/scribblings/sk-fixture.scrbl"
+           "fixtures/fennel/.projectile"
+           "fixtures/fennel/flsproject.fnl"
+           "fixtures/fennel/Makefile"
+           "fixtures/fennel/src/sk/fixture/main.fnl"
+           "fixtures/fennel/src/sk/fixture/math.fnl"
+           "fixtures/fennel/src/sk/fixture/macros.fnl"
+           "fixtures/fennel/test/sk/fixture/main-test.fnl"
            "scripts/guix-lisp-shell"
            "scripts/clojure-project"
            "scripts/clojure-project-check"
            "scripts/emacs-clojure-check"
            "scripts/racket-project"
            "scripts/racket-project-check"
-           "scripts/emacs-racket-check")))
+           "scripts/emacs-racket-check"
+           "scripts/fennel-project"
+           "scripts/fennel-project-check"
+           "scripts/emacs-fennel-check")))
        (emacs-descendant-p
         (lambda (pid)
           (let ((current pid)
@@ -125,6 +135,41 @@
                 (with-current-buffer buffer
                   (and (derived-mode-p 'racket-repl-mode)
                        (bound-and-true-p racket--repl-session-id)))))
+         (buffer-list)))
+       (fennel-child-process
+        (seq-find
+         (lambda (pid)
+           (let* ((attributes (process-attributes pid))
+                  (command
+                   (format "%s %s"
+                           (or (cdr (assq 'comm attributes)) "")
+                           (or (cdr (assq 'args attributes)) ""))))
+             (and (funcall emacs-descendant-p pid)
+                  (string-match-p
+                   "\\(?:^\\|/\\)\\(?:fennel\\|fennel-ls\\|fennel-project\\|fnlfmt\\)\\(?:[[:space:]]\\|$\\)"
+                   command))))
+         (list-system-processes)))
+       (fennel-emacs-process
+        (seq-find
+         (lambda (process)
+           (seq-some
+            (lambda (argument)
+              (string-match-p
+               "\\(?:^\\|/\\)\\(?:fennel\\|fennel-ls\\|fennel-project\\|fnlfmt\\)\\'"
+               argument))
+            (or (process-command process) '())))
+         (process-list)))
+       (live-fennel-repl
+        (seq-find
+         (lambda (buffer)
+           (and (buffer-live-p buffer)
+                (with-current-buffer buffer
+                  (and (derived-mode-p 'fennel-proto-repl-mode)
+                       (fboundp 'fennel-proto-repl--process-buffer)
+                       (when-let ((process-buffer
+                                   (fennel-proto-repl--process-buffer)))
+                         (process-live-p
+                          (get-buffer-process process-buffer)))))))
          (buffer-list)))
        (visible-profile-load-path
         (seq-find
@@ -237,6 +282,7 @@
                     (featurep 'sk-lisp)
                     (featurep 'sk-clojure)
                     (featurep 'sk-racket)
+                    (featurep 'sk-fennel)
                     (featurep 'sk-format)
                     (featurep 'sk-keys)
                     (featurep 'sk-org)))
@@ -272,6 +318,9 @@
          (cons "Racket Mode package generation"
                (funcall owned-library-p
                         "racket-mode" "racket-mode-[0-9]*"))
+         (cons "Fennel Mode package generation"
+               (funcall owned-library-p
+                        "fennel-mode" "fennel-mode-[0-9]*"))
          (cons "package-lint generation"
                (funcall owned-library-p
                         "package-lint" "package-lint-[0-9]*"))
@@ -366,13 +415,36 @@
                (and (not racket-child-process)
                     (not racket-emacs-process)
                     (not live-racket-repl)))
+         (cons "Fennel editing ownership"
+               (and
+                (= 1 (cl-count #'sk/fennel-mode-setup fennel-mode-hook
+                               :test #'eq))
+                (not (memq #'lsp-deferred fennel-mode-hook))
+                (seq-every-p
+                 (lambda (path) (not (file-executable-p path)))
+                 (mapcan
+                  (lambda (command)
+                    (list (expand-file-name command home-bin)
+                          (expand-file-name command system-bin)))
+                  '("fennel" "fennel-ls" "fnlfmt")))))
+         (cons "tracked Fennel wrapper contract"
+               (and
+                (file-equal-p
+                 sk/fennel-project-wrapper
+                 (expand-file-name "scripts/fennel-project" repo-root))
+                (seq-every-p #'file-readable-p lisp-fixture-files)))
+         (cons "Fennel explicit-start policy"
+               (and (not fennel-child-process)
+                    (not fennel-emacs-process)
+                    (not live-fennel-repl)))
          (cons "scoped Puni hooks"
                (seq-every-p
                 (lambda (hook)
                   (= 1 (cl-count #'puni-mode (symbol-value hook) :test #'eq)))
                 '(emacs-lisp-mode-hook lisp-interaction-mode-hook
                   scheme-mode-hook lisp-mode-hook clojure-mode-hook
-                  racket-mode-hook)))
+                  racket-mode-hook fennel-mode-hook
+                  fennel-proto-repl-mode-hook)))
          (cons "loaded Eshell highlighting"
                (or (not (featurep 'esh-mode))
                    (and (featurep 'eshell-syntax-highlighting)
@@ -447,6 +519,8 @@
           :clojure-child clojure-child-process
           :racket-mode (locate-library "racket-mode")
           :racket-child racket-child-process
+          :fennel-mode (locate-library "fennel-mode")
+          :fennel-child fennel-child-process
           :sly (locate-library "sly"))))
 
 ;;; live-check.el ends here

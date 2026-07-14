@@ -82,7 +82,7 @@
   "Return non-nil when PROCESS is a configured Lisp runtime or server."
   (seq-some (lambda (argument)
               (string-match-p
-               "\\(?:^\\|/\\)\\(?:guile\\|sbcl\\|java\\|clojure-lsp\\|racket\\|raco\\|racket-project\\)\\'"
+               "\\(?:^\\|/\\)\\(?:guile\\|sbcl\\|java\\|clojure-lsp\\|racket\\|raco\\|racket-project\\|fennel\\|fennel-ls\\|fennel-project\\|fnlfmt\\)\\'"
                               argument))
             (or (process-command process) '())))
 
@@ -228,6 +228,17 @@
     (should (equal lsp-clojure-custom-server-command expected))
     (require 'lsp-clojure)
     (should (equal (lsp-clojure--build-command) expected)))
+  (sk/check-with-fixture
+   "fennel/src/sk/fixture/main.fnl"
+   (lambda ()
+     (let ((expected
+            (list sk/fennel-project-wrapper "--project"
+                  (file-name-as-directory
+                   (sk/check-fixture-path "fennel"))
+                  "lsp")))
+       (require 'lsp-fennel)
+       (should (equal (sk/fennel--lsp-command) expected))
+       (should (equal (lsp-fennel--ls-command) expected)))))
   (should (equal company-backends
                  '((company-capf company-yasnippet)
                    company-files
@@ -314,11 +325,23 @@
        (should
         (equal (plist-get configuration :racket-program)
                (sk/racket--backend-command sk/racket-project-root))))))
+  (sk/check-with-eldoc-fixture
+   "fennel/src/sk/fixture/main.fnl"
+   (lambda ()
+     (should (eq major-mode 'fennel-mode))
+     (should (eq (sk/lisp--dialect) 'fennel))
+     (should (bound-and-true-p puni-mode))
+     (should (bound-and-true-p company-mode))
+     (should-not (bound-and-true-p fennel-proto-repl-minor-mode))
+     (should-not (bound-and-true-p lsp-mode))
+     (should sk/fennel-project-root)
+     (should-not (sk/fennel--live-repl-buffer sk/fennel-project-root))))
   (dolist (case '((inferior-emacs-lisp-mode . elisp)
                   (geiser-repl-mode . scheme)
                   (sly-mrepl-mode . common-lisp)
                   (sk/clojure-repl-mode . clojure)
-                  (racket-repl-mode . racket)))
+                  (racket-repl-mode . racket)
+                  (fennel-proto-repl-mode . fennel)))
     (with-temp-buffer
       ;; Do not start a runtime merely to verify the global leader dispatcher
       ;; recognizes its already-connected REPL modes.
@@ -390,18 +413,110 @@
      (should-not (sk/racket--live-repl-buffer sk/racket-project-root))))
   (should-not (seq-some #'sk/check-lisp-runtime-process-p (process-list))))
 
+(ert-deftest sk/check-fennel-editing-and-runtime-detachment-contract ()
+  (should (file-equal-p sk/fennel-repository-directory
+                        sk/check-source-root))
+  (should (file-executable-p sk/fennel-project-wrapper))
+  (should (= 1 (cl-count #'sk/fennel-mode-setup fennel-mode-hook
+                          :test #'eq)))
+  (should (= 1 (cl-count #'puni-mode fennel-mode-hook :test #'eq)))
+  (should (= 1 (cl-count #'puni-mode fennel-proto-repl-mode-hook
+                          :test #'eq)))
+  (should-not (memq #'lsp-deferred fennel-mode-hook))
+  (sk/check-with-fixture
+   "fennel/src/sk/fixture/main.fnl"
+   (lambda ()
+     (should (eq major-mode 'fennel-mode))
+     (should sk/fennel-project-root)
+     (should-not (bound-and-true-p fennel-proto-repl-minor-mode))
+     (should-not (bound-and-true-p lsp-mode))
+     (should-not (memq #'fennel--xref-backend xref-backend-functions))
+     (should-not (sk/fennel--live-repl-buffer sk/fennel-project-root))))
+  (with-temp-buffer
+    (setq-local sk/fennel-project-root
+                (file-name-as-directory (sk/check-fixture-path "fennel")))
+    (should-error (sk/fennel-repl) :type 'user-error))
+  (should-not (seq-some #'sk/check-lisp-runtime-process-p (process-list))))
+
+(ert-deftest sk/check-fennel-keymaps-preserve-project-boundaries ()
+  (dolist (binding
+           '(("C-c C-z" . sk/fennel-repl)
+             ("C-c C-b" . sk/fennel-eval-buffer)
+             ("C-c C-e" . sk/fennel-eval-defun)
+             ("C-M-x" . sk/fennel-eval-defun)
+             ("C-x C-e" . sk/fennel-eval-last-sexp)
+             ("C-c C-p" . sk/fennel-macroexpand)
+             ("C-c C-t" . sk/fennel-format-buffer)
+             ("C-c C-l" . sk/fennel-project-check)
+             ("C-c C-f" . sk/fennel-docs)
+             ("C-c C-d" . sk/fennel-docs)
+             ("C-c C-v" . sk/fennel-docs)
+             ("C-c C-q" . sk/fennel-stop)))
+    (should (eq (lookup-key fennel-mode-map (kbd (car binding)))
+                (cdr binding))))
+  (dolist (key '("C-c C-k" "C-c C-n" "C-c C-r"))
+    (should-not (lookup-key fennel-mode-map (kbd key))))
+
+  (dolist (binding
+           '(("C-c C-z" . sk/fennel-repl)
+             ("C-c C-b" . sk/fennel-eval-buffer)
+             ("C-c C-e" . sk/fennel-eval-defun)
+             ("C-M-x" . sk/fennel-eval-defun)
+             ("C-x C-e" . sk/fennel-eval-last-sexp)
+             ("C-c C-p" . sk/fennel-macroexpand)
+             ("C-c C-t" . sk/fennel-format-buffer)
+             ("C-c C-l" . sk/fennel-project-check)
+             ("C-c C-f" . sk/fennel-docs)
+             ("C-c C-d" . sk/fennel-docs)
+             ("C-c C-v" . sk/fennel-docs)
+             ("C-c C-a" . sk/fennel-docs)
+             ("C-c C-q" . sk/fennel-stop)))
+    (should
+     (eq (lookup-key fennel-proto-repl-minor-mode-map
+                     (kbd (car binding)))
+         (cdr binding))))
+  (dolist (key '("C-c C-k" "C-c C-n" "C-c C-S-p" "C-c C-r"
+                 "C-c C-S-l"))
+    (should-not
+     (lookup-key fennel-proto-repl-minor-mode-map (kbd key))))
+
+  (should (eq (lookup-key fennel-proto-repl-mode-map (kbd "C-c C-z"))
+              #'sk/fennel-repl))
+  (should (eq (lookup-key fennel-proto-repl-mode-map (kbd "C-c C-q"))
+              #'sk/fennel-stop))
+
+  ;; The protocol minor map has precedence after a project REPL is linked.
+  ;; Assert the effective bindings too, so a safe major-map binding cannot hide
+  ;; a higher-priority upstream formatter/linker/reload route.
+  (sk/check-with-fixture
+   "fennel/src/sk/fixture/main.fnl"
+   (lambda ()
+     (fennel-proto-repl-minor-mode 1)
+     (dolist (binding
+              '(("C-c C-t" . sk/fennel-format-buffer)
+                ("C-c C-l" . sk/fennel-project-check)
+                ("C-c C-q" . sk/fennel-stop)
+                ("C-c C-z" . sk/fennel-repl)))
+       (should (eq (key-binding (kbd (car binding))) (cdr binding))))
+     (dolist (key '("C-c C-k" "C-c C-n" "C-c C-S-p" "C-c C-r"
+                    "C-c C-S-l"))
+       (should-not (key-binding (kbd key)))))))
+
 (ert-deftest sk/check-dialect-modules-participate-in-config-reload ()
   (let ((lisp-position (seq-position sk/reload-module-files "sk-lisp"))
         (clojure-position (seq-position sk/reload-module-files "sk-clojure"))
         (racket-position (seq-position sk/reload-module-files "sk-racket"))
+        (fennel-position (seq-position sk/reload-module-files "sk-fennel"))
         (format-position (seq-position sk/reload-module-files "sk-format")))
     (should lisp-position)
     (should clojure-position)
     (should racket-position)
+    (should fennel-position)
     (should format-position)
     (should (< lisp-position clojure-position))
     (should (< clojure-position racket-position))
-    (should (< racket-position format-position))))
+    (should (< racket-position fennel-position))
+    (should (< fennel-position format-position))))
 
 (ert-deftest sk/check-lisp-activation-and-indent-ownership ()
   (should (= 1 (cl-count #'geiser-mode--maybe-activate scheme-mode-hook
@@ -514,7 +629,8 @@
                   ("guile/src/sk/fixture/math.scm" . "guile")
                   ("common-lisp/tests/core.lisp" . "common-lisp")
                   ("clojure/src/sk/fixture/core.clj" . "clojure")
-                  ("racket/src/sk/fixture/main.rkt" . "racket")))
+                  ("racket/src/sk/fixture/main.rkt" . "racket")
+                  ("fennel/src/sk/fixture/main.fnl" . "fennel")))
     (let* ((file (sk/check-fixture-path (car case)))
            (expected (file-name-as-directory
                       (sk/check-fixture-path (cdr case))))
@@ -579,6 +695,36 @@
          " ")))
       (should (file-equal-p command-directory
                             (sk/check-fixture-path "clojure"))))))
+
+(ert-deftest sk/check-fennel-wrapper-format-and-project-check-command ()
+  (let* ((root (file-name-as-directory (sk/check-fixture-path "fennel")))
+         (base (list sk/fennel-project-wrapper "--project" root)))
+    (should (equal (sk/fennel--command root "repl")
+                   (append base '("repl"))))
+    (should (equal (sk/fennel--command root "lsp")
+                   (append base '("lsp"))))
+    (sk/check-with-fixture
+     "fennel/src/sk/fixture/main.fnl"
+     (lambda ()
+       (let (format-route format-directory check-command check-directory)
+         (cl-letf (((symbol-function 'sk/format--external)
+                    (lambda (&rest arguments)
+                      (setq format-route arguments
+                            format-directory default-directory)))
+                   ((symbol-function 'compile)
+                    (lambda (command)
+                      (setq check-command command
+                            check-directory default-directory)
+                      'fixture-compilation)))
+           (sk/format-buffer)
+           (should (eq (sk/lisp-project-check) 'fixture-compilation)))
+         (should (equal format-route
+                        (append base '("format" "-"))))
+         (should (file-equal-p format-directory root))
+         (should (equal check-command
+                        (mapconcat #'shell-quote-argument
+                                   (append base '("check")) " ")))
+         (should (file-equal-p check-directory root)))))))
 
 (ert-deftest sk/check-clojure-repl-command-and-project-isolation ()
   (let* ((root-a (file-name-as-directory
@@ -724,7 +870,10 @@
   ;; Racket Babel would be a second, unwrapped runtime path.  Source editing is
   ;; enabled through `org-src-lang-modes' while execution stays disabled.
   (should (equal (cdr (assoc "racket" org-src-lang-modes)) 'racket))
-  (should-not (alist-get 'racket org-babel-load-languages)))
+  (should-not (alist-get 'racket org-babel-load-languages))
+  ;; Fennel is likewise edit-only in Org; ob-fennel would bypass the manifest.
+  (should (equal (cdr (assoc "fennel" org-src-lang-modes)) 'fennel))
+  (should-not (alist-get 'fennel org-babel-load-languages)))
 
 (ert-deftest sk/check-common-lisp-project-connection-isolation ()
   (let* ((root-a (file-name-as-directory
@@ -1035,19 +1184,22 @@
 
 (ert-deftest sk/check-puni-lisp-and-org-source-editors ()
   (dolist (mode '(emacs-lisp-mode lisp-interaction-mode scheme-mode lisp-mode
-                  clojure-mode racket-mode))
+                  clojure-mode racket-mode fennel-mode
+                  fennel-proto-repl-mode))
     (sk/check-puni-contract-in-mode mode))
   (dolist (case '(("emacs-lisp" . emacs-lisp-mode)
                   ("scheme" . scheme-mode)
                   ("lisp" . lisp-mode)
-                  ("racket" . racket-mode)))
+                  ("racket" . racket-mode)
+                  ("fennel" . fennel-mode)))
     (sk/check-puni-org-source-edit (car case) (cdr case)))
   (with-temp-buffer
     (org-mode)
     (should-not (bound-and-true-p puni-mode)))
   (dolist (hook '(emacs-lisp-mode-hook lisp-interaction-mode-hook
                   scheme-mode-hook lisp-mode-hook clojure-mode-hook
-                  racket-mode-hook))
+                  racket-mode-hook fennel-mode-hook
+                  fennel-proto-repl-mode-hook))
     (should (= 1 (cl-count #'puni-mode (symbol-value hook) :test #'eq)))))
 
 (ert-deftest sk/check-authored-snippets-and-eshell-highlighting ()
@@ -1359,6 +1511,9 @@
                     ("*sk-clojure-xref*" xref--xref-buffer-mode nil right 0)
                     ("*sk-clojure-repl*" sk/clojure-repl-mode nil right 0)
                     ("*sk-racket-repl*" racket-repl-mode nil right 0)
+                    ("*sk-fennel-repl*" fennel-proto-repl-mode nil right 0)
+                    ("*Fennel Error*" fennel-proto-repl-compilation-mode
+                     nil bottom 0)
                     ("*sk-sly-mrepl*" sly-mrepl-mode nil right 0)
                     ("*sk-geiser-debug*" geiser-debug-mode t bottom 0)
                     ("*compilation*" compilation-mode nil bottom 0)
@@ -1706,6 +1861,62 @@
                      macroexpand debug project stop)))))
   (sk/check-with-fixture
    "racket/src/sk/fixture/main.rkt"
+   (lambda ()
+     (dolist (command '(sk/lisp-eval-buffer
+                        sk/lisp-eval-defun
+                        sk/lisp-eval-last-sexp
+                        sk/lisp-docs
+                        sk/lisp-definition
+                        sk/lisp-references
+                        sk/lisp-macroexpand
+                        sk/lisp-debug
+                        sk/lisp-stop))
+       (should-error (funcall command) :type 'user-error)))))
+
+(ert-deftest sk/check-fennel-shared-dispatch-and-cold-guards ()
+  (with-temp-buffer
+    (setq major-mode 'fennel-mode)
+    (insert "fixture-answer")
+    (let (calls)
+      (cl-letf (((symbol-function 'sk/fennel-repl)
+                 (lambda () (interactive) (push 'repl calls)))
+                ((symbol-function 'sk/fennel-eval-buffer)
+                 (lambda () (interactive) (push 'buffer calls)))
+                ((symbol-function 'sk/fennel-eval-defun)
+                 (lambda () (interactive) (push 'defun calls)))
+                ((symbol-function 'sk/fennel-eval-last-sexp)
+                 (lambda () (interactive) (push 'sexp calls)))
+                ((symbol-function 'sk/fennel-docs)
+                 (lambda () (interactive) (push 'docs calls)))
+                ((symbol-function 'sk/fennel-definition)
+                 (lambda () (interactive) (push 'definition calls)))
+                ((symbol-function 'sk/fennel-references)
+                 (lambda () (interactive) (push 'references calls)))
+                ((symbol-function 'sk/fennel-macroexpand)
+                 (lambda () (interactive) (push 'macroexpand calls)))
+                ((symbol-function 'sk/fennel-debug)
+                 (lambda () (interactive) (push 'debug calls)))
+                ((symbol-function 'sk/fennel-project-check)
+                 (lambda () (interactive) (push 'project calls)))
+                ((symbol-function 'sk/fennel-stop)
+                 (lambda () (interactive) (push 'stop calls))))
+        (sk/lisp-repl)
+        (sk/lisp-eval-buffer)
+        (sk/lisp-eval-defun)
+        (sk/lisp-eval-last-sexp)
+        (sk/lisp-docs)
+        (sk/lisp-definition)
+        (sk/lisp-references)
+        (sk/lisp-macroexpand)
+        (sk/lisp-debug)
+        (sk/lisp-project-check)
+        (sk/lisp-stop))
+      (should
+       (equal (reverse calls)
+              '(repl buffer defun sexp docs definition references
+                     macroexpand debug project stop)))))
+  (sk/check-with-fixture
+   "fennel/src/sk/fixture/main.fnl"
    (lambda ()
      (dolist (command '(sk/lisp-eval-buffer
                         sk/lisp-eval-defun

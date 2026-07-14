@@ -1,0 +1,470 @@
+#!/bin/sh
+
+set -eu
+
+case ${0##*/} in
+    guix-lisp-shell)
+        fake_root=$(CDPATH='' cd "$(dirname "$0")/../.." && pwd -P)
+        [ "$#" -ge 3 ] || exit 70
+        [ "$1" = fennel ] || exit 71
+        [ "$2" = -- ] || exit 72
+        shift 2
+        printf '%s\n' GUIX_SHELL >>"$fake_root/tool.log"
+        command=$1
+        shift
+        if [ "$command" = "$fake_root/repo/scripts/fennel-project" ]; then
+            GUIX_ENVIRONMENT=$fake_root/fake-store/fennel-profile \
+                "$fake_root/repo/scripts/fennel-project-test-worker" "$@"
+        else
+            GUIX_ENVIRONMENT=$fake_root/fake-store/fennel-profile \
+                SK_FENNEL_PROJECT_TEST_COMMAND=$fake_root/repo/scripts/fennel-project-test-worker \
+                "$command" "$@"
+        fi
+        exit 0
+        ;;
+    fennel)
+        fake_root=$(CDPATH='' cd "$(dirname "$0")/../../.." && pwd -P)
+        {
+            printf '%s' FENNEL
+            for argument do
+                printf ' <%s>' "$argument"
+            done
+            printf ' |HOME=%s|XDG_CACHE_HOME=%s|CACHE_BASE=%s|FENNEL_PATH=%s\n' \
+                "${HOME:-}" "${XDG_CACHE_HOME:-}" \
+                "${SK_FENNEL_PROJECT_CACHE_BASE:-}" "${FENNEL_PATH:-}"
+        } >>"$fake_root/tool.log"
+        [ "${1:-}" = --no-fennelrc ] || exit 73
+        shift
+        case ${1:-} in
+            --eval)
+                [ "$#" -eq 2 ] || exit 74
+                expression=$2
+                case $expression in
+                    *SK_FENNEL_PROJECT_CACHE_BASE*)
+                        printf '%s\n' \
+                            "${HOME:-}" \
+                            "${XDG_CACHE_HOME:-}" \
+                            "${XDG_CONFIG_HOME:-}" \
+                            "${XDG_DATA_HOME:-}" \
+                            "${XDG_STATE_HOME:-}" \
+                            "${XDG_RUNTIME_DIR:-}" \
+                            "${TMPDIR:-}" \
+                            "${SK_FENNEL_PROJECT_CACHE_BASE:-}" \
+                            "${FENNEL_PATH:-}" \
+                            "${FENNEL_MACRO_PATH:-}"
+                        ;;
+                    *LUA_INIT_5_5*)
+                        printf '%s\n' \
+                            "${LUA_INIT:-}" "${LUA_PATH:-}" \
+                            "${LUA_CPATH:-}" "${LUA_INIT_5_1:-}" \
+                            "${LUA_PATH_5_1:-}" "${LUA_CPATH_5_1:-}" \
+                            "${LUA_INIT_5_2:-}" "${LUA_PATH_5_2:-}" \
+                            "${LUA_CPATH_5_2:-}" "${LUA_INIT_5_3:-}" \
+                            "${LUA_PATH_5_3:-}" "${LUA_CPATH_5_3:-}" \
+                            "${LUA_INIT_5_4:-}" "${LUA_PATH_5_4:-}" \
+                            "${LUA_CPATH_5_4:-}" "${LUA_INIT_5_5:-}" \
+                            "${LUA_PATH_5_5:-}" "${LUA_CPATH_5_5:-}" \
+                            "${GUIX_LUA_PATH:-}" "${GUIX_LUA_CPATH:-}"
+                        ;;
+                    *macrodebug*) printf '%s\n' '(* 21 2)' ;;
+                    *'twice 21'*) printf '%s\n' 42 ;;
+                    *fixture-answer*) printf '%s\n' 42 ;;
+                    *) exit 75 ;;
+                esac
+                ;;
+            --compile)
+                shift
+                [ "$#" -gt 0 ] || exit 76
+                case " $* " in
+                    *' negative/syntax-error.fnl '*)
+                        printf '%s\n' 'Parse error: intentional syntax failure' >&2
+                        exit 1
+                        ;;
+                esac
+                for source do
+                    printf '%s\n' "-- compiled $source"
+                done
+                ;;
+            --repl) ;;
+            '') exit 77 ;;
+            *)
+                case $1 in
+                    *negative/failing-test.fnl)
+                        printf '%s\n' 'intentional test failure' >&2
+                        exit 1
+                        ;;
+                    *test/sk/fixture/main-test.fnl)
+                        printf '%s\n' 'fennel fixture tests: PASS'
+                        ;;
+                    *) exit 78 ;;
+                esac
+                ;;
+        esac
+        exit 0
+        ;;
+    fnlfmt)
+        fake_root=$(CDPATH='' cd "$(dirname "$0")/../../.." && pwd -P)
+        printf 'FNLFMT %s\n' "$*" >>"$fake_root/tool.log"
+        [ "$#" -eq 2 ] || exit 79
+        [ "$1" = --fix ] || exit 80
+        [ -f "$2" ] || exit 81
+        if rg -q '^\(local answer      42\)$' "$2"; then
+            printf '%s\n' '(local answer 42)' '(print answer)' >"$2"
+        fi
+        exit 0
+        ;;
+    fennel-ls)
+        fake_root=$(CDPATH='' cd "$(dirname "$0")/../../.." && pwd -P)
+        printf 'FENNEL_LS %s |XDG_CACHE_HOME=%s|CACHE_BASE=%s\n' \
+            "$*" "${XDG_CACHE_HOME:-}" \
+            "${SK_FENNEL_PROJECT_CACHE_BASE:-}" >>"$fake_root/tool.log"
+        case ${1:-} in
+            --server)
+                [ "$#" -eq 1 ] || exit 82
+                ;;
+            --lint)
+                shift
+                [ "$#" -gt 0 ] || exit 83
+                printf '%s\n' \
+                    '--WARNING: plugin fennel-ls does not support Fennel version 1.6.1' >&2
+                case " $* " in
+                    *' negative/lint-error.fnl '*)
+                        printf '%s\n' 'lint diagnostic: unused definition' >&2
+                        exit 1
+                        ;;
+                    *' negative/runaway-macro.fnl '*)
+                        printf '%s\n' 'instruction limit reached' >&2
+                        exit 1
+                        ;;
+                esac
+                ;;
+            *) exit 84 ;;
+        esac
+        exit 0
+        ;;
+    make)
+        fake_root=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+        printf 'MAKE %s |XDG_CACHE_HOME=%s|CACHE_BASE=%s\n' \
+            "$*" "${XDG_CACHE_HOME:-}" \
+            "${SK_FENNEL_PROJECT_CACHE_BASE:-}" >>"$fake_root/tool.log"
+        [ "$#" -eq 5 ] || exit 85
+        [ "$1" = --no-print-directory ] || exit 86
+        [ "$2" = -s ] || exit 87
+        [ "$3" = -C ] || exit 88
+        project=$4
+        target=$5
+        command=${FENNEL_PROJECT:?}
+        mode=${FENNEL_PROJECT_MODE:?}
+        [ "$mode" = --authenticated ] || exit 90
+        case $target in
+            eval)
+                "$command" "$mode" --project "$project" eval \
+                    '(let [main (require :sk.fixture.main)] (main.fixture-answer))'
+                ;;
+            macro)
+                "$command" "$mode" --project "$project" eval \
+                    '(do (import-macros {: twice} :sk.fixture.macros) (twice 21))'
+                ;;
+            check)
+                "$command" "$mode" --project "$project" format-check \
+                    src/sk/fixture/macros.fnl \
+                    src/sk/fixture/math.fnl \
+                    src/sk/fixture/main.fnl \
+                    test/sk/fixture/main-test.fnl
+                "$command" "$mode" --project "$project" lint \
+                    flsproject.fnl \
+                    src/sk/fixture/macros.fnl \
+                    src/sk/fixture/math.fnl \
+                    src/sk/fixture/main.fnl \
+                    test/sk/fixture/main-test.fnl
+                "$command" "$mode" --project "$project" compile \
+                    src/sk/fixture/math.fnl \
+                    src/sk/fixture/main.fnl \
+                    test/sk/fixture/main-test.fnl >/dev/null
+                "$command" "$mode" --project "$project" test \
+                    test/sk/fixture/main-test.fnl >/dev/null
+                ;;
+            *) exit 89 ;;
+        esac
+        exit 0
+        ;;
+    readlink)
+        [ "$#" -eq 3 ] || exit 91
+        [ "$1" = -f ] || exit 92
+        [ "$2" = -- ] || exit 93
+        CDPATH='' cd "$3" 2>/dev/null && pwd -P
+        exit 0
+        ;;
+esac
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+sandbox=$(mktemp -d "${TMPDIR:-/tmp}/fennel-project-check-test.XXXXXX")
+sandbox=$(CDPATH='' cd "$sandbox" && pwd -P)
+cleanup() {
+    [ -z "${fake_store:-}" ] || \
+        chmod u+w "$fake_store" "$profile" 2>/dev/null || true
+    rm -rf -- "$sandbox"
+}
+trap cleanup EXIT HUP INT TERM
+
+fail() {
+    printf 'fennel-project-check-test: %s\n' "$1" >&2
+    exit 1
+}
+
+contains() {
+    case $output in
+        *"$1"*) ;;
+        *) fail "acceptance output omitted: $1" ;;
+    esac
+}
+
+fake_repo=$sandbox/repo
+fake_bin=$sandbox/bin
+fake_home=$sandbox/real-home
+outer_tmp=$sandbox/outer-tmp
+fake_store=$sandbox/fake-store
+profile=$fake_store/fennel-profile
+log=$sandbox/tool.log
+
+mkdir -p "$fake_repo/scripts" "$fake_repo/fixtures" "$fake_bin" \
+    "$fake_home" "$outer_tmp" "$profile/bin"
+cp "$repo/scripts/fennel-project" "$fake_repo/scripts/fennel-project"
+# The dollars in the second expression are literal source text.
+# shellcheck disable=SC2016
+sed -e "s|^store_root=/gnu/store$|store_root=$fake_store|" \
+    -e 's|^project_command=$script_dir/fennel-project$|project_command=$script_dir/fennel-project-test-worker|' \
+    "$repo/scripts/fennel-project" \
+    >"$fake_repo/scripts/fennel-project-test-worker"
+# The dollars are literal source text in the copied checker.
+# shellcheck disable=SC2016
+sed 's|^project_command=$repository/scripts/fennel-project$|project_command=${SK_FENNEL_PROJECT_TEST_COMMAND:-$repository/scripts/fennel-project}|' \
+    "$repo/scripts/fennel-project-check" \
+    >"$fake_repo/scripts/fennel-project-check"
+cp -R "$repo/fixtures/fennel" "$fake_repo/fixtures/fennel"
+cp "$repo/tests/fennel-project-check" \
+    "$fake_repo/scripts/guix-lisp-shell"
+for command in fennel fnlfmt fennel-ls; do
+    cp "$repo/tests/fennel-project-check" "$profile/bin/$command"
+done
+cp "$repo/tests/fennel-project-check" "$fake_bin/make"
+cp "$repo/tests/fennel-project-check" "$fake_bin/readlink"
+chmod +x "$fake_repo/scripts/fennel-project" \
+    "$fake_repo/scripts/fennel-project-test-worker" \
+    "$fake_repo/scripts/fennel-project-check" \
+    "$fake_repo/scripts/guix-lisp-shell" "$profile/bin"/* \
+    "$fake_bin/make" "$fake_bin/readlink"
+: >"$sandbox/fake-guix"
+chmod +x "$sandbox/fake-guix"
+: >"$log"
+printf '%s\n' 'fake immutable Fennel manifest' >"$profile/manifest"
+chmod a-w "$fake_store" "$profile"
+
+if rg -q 'sk/fixture|main-test|flsproject' \
+    "$fake_repo/scripts/fennel-project"; then
+    fail 'production Fennel wrapper embeds fixture-specific paths'
+fi
+
+run_check() {
+    HOME=$fake_home TMPDIR=$outer_tmp PATH="$fake_bin:$PATH" \
+        GUIX=$CHECK_GUIX GUIX_ENVIRONMENT=$CHECK_GUIX_ENVIRONMENT \
+        SK_FENNEL_PROJECT_TEST_COMMAND=$fake_repo/scripts/fennel-project-test-worker \
+        "$fake_repo/scripts/fennel-project-check" "$@"
+}
+
+CHECK_GUIX=$sandbox/fake-guix
+CHECK_GUIX_ENVIRONMENT=
+output=$(run_check "$fake_repo") || \
+    {
+        printf '%s\n' "$output" >&2
+        fail 'self-entering acceptance run failed'
+    }
+for proof in \
+    'fennel-project-check: evaluation: 42' \
+    'fennel-project-check: macro evaluation: 42' \
+    'fennel-project-check: isolated Fennel/Lua environment: PASS' \
+    'fennel-project-check: compile/format/lint/test/expand: PASS' \
+    'fennel-project-check: syntax negative control: PASS' \
+    'fennel-project-check: format negative control: PASS' \
+    'fennel-project-check: lint negative control: PASS' \
+    'fennel-project-check: macro limit negative control: PASS' \
+    'fennel-project-check: test negative control: PASS' \
+    'fennel-project-check: direct and Make check: PASS' \
+    'fennel-project-check: no source or real-HOME mutation: PASS' \
+    'fennel-project-check: PASS'; do
+    contains "$proof"
+done
+
+[ "$(grep -c '^GUIX_SHELL$' "$log")" -eq 1 ] || \
+    fail 'checker did not enter exactly one authenticated Fennel shell'
+[ "$(grep -c '^FENNEL ' "$log")" -ge 12 ] || \
+    fail 'checker did not exercise runtime, compiler, test, and recovery paths'
+[ "$(grep -c '^FNLFMT ' "$log")" -ge 10 ] || \
+    fail 'checker did not exercise formatter checks and recovery'
+[ "$(grep -c '^FENNEL_LS ' "$log")" -ge 6 ] || \
+    fail 'checker did not exercise linter checks and recovery'
+if rg -q '/projects/[0-9a-f]{64}/cache/fennel/projects/' "$log"; then
+    fail 'recursive Make nested Fennel project state'
+fi
+
+: >"$log"
+CHECK_GUIX=$sandbox/fake-guix
+CHECK_GUIX_ENVIRONMENT=$profile
+output=$(run_check "$fake_repo") || \
+    fail 'ambient-profile acceptance run failed to re-enter pins'
+contains 'fennel-project-check: PASS'
+[ "$(grep -c '^GUIX_SHELL$' "$log")" -eq 1 ] || \
+    fail 'ambient GUIX_ENVIRONMENT bypassed the authenticated Fennel shell'
+
+: >"$log"
+wrapper_cache=$sandbox/wrapper-cache
+result=$(
+    HOME=$fake_home XDG_CACHE_HOME=$wrapper_cache PATH="$fake_bin:$PATH" \
+        GUIX=$sandbox/fake-guix GUIX_ENVIRONMENT=$profile \
+        "$fake_repo/scripts/fennel-project" \
+        --project "$fake_repo/fixtures/fennel" eval \
+        '(let [main (require :sk.fixture.main)] (main.fixture-answer))'
+)
+[ "$result" = 42 ] || fail 'standalone wrapper shell entry returned wrong value'
+[ "$(grep -c '^GUIX_SHELL$' "$log")" -eq 1 ] || \
+    fail 'standalone wrapper did not enter exactly one authenticated shell'
+
+set +e
+export SK_FENNEL_PROJECT_CHECK_BREAK=1
+output=$(run_check "$fake_repo" 2>&1)
+failure_status=$?
+unset SK_FENNEL_PROJECT_CHECK_BREAK
+set -e
+[ "$failure_status" -eq 91 ] || \
+    fail 'deliberate checker failure returned the wrong status'
+contains 'fennel-project-check: deliberate failure control: TRIGGERED'
+
+if [ -n "$(find "$outer_tmp" -mindepth 1 -print -quit)" ]; then
+    fail 'isolated run directory survived cleanup'
+fi
+for artifact in .fennel .fnx .luarocks target; do
+    [ ! -e "$fake_repo/fixtures/fennel/$artifact" ] || \
+        fail "source fixture gained $artifact"
+done
+[ -z "$(find "$fake_repo/fixtures/fennel" -type f -name '*.lua' \
+    -print -quit)" ] || fail 'source fixture gained compiled Lua'
+
+if run_check "$sandbox/missing" >/dev/null 2>&1; then
+    fail 'missing repository passed'
+else
+    [ "$?" -eq 66 ] || fail 'missing repository returned the wrong status'
+fi
+if run_check "$fake_repo" extra >/dev/null 2>&1; then
+    fail 'extra argument passed'
+else
+    [ "$?" -eq 64 ] || fail 'extra argument returned the wrong status'
+fi
+
+project=$fake_repo/fixtures/fennel
+if HOME=$fake_home GUIX_ENVIRONMENT=/nonexistent \
+    "$fake_repo/scripts/fennel-project" --authenticated --project "$project" \
+        eval '42' >/dev/null 2>&1; then
+    fail 'project command accepted an invalid GUIX_ENVIRONMENT'
+else
+    [ "$?" -eq 69 ] || fail 'invalid Fennel profile returned wrong status'
+fi
+chmod u+w "$fake_store"
+mutable_profile=$fake_store/mutable-profile
+cp -R "$profile" "$mutable_profile"
+chmod u+w "$mutable_profile"
+chmod a-w "$fake_store"
+if HOME=$fake_home PATH="$fake_bin:$PATH" GUIX_ENVIRONMENT=$mutable_profile \
+    "$fake_repo/scripts/fennel-project-test-worker" \
+        --authenticated --project "$project" \
+        eval '42' >/dev/null 2>&1; then
+    fail 'project command accepted a mutable authenticated profile'
+else
+    [ "$?" -eq 69 ] || fail 'mutable Fennel profile returned wrong status'
+fi
+if HOME=$fake_home GUIX_ENVIRONMENT=$profile \
+    "$fake_repo/scripts/fennel-project" --authenticated --project "$project" \
+        eval '42' >/dev/null 2>&1; then
+    fail 'project command accepted a read-only profile outside /gnu/store'
+else
+    [ "$?" -eq 69 ] || fail 'non-store Fennel profile returned wrong status'
+fi
+if HOME=$fake_home GUIX_ENVIRONMENT=$profile \
+    "$fake_repo/scripts/fennel-project" --project "$project" \
+        unknown >/dev/null 2>&1; then
+    fail 'unknown project action passed'
+else
+    [ "$?" -eq 64 ] || fail 'unknown project action returned wrong status'
+fi
+if HOME=$fake_home GUIX_ENVIRONMENT=$profile \
+    "$fake_repo/scripts/fennel-project" --project "$project" \
+        eval >/dev/null 2>&1; then
+    fail 'eval without an expression passed'
+else
+    [ "$?" -eq 64 ] || fail 'invalid eval returned wrong status'
+fi
+: >"$log"
+legacy_cache=$sandbox/legacy-cache
+result=$(
+    HOME=$fake_home XDG_CACHE_HOME=$legacy_cache PATH="$fake_bin:$PATH" \
+        GUIX=$sandbox/fake-guix \
+        GUIX_ENVIRONMENT=$profile SK_FENNEL_PROJECT_AUTHENTICATED=1 \
+        "$fake_repo/scripts/fennel-project" --project "$project" \
+        eval '(let [main (require :sk.fixture.main)] (main.fixture-answer))'
+)
+[ "$result" = 42 ] || fail 'legacy ambient sentinel changed evaluation'
+[ "$(grep -c '^GUIX_SHELL$' "$log")" -eq 1 ] || \
+    fail 'legacy ambient sentinel bypassed authenticated shell entry'
+
+project_key() {
+    canonical=$(CDPATH='' cd "$1" && pwd -P)
+    key=$(printf '%s\n' "$canonical" | sha256sum)
+    printf '%s\n' "${key%% *}"
+}
+
+lsp_cache=$sandbox/lsp-cache
+project_two=$sandbox/project-two
+cp -R "$project" "$project_two"
+run_lsp() {
+    HOME=$fake_home XDG_CACHE_HOME=$lsp_cache PATH="$fake_bin:$PATH" \
+        GUIX_ENVIRONMENT=$profile \
+        "$fake_repo/scripts/fennel-project-test-worker" \
+        --authenticated --project "$1" lsp
+}
+
+: >"$log"
+run_lsp "$project" || fail 'first project LSP run failed'
+run_lsp "$project" || fail 'stable project LSP rerun failed'
+run_lsp "$project_two" || fail 'second project LSP run failed'
+
+state_root=$lsp_cache/fennel/projects
+state_a=$state_root/$(project_key "$project")
+state_b=$state_root/$(project_key "$project_two")
+[ "$state_a" != "$state_b" ] || fail 'two project roots shared one state key'
+for state in "$state_a" "$state_b"; do
+    for directory in home cache config data state runtime tmp; do
+        [ -d "$state/$directory" ] || \
+            fail "missing keyed state directory: $state/$directory"
+    done
+    grep -F "|XDG_CACHE_HOME=$state/cache|CACHE_BASE=$lsp_cache" \
+        "$log" >/dev/null || \
+        fail "LSP command did not use keyed XDG state: $state"
+done
+[ "$(grep -F -c "|XDG_CACHE_HOME=$state_a/cache|CACHE_BASE=$lsp_cache" \
+    "$log")" -eq 2 ] || fail 'same root did not reuse its stable state key'
+[ "$(grep -F -c "|XDG_CACHE_HOME=$state_b/cache|CACHE_BASE=$lsp_cache" \
+    "$log")" -eq 1 ] || fail 'second root did not receive isolated state'
+
+formatted=$(
+    printf '%s\n' '(local answer      42)' '(print   answer)' |
+        HOME=$fake_home XDG_CACHE_HOME=$lsp_cache PATH="$fake_bin:$PATH" \
+        GUIX_ENVIRONMENT=$profile \
+        "$fake_repo/scripts/fennel-project-test-worker" --authenticated \
+        --project "$project" format -
+)
+[ "$formatted" = "(local answer 42)
+(print answer)" ] || fail 'stdin formatter output gained or lost content'
+
+[ ! -e "$fake_home/.cache" ] || fail 'real HOME gained cache state'
+[ ! -e "$fake_home/.fennelrc" ] || fail 'real HOME gained Fennel state'
+
+printf '%s\n' 'fennel-project-check-test: PASS'

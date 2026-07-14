@@ -27,6 +27,7 @@
 (require 'sk-lisp)
 (require 'sk-clojure)
 (require 'sk-racket)
+(require 'sk-fennel)
 (require 'sk-lua)
 (require 'sk-python)
 (require 'sk-shell)

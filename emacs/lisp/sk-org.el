@@ -58,7 +58,7 @@
   "Org agenda priority commands under `sk/org-agenda-localleader-map'.")
 
 (defconst sk/org-source-block-languages
-  '("emacs-lisp" "scheme" "lisp" "racket" "sh" "bash" "c" "python" "lua" "json")
+  '("emacs-lisp" "scheme" "lisp" "racket" "fennel" "sh" "bash" "c" "python" "lua" "json")
   "Languages offered when inserting Org source blocks.")
 
 ;; Buffer setup:
@@ -339,6 +339,9 @@
   ;; Racket source blocks use the declared editor mode, but Babel execution is
   ;; intentionally absent: every runtime action must cross racket-project.
   (add-to-list 'org-src-lang-modes '("racket" . racket))
+  ;; Fennel follows the same edit-only Org contract.  There is deliberately no
+  ;; ob-fennel activation; execution must cross the project manifest wrapper.
+  (add-to-list 'org-src-lang-modes '("fennel" . fennel))
   (require 'org-habit)
   (add-to-list 'org-modules 'org-habit)
   (setq org-habit-graph-column 60)
@@ -349,6 +352,7 @@
                       ("scm" . "src scheme")
                       ("cl" . "src lisp")
                       ("rkt" . "src racket")
+                      ("fnl" . "src fennel")
                       ("lua" . "src lua")
                       ("c" . "src c")
                       ("py" . "src python")

@@ -3,7 +3,8 @@
 set -eu
 
 usage() {
-    printf 'usage: %s list | core|jvm|racket [-- COMMAND ...]\n' "$0" >&2
+    printf 'usage: %s list | core|jvm|racket|fennel [-- COMMAND ...]\n' \
+        "$0" >&2
     exit 64
 }
 
@@ -23,12 +24,13 @@ shift
 case $tier in
     list)
         [ "$#" -eq 0 ] || usage
-        printf '%s\n' core jvm racket
+        printf '%s\n' core jvm racket fennel
         exit 0
         ;;
     core) manifest=$repo/guix/manifests/core-lisp.scm ;;
     jvm) manifest=$repo/guix/manifests/jvm-lisp.scm ;;
     racket) manifest=$repo/guix/manifests/racket.scm ;;
+    fennel) manifest=$repo/guix/manifests/fennel.scm ;;
     *) usage ;;
 esac
 

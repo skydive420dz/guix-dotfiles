@@ -1,12 +1,15 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; Accepted Slice 17 expands the reviewed Home user/editor base to 82 packages.
+;; Slice 18's Fennel candidate expands the reviewed Home user/editor base to
+;; 83 packages while it is evaluated.
 ;; Package-lint keeps the tracked Emacs Lisp project independent of mutable
 ;; ELPA state; Clojure mode, cljfmt, and clj-kondo provide the persistent
 ;; editor-side Clojure integration without leaking its JVM runtime into Home.
 ;; Racket Mode is represented separately because Home must select the local
 ;; runtime-detached package object rather than Guix's same-named package, which
 ;; embeds an absolute Racket runtime path.
+;; Fennel Mode itself is runtime-free; its interpreter, formatter, and language
+;; server remain owned exclusively by the disposable Fennel manifest.
 ;; The System list guarantees a tty shell, Kitty, and `emacs -Q'; normal
 ;; configured EXWM still consumes the accepted base Home services and editor
 ;; profile.
@@ -75,6 +78,7 @@
     "emacs-geiser-guile"
     "emacs-sly"
     "emacs-clojure-mode"
+    "emacs-fennel-mode"
     "emacs-lua-mode"
     "emacs-json-mode"
     "emacs-org"

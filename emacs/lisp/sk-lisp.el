@@ -12,6 +12,17 @@
 (declare-function sk/clojure-project-check "sk-clojure")
 (declare-function sk/clojure-references "sk-clojure")
 (declare-function sk/clojure-repl "sk-clojure")
+(declare-function sk/fennel-debug "sk-fennel")
+(declare-function sk/fennel-definition "sk-fennel")
+(declare-function sk/fennel-docs "sk-fennel")
+(declare-function sk/fennel-eval-buffer "sk-fennel")
+(declare-function sk/fennel-eval-defun "sk-fennel")
+(declare-function sk/fennel-eval-last-sexp "sk-fennel")
+(declare-function sk/fennel-macroexpand "sk-fennel")
+(declare-function sk/fennel-project-check "sk-fennel")
+(declare-function sk/fennel-references "sk-fennel")
+(declare-function sk/fennel-repl "sk-fennel")
+(declare-function sk/fennel-stop "sk-fennel")
 (declare-function sk/racket-debug "sk-racket")
 (declare-function sk/racket-definition "sk-racket")
 (declare-function sk/racket-docs "sk-racket")
@@ -215,7 +226,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
          (scheme-mode . puni-mode)
          (lisp-mode . puni-mode)
          (clojure-mode . puni-mode)
-         (racket-mode . puni-mode)))
+         (racket-mode . puni-mode)
+         (fennel-mode . puni-mode)
+         (fennel-proto-repl-mode . puni-mode)))
 
 (defun sk/lisp--dialect ()
   "Return the active Lisp dialect symbol for the current buffer."
@@ -231,6 +244,8 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     'clojure)
    ((derived-mode-p 'racket-mode 'racket-repl-mode)
     'racket)
+   ((derived-mode-p 'fennel-mode 'fennel-proto-repl-mode)
+    'fennel)
    (t
     (user-error "Not in a Lisp-family buffer"))))
 
@@ -307,7 +322,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     ('clojure
      (sk/clojure-repl))
     ('racket
-     (sk/racket-repl))))
+     (sk/racket-repl))
+    ('fennel
+     (sk/fennel-repl))))
 
 (defun sk/lisp-project-check ()
   "Run the current Lisp project's warning-fatal `make check' gate."
@@ -317,6 +334,8 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
      (sk/clojure-project-check))
     ('racket
      (sk/racket-project-check))
+    ('fennel
+     (sk/fennel-project-check))
     (_
      (let* ((root (sk/lisp--project-root t))
             (makefile (expand-file-name "Makefile" root))
@@ -338,7 +357,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     ('clojure
      (sk/clojure-eval-buffer))
     ('racket
-     (sk/racket-eval-buffer))))
+     (sk/racket-eval-buffer))
+    ('fennel
+     (sk/fennel-eval-buffer))))
 
 (defun sk/lisp-eval-defun ()
   "Evaluate the current top-level form with the Lisp dialect backend."
@@ -353,7 +374,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     ('clojure
      (sk/clojure-eval-defun))
     ('racket
-     (sk/racket-eval-defun))))
+     (sk/racket-eval-defun))
+    ('fennel
+     (sk/fennel-eval-defun))))
 
 (defun sk/lisp-eval-last-sexp ()
   "Evaluate the sexp before point with the Lisp dialect backend."
@@ -368,7 +391,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     ('clojure
      (sk/clojure-eval-last-sexp))
     ('racket
-     (sk/racket-eval-last-sexp))))
+     (sk/racket-eval-last-sexp))
+    ('fennel
+     (sk/fennel-eval-last-sexp))))
 
 (defun sk/lisp-docs ()
   "Show docs for the symbol at point using the active Lisp backend."
@@ -387,7 +412,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
       ('clojure
        (sk/clojure-docs))
       ('racket
-       (sk/racket-docs)))))
+       (sk/racket-docs))
+      ('fennel
+       (sk/fennel-docs)))))
 
 (defun sk/lisp-definition ()
   "Visit the definition at point through the active Lisp backend."
@@ -404,7 +431,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
       ('clojure
        (sk/clojure-definition))
       ('racket
-       (sk/racket-definition)))))
+       (sk/racket-definition))
+      ('fennel
+       (sk/fennel-definition)))))
 
 (defun sk/lisp-references ()
   "Show callers or references at point through the active Lisp backend."
@@ -423,7 +452,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
       ('clojure
        (sk/clojure-references))
       ('racket
-       (sk/racket-references)))))
+       (sk/racket-references))
+      ('fennel
+       (sk/fennel-references)))))
 
 (defun sk/lisp-macroexpand ()
   "Macroexpand the form at point through the active Lisp backend."
@@ -439,7 +470,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     ('clojure
      (sk/clojure-macroexpand))
     ('racket
-     (sk/racket-macroexpand))))
+     (sk/racket-macroexpand))
+    ('fennel
+     (sk/fennel-macroexpand))))
 
 (defun sk/lisp-debug ()
   "Instrument Elisp or display an active Geiser/SLY debugger."
@@ -470,7 +503,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     ('clojure
      (sk/clojure-debug))
     ('racket
-     (sk/racket-debug))))
+     (sk/racket-debug))
+    ('fennel
+     (sk/fennel-debug))))
 
 (defun sk/lisp-stop ()
   "Stop the current project REPL/backend without touching other projects."
@@ -480,6 +515,8 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
      (sk/clojure-stop))
     ('racket
      (sk/racket-stop))
+    ('fennel
+     (sk/fennel-stop))
     (_
      (user-error "No scoped stop command for this Lisp dialect"))))
 

@@ -6,6 +6,7 @@
 (require 'subr-x)
 
 (declare-function sk/lisp--project-root "sk-lisp" (&optional required))
+(declare-function sk/fennel-format-buffer "sk-fennel")
 
 (defun sk/format--source-filename (fallback)
   "Return the visited source filename or FALLBACK under `default-directory'."
@@ -101,6 +102,8 @@ parser explicitly through a .json suffix."
         (sk/format--external
          "cljfmt" "fix" "--quiet" "--config" config
          "--project-root" root "-")))
+     ((derived-mode-p 'fennel-mode)
+      (sk/fennel-format-buffer))
      ((derived-mode-p 'emacs-lisp-mode 'lisp-interaction-mode
                       'scheme-mode 'lisp-mode 'common-lisp-mode
                       'racket-mode

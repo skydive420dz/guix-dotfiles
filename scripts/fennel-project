@@ -1,0 +1,266 @@
+#!/bin/sh
+
+set -eu
+
+usage() {
+    printf '%s\n' \
+        "usage: $0 --project ROOT check|compile|eval|expand|format|format-check|lint|lsp|make|raw|repl|run|test [ARGUMENT ...]" >&2
+    exit 64
+}
+
+authenticated=0
+if [ "${1:-}" = --authenticated ]; then
+    authenticated=1
+    shift
+fi
+
+[ "$#" -ge 3 ] || usage
+[ "$1" = --project ] || usage
+project_input=$2
+action=$3
+shift 3
+
+case $action in
+    check|compile|eval|expand|format|format-check|lint|lsp|make|raw|repl|run|test) ;;
+    *) usage ;;
+esac
+case $action in
+    check|lsp) [ "$#" -eq 0 ] || usage ;;
+    eval|expand|format) [ "$#" -eq 1 ] || usage ;;
+    compile|format-check|lint|make|raw|run|test)
+        [ "$#" -gt 0 ] || usage
+        ;;
+esac
+
+if ! project=$(CDPATH='' cd -- "$project_input" 2>/dev/null && pwd -P); then
+    printf 'fennel-project: project is not a directory: %s\n' \
+        "$project_input" >&2
+    exit 66
+fi
+if [ ! -r "$project/.projectile" ] || [ ! -d "$project/src" ]; then
+    printf 'fennel-project: project lacks .projectile or src/: %s\n' \
+        "$project" >&2
+    exit 66
+fi
+case $project in
+    *';'*)
+        printf 'fennel-project: project path contains a semicolon: %s\n' \
+            "$project" >&2
+        exit 65
+        ;;
+esac
+
+script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
+project_command=$script_dir/fennel-project
+lisp_shell=$script_dir/guix-lisp-shell
+
+if [ "$authenticated" -eq 0 ]; then
+    if [ ! -x "$lisp_shell" ]; then
+        printf 'fennel-project: authenticated shell wrapper is unavailable: %s\n' \
+            "$lisp_shell" >&2
+        exit 66
+    fi
+    exec "$lisp_shell" fennel -- \
+        "$project_command" --authenticated \
+        --project "$project" "$action" "$@"
+fi
+
+profile=${GUIX_ENVIRONMENT:-}
+store_root=/gnu/store
+if ! command -v readlink >/dev/null 2>&1 || \
+   ! resolved_profile=$(readlink -f -- "$profile" 2>/dev/null); then
+    resolved_profile=
+fi
+case $resolved_profile in
+    "$store_root/"*-profile) ;;
+    *) resolved_profile= ;;
+esac
+if [ -z "$resolved_profile" ] || [ "$profile" != "$resolved_profile" ] || \
+   [ -w "$store_root" ] || [ ! -d "$profile" ] || \
+   [ ! -r "$profile/manifest" ] || [ -w "$profile" ]; then
+    printf '%s\n' \
+        'fennel-project: authenticated Fennel profile is not a canonical immutable Guix store profile' >&2
+    exit 69
+fi
+
+fennel=$profile/bin/fennel
+fnlfmt=$profile/bin/fnlfmt
+fennel_ls=$profile/bin/fennel-ls
+for tool in "$fennel" "$fnlfmt" "$fennel_ls"; do
+    if [ ! -x "$tool" ]; then
+        printf 'fennel-project: profile tool is unavailable: %s\n' "$tool" >&2
+        exit 69
+    fi
+done
+
+for command in cat chmod cksum cp make mkdir mktemp readlink rm sha256sum; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        printf 'fennel-project: missing profile command: %s\n' "$command" >&2
+        exit 127
+    fi
+done
+
+# Recursive Make targets call this wrapper again.  Preserve the original cache
+# base separately so those calls reuse one project key instead of nesting a new
+# project tree below the already-keyed XDG_CACHE_HOME.
+cache_base=${SK_FENNEL_PROJECT_CACHE_BASE:-${XDG_CACHE_HOME:-${HOME:?HOME must be set}/.cache}}
+case $cache_base in
+    /*) ;;
+    *)
+        printf 'fennel-project: XDG_CACHE_HOME is not absolute: %s\n' \
+            "$cache_base" >&2
+        exit 65
+        ;;
+esac
+project_key=$(printf '%s\n' "$project" | sha256sum)
+project_key=${project_key%% *}
+state=$cache_base/fennel/projects/$project_key
+user_home=$state/home
+xdg_cache=$state/cache
+xdg_config=$state/config
+xdg_data=$state/data
+xdg_state=$state/state
+xdg_runtime=$state/runtime
+tmp_root=$state/tmp
+case $state in
+    *';'*)
+        printf 'fennel-project: state path contains a semicolon: %s\n' \
+            "$state" >&2
+        exit 65
+        ;;
+esac
+mkdir -p "$user_home" "$xdg_cache" "$xdg_config" "$xdg_data" \
+    "$xdg_state" "$xdg_runtime" "$tmp_root"
+chmod 700 "$state" "$user_home" "$xdg_cache" "$xdg_config" \
+    "$xdg_data" "$xdg_state" "$xdg_runtime" "$tmp_root"
+
+# Drop every ambient Lua/Fennel search path before entering the marked
+# project.  The Guix executable wrappers repopulate only their own
+# GUIX_LUA_PATH/GUIX_LUA_CPATH inputs when they exec Lua.
+unset LUA_INIT LUA_PATH LUA_CPATH \
+    LUA_INIT_5_1 LUA_PATH_5_1 LUA_CPATH_5_1 \
+    LUA_INIT_5_2 LUA_PATH_5_2 LUA_CPATH_5_2 \
+    LUA_INIT_5_3 LUA_PATH_5_3 LUA_CPATH_5_3 \
+    LUA_INIT_5_4 LUA_PATH_5_4 LUA_CPATH_5_4 \
+    LUA_INIT_5_5 LUA_PATH_5_5 LUA_CPATH_5_5 \
+    GUIX_LUA_PATH GUIX_LUA_CPATH FENNEL_PATH FENNEL_MACRO_PATH
+export HOME="$user_home"
+export SK_FENNEL_PROJECT_CACHE_BASE="$cache_base"
+export XDG_CACHE_HOME="$xdg_cache"
+export XDG_CONFIG_HOME="$xdg_config"
+export XDG_DATA_HOME="$xdg_data"
+export XDG_STATE_HOME="$xdg_state"
+export XDG_RUNTIME_DIR="$xdg_runtime"
+export TMPDIR="$tmp_root"
+export FENNEL_PATH="$project/src/?.fnl;$project/src/?/init.fnl;$project/test/?.fnl;$project/test/?/init.fnl"
+export FENNEL_MACRO_PATH="$project/src/?.fnlm;$project/src/?/init.fnlm;$project/src/?.fnl;$project/src/?/init-macros.fnl;$project/src/?/init.fnl;$project/test/?.fnlm;$project/test/?/init.fnlm;$project/test/?.fnl;$project/test/?/init-macros.fnl;$project/test/?/init.fnl"
+export LC_ALL=C
+export TZ=UTC
+export NO_COLOR=1
+
+format_tmp=
+cleanup_format() {
+    [ -z "$format_tmp" ] || rm -f -- "$format_tmp"
+}
+trap cleanup_format EXIT
+trap 'cleanup_format; trap - EXIT; exit 129' HUP
+trap 'cleanup_format; trap - EXIT; exit 130' INT
+trap 'cleanup_format; trap - EXIT; exit 143' TERM
+
+format_source() {
+    source=$1
+    format_tmp=$(mktemp "$tmp_root/fnlfmt.XXXXXX")
+    if [ "$source" = - ]; then
+        cat >"$format_tmp"
+    elif [ -r "$source" ]; then
+        cp "$source" "$format_tmp"
+    else
+        printf 'fennel-project: format input is unreadable: %s\n' \
+            "$source" >&2
+        return 1
+    fi
+    "$fnlfmt" --fix "$format_tmp"
+    cat "$format_tmp"
+    rm -f -- "$format_tmp"
+    format_tmp=
+}
+
+format_check() {
+    status=0
+    for source do
+        if [ ! -r "$source" ]; then
+            printf 'fennel-project: format input is unreadable: %s\n' \
+                "$source" >&2
+            status=1
+            continue
+        fi
+        format_tmp=$(mktemp "$tmp_root/fnlfmt.XXXXXX")
+        cp "$source" "$format_tmp"
+        if ! "$fnlfmt" --fix "$format_tmp"; then
+            rm -f -- "$format_tmp"
+            format_tmp=
+            return 1
+        fi
+        source_signature=$(cksum <"$source")
+        formatted_signature=$(cksum <"$format_tmp")
+        if [ "$source_signature" != "$formatted_signature" ]; then
+            printf 'fennel-project: formatting differs: %s\n' "$source" >&2
+            status=1
+        fi
+        rm -f -- "$format_tmp"
+        format_tmp=
+    done
+    return "$status"
+}
+
+make_project() {
+    if [ ! -r "$project/Makefile" ]; then
+        printf 'fennel-project: project action requires a Makefile: %s\n' \
+            "$project" >&2
+        return 66
+    fi
+    FENNEL_PROJECT=$project_command \
+        FENNEL_PROJECT_MODE=--authenticated \
+        make --no-print-directory -s -C "$project" "$@"
+}
+
+cd "$project"
+case $action in
+    check)
+        make_project check
+        printf '%s\n' 'fennel-project: check: PASS'
+        ;;
+    compile)
+        exec "$fennel" --no-fennelrc --compile "$@"
+        ;;
+    eval)
+        exec "$fennel" --no-fennelrc --eval "$1"
+        ;;
+    expand)
+        exec "$fennel" --no-fennelrc --eval "(macrodebug $1 true)"
+        ;;
+    format)
+        format_source "$1"
+        ;;
+    format-check)
+        format_check "$@"
+        ;;
+    lint)
+        exec "$fennel_ls" --lint "$@"
+        ;;
+    lsp)
+        exec "$fennel_ls" --server
+        ;;
+    make)
+        make_project "$@"
+        ;;
+    raw)
+        exec "$fennel" --no-fennelrc "$@"
+        ;;
+    repl)
+        exec "$fennel" --no-fennelrc --repl "$@"
+        ;;
+    run|test)
+        exec "$fennel" --no-fennelrc "$@"
+        ;;
+esac

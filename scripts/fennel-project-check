@@ -1,0 +1,448 @@
+#!/bin/sh
+
+set -eu
+
+fail() {
+    printf 'fennel-project-check: %s\n' "$1" >&2
+    exit 1
+}
+
+project_key() {
+    canonical=$(CDPATH='' cd "$1" && pwd -P)
+    key=$(printf '%s\n' "$canonical" | sha256sum)
+    printf '%s\n' "${key%% *}"
+}
+
+if [ "${SK_FENNEL_PROJECT_CHECK_INNER:-0}" = 1 ]; then
+    [ "$#" -eq 0 ] || fail 'internal runner received arguments'
+    project=${SK_FENNEL_PROJECT_CHECK_PROJECT:?}
+    project_command=${SK_FENNEL_PROJECT_CHECK_COMMAND:?}
+    cache_home=${XDG_CACHE_HOME:?}
+    state=$cache_home/fennel/projects/$(project_key "$project")
+    negative_output=$TMPDIR/fennel-negative.out
+    fennel_path="$project/src/?.fnl;$project/src/?/init.fnl;$project/test/?.fnl;$project/test/?/init.fnl"
+    fennel_macro_path="$project/src/?.fnlm;$project/src/?/init.fnlm;$project/src/?.fnl;$project/src/?/init-macros.fnl;$project/src/?/init.fnl;$project/test/?.fnlm;$project/test/?/init.fnlm;$project/test/?.fnl;$project/test/?/init-macros.fnl;$project/test/?/init.fnl"
+
+    run_project() {
+        "$project_command" --authenticated --project "$project" "$@"
+    }
+
+    make_project() {
+        FENNEL_PROJECT=$project_command \
+            FENNEL_PROJECT_MODE=--authenticated \
+            make --no-print-directory -s -C "$project" "$1"
+    }
+
+    expect_failure() {
+        label=$1
+        shift
+        if "$@" >"$negative_output" 2>&1; then
+            fail "$label negative control unexpectedly passed"
+        fi
+        printf 'fennel-project-check: %s negative control: PASS\n' "$label"
+    }
+
+    positive_lint() {
+        lint_output=$(
+            run_project lint "$@" 2>&1
+        ) || {
+            printf '%s\n' "$lint_output" >&2
+            fail 'positive fennel-ls lint returned nonzero'
+        }
+        unexpected_lint=$(
+            printf '%s\n' "$lint_output" |
+                rg -v '^--WARNING: plugin [^ ]+ does not support Fennel version 1\.6\.1$' || :
+        )
+        [ -z "$unexpected_lint" ] || {
+            printf '%s\n' "$unexpected_lint" >&2
+            fail 'positive fennel-ls lint emitted an unexpected diagnostic'
+        }
+    }
+
+    result=$(
+        run_project eval \
+            '(let [main (require :sk.fixture.main)] (main.fixture-answer))'
+    )
+    [ "$result" = 42 ] || fail "evaluation returned $result instead of 42"
+    printf '%s\n' 'fennel-project-check: evaluation: 42'
+
+    macro_result=$(
+        run_project eval \
+            '(do (import-macros {: twice} :sk.fixture.macros) (twice 21))'
+    )
+    [ "$macro_result" = 42 ] || \
+        fail "macro evaluation returned $macro_result instead of 42"
+    printf '%s\n' 'fennel-project-check: macro evaluation: 42'
+
+    expected_environment=$(
+        printf '%s\n' \
+            "$state/home" \
+            "$state/cache" \
+            "$state/config" \
+            "$state/data" \
+            "$state/state" \
+            "$state/runtime" \
+            "$state/tmp" \
+            "$cache_home" \
+            "$fennel_path" \
+            "$fennel_macro_path"
+    )
+    actual_environment=$(
+        run_project raw --eval \
+            '(table.concat (icollect [_ name (ipairs ["HOME" "XDG_CACHE_HOME" "XDG_CONFIG_HOME" "XDG_DATA_HOME" "XDG_STATE_HOME" "XDG_RUNTIME_DIR" "TMPDIR" "SK_FENNEL_PROJECT_CACHE_BASE" "FENNEL_PATH" "FENNEL_MACRO_PATH"])] (or (os.getenv name) "")) "\n")'
+    )
+    [ "$actual_environment" = "$expected_environment" ] || \
+        fail 'Fennel isolation environment differs from keyed state contract'
+
+    lua_environment=$(
+        run_project raw --eval \
+            '(table.concat (icollect [_ name (ipairs ["LUA_INIT" "LUA_PATH" "LUA_CPATH" "LUA_INIT_5_1" "LUA_PATH_5_1" "LUA_CPATH_5_1" "LUA_INIT_5_2" "LUA_PATH_5_2" "LUA_CPATH_5_2" "LUA_INIT_5_3" "LUA_PATH_5_3" "LUA_CPATH_5_3" "LUA_INIT_5_4" "LUA_PATH_5_4" "LUA_CPATH_5_4" "LUA_INIT_5_5" "LUA_PATH_5_5" "LUA_CPATH_5_5" "GUIX_LUA_PATH" "GUIX_LUA_CPATH"])] (or (os.getenv name) "")) "\n")'
+    )
+    case $lua_environment in
+        *'/poison/'*) fail 'ambient Lua search or init state survived' ;;
+    esac
+    printf '%s\n' 'fennel-project-check: isolated Fennel/Lua environment: PASS'
+
+    compiled=$(
+        run_project compile \
+            src/sk/fixture/math.fnl \
+            src/sk/fixture/main.fnl \
+            test/sk/fixture/main-test.fnl
+    )
+    [ -n "$compiled" ] || fail 'source compilation produced no Lua output'
+
+    run_project format-check \
+        src/sk/fixture/macros.fnl \
+        src/sk/fixture/math.fnl \
+        src/sk/fixture/main.fnl \
+        test/sk/fixture/main-test.fnl
+    positive_lint \
+        flsproject.fnl \
+        src/sk/fixture/macros.fnl \
+        src/sk/fixture/math.fnl \
+        src/sk/fixture/main.fnl \
+        test/sk/fixture/main-test.fnl
+    test_output=$(
+        run_project test \
+            test/sk/fixture/main-test.fnl
+    )
+    case $test_output in
+        *'fennel fixture tests: PASS'*) ;;
+        *) fail 'tracked Fennel tests omitted their success marker' ;;
+    esac
+    expanded=$(
+        run_project expand '(-> 21 (* 2))'
+    )
+    case $expanded in
+        *'(* 21 2)'*) ;;
+        *) fail 'macro expansion produced the wrong output' ;;
+    esac
+    printf '%s\n' \
+        'fennel-project-check: compile/format/lint/test/expand: PASS'
+
+    formatted_stdin=$(
+        printf '%s\n' '(local answer      42)' '(print   answer)' |
+            run_project format -
+    )
+    formatted_file=$(
+        run_project format \
+            negative/unformatted.fnl
+    )
+    [ "$formatted_stdin" = "$formatted_file" ] || \
+        fail 'stdin and file formatting produced different output'
+
+    result=$(make_project eval)
+    [ "$result" = 42 ] || \
+        fail "Make evaluation returned $result instead of 42"
+    macro_result=$(make_project macro)
+    [ "$macro_result" = 42 ] || \
+        fail "Make macro evaluation returned $macro_result instead of 42"
+
+    expect_failure syntax \
+        run_project compile \
+        negative/syntax-error.fnl
+    run_project compile \
+        src/sk/fixture/math.fnl src/sk/fixture/main.fnl >/dev/null
+
+    expect_failure format \
+        run_project format-check \
+        negative/unformatted.fnl
+    run_project format-check \
+        src/sk/fixture/main.fnl
+
+    expect_failure lint \
+        run_project lint \
+        negative/lint-error.fnl
+    positive_lint src/sk/fixture/main.fnl
+
+    macro_limit_status=0
+    timeout 10 "$project_command" --authenticated --project "$project" lint \
+        negative/runaway-macro.fnl >"$negative_output" 2>&1 || \
+        macro_limit_status=$?
+    case $macro_limit_status in
+        0) fail 'runaway macro negative control unexpectedly passed' ;;
+        124|137) fail 'runaway macro exceeded the outer timeout' ;;
+    esac
+    rg -q 'instruction limit reached' "$negative_output" || \
+        fail 'runaway macro did not hit the configured instruction limit'
+    positive_lint src/sk/fixture/macros.fnl
+    printf '%s\n' \
+        'fennel-project-check: macro limit negative control: PASS'
+
+    expect_failure test \
+        run_project test \
+        negative/failing-test.fnl
+    run_project test \
+        test/sk/fixture/main-test.fnl >/dev/null
+
+    run_project check
+    make_project check
+    printf '%s\n' 'fennel-project-check: direct and Make check: PASS'
+
+    for directory in home cache config data state runtime tmp; do
+        [ -d "$state/$directory" ] || \
+            fail "missing keyed state directory: $state/$directory"
+    done
+    nested_state=$state/cache/fennel/projects/$(project_key "$project")
+    [ ! -e "$nested_state" ] || \
+        fail 'recursive Make nested a second Fennel project state'
+    [ -z "$(find "$state/tmp" -mindepth 1 -print -quit)" ] || \
+        fail 'formatter temporary state survived cleanup'
+
+    for artifact in .fennel .fnx .luarocks target; do
+        [ ! -e "$project/$artifact" ] || \
+            fail "project-local artifact appeared: $project/$artifact"
+    done
+    [ -z "$(find "$project" -type f -name '*.lua' -print -quit)" ] || \
+        fail 'source compilation wrote project-local Lua output'
+    for artifact in \
+        "$state/home/.fennelrc" \
+        "$state/home/.luarocks" \
+        "$state/config/luarocks" \
+        "$state/data/luarocks" \
+        "$state/home/.fnx" \
+        "$state/config/fnx" \
+        "$state/data/fnx"; do
+        [ ! -e "$artifact" ] || \
+            fail "mutable dependency state appeared: $artifact"
+    done
+
+    case ${SK_FENNEL_PROJECT_CHECK_BREAK:-0} in
+        0) ;;
+        1)
+            printf '%s\n' \
+                'fennel-project-check: deliberate failure control: TRIGGERED' >&2
+            exit 91
+            ;;
+        *) fail 'invalid SK_FENNEL_PROJECT_CHECK_BREAK value' ;;
+    esac
+    exit 0
+fi
+
+usage() {
+    printf 'usage: %s [REPOSITORY]\n' "$0" >&2
+    exit 64
+}
+
+case $# in
+    0) repository_input=$(dirname "$0")/.. ;;
+    1) repository_input=$1 ;;
+    *) usage ;;
+esac
+
+if ! repository=$(CDPATH='' cd -- "$repository_input" 2>/dev/null && pwd -P); then
+    printf 'fennel-project-check: repository is not a directory: %s\n' \
+        "$repository_input" >&2
+    exit 66
+fi
+
+fixture=$repository/fixtures/fennel
+project_command=$repository/scripts/fennel-project
+lisp_shell=$repository/scripts/guix-lisp-shell
+
+for path in \
+    "$fixture/.projectile" \
+    "$fixture/.gitignore" \
+    "$fixture/Makefile" \
+    "$fixture/flsproject.fnl" \
+    "$fixture/src/sk/fixture/macros.fnl" \
+    "$fixture/src/sk/fixture/math.fnl" \
+    "$fixture/src/sk/fixture/main.fnl" \
+    "$fixture/test/sk/fixture/main-test.fnl" \
+    "$fixture/negative/syntax-error.fnl" \
+    "$fixture/negative/unformatted.fnl" \
+    "$fixture/negative/lint-error.fnl" \
+    "$fixture/negative/runaway-macro.fnl" \
+    "$fixture/negative/failing-test.fnl" \
+    "$project_command"; do
+    if [ ! -r "$path" ]; then
+        printf 'fennel-project-check: unreadable input: %s\n' "$path" >&2
+        exit 66
+    fi
+done
+if [ ! -x "$project_command" ]; then
+    printf 'fennel-project-check: input is not executable: %s\n' \
+        "$project_command" >&2
+    exit 66
+fi
+
+for command in chmod cksum cp dirname env find git make mkdir mktemp rg rm \
+    sha256sum sort timeout; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        printf 'fennel-project-check: missing command: %s\n' "$command" >&2
+        exit 127
+    fi
+done
+
+tree_state() {
+    root=$1
+    if [ ! -e "$root" ]; then
+        printf 'MISSING %s\n' "$root"
+    elif [ -d "$root" ]; then
+        (
+            cd "$root"
+            find . -type d -print | sort
+            find . -type f -exec cksum {} \; | sort
+            find . -type l -print | sort
+        )
+    else
+        cksum "$root"
+    fi
+}
+
+repository_state() {
+    if git -C "$repository" rev-parse --is-inside-work-tree \
+        >/dev/null 2>&1; then
+        printf '%s\n' '== status =='
+        git -C "$repository" status --short --untracked-files=all
+        printf '%s\n' '== worktree diff =='
+        git -C "$repository" diff --no-ext-diff --binary
+        printf '%s\n' '== index diff =='
+        git -C "$repository" diff --cached --no-ext-diff --binary
+    else
+        printf '%s\n' NO_GIT_WORK_TREE
+    fi
+}
+
+home_state() {
+    for relative in \
+        .fennelrc \
+        .config/fennel \
+        .local/share/fennel \
+        .local/state/fennel \
+        .cache/fennel \
+        .config/fennel-ls \
+        .local/share/fennel-ls \
+        .cache/fennel-ls \
+        .luarocks \
+        .config/luarocks \
+        .cache/luarocks \
+        .fnx \
+        .config/fnx \
+        .local/share/fnx \
+        .cache/fnx; do
+        path=$original_home/$relative
+        printf '== %s ==\n' "$relative"
+        tree_state "$path"
+    done
+}
+
+original_home=${HOME:?HOME must be set}
+before_fixture=$(tree_state "$fixture")
+before_repository=$(repository_state)
+before_home=$(home_state)
+
+sandbox=$(mktemp -d "${TMPDIR:-/tmp}/sk-fennel-project-check.XXXXXX")
+sandbox=$(CDPATH='' cd "$sandbox" && pwd -P)
+cleanup() {
+    rm -rf -- "$sandbox"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+isolated_home=$sandbox/home
+isolated_tmp=$sandbox/tmp
+isolated_cache=$sandbox/xdg/cache
+isolated_config=$sandbox/xdg/config
+isolated_data=$sandbox/xdg/data
+isolated_state=$sandbox/xdg/state
+isolated_runtime=$sandbox/xdg/runtime
+project=$sandbox/project
+
+mkdir -p "$isolated_home" "$isolated_tmp" "$isolated_cache" \
+    "$isolated_config" "$isolated_data" "$isolated_state" \
+    "$isolated_runtime" "$project"
+chmod 700 "$sandbox" "$isolated_home" "$isolated_tmp" "$isolated_runtime"
+cp -R "$fixture/." "$project/"
+before_project=$(tree_state "$project")
+
+printf '%s\n' '== Fennel project =='
+set -- env \
+    "HOME=$isolated_home" \
+    "TMPDIR=$isolated_tmp" \
+    "XDG_CACHE_HOME=$isolated_cache" \
+    "XDG_CONFIG_HOME=$isolated_config" \
+    "XDG_DATA_HOME=$isolated_data" \
+    "XDG_STATE_HOME=$isolated_state" \
+    "XDG_RUNTIME_DIR=$isolated_runtime" \
+    "LUA_INIT=@/poison/init.lua" \
+    "LUA_PATH=/poison/lua/path" \
+    "LUA_CPATH=/poison/lua/cpath" \
+    "LUA_INIT_5_3=@/poison/init-5.3.lua" \
+    "LUA_PATH_5_3=/poison/lua/5.3/path" \
+    "LUA_CPATH_5_3=/poison/lua/5.3/cpath" \
+    "GUIX_LUA_PATH=/poison/guix/lua/path" \
+    "GUIX_LUA_CPATH=/poison/guix/lua/cpath" \
+    "FENNEL_PATH=/poison/fennel/path" \
+    "FENNEL_MACRO_PATH=/poison/fennel/macro-path" \
+    "LANG=C" \
+    "LC_ALL=C" \
+    "TZ=UTC" \
+    "SK_FENNEL_PROJECT_CHECK_INNER=1" \
+    "SK_FENNEL_PROJECT_CHECK_BREAK=${SK_FENNEL_PROJECT_CHECK_BREAK:-0}" \
+    "SK_FENNEL_PROJECT_CHECK_PROJECT=$project" \
+    "SK_FENNEL_PROJECT_CHECK_COMMAND=$project_command" \
+    "$repository/scripts/fennel-project-check"
+
+guix=${GUIX:-$original_home/.config/guix/current/bin/guix}
+if [ ! -x "$guix" ]; then
+    printf 'fennel-project-check: canonical Guix is not executable: %s\n' \
+        "$guix" >&2
+    exit 69
+fi
+if [ ! -x "$lisp_shell" ]; then
+    printf 'fennel-project-check: Guix shell wrapper is unavailable: %s\n' \
+        "$lisp_shell" >&2
+    exit 66
+fi
+
+runner_status=0
+HOME=$isolated_home \
+TMPDIR=$isolated_tmp \
+XDG_CACHE_HOME=$isolated_cache \
+XDG_CONFIG_HOME=$isolated_config \
+XDG_DATA_HOME=$isolated_data \
+XDG_STATE_HOME=$isolated_state \
+XDG_RUNTIME_DIR=$isolated_runtime \
+GUIX=$guix \
+    "$lisp_shell" fennel -- "$@" || runner_status=$?
+
+after_project=$(tree_state "$project")
+after_fixture=$(tree_state "$fixture")
+after_repository=$(repository_state)
+after_home=$(home_state)
+
+[ "$after_project" = "$before_project" ] || \
+    fail 'copied project changed during isolated run'
+[ "$after_fixture" = "$before_fixture" ] || \
+    fail 'source fixture changed during isolated run'
+[ "$after_repository" = "$before_repository" ] || \
+    fail 'repository state changed during isolated run'
+[ "$after_home" = "$before_home" ] || \
+    fail 'real HOME Fennel/Lua state changed during isolated run'
+
+[ "$runner_status" -eq 0 ] || exit "$runner_status"
+printf '%s\n' 'fennel-project-check: no source or real-HOME mutation: PASS'
+printf '%s\n' 'fennel-project-check: PASS'

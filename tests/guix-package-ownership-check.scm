@@ -36,12 +36,12 @@
            "ripgrep" "vim" "xset" "xwallpaper" "picom" "xrandr"))
  "reviewed 13-package recovery floor changed")
 
-(assert (= (length home-specifications) 81)
-        "reviewed Home specification list must contain exactly 81 packages")
+(assert (= (length home-specifications) 82)
+        "reviewed Home specification list must contain exactly 82 packages")
 (assert (equal? home-explicit '("emacs-racket-mode"))
         "reviewed explicit Home package names changed")
-(assert (= (length home) 82)
-        "reviewed Home ownership must contain exactly 82 packages")
+(assert (= (length home) 83)
+        "reviewed Home ownership must contain exactly 83 packages")
 (assert (equal? home (append home-specifications home-explicit))
         "Home ownership names do not match specifications plus explicit packages")
 
@@ -52,7 +52,7 @@
  '("fish-foreign-env" "emacs" "emacs-use-package" "emacs-geiser" "emacs-sly"
    "emacs-puni" "emacs-eshell-syntax-highlighting" "emacs-yasnippet"
    "emacs-package-lint" "emacs-clojure-mode" "cljfmt" "clj-kondo"
-   "emacs-racket-mode"
+   "emacs-racket-mode" "emacs-fennel-mode"
    "guile" "sbcl" "python-lsp-server" "lua-language-server"
    "ungoogled-chromium" "ranger" "shellcheck"))
 
@@ -62,6 +62,7 @@
            (string-append "optional dialect leaked into Home: " specification)))
  '("babashka" "clojure" "clojure-tools" "clojure-lsp" "gradle"
    "leiningen" "maven" "openjdk" "racket" "racket-minimal"
+   "fennel" "fnlfmt" "fennel-ls"
    "emacs-cider" "emacs-flycheck-clj-kondo"))
 
 (assert (equal? (sk:intersection recovery home) '("emacs"))
@@ -118,10 +119,12 @@
  '("ungoogled-chromium" "ranger" "emacs-use-package" "emacs-geiser"
    "emacs-sly" "emacs-puni" "emacs-eshell-syntax-highlighting"
    "emacs-package-lint" "emacs-clojure-mode" "cljfmt" "clj-kondo"
+   "emacs-fennel-mode"
    "sbcl" "python-lsp-server" "lua-language-server"
    "gcc-toolchain" "gdb" "shellcheck" "babashka" "clojure"
    "clojure-tools" "clojure-lsp" "gradle" "leiningen" "maven"
-   "openjdk" "racket" "racket-minimal" "emacs-racket-mode"))
+   "openjdk" "racket" "racket-minimal" "emacs-racket-mode"
+   "fennel" "fnlfmt" "fennel-ls"))
 
 (format #t
         "guix-package-ownership-check: PASS (recovery=~a home=~a explicit=~a)~%"

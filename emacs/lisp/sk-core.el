@@ -243,6 +243,7 @@
     "sk-lisp"
     "sk-clojure"
     "sk-racket"
+    "sk-fennel"
     "sk-lua"
     "sk-python"
     "sk-shell"

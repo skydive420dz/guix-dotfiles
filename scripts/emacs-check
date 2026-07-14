@@ -81,10 +81,11 @@ backend_checks="$repo/tests/emacs/backend-check.el"
 guix_lisp_shell="$repo/scripts/guix-lisp-shell"
 clojure_project="$repo/scripts/clojure-project"
 racket_project="$repo/scripts/racket-project"
+fennel_project="$repo/scripts/fennel-project"
 
 for file in "$live_expression_file" "$batch_bootstrap" "$batch_checks" \
     "$backend_checks" "$guix_lisp_shell" "$clojure_project" \
-    "$racket_project"; do
+    "$racket_project" "$fennel_project"; do
     if [ ! -r "$file" ]; then
         printf 'preflight: unreadable %s\n' "$file" >&2
         exit 2
@@ -153,6 +154,7 @@ run_batch_checks() (
     cp "$guix_lisp_shell" "$source_root/scripts/guix-lisp-shell"
     cp "$clojure_project" "$source_root/scripts/clojure-project"
     cp "$racket_project" "$source_root/scripts/racket-project"
+    cp "$fennel_project" "$source_root/scripts/fennel-project"
 
     env -i \
         HOME="$isolated_home" \

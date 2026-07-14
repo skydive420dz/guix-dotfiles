@@ -717,6 +717,7 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
              (derived-mode . shell-mode)
              (derived-mode . sk/clojure-repl-mode)
              (derived-mode . racket-repl-mode)
+             (derived-mode . fennel-proto-repl-mode)
              (derived-mode . sly-mrepl-mode)
              (derived-mode . sly-xref-mode)
              (derived-mode . term-mode)
@@ -730,13 +731,13 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
          (window-width . 0.42)
          (mode . (ibuffer-mode dired-mode geiser-repl-mode geiser-xref-mode
                   magit-mode eshell-mode shell-mode sk/clojure-repl-mode
-                  racket-repl-mode
+                  racket-repl-mode fennel-proto-repl-mode
                   sly-mrepl-mode
                   sly-xref-mode term-mode vterm-mode xref--xref-buffer-mode))
          (reusable-frames . nil)
          (inhibit-switch-frame . t)
          (window-parameters . ((no-delete-other-windows . t))))
-        ((or "\\*\\(?:Warnings\\|Compile-Log\\|compilation\\)\\*"
+        ((or "\\*\\(?:Warnings\\|Compile-Log\\|compilation\\|Fennel Error\\)\\*"
              sk/window-geiser-debugger-buffer-p
              (derived-mode . sly-db-mode))
          (display-buffer-reuse-window display-buffer-in-side-window)

@@ -27,15 +27,23 @@ cp "$source_repo/guix/modules/sk/development-tiers.scm" \
 chmod +x "$wrapper"
 
 [ "$(grep -c '"findutils"' \
-    "$repo/guix/modules/sk/development-tiers.scm")" -eq 1 ] ||
-    fail 'findutils must be declared exactly once for the Racket tier'
+    "$repo/guix/modules/sk/development-tiers.scm")" -eq 2 ] ||
+    fail 'findutils must be declared once in each inventorying tier'
 if ! awk '
-    /\(define %sk-racket-specifications/ { racket = 1 }
-    racket && /"findutils"/ { found = 1 }
-    /\(define %sk-development-tier-registry/ { exit !found }
-    END { exit !found }
+    /\(define %sk-development-base-specifications/ { section = "base" }
+    /\(define %sk-core-lisp-specifications/ { section = "core" }
+    /\(define %sk-jvm-lisp-specifications/ { section = "jvm" }
+    /\(define %sk-racket-specifications/ { section = "racket" }
+    /\(define %sk-fennel-specifications/ { section = "fennel" }
+    /\(define %sk-development-tier-registry/ { section = "registry" }
+    /"findutils"/ { count[section]++ }
+    END {
+        exit !(count["racket"] == 1 && count["fennel"] == 1 &&
+               count["base"] == 0 && count["core"] == 0 &&
+               count["jvm"] == 0)
+    }
 ' "$repo/guix/modules/sk/development-tiers.scm"; then
-    fail 'Racket tier does not own its findutils checker dependency'
+    fail 'findutils ownership escaped the Racket/Fennel checker tiers'
 fi
 
 cat >"$fake_guix" <<'EOF'
@@ -61,7 +69,8 @@ chmod +x "$fake_guix"
 output=$(HOME=$home GUIX=$fake_guix "$wrapper" list)
 [ "$output" = "core
 jvm
-racket" ] || fail 'tier registry output changed'
+racket
+fennel" ] || fail 'tier registry output changed'
 [ ! -e "$log" ] || fail 'list invoked Guix'
 
 : >"$log"
@@ -89,7 +98,10 @@ case $logged in
         ;;
 esac
 
-for tier_and_manifest in 'jvm:jvm-lisp.scm' 'racket:racket.scm'; do
+for tier_and_manifest in \
+    'jvm:jvm-lisp.scm' \
+    'racket:racket.scm' \
+    'fennel:fennel.scm'; do
     tier=${tier_and_manifest%%:*}
     expected=${tier_and_manifest#*:}
     : >"$log"
