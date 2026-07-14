@@ -1,7 +1,7 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; Slice 18's Fennel candidate expands the reviewed Home user/editor base to
-;; 83 packages while it is evaluated.
+;; Accepted Slice 18 expands the reviewed Home user/editor base to 83 packages
+;; with the runtime-free Fennel editor mode.
 ;; Package-lint keeps the tracked Emacs Lisp project independent of mutable
 ;; ELPA state; Clojure mode, cljfmt, and clj-kondo provide the persistent
 ;; editor-side Clojure integration without leaking its JVM runtime into Home.

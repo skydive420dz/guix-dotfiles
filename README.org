@@ -98,11 +98,13 @@ next active slice.
   49/49 editor tests, live cold-open probe, connected backend/XP/debugger checks,
   deliberate 1/255 cleanup control, runtime-absence checks, and exact retention
   rotation all pass.  Home 39 is retained as the immediate fallback.
-- [ ] Finish Slice 18's Fennel candidate acceptance, then Slice 19 polish.
-  Fennel was selected over Janet, Hy, Chez Scheme, and alternate Common Lisp
-  implementations; its implementation and complete non-activating gate pass.
-  Publication, =ghr=, reboot, fresh live checks, cleanup, and retention rotation
-  remain required before the candidate is accepted.
+- [X] Activate and accept Slice 18.  Published implementation =c1bbf39= and
+  candidate documentation =81ebb24= activated as Home generation 41 with 83
+  declared packages.  After reboot, live/batch editor checks, 53/53 ERT tests,
+  the real project checker, two-root REPL/LSP checks, deliberate cleanup,
+  strict shell/ownership/runtime-absence gates, residue cleanup, and retention
+  rotation all pass.  Home 40 is retained as the immediate Racket fallback.
+- [ ] Execute Slice 19 desktop, security, and documentation polish.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 - [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
   the GRUB prompt before making more bootloader changes.
@@ -241,15 +243,19 @@ System =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=; neither gate-only
 path was activated.  Fresh live checks prove the active Home and System expose
 no persistent Racket runtime/package/executable leakage.  Home generation 39 at
 =/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home= is the immediate fallback.
-Slice 18's unaccepted Fennel candidate adds only =emacs-fennel-mode= to that
-accepted 82-package Home declaration, producing an 83-package candidate Home at
-=/gnu/store/8q8dki5ka0b7ayby2kg1c7gk1cc9mrfh-home=.  Fennel 1.6.1, fnlfmt
-0.3.0, fennel-ls 0.2.3, and its checker-only Findutils remain outside
-persistent profiles in the disposable =fennel= manifest.  The candidate System
-remains unchanged at
-=/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=.  Both paths are
-non-activating build-gate evidence: accepted live ownership is still Home
-generation 40 with 82 declared packages and System generation 85.
+Slice 18 is accepted as Home generation 41 at
+=/gnu/store/ci9szqljcz4jjvwcrp76865j8q8ihl3d-home= with active profile
+=/gnu/store/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile=.  It adds only
+=emacs-fennel-mode= to the 82-package Slice 17 declaration, for 83 declared
+Home packages.  Fennel 1.6.1, fnlfmt 0.3.0, fennel-ls 0.2.3, and its
+checker-only Findutils remain outside persistent profiles in the disposable
+=fennel= manifest.  The historical non-activating gate realized candidate Home
+=/gnu/store/8q8dki5ka0b7ayby2kg1c7gk1cc9mrfh-home= and unchanged candidate
+System =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=; neither gate-only
+path describes the active generation.  Fresh acceptance leaves System
+generation 85 current and booted at
+=/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system= and proves that neither
+persistent profile exposes a Fennel runtime executable.
 The reduced System consumes the 13 recovery specifications recorded in
 =guix/package-ownership.scm= plus =kitty-latest=.  System generation 85 has
 passed a fresh boot; accepted System generation 84 remains its immediate
@@ -265,7 +271,7 @@ Guile from System =%base-packages=; all three must resolve to identical store
 objects.  Any other top-level overlap, missing declared package, internal
 duplicate name, missing recovery/Home artifact, Clojure/JVM runtime leakage
 beyond the three declared Home editor-side packages, or persistent Racket
-runtime/package/executable leakage fails the gate.  The Slice 18 candidate also
+runtime/package/executable leakage fails the gate.  The Slice 18 gate also
 fails if Fennel, fnlfmt, fennel-ls, LuaRocks, or generated Lua/dependency state
 leaks into persistent Home, System, or the project source.  For Racket Mode the
 gate also inspects every requisite of the realized editor output, because a hidden
@@ -682,14 +688,14 @@ Racket (accepted Slice 17)
                its initialization contacts the backend and therefore violates
                this slice's cold-open contract.
 
-Fennel (Slice 18 candidate; not accepted)
+Fennel (accepted Slice 18)
   Mode:        fennel-mode
   Backend:     explicit project-keyed protocol REPL; explicit
                lsp-mode + fennel-ls through =SPC c l=
   Diagnostics: fennel-ls only after explicit language-server startup
   Formatter:   fnlfmt through =SPC c f=
   Notes:       Opening a file starts no interpreter or language server.  The
-               83-package candidate Home adds only =emacs-fennel-mode=; Fennel
+               83-package accepted Home adds only =emacs-fennel-mode=; Fennel
                1.6.1, fnlfmt 0.3.0, fennel-ls 0.2.3, and Findutils remain in
                the authenticated =fennel= manifest.  The tracked fixture covers
                source, macros, tests, formatting, lint, compilation, deliberate
@@ -699,8 +705,8 @@ Fennel (Slice 18 candidate; not accepted)
                version 1.6.1=; the gate permits that exact warning only.  Basic
                diagnostics, hover, definition, and distinct definition/use
                references pass on non-macro source, but imported-macro semantic
-               navigation is not claimed.  Publication and live acceptance are
-               still pending.
+               navigation is not claimed.  Fresh rebooted project, editor,
+               connected-backend, ownership, and cleanup acceptance passes.
 #+end_src
 
 Lisp-family editing has a shared leader surface over the native backend for
@@ -746,7 +752,7 @@ Fennel:       protocol REPL commands; fennel-ls docs/navigation start only on
 Cold Lisp files should provide mode detection, indentation, basic syntax, and
 the correct command surface. Rich semantic completion/docs are REPL-backed for
 Scheme and Common Lisp, explicitly clojure-lsp-backed for Clojure, and
-explicitly XP/backend-backed for Racket.  The unaccepted Fennel candidate stays
+explicitly XP/backend-backed for Racket.  Accepted Fennel stays
 cold until its protocol REPL or fennel-ls command is invoked explicitly.
 Evaluation checks backend connection state before dispatch, while backend
 failures after that check retain their original error.
@@ -759,8 +765,8 @@ buffers to right slot 0, and routes compilation, debugger, and Fennel error
 output to the bottom slot.  Opening a source file still never starts a runtime.
 
 =electric-pair-mode= owns delimiter insertion.  Puni is enabled only in Emacs
-Lisp, Lisp Interaction, Scheme, Common Lisp, Clojure, classic Racket, and the
-Fennel candidate's source/protocol-REPL modes—including those source modes
+Lisp, Lisp Interaction, Scheme, Common Lisp, Clojure, classic Racket, and
+Fennel source/protocol-REPL modes—including those source modes
 inside Org source editing—and owns balanced
 deletion plus the explicit structural commands above.  Evil retains modal state
 and ordinary motions.
@@ -1343,13 +1349,16 @@ Home's editor package does not retain the manifest-only Racket runtime.  The
 complete gate passed from the exact source candidate before publication;
 checkpoint =18bdc80= was then published, activated as Home 40, rebooted, and
 accepted through the corresponding fresh-live checks.
-The Slice 18 candidate extends the gate again with the copied Fennel project
+The Slice 18 gate extends that contract again with the copied Fennel project
 checker, connected protocol-REPL/fennel-ls checker, exact warning policy,
 runtime/tool leakage probes, and source/state/process cleanup controls.  The
 complete non-activating gate passes with candidate Home
 =/gnu/store/8q8dki5ka0b7ayby2kg1c7gk1cc9mrfh-home= and unchanged System
-=/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=.  Neither path has been
-activated; the accepted live profiles and generation pins remain unchanged.
+=/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=.  Those remain historical
+gate-only paths.  Published implementation =c1bbf39= and candidate
+documentation =81ebb24= were then activated as Home generation 41, rebooted,
+and accepted through fresh project/editor/backend, ownership, cleanup, and
+retention gates; System 85 and Pull 5 remain unchanged.
 Guix may reuse already-authenticated
 immutable store objects; the separate isolated clean-clone test verifies the
 published =sk-guix= refs.  The gate never pulls, reconfigures,
@@ -1468,15 +1477,15 @@ source configures Racket Mode to use the project wrapper only after explicit
 backend/XP startup.  The complete non-activating gate and the activated,
 fresh-reboot Home/editor/backend acceptance both pass.
 
-The Fennel candidate declaration gives Home only =emacs-fennel-mode=; its
+The accepted Fennel declaration gives Home only =emacs-fennel-mode=; its
 interpreter, formatter, language server, and checker-only Findutils stay in the
 project manifest.  Repository source adds explicit project-keyed protocol REPL
 and fennel-ls startup, shared evaluation/docs/navigation/macro/check/stop keys,
 Puni, wrapper-backed formatting, edit-only Org source blocks, and the existing
 helper/REPL window policy.  Opening =.fnl= starts no process, debugging reports
 an explicit unsupported error, and stopping one project preserves other
-projects and unrelated processes.  This remains candidate source until the
-publication and fresh-live acceptance sequence completes.
+projects and unrelated processes.  The published source and activated Home 41
+pass the fresh-live acceptance sequence.
 
 The disposable Racket checker proves evaluation at 42, the backend command,
 project-keyed PLT environment, compilation, strict require-recommendation lint, RackUnit,
@@ -1496,6 +1505,14 @@ status-91 controls fail for the intended reasons and recover cleanly.  The
 connected checker proves cold open, two-root REPL/LSP isolation, evaluation and
 error recovery, formatter/project gates, basic non-macro diagnostics, hover,
 definition/references, project-scoped stop, and deliberate process cleanup.
+After the Slice 18 reboot, the live probe resolves Fennel Mode 0.9.2 from the
+active store path without starting a Fennel child, 53/53 ERT tests pass, and the
+established connected Geiser/Guile and SLY/SBCL checks remain green.  The real
+Fennel project checker passes every normal/negative/isolation/no-mutation
+control; =SK_FENNEL_PROJECT_CHECK_BREAK=1= returns exact status 91 and cleanup
+passes.  Connected two-root REPL/LSP and deliberate-failure cleanup pass,
+=scripts/shell-check --strict= reports =recovery=13 home=83 explicit=1=, and neither
+Home nor System exposes a Fennel runtime executable.
 Pinned fennel-ls emits the exact compatibility warning =--WARNING: plugin
 fennel-ls does not support Fennel version 1.6.1=.  Only that warning is allowed;
 imported-macro LSP navigation or semantic analysis is not claimed.
@@ -1548,6 +1565,13 @@ reviewed implementation and a freshly generated exact-number plan.  The
 read-only tool currently proves retention of the booted closure; an apply
 implementation must additionally identify and protect the exact booted
 generation-number link before deleting anything.
+
+The accepted Slice 18 inventory counts are System/Home/Pull =84/41/5=.  Exact
+pins promote Home 41, retain Home 40 as the preferred immediate Racket fallback,
+and retain Home 39 as the last-known-good Clojure fallback; older pins remain in
+place.  System 85 and Pull 5 are unchanged.  Acceptance removed the two
+stage-hash checker cache directories, but performed no generation deletion or
+garbage collection.
 
 * Live symlinks
 
@@ -1636,17 +1660,17 @@ a local recovery tty:
    Home, and Pull targets in =generation-pins.tsv= and pass retention
    verification plus the rollback drill.
 
-The recorded 85/40/5 generations are this installation's historical rollback
+The recorded 85/41/5 generations are this installation's historical rollback
 evidence and are not valid new-install targets.  Blank-disk partitioning,
 filesystem creation, initial GRUB/EFI installation, initial user/network/
 firmware provisioning, secret restoration, substitute-ACL mutation, and a new
 installation's first boot remain outside this checked sequence.
 
-For a complete Slice 17 rollback, first restore source checkpoint
-=2d6587fe707892acc9dd33f605ccba6ab839c161= because the live repository links
+For a complete Slice 18 rollback, first restore source checkpoint
+=81ebb249e299e4e6bd840971d084ab21521d1e27= because the live repository links
 are not changed by a Home generation switch.  Then use the protected Pull 5
 Guix at =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile/bin/guix= to
-switch exactly to Home generation 39 and reboot.  System generation 85 needs no
+switch exactly to Home generation 40 and reboot.  System generation 85 needs no
 change.
 
 * Generated or local state

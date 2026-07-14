@@ -246,7 +246,7 @@ Current next action:
     =2d6587fe707892acc9dd33f605ccba6ab839c161= first, switch exactly to Home 39
     through the protected Pull 5 Guix, and reboot.  Home rollback alone does not
     restore repository-linked source; System 85 needs no change.
-- [ ] Accept [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 18: Optional dialect incubation][Slice 18: Fennel incubation candidate]].
+- [X] Accept [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 18: Optional dialect incubation][Slice 18: Fennel incubation]].
   - [X] Select Fennel over Janet, Hy, Chez Scheme, and alternate Common Lisp
     implementations.  It adds a new Lisp-on-Lua family with a complete pinned
     interpreter/formatter/LSP/editor path while keeping only the runtime-free
@@ -255,9 +255,8 @@ Current next action:
     and Findutils stack; generic authenticated wrapper with canonical immutable
     Guix-store-profile enforcement; SHA-256-keyed isolated state; marked fixture;
     project/editor/connectivity checks; and shared
-    REPL/LSP/format/Puni/Org/window integration.  Candidate Home adds only
-    =emacs-fennel-mode= for 83 declared packages versus accepted live Home
-    generation 40's 82; System remains unchanged.
+    REPL/LSP/format/Puni/Org/window integration.  Home adds only
+    =emacs-fennel-mode= for 83 declared packages; System remains unchanged.
   - [X] Pass focused project and connected-editor checks plus the complete
     non-activating candidate gate.  Exact gate-only paths are Home
     =/gnu/store/8q8dki5ka0b7ayby2kg1c7gk1cc9mrfh-home= and unchanged System
@@ -266,19 +265,26 @@ Current next action:
     cleanup controls pass.  The exact fennel-ls/Fennel 1.6.1 compatibility
     warning is documented; semantic LSP acceptance is basic non-macro source
     only.
-  - [ ] Push the exact implementation/documentation checkpoint.  Do not run
-    =ghr= from unpublished source.
-  - [ ] Run =ghr=, reboot, and pass fresh live project, editor, cold-open,
+  - [X] Publish implementation checkpoint =c1bbf39= and candidate documentation
+    checkpoint =81ebb24= before activation.
+  - [X] Run =ghr=, reboot, and pass fresh live project, editor, cold-open,
     two-root REPL/LSP, formatting, basic non-macro LSP, ownership/leakage, and
-    deliberate cleanup checks.
-  - [ ] Confirm no checker/project residue or repository mutation remains, then
-    rotate exact retention pins while keeping the previous accepted Home as the
-    immediate rollback.  Until then, Home 40/82 and the existing System/Pull
-    generations remain the accepted baseline.
+    deliberate cleanup checks.  Home generation 41 is active at
+    =/gnu/store/ci9szqljcz4jjvwcrp76865j8q8ihl3d-home= with profile
+    =/gnu/store/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile=; System generation
+    85 remains current and booted, and Pull generation 5 is unchanged.
+  - [X] Confirm no checker/project residue or repository mutation remains, remove
+    both stage-hash cache directories, and rotate exact retention pins.  The
+    inventory counts are System/Home/Pull =84/41/5=; Home 40 is the preferred
+    immediate Racket fallback and Home 39 the last-known-good Clojure fallback.
+    No generation deletion or garbage collection was performed.
+  - [X] Record complete rollback: restore source checkpoint
+    =81ebb249e299e4e6bd840971d084ab21521d1e27= first, use protected Pull 5 to
+    switch exactly to Home 40, and reboot.  System 85 needs no change.
 
-Next action: publish the Slice 18 Fennel candidate checkpoint, then activate it
-through =ghr=, reboot, and the fresh-live acceptance sequence above.  Do not
-broaden =sk-guix= package ownership or rotate retention before those checks.
+Next action: proceed to Slice 19 desktop, security, and documentation polish.
+Keep the accepted Fennel runtime/tool boundary and the documented fennel-ls
+version limitation intact.
 
 Ordered follow-up:
 
