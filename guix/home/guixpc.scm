@@ -11,7 +11,8 @@
              (gnu packages)
              (gnu services)
              (guix gexp)
-             (guix packages))
+             (guix packages)
+             (sk emacs))
 
 (load (string-append (dirname (current-filename))
                      "/../package-ownership.scm"))
@@ -39,9 +40,23 @@
        repo
        (module-ref (current-module) '%guixpc-repo-links))))
 
+;; Packages whose exact package objects encode ownership policy belong here
+;; instead of going through specification->package.  In particular, the
+;; runtime-detached Racket Mode variant must not silently resolve back to the
+;; upstream package that embeds and retains a Racket runtime.
+(define %guixpc-home-explicit-packages
+  (list emacs-racket-mode/runtime-detached))
+
+(unless (equal? (map package-name %guixpc-home-explicit-packages)
+                %guixpc-home-explicit-package-names)
+  (error "guixpc explicit Home package objects do not match ownership names"
+         (map package-name %guixpc-home-explicit-packages)))
+
 (home-environment
  (packages
-  (map specification->package %guixpc-home-package-specifications))
+  (append
+   (map specification->package %guixpc-home-package-specifications)
+   %guixpc-home-explicit-packages))
  (services
   (list
    (simple-service 'sk-repo-dotfile-links

@@ -13,8 +13,12 @@
 
 (define recovery
   (module-ref (current-module) '%guixpc-recovery-package-specifications))
-(define home
+(define home-specifications
   (module-ref (current-module) '%guixpc-home-package-specifications))
+(define home-explicit
+  (module-ref (current-module) '%guixpc-home-explicit-package-names))
+(define home
+  (module-ref (current-module) '%guixpc-home-package-names))
 
 (define (read-file path)
   (call-with-input-file path get-string-all))
@@ -23,6 +27,8 @@
   (read-file (string-append repo "/guix/systems/guixpc.scm")))
 (define home-source
   (read-file (string-append repo "/guix/home/guixpc.scm")))
+(define emacs-module-source
+  (read-file (string-append repo "/guix/modules/sk/emacs.scm")))
 
 (assert
  (equal? recovery
@@ -30,8 +36,14 @@
            "ripgrep" "vim" "xset" "xwallpaper" "picom" "xrandr"))
  "reviewed 13-package recovery floor changed")
 
-(assert (= (length home) 81)
-        "reviewed Home ownership list must contain exactly 81 packages")
+(assert (= (length home-specifications) 81)
+        "reviewed Home specification list must contain exactly 81 packages")
+(assert (equal? home-explicit '("emacs-racket-mode"))
+        "reviewed explicit Home package names changed")
+(assert (= (length home) 82)
+        "reviewed Home ownership must contain exactly 82 packages")
+(assert (equal? home (append home-specifications home-explicit))
+        "Home ownership names do not match specifications plus explicit packages")
 
 (for-each
  (lambda (specification)
@@ -40,6 +52,7 @@
  '("fish-foreign-env" "emacs" "emacs-use-package" "emacs-geiser" "emacs-sly"
    "emacs-puni" "emacs-eshell-syntax-highlighting" "emacs-yasnippet"
    "emacs-package-lint" "emacs-clojure-mode" "cljfmt" "clj-kondo"
+   "emacs-racket-mode"
    "guile" "sbcl" "python-lsp-server" "lua-language-server"
    "ungoogled-chromium" "ranger" "shellcheck"))
 
@@ -48,8 +61,8 @@
    (assert (not (member specification home))
            (string-append "optional dialect leaked into Home: " specification)))
  '("babashka" "clojure" "clojure-tools" "clojure-lsp" "gradle"
-   "leiningen" "maven" "openjdk" "racket" "emacs-cider"
-   "emacs-flycheck-clj-kondo" "emacs-racket-mode"))
+   "leiningen" "maven" "openjdk" "racket" "racket-minimal"
+   "emacs-cider" "emacs-flycheck-clj-kondo"))
 
 (assert (equal? (sk:intersection recovery home) '("emacs"))
         "Emacs must be the sole overlap in the explicit ownership lists")
@@ -65,6 +78,35 @@
  (string-contains home-source
                   "(map specification->package %guixpc-home-package-specifications)")
  "Home declaration lacks the reviewed Home-list wiring")
+(assert (string-contains home-source "(sk emacs)")
+        "Home declaration lacks the local Emacs package module")
+(assert
+ (string-contains home-source
+                  "(list emacs-racket-mode/runtime-detached)")
+ "Home declaration lacks the runtime-detached Racket Mode object")
+(assert
+ (string-contains
+  home-source
+  (string-append
+   "(append\n"
+   "   (map specification->package %guixpc-home-package-specifications)\n"
+   "   %guixpc-home-explicit-packages)"))
+ "Home declaration does not append its explicit package objects")
+
+(assert
+ (string-contains emacs-module-source
+                  "(package/inherit emacs-racket-mode")
+ "Racket Mode variant no longer inherits the pinned Guix package")
+(assert
+ (string-contains emacs-module-source
+                  "(add-after 'configure 'restore-unqualified-racket-program")
+ "Racket Mode variant no longer restores the command after configuration")
+(assert
+ (string-contains emacs-module-source
+                  "(\"racket-program\" \"racket\")")
+ "Racket Mode variant no longer restores the unqualified runtime command")
+(assert (not (string-contains emacs-module-source "/gnu/store/"))
+        "Racket Mode variant embeds a literal store path")
 
 (for-each
  (lambda (specification)
@@ -79,7 +121,8 @@
    "sbcl" "python-lsp-server" "lua-language-server"
    "gcc-toolchain" "gdb" "shellcheck" "babashka" "clojure"
    "clojure-tools" "clojure-lsp" "gradle" "leiningen" "maven"
-   "openjdk"))
+   "openjdk" "racket" "racket-minimal" "emacs-racket-mode"))
 
-(format #t "guix-package-ownership-check: PASS (recovery=~a home=~a)~%"
-        (length recovery) (length home))
+(format #t
+        "guix-package-ownership-check: PASS (recovery=~a home=~a explicit=~a)~%"
+        (length recovery) (length home) (length home-explicit))

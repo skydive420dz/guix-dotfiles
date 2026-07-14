@@ -1,0 +1,232 @@
+#!/bin/sh
+
+set -eu
+
+usage() {
+    printf 'usage: %s --project ROOT backend|check|docs|eval|expand|lint|make|raw|repl|test [ARGUMENT ...]\n' \
+        "$0" >&2
+    exit 64
+}
+
+[ "$#" -ge 3 ] || usage
+[ "$1" = --project ] || usage
+project_input=$2
+action=$3
+shift 3
+
+case $action in
+    backend|check|docs|eval|expand|lint|make|raw|repl|test) ;;
+    *) usage ;;
+esac
+case $action in
+    eval) [ "$#" -eq 1 ] || usage ;;
+    check) [ "$#" -eq 0 ] || usage ;;
+    make|lint|test|docs|expand) [ "$#" -gt 0 ] || usage ;;
+esac
+
+if ! project=$(CDPATH='' cd -- "$project_input" 2>/dev/null && pwd -P); then
+    printf 'racket-project: project is not a directory: %s\n' \
+        "$project_input" >&2
+    exit 66
+fi
+if [ ! -r "$project/.projectile" ] || [ ! -d "$project/src" ]; then
+    printf 'racket-project: project lacks .projectile or src/: %s\n' \
+        "$project" >&2
+    exit 66
+fi
+
+script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
+project_command=$script_dir/racket-project
+lisp_shell=$script_dir/guix-lisp-shell
+
+case ${SK_RACKET_PROJECT_AUTHENTICATED:-0} in
+    0)
+    if [ ! -x "$lisp_shell" ]; then
+        printf 'racket-project: authenticated shell wrapper is unavailable: %s\n' \
+            "$lisp_shell" >&2
+        exit 66
+    fi
+    exec "$lisp_shell" racket -- env SK_RACKET_PROJECT_AUTHENTICATED=1 \
+        "$project_command" --project "$project" "$action" "$@"
+        ;;
+    1) ;;
+    *)
+        printf '%s\n' \
+            'racket-project: SK_RACKET_PROJECT_AUTHENTICATED must be 0 or 1' >&2
+        exit 64
+        ;;
+esac
+
+profile=${GUIX_ENVIRONMENT:-}
+if [ ! -d "$profile" ]; then
+    printf '%s\n' \
+        'racket-project: authenticated Racket profile is unavailable' >&2
+    exit 69
+fi
+
+racket=$profile/bin/racket
+if [ ! -x "$racket" ]; then
+    printf 'racket-project: profile lacks Racket: %s\n' "$racket" >&2
+    exit 69
+fi
+
+for command in cat cksum make mkdir mktemp rg rm; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        printf 'racket-project: missing profile command: %s\n' "$command" >&2
+        exit 127
+    fi
+done
+
+cache_base=${XDG_CACHE_HOME:-${HOME:?HOME must be set}/.cache}
+project_key=$(
+    printf '%s\n' "$project" | cksum |
+        while read -r checksum octets _rest; do
+            printf '%s-%s\n' "$checksum" "$octets"
+        done
+)
+state=$cache_base/racket/projects/$project_key
+plt_user_home=$state/user-home
+plt_addon_dir=$state/addon
+plt_config_dir=$state/config
+compiled_root=$state/compiled
+docs_root=$state/docs
+tmp_root=$state/tmp
+case $project in
+    *:*)
+        printf 'racket-project: project path contains a colon: %s\n' \
+            "$project" >&2
+        exit 65
+        ;;
+esac
+case $state in
+    *:*)
+        printf 'racket-project: state path contains a colon: %s\n' \
+            "$state" >&2
+        exit 65
+        ;;
+esac
+mkdir -p "$plt_user_home" "$plt_addon_dir" "$plt_config_dir" \
+    "$compiled_root" "$tmp_root"
+
+export PLTUSERHOME="$plt_user_home"
+export PLTADDONDIR="$plt_addon_dir"
+export PLTCONFIGDIR="$plt_config_dir"
+export PLTCOLLECTS="$project/src:"
+# The empty suffix splices Racket's installation roots after our writable
+# root: store .zo files remain readable, while new .zo files go to the cache.
+export PLTCOMPILEDROOTS="$compiled_root:"
+
+run_raco() {
+    "$racket" -U -S "$project/src" -l raco -- "$@"
+}
+
+make_project() {
+    (
+        cd "$project"
+        run_raco make -- "$@"
+    )
+}
+
+test_project() {
+    (
+        cd "$project"
+        run_raco test --process --timeout 30 -- "$@"
+    )
+}
+
+lint_project() {
+    lint_output=$(mktemp "$tmp_root/check-requires.XXXXXX")
+    if ! (
+        cd "$project"
+        run_raco check-requires -- "$@"
+    ) >"$lint_output" 2>&1; then
+        cat "$lint_output" >&2
+        rm -f -- "$lint_output"
+        return 1
+    fi
+    recommendation_status=0
+    rg -q '^(DROP|ADD|BYPASS) ' "$lint_output" || \
+        recommendation_status=$?
+    case $recommendation_status in
+        0)
+            cat "$lint_output" >&2
+            rm -f -- "$lint_output"
+            return 1
+            ;;
+        1) ;;
+        *)
+            rm -f -- "$lint_output"
+            return "$recommendation_status"
+            ;;
+    esac
+    rm -f -- "$lint_output"
+}
+
+docs_project() {
+    rm -rf -- "$docs_root"
+    mkdir -p "$docs_root"
+    (
+        cd "$project"
+        run_raco scribble --html ++main-xref-in --dest "$docs_root" -- "$@"
+    )
+}
+
+expand_project() {
+    (
+        cd "$project"
+        run_raco expand -- "$@"
+    )
+}
+
+check_project() {
+    if [ ! -r "$project/Makefile" ]; then
+        printf 'racket-project: project check requires a Makefile: %s\n' \
+            "$project" >&2
+        return 66
+    fi
+    (
+        cd "$project"
+        RACKET_PROJECT=$project_command \
+            make --no-print-directory -s check
+    )
+}
+
+case $action in
+    backend)
+        # Racket Mode appends its backend module and flags here.  Preserve its
+        # argument vector after the wrapper-owned user-path suppression flag.
+        cd "$project"
+        exec "$racket" -U -S "$project/src" "$@"
+        ;;
+    raw)
+        cd "$project"
+        exec "$racket" -U -S "$project/src" "$@"
+        ;;
+    eval)
+        cd "$project"
+        exec "$racket" -U -S "$project/src" -e "$1"
+        ;;
+    repl)
+        cd "$project"
+        exec "$racket" -U -S "$project/src" -q -i "$@"
+        ;;
+    make)
+        make_project "$@"
+        ;;
+    test)
+        test_project "$@"
+        ;;
+    lint)
+        lint_project "$@"
+        ;;
+    docs)
+        docs_project "$@"
+        ;;
+    expand)
+        expand_project "$@"
+        ;;
+    check)
+        check_project
+        printf '%s\n' 'racket-project: check: PASS'
+        ;;
+esac

@@ -43,10 +43,19 @@
            "fixtures/clojure/.cljfmt.edn"
            "fixtures/clojure/src/sk/fixture/core.clj"
            "fixtures/clojure/test/sk/fixture/core_test.clj"
+           "fixtures/racket/.projectile"
+           "fixtures/racket/Makefile"
+           "fixtures/racket/info.rkt"
+           "fixtures/racket/src/sk/fixture/main.rkt"
+           "fixtures/racket/test/sk/fixture/main-test.rkt"
+           "fixtures/racket/scribblings/sk-fixture.scrbl"
            "scripts/guix-lisp-shell"
            "scripts/clojure-project"
            "scripts/clojure-project-check"
-           "scripts/emacs-clojure-check")))
+           "scripts/emacs-clojure-check"
+           "scripts/racket-project"
+           "scripts/racket-project-check"
+           "scripts/emacs-racket-check")))
        (emacs-descendant-p
         (lambda (pid)
           (let ((current pid)
@@ -85,6 +94,37 @@
                     (and (derived-mode-p 'sk/clojure-repl-mode)
                          (processp process)
                          (process-live-p process))))))
+         (buffer-list)))
+       (racket-child-process
+        (seq-find
+         (lambda (pid)
+           (let* ((attributes (process-attributes pid))
+                  (command
+                   (format "%s %s"
+                           (or (cdr (assq 'comm attributes)) "")
+                           (or (cdr (assq 'args attributes)) ""))))
+             (and (funcall emacs-descendant-p pid)
+                  (string-match-p
+                   "\\(?:^\\|/\\)\\(?:racket\\|raco\\|racket-project\\)\\(?:[[:space:]]\\|$\\)"
+                   command))))
+         (list-system-processes)))
+       (racket-emacs-process
+        (seq-find
+         (lambda (process)
+           (seq-some
+            (lambda (argument)
+              (string-match-p
+               "\\(?:^\\|/\\)\\(?:racket\\|raco\\|racket-project\\)\\'"
+               argument))
+            (or (process-command process) '())))
+         (process-list)))
+       (live-racket-repl
+        (seq-find
+         (lambda (buffer)
+           (and (buffer-live-p buffer)
+                (with-current-buffer buffer
+                  (and (derived-mode-p 'racket-repl-mode)
+                       (bound-and-true-p racket--repl-session-id)))))
          (buffer-list)))
        (visible-profile-load-path
         (seq-find
@@ -196,6 +236,7 @@
                (and (featurep 'sk-core)
                     (featurep 'sk-lisp)
                     (featurep 'sk-clojure)
+                    (featurep 'sk-racket)
                     (featurep 'sk-format)
                     (featurep 'sk-keys)
                     (featurep 'sk-org)))
@@ -228,6 +269,9 @@
          (cons "Clojure mode package generation"
                (funcall owned-library-p
                         "clojure-mode" "clojure-mode-[0-9]*"))
+         (cons "Racket Mode package generation"
+               (funcall owned-library-p
+                        "racket-mode" "racket-mode-[0-9]*"))
          (cons "package-lint generation"
                (funcall owned-library-p
                         "package-lint" "package-lint-[0-9]*"))
@@ -296,12 +340,39 @@
          (cons "Clojure explicit-start policy"
                (and (not clojure-child-process)
                     (not live-clojure-repl)))
+         (cons "Racket editing ownership"
+               (and
+                (= 1 (cl-count #'sk/racket-mode-setup racket-mode-hook
+                               :test #'eq))
+                (not (memq #'racket-xp-mode racket-mode-hook))
+                (seq-every-p
+                 (lambda (path) (not (file-executable-p path)))
+                 (mapcan
+                  (lambda (command)
+                    (list (expand-file-name command home-bin)
+                          (expand-file-name command system-bin)))
+                  '("racket" "raco" "drracket" "gracket" "mzc"
+                    "scribble" "plt-help")))))
+         (cons "tracked Racket wrapper contract"
+               (and
+                (file-equal-p
+                 sk/racket-project-wrapper
+                 (expand-file-name "scripts/racket-project" repo-root))
+                (equal racket-program
+                       (list sk/racket-project-wrapper
+                             "--project" "." "backend"))
+                (seq-every-p #'file-readable-p lisp-fixture-files)))
+         (cons "Racket explicit-start policy"
+               (and (not racket-child-process)
+                    (not racket-emacs-process)
+                    (not live-racket-repl)))
          (cons "scoped Puni hooks"
                (seq-every-p
                 (lambda (hook)
                   (= 1 (cl-count #'puni-mode (symbol-value hook) :test #'eq)))
                 '(emacs-lisp-mode-hook lisp-interaction-mode-hook
-                  scheme-mode-hook lisp-mode-hook clojure-mode-hook)))
+                  scheme-mode-hook lisp-mode-hook clojure-mode-hook
+                  racket-mode-hook)))
          (cons "loaded Eshell highlighting"
                (or (not (featurep 'esh-mode))
                    (and (featurep 'eshell-syntax-highlighting)
@@ -316,14 +387,14 @@
          (cons "Lisp structural key"
                (eq (lookup-key evil-normal-state-map (kbd "SPC l ]"))
                    #'puni-slurp-forward))
-         (cons "Clojure explicit command keys"
+         (cons "explicit Lisp command keys"
                (and
                 (eq (lookup-key evil-normal-state-map (kbd "SPC c l"))
                     #'lsp)
                 (eq (lookup-key evil-normal-state-map (kbd "SPC l n"))
                     #'sk/clojure-reload-namespace)
                 (eq (lookup-key evil-normal-state-map (kbd "SPC l q"))
-                    #'sk/clojure-stop)))
+                    #'sk/lisp-stop)))
          (cons "Lisp project command surface"
                (and
                 (seq-every-p
@@ -374,6 +445,8 @@
           :lsp (locate-library "lsp-mode")
           :clojure-mode (locate-library "clojure-mode")
           :clojure-child clojure-child-process
+          :racket-mode (locate-library "racket-mode")
+          :racket-child racket-child-process
           :sly (locate-library "sly"))))
 
 ;;; live-check.el ends here

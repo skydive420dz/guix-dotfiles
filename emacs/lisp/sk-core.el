@@ -241,6 +241,8 @@
     "sk-project"
     "sk-lsp"
     "sk-lisp"
+    "sk-clojure"
+    "sk-racket"
     "sk-lua"
     "sk-python"
     "sk-shell"

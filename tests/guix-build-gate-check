@@ -47,7 +47,9 @@ fake_elisp_failure=$tmp/fail-elisp-fixture
 gate=$sandbox_repo/scripts/guix-build-gate
 fake_emacs_check=$sandbox_repo/scripts/emacs-check
 fake_emacs_clojure_check=$sandbox_repo/scripts/emacs-clojure-check
+fake_emacs_racket_check=$sandbox_repo/scripts/emacs-racket-check
 fake_clojure_project_check=$sandbox_repo/scripts/clojure-project-check
+fake_racket_project_check=$sandbox_repo/scripts/racket-project-check
 fake_guix=$sandbox_home/.config/guix/current/bin/guix
 fake_guile=$sandbox_home/bin/guile
 
@@ -65,14 +67,20 @@ cp "$repo/scripts/guix-build-gate" "$gate"
 cp "$repo/scripts/lisp-project-check" \
     "$sandbox_repo/scripts/lisp-project-check"
 cp "$repo/scripts/clojure-project-check" "$fake_clojure_project_check"
+cp "$repo/scripts/racket-project-check" "$fake_racket_project_check"
+cp "$repo/scripts/racket-project" "$sandbox_repo/scripts/racket-project"
 cp "$repo/guile/guile" "$sandbox_repo/guile/guile"
 cp "$repo/guix/package-ownership.scm" \
     "$sandbox_repo/guix/package-ownership.scm"
+cp "$repo/guix/modules/sk/emacs.scm" \
+    "$sandbox_repo/guix/modules/sk/emacs.scm"
 cp -R "$repo/fixtures/elisp" "$sandbox_repo/fixtures/elisp"
 cp -R "$repo/fixtures/guile" "$sandbox_repo/fixtures/guile"
 cp -R "$repo/fixtures/common-lisp" "$sandbox_repo/fixtures/common-lisp"
+cp -R "$repo/fixtures/racket/." "$sandbox_repo/fixtures/racket/"
 chmod +x "$gate" "$sandbox_repo/scripts/lisp-project-check" \
-    "$fake_clojure_project_check"
+    "$fake_clojure_project_check" "$fake_racket_project_check" \
+    "$sandbox_repo/scripts/racket-project"
 cat >"$fake_emacs_check" <<'EOF'
 #!/bin/sh
 set -eu
@@ -119,6 +127,49 @@ if [ "${SK_FAKE_EMACS_CLOJURE_MARKER:-1}" = 1 ]; then
 fi
 EOF
 chmod +x "$fake_emacs_clojure_check"
+cat >"$fake_emacs_racket_check" <<'EOF'
+#!/bin/sh
+set -eu
+
+[ "$#" -eq 1 ]
+[ "$1" = "$SK_FAKE_REPO" ]
+[ "${GUIX_ENVIRONMENT:-}" = '' ]
+[ "$GUIX" = "$SK_FAKE_GUIX_PROFILE/bin/guix" ]
+[ "$SK_EMACS_CHECK_HOME_PROFILE" = "$SK_FAKE_HOME/profile" ]
+[ "$SK_EMACS_CHECK_SYSTEM_PROFILE" = "$SK_FAKE_SYSTEM/profile" ]
+[ "$HOME" != "$SK_FAKE_ORIGINAL_HOME" ]
+[ -d "$HOME" ]
+[ -d "$TMPDIR" ]
+[ -d "$XDG_CACHE_HOME" ]
+[ -d "$XDG_CONFIG_HOME" ]
+[ -r "$XDG_CONFIG_HOME/guix/trusted-channels.scm" ]
+cmp -s "$SK_FAKE_CHANNELS" \
+    "$XDG_CONFIG_HOME/guix/trusted-channels.scm"
+[ -d "$XDG_DATA_HOME" ]
+[ -d "$XDG_STATE_HOME" ]
+
+case $SK_EMACS_RACKET_CHECK_BREAK in
+    0)
+        printf '%s\n' RACKET-EMACS >>"$SK_FAKE_CANDIDATE_LOG"
+        [ "${SK_FAKE_FAIL:-}" != emacs-racket ] || exit 98
+        if [ "${SK_FAKE_EMACS_RACKET_MARKER:-1}" = 1 ]; then
+            printf '%s\n' 'emacs-racket-check: PASS'
+        fi
+        ;;
+    1)
+        printf '%s\n' RACKET-EMACS-BREAK >>"$SK_FAKE_CANDIDATE_LOG"
+        if [ "${SK_FAKE_EMACS_RACKET_BREAK_MARKER:-1}" = 1 ]; then
+            printf '%s\n' \
+                'Deliberate connected failure with Racket backend/REPL live' >&2
+            printf 'emacs-racket-check: candidate editor process failed with status %s\n' \
+                "${SK_FAKE_EMACS_RACKET_INNER_STATUS:-255}" >&2
+        fi
+        exit "${SK_FAKE_EMACS_RACKET_BREAK_STATUS:-1}"
+        ;;
+    *) exit 64 ;;
+esac
+EOF
+chmod +x "$fake_emacs_racket_check"
 printf '%s\n' '(home-environment)' >"$sandbox_repo/guix/home/guixpc.scm"
 printf '%s\n' '(operating-system)' >"$sandbox_repo/guix/systems/guixpc.scm"
 printf '%s\n' '(define-module (sk development-tiers))' \
@@ -127,8 +178,6 @@ for manifest in core-lisp jvm-lisp racket; do
     printf '(manifest %s)\n' "$manifest" \
         >"$sandbox_repo/guix/manifests/$manifest.scm"
 done
-printf '%s\n' '#lang racket/base' \
-    >"$sandbox_repo/fixtures/racket/basic-test.rkt"
 printf '%s\n' ';; fake readline module' \
     >"$fake_system/profile/share/guile/site/3.0/ice-9/readline.scm"
 printf '%s\n' ';; fake colorized module' \
@@ -230,7 +279,7 @@ printf '%s\n' candidate-guile-ready
 EOF
 chmod +x "$fake_home/profile/bin/guile"
 for library in clojure-mode-0 eshell-syntax-highlighting-0 geiser-0 \
-    geiser-guile-0 org-0 package-lint-0 puni-0 sly-0 use-package-0 \
+    geiser-guile-0 org-0 package-lint-0 puni-0 racket-mode-0 sly-0 use-package-0 \
     yasnippet-0; do
     mkdir -p "$fake_home/profile/share/emacs/site-lisp/$library"
 done
@@ -246,7 +295,7 @@ printf '%s\n' curl git fish emacs emacs-exwm bluez ncurses ripgrep vim \
     xset xwallpaper picom xrandr >"$fake_recovery_names"
 printf '%s\n' fish-foreign-env emacs emacs-desktop-environment emacs-geiser \
     emacs-sly emacs-puni emacs-eshell-syntax-highlighting emacs-yasnippet \
-    emacs-package-lint emacs-clojure-mode cljfmt clj-kondo \
+    emacs-package-lint emacs-clojure-mode emacs-racket-mode cljfmt clj-kondo \
     guile sbcl lua-language-server python-lsp-server \
     ungoogled-chromium ranger shellcheck >"$fake_home_names"
 
@@ -271,7 +320,7 @@ reset_fake_home_manifest() {
     write_fake_manifest "$fake_home_manifest" \
         emacs emacs-desktop-environment emacs-eshell-syntax-highlighting \
         emacs-geiser emacs-puni emacs-sly emacs-yasnippet \
-        emacs-clojure-mode fish emacs-package-lint fish-foreign-env \
+        emacs-clojure-mode emacs-racket-mode fish emacs-package-lint fish-foreign-env \
         cljfmt clj-kondo guile lua-language-server python-lsp-server ranger \
         sbcl shellcheck ungoogled-chromium
 }
@@ -336,7 +385,7 @@ case ${4:-} in
     %guixpc-recovery-package-specifications)
         cat "$SK_FAKE_RECOVERY_NAMES"
         ;;
-    %guixpc-home-package-specifications)
+    %guixpc-home-package-names)
         cat "$SK_FAKE_HOME_NAMES"
         ;;
     *)
@@ -421,12 +470,33 @@ EOF_DESCRIBE
     shell)
         case $* in
             *emacs-clojure-check*) exit 98 ;;
+            *emacs-racket-check*) exit 99 ;;
             *jvm-lisp.scm*clojure-project-check*)
                 stage=clojure-fixture
                 printf '%s\n' CLOJURE >>"$SK_FAKE_CANDIDATE_LOG"
                 if [ "${SK_FAKE_CLOJURE_MARKER:-1}" = 1 ]; then
                     printf '%s\n' 'clojure-project-check: PASS'
                 fi
+                ;;
+            *racket.scm*racket-project-check*)
+                stage=racket-fixture
+                case $* in
+                    *SK_RACKET_PROJECT_CHECK_BREAK=1*)
+                        printf '%s\n' RACKET-BREAK \
+                            >>"$SK_FAKE_CANDIDATE_LOG"
+                        if [ "${SK_FAKE_RACKET_BREAK_MARKER:-1}" = 1 ]; then
+                            printf '%s\n' \
+                                'racket-project-check: deliberate failure control: TRIGGERED' >&2
+                        fi
+                        exit "${SK_FAKE_RACKET_BREAK_STATUS:-91}"
+                        ;;
+                    *)
+                        printf '%s\n' RACKET >>"$SK_FAKE_CANDIDATE_LOG"
+                        if [ "${SK_FAKE_RACKET_MARKER:-1}" = 1 ]; then
+                            printf '%s\n' 'racket-project-check: PASS'
+                        fi
+                        ;;
+                esac
                 ;;
             *core-lisp.scm*lisp-project-check*guile*)
                 stage=guile-fixture
@@ -438,12 +508,15 @@ EOF_DESCRIBE
             *jvm-lisp.scm*clojure-lsp*)
                 stage=jvm-runtime
                 ;;
-            *core-lisp.scm*clojure*|*core-lisp.scm*racket*|\
-            *jvm-lisp.scm*bb*|\
+            *core-lisp.scm*find*|*core-lisp.scm*clojure*|*core-lisp.scm*racket*|\
+            *core-lisp.scm*raco*|\
+            *jvm-lisp.scm*find*|*jvm-lisp.scm*bb*|\
             *jvm-lisp.scm*clojure*|*jvm-lisp.scm*clj*|\
             *jvm-lisp.scm*gradle*|*jvm-lisp.scm*lein*|*jvm-lisp.scm*mvn*|\
             *jvm-lisp.scm*guile*|*jvm-lisp.scm*sbcl*|*jvm-lisp.scm*racket*|\
-            *racket.scm*guile*|*racket.scm*sbcl*|*racket.scm*clojure*)
+            *jvm-lisp.scm*raco*|\
+            *racket.scm*guile*|*racket.scm*sbcl*|*racket.scm*clojure*|\
+            *racket.scm*java*)
                 exit "${SK_FAKE_ABSENT_STATUS:-127}"
                 ;;
             *core-lisp.scm*) stage=core-runtime ;;
@@ -471,6 +544,17 @@ EOF_DESCRIBE
                 printf 'unexpected fake profile: %s\n' "$profile" >&2
                 exit 75
                 ;;
+        esac
+        ;;
+    gc)
+        [ "${2:-}" = --requisites ] || exit 75
+        case ${SK_FAKE_RACKET_REFERENCE:-0} in
+            0) printf '%s\n' /gnu/store/fake-emacs-30.1 ;;
+            full) printf '%s\n' /gnu/store/fake-racket-9.1 ;;
+            minimal) printf '%s\n' /gnu/store/fake-racket-minimal-9.1 ;;
+            vm) printf '%s\n' /gnu/store/fake-racket-vm-cs-9.1 ;;
+            doc) printf '%s\n' /gnu/store/fake-racket-doc-9.1 ;;
+            *) exit 75 ;;
         esac
         ;;
     *)
@@ -509,6 +593,14 @@ run_gate() {
         SK_FAKE_GUILE_FALLBACK=${SK_FAKE_GUILE_FALLBACK:-0} \
         SK_FAKE_CLOJURE_MARKER=${SK_FAKE_CLOJURE_MARKER:-1} \
         SK_FAKE_EMACS_CLOJURE_MARKER=${SK_FAKE_EMACS_CLOJURE_MARKER:-1} \
+        SK_FAKE_RACKET_MARKER=${SK_FAKE_RACKET_MARKER:-1} \
+        SK_FAKE_RACKET_BREAK_MARKER=${SK_FAKE_RACKET_BREAK_MARKER:-1} \
+        SK_FAKE_RACKET_BREAK_STATUS=${SK_FAKE_RACKET_BREAK_STATUS:-91} \
+        SK_FAKE_EMACS_RACKET_MARKER=${SK_FAKE_EMACS_RACKET_MARKER:-1} \
+        SK_FAKE_EMACS_RACKET_BREAK_MARKER=${SK_FAKE_EMACS_RACKET_BREAK_MARKER:-1} \
+        SK_FAKE_EMACS_RACKET_BREAK_STATUS=${SK_FAKE_EMACS_RACKET_BREAK_STATUS:-1} \
+        SK_FAKE_EMACS_RACKET_INNER_STATUS=${SK_FAKE_EMACS_RACKET_INNER_STATUS:-255} \
+        SK_FAKE_RACKET_REFERENCE=${SK_FAKE_RACKET_REFERENCE:-0} \
         SK_FAKE_ABSENT_STATUS=${SK_FAKE_ABSENT_STATUS:-127} \
         SK_FAKE_FISH_STATUS=${SK_FAKE_FISH_STATUS:-0} \
         "$gate" "$@"
@@ -556,34 +648,47 @@ contains "$log" 'sbcl'
 contains "$log" "$sandbox_repo/scripts/lisp-project-check"
 contains "$log" 'common-lisp'
 contains "$log" "$sandbox_repo/scripts/clojure-project-check"
+contains "$log" "$sandbox_repo/scripts/racket-project-check"
 lacks "$log" "$sandbox_repo/scripts/emacs-clojure-check"
+lacks "$log" "$sandbox_repo/scripts/emacs-racket-check"
 for command in java cljfmt clj-kondo clojure-lsp bb clojure clj gradle lein \
     mvn; do
     logged_argument "$command" || fail "JVM probe omitted $command"
 done
-contains "$log" 'raco'
+logged_argument find || fail 'Racket manifest utility probe omitted find'
 contains "$log" "$sandbox_repo/guix/home/guixpc.scm"
 contains "$log" "$sandbox_repo/guix/systems/guixpc.scm"
 contains "$output" 'System recovery profile: PASS'
+contains "$output" 'Detached Racket Mode closure requisites: PASS'
 contains "$output" 'Realized package ownership: PASS (overlap=emacs,fish,guile)'
 contains "$output" 'Candidate Guile profile: PASS'
 contains "$output" 'Non-login SSH Fish environment: PASS'
 contains "$output" 'Guile project fixture: PASS'
 contains "$output" 'Common Lisp project fixture: PASS'
 contains "$output" 'Clojure project fixture: PASS'
+contains "$output" 'Racket project fixture: PASS'
+contains "$output" 'Racket project deliberate-failure cleanup: PASS'
 contains "$output" 'Candidate Emacs Lisp fixture: PASS'
 contains "$output" 'Candidate Emacs batch: PASS'
 contains "$output" 'Candidate Emacs Clojure backend: PASS'
+contains "$output" 'Candidate Emacs Racket backend: PASS'
+contains "$output" 'Candidate Emacs Racket deliberate-failure cleanup: PASS'
 contains "$(cat "$fake_candidate_log")" 'CLOJURE'
+contains "$(cat "$fake_candidate_log")" 'RACKET'
 contains "$(cat "$fake_candidate_log")" 'GUILE'
 contains "$(cat "$fake_candidate_log")" 'ELISP'
 contains "$(cat "$fake_candidate_log")" 'EMACS'
 contains "$(cat "$fake_candidate_log")" 'CLOJURE-EMACS'
+contains "$(cat "$fake_candidate_log")" 'RACKET-EMACS'
 [ "$(cat "$fake_candidate_log")" = "CLOJURE
+RACKET
+RACKET-BREAK
 GUILE
 ELISP
 EMACS
-CLOJURE-EMACS" ] || fail 'candidate validators ran out of order'
+CLOJURE-EMACS
+RACKET-EMACS
+RACKET-EMACS-BREAK" ] || fail 'candidate validators ran out of order'
 
 override_profile=$tmp/override-bootstrap-profile
 mkdir -p "$override_profile/bin"
@@ -630,24 +735,25 @@ for command in cljfmt clj-kondo; do
     mv "$tmp/$command.absent" "$fake_home/profile/bin/$command"
 done
 
-for command in bb clj clojure clojure-lsp gradle java javac lein mvn; do
+for command in bb clj clojure clojure-lsp drracket gradle gracket java javac \
+    lein mvn mzc plt-help raco racket scribble; do
     printf '%s\n' '#!/bin/sh' 'exit 0' >"$fake_home/profile/bin/$command"
     chmod +x "$fake_home/profile/bin/$command"
     if output=$(run_gate 2>&1); then
         fail "Home profile leaked JVM command $command past the gate"
     fi
-    contains "$output" "optional JVM command leaked into Home: $command"
+    contains "$output" "optional project command leaked into Home: $command"
     rm "$fake_home/profile/bin/$command"
 done
 
-for command in bb clj clj-kondo cljfmt clojure clojure-lsp gradle java \
-    javac lein mvn; do
+for command in bb clj clj-kondo cljfmt clojure clojure-lsp drracket gradle \
+    gracket java javac lein mvn mzc plt-help raco racket scribble; do
     printf '%s\n' '#!/bin/sh' 'exit 0' >"$fake_system/profile/bin/$command"
     chmod +x "$fake_system/profile/bin/$command"
     if output=$(run_gate 2>&1); then
         fail "System profile leaked JVM command $command past the gate"
     fi
-    contains "$output" "optional JVM command leaked into System: $command"
+    contains "$output" "optional project command leaked into System: $command"
     rm "$fake_system/profile/bin/$command"
 done
 
@@ -663,7 +769,7 @@ printf '%s\n' 'function fenv.main' 'end' \
     >"$fake_home/profile/share/fish/functions/fenv.main.fish"
 
 for library in clojure-mode eshell-syntax-highlighting package-lint puni \
-    yasnippet; do
+    racket-mode yasnippet; do
     mv "$fake_home/profile/share/emacs/site-lisp/$library-0" \
         "$tmp/$library-0.absent"
     if output=$(run_gate 2>&1); then
@@ -686,7 +792,8 @@ for module in readline colorized; do
 done
 
 for package in emacs-clojure-mode emacs-eshell-syntax-highlighting \
-    emacs-package-lint emacs-puni emacs-yasnippet cljfmt clj-kondo; do
+    emacs-package-lint emacs-puni emacs-racket-mode emacs-yasnippet \
+    cljfmt clj-kondo; do
     remove_fake_manifest_package "$fake_home_manifest" "$package"
     if output=$(run_gate 2>&1); then
         fail "Home manifest missing declared $package passed the gate"
@@ -730,6 +837,29 @@ if output=$(SK_FAKE_CLOJURE_MARKER=0 run_gate 2>&1); then
 fi
 contains "$output" 'Clojure project fixture omitted its PASS marker'
 
+if output=$(SK_FAKE_FAIL=racket-fixture run_gate 2>&1); then
+    fail 'Racket project fixture failure passed the gate'
+fi
+contains "$output" 'Racket project fixture check failed'
+contains "$(cat "$fake_candidate_log")" 'RACKET'
+lacks "$(cat "$fake_candidate_log")" 'GUILE'
+
+if output=$(SK_FAKE_RACKET_MARKER=0 run_gate 2>&1); then
+    fail 'Racket project fixture without PASS marker passed the gate'
+fi
+contains "$output" 'Racket project fixture omitted its PASS marker'
+
+if output=$(SK_FAKE_RACKET_BREAK_STATUS=90 run_gate 2>&1); then
+    fail 'Racket project failure control with wrong status passed the gate'
+fi
+contains "$output" \
+    'Racket project failure control returned status 90, expected 91'
+
+if output=$(SK_FAKE_RACKET_BREAK_MARKER=0 run_gate 2>&1); then
+    fail 'Racket project failure control without trigger passed the gate'
+fi
+contains "$output" 'Racket project failure control missed its trigger'
+
 mkdir -p "$sandbox_repo/fixtures/clojure/.cpcache"
 if output=$(run_gate 2>&1); then
     fail 'Clojure cache escape passed the gate'
@@ -737,6 +867,14 @@ fi
 contains "$output" 'Clojure cache escaped isolation:'
 contains "$output" 'fixtures/clojure/.cpcache'
 rm -rf -- "$sandbox_repo/fixtures/clojure/.cpcache"
+
+mkdir -p "$sandbox_repo/fixtures/racket/compiled"
+if output=$(run_gate 2>&1); then
+    fail 'Racket cache escape passed the gate'
+fi
+contains "$output" 'Racket state escaped isolation:'
+contains "$output" 'fixtures/racket/compiled'
+rm -rf -- "$sandbox_repo/fixtures/racket/compiled"
 
 if output=$(SK_FAKE_FAIL=guile-profile run_gate 2>&1); then
     fail 'candidate Guile startup failure passed the gate'
@@ -776,6 +914,38 @@ if output=$(SK_FAKE_EMACS_CLOJURE_MARKER=0 run_gate 2>&1); then
 fi
 contains "$output" \
     'candidate Emacs Clojure backend omitted its PASS marker'
+
+if output=$(SK_FAKE_FAIL=emacs-racket run_gate 2>&1); then
+    fail 'candidate Emacs Racket backend failure passed the gate'
+fi
+contains "$output" 'candidate Emacs Racket backend check failed'
+contains "$(cat "$fake_candidate_log")" 'CLOJURE-EMACS'
+contains "$(cat "$fake_candidate_log")" 'RACKET-EMACS'
+lacks "$output" 'Candidate Emacs Racket backend: PASS'
+
+if output=$(SK_FAKE_EMACS_RACKET_MARKER=0 run_gate 2>&1); then
+    fail 'candidate Emacs Racket backend without PASS marker passed the gate'
+fi
+contains "$output" \
+    'candidate Emacs Racket backend omitted its PASS marker'
+
+if output=$(SK_FAKE_EMACS_RACKET_BREAK_STATUS=2 run_gate 2>&1); then
+    fail 'connected Racket failure control with wrong status passed the gate'
+fi
+contains "$output" \
+    'connected Racket failure control returned status 2, expected 1'
+
+if output=$(SK_FAKE_EMACS_RACKET_BREAK_MARKER=0 run_gate 2>&1); then
+    fail 'connected Racket failure control without cleanup proof passed the gate'
+fi
+contains "$output" \
+    'connected Racket failure control missed its cleanup proof'
+
+if output=$(SK_FAKE_EMACS_RACKET_INNER_STATUS=124 run_gate 2>&1); then
+    fail 'connected Racket watchdog timeout passed as deliberate cleanup'
+fi
+contains "$output" \
+    'connected Racket failure control missed its cleanup proof'
 
 printf '%s\t1\tout\t/gnu/store/fake-guile\n' guile \
     >>"$fake_system_manifest"
@@ -837,7 +1007,14 @@ for package in babashka clj-kondo gradle maven; do
     reset_fake_system_manifest
 done
 
-for forbidden in pull reconfigure switch-generation delete-generations gc; do
+for reference in full minimal vm doc; do
+    if output=$(SK_FAKE_RACKET_REFERENCE=$reference run_gate 2>&1); then
+        fail "Racket-retaining editor package reference $reference passed the gate"
+    fi
+    contains "$output" 'detached Racket Mode still retains a Racket runtime'
+done
+
+for forbidden in pull reconfigure switch-generation delete-generations; do
     if logged_argument "$forbidden"; then
         fail "gate invoked forbidden command: $forbidden"
     fi
@@ -863,15 +1040,25 @@ dry_run_count=$(printf '%s\n' "$plan_log" | awk '
 [ "$dry_run_count" -eq 7 ] || \
     fail "plan used --dry-run $dry_run_count times; expected 7"
 
+mv "$sandbox_repo/fixtures/racket/negative/broken-doc.scrbl" \
+    "$sandbox_repo/fixtures/racket/negative/broken-doc.scrbl.missing"
+if output=$(run_gate --plan 2>&1); then
+    fail 'plan accepted an incomplete Racket negative-fixture contract'
+fi
+contains "$output" 'unreadable declaration:'
+contains "$output" 'negative/broken-doc.scrbl'
+mv "$sandbox_repo/fixtures/racket/negative/broken-doc.scrbl.missing" \
+    "$sandbox_repo/fixtures/racket/negative/broken-doc.scrbl"
+
 for stage in channels provenance exwm promoted fish core-manifest jvm-manifest \
     racket-manifest core-runtime guile-fixture common-lisp-fixture jvm-runtime \
-    clojure-fixture racket-runtime home system guile-profile elisp-fixture \
-    emacs emacs-clojure; do
+    clojure-fixture racket-runtime racket-fixture home system guile-profile \
+    elisp-fixture emacs emacs-clojure emacs-racket; do
     if output=$(SK_FAKE_FAIL=$stage run_gate 2>&1); then
         fail "$stage failure passed the gate"
     fi
     case $stage in
-        channels|provenance|exwm|promoted|fish|core-manifest|jvm-manifest|racket-manifest|core-runtime|guile-fixture|common-lisp-fixture|jvm-runtime|clojure-fixture|racket-runtime)
+        channels|provenance|exwm|promoted|fish|core-manifest|jvm-manifest|racket-manifest|core-runtime|guile-fixture|common-lisp-fixture|jvm-runtime|clojure-fixture|racket-runtime|racket-fixture)
             if logged_command home; then
                 fail "$stage failure continued into Home"
             fi
@@ -899,6 +1086,10 @@ for stage in channels provenance exwm promoted fish core-manifest jvm-manifest \
             ;;
         emacs-clojure)
             contains "$(cat "$fake_candidate_log")" 'CLOJURE-EMACS'
+            lacks "$(cat "$fake_candidate_log")" 'RACKET-EMACS'
+            ;;
+        emacs-racket)
+            contains "$(cat "$fake_candidate_log")" 'RACKET-EMACS'
             ;;
     esac
 done

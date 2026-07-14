@@ -38,10 +38,13 @@
             "cljfmt")))
 
 ;; Full Racket supplies raco, RackUnit, documentation, and the GUI/runtime
-;; closure expected by the later editor-integration slice.
+;; closure expected by the editor integration.  Findutils is Racket-tier-only:
+;; the disposable checker inventories empty directories, files, and symlinks,
+;; and that containment proof must not inherit `find' from an ambient profile.
 (define %sk-racket-specifications
   (append %sk-development-base-specifications
-          '("racket")))
+          '("findutils"
+            "racket")))
 
 (define %sk-development-tier-registry
   `((core-lisp . ,%sk-core-lisp-specifications)

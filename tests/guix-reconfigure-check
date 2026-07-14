@@ -12,7 +12,7 @@ fake_guile=$sandbox/store/guile
 fake_log=$sandbox/reconfigure.log
 wrapper=$repo/scripts/guix-reconfigure
 
-mkdir -p "$repo/scripts" "$repo/guix/home" \
+mkdir -p "$repo/scripts" "$repo/guix/home" "$repo/guix/modules" \
     "$home/.config/guix/current/bin" "$(dirname "$fake_guix")"
 cp "$source_repo/scripts/guix-reconfigure" "$wrapper"
 chmod +x "$wrapper"
@@ -139,6 +139,7 @@ ln -s "$fake_guix" "$home/.config/guix/current/bin/guix"
 ln -s "$repo/guix/channels.scm" "$home/.config/guix/channels.scm"
 ln -s "$repo/guix/home/guixpc.scm" "$home/.config/guix/home.scm"
 home_config_resolved=$(readlink -f "$repo/guix/home/guixpc.scm")
+module_dir_resolved=$(CDPATH='' cd "$repo/guix/modules" && pwd -P)
 
 run_wrapper() {
     HOME=$home \
@@ -209,6 +210,7 @@ fi
 
 : >"$fake_log"
 run_wrapper >/dev/null
-grep -q "CALL.*home.*reconfigure.*$home_config_resolved" "$fake_log"
+grep -q "CALL.*home.*-L.*$module_dir_resolved.*reconfigure.*$home_config_resolved" \
+    "$fake_log"
 
 printf '%s\n' 'guix-reconfigure-check: PASS'

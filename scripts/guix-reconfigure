@@ -23,6 +23,7 @@ fi
 
 home=${HOME:?HOME must be set}
 script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
+module_dir_input=$script_dir/../guix/modules
 entrypoints_check="$script_dir/guix-entrypoints"
 home_links_preflight="$script_dir/guix-home-links-preflight.scm"
 frontend_input=${SK_GUIX_FRONTEND_PROFILE:-$home/.config/guix/current}
@@ -47,6 +48,13 @@ if [ ! -x "$entrypoints_check" ]; then
         "$entrypoints_check" >&2
     exit 1
 fi
+
+if [ ! -d "$module_dir_input" ]; then
+    printf 'guix-reconfigure: module directory is unavailable: %s\n' \
+        "$module_dir_input" >&2
+    exit 1
+fi
+module_dir=$(CDPATH='' cd "$module_dir_input" && pwd -P)
 
 "$entrypoints_check" check
 
@@ -277,9 +285,10 @@ if [ "$print_only" -eq 1 ]; then
 fi
 
 if [ "$mode" = system ]; then
-    exec "$privileged_sudo" "$guix_resolved" system reconfigure "$source_resolved" \
+    exec "$privileged_sudo" "$guix_resolved" system -L "$module_dir" \
+        reconfigure "$source_resolved" \
         --substitute-urls="$substitute_urls" "$@"
 else
-    exec "$guix_resolved" home reconfigure "$source_resolved" \
+    exec "$guix_resolved" home -L "$module_dir" reconfigure "$source_resolved" \
         --substitute-urls="$substitute_urls" "$@"
 fi

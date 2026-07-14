@@ -1,10 +1,13 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; The Slice 16 candidate expands the reviewed Home user/editor base to 81
+;; The Slice 17 candidate expands the reviewed Home user/editor base to 82
 ;; packages; live acceptance remains separate from this declaration.
 ;; Package-lint keeps the tracked Emacs Lisp project independent of mutable
 ;; ELPA state; Clojure mode, cljfmt, and clj-kondo provide the persistent
 ;; editor-side Clojure integration without leaking its JVM runtime into Home.
+;; Racket Mode is represented separately because Home must select the local
+;; runtime-detached package object rather than Guix's same-named package, which
+;; embeds an absolute Racket runtime path.
 ;; The System list guarantees a tty shell, Kitty, and `emacs -Q'; normal
 ;; configured EXWM still consumes the accepted base Home services and editor
 ;; profile.
@@ -120,6 +123,16 @@
           %guixpc-home-emacs-package-specifications
           %guixpc-home-development-package-specifications))
 
+;; Keep names for explicit package objects in the shared ownership declaration
+;; so duplicate, overlap, and source-wiring checks cover them too.  guixpc Home
+;; validates that the package objects it selects have exactly these names.
+(define %guixpc-home-explicit-package-names
+  '("emacs-racket-mode"))
+
+(define %guixpc-home-package-names
+  (append %guixpc-home-package-specifications
+          %guixpc-home-explicit-package-names))
+
 (define (sk:duplicates items)
   (let loop ((remaining items) (seen '()) (duplicates '()))
     (if (null? remaining)
@@ -144,19 +157,19 @@
 (let ((recovery-duplicates
        (sk:duplicates %guixpc-recovery-package-specifications))
       (home-duplicates
-       (sk:duplicates %guixpc-home-package-specifications))
+       (sk:duplicates %guixpc-home-package-names))
       (overlap
        (sk:intersection %guixpc-recovery-package-specifications
-                        %guixpc-home-package-specifications)))
+                        %guixpc-home-package-names)))
   (unless (null? recovery-duplicates)
     (error "duplicate guixpc recovery package specifications"
            recovery-duplicates))
   (unless (null? home-duplicates)
-    (error "duplicate guixpc Home package specifications" home-duplicates))
+    (error "duplicate guixpc Home package ownership names" home-duplicates))
   ;; The normal session selects Home Emacs through PATH and its coherent
   ;; site-lisp profile.  System deliberately retains the same Emacs package as
   ;; a tty/EXWM recovery executable, so this is the sole approved overlap in
-  ;; these two explicit specification lists.  The full build gate separately
+  ;; these two explicit ownership lists.  The full build gate separately
   ;; checks the expected implicit Fish and Guile profile overlap.
   (unless (equal? overlap '("emacs"))
     (error "unexpected guixpc System/Home package ownership overlap" overlap)))

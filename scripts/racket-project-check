@@ -1,0 +1,327 @@
+#!/bin/sh
+
+set -eu
+
+fail() {
+    printf 'racket-project-check: %s\n' "$1" >&2
+    exit 1
+}
+
+project_key() {
+    canonical=$(CDPATH='' cd "$1" && pwd -P)
+    printf '%s\n' "$canonical" | cksum |
+        while read -r checksum octets _rest; do
+            printf '%s-%s\n' "$checksum" "$octets"
+        done
+}
+
+if [ "${SK_RACKET_PROJECT_CHECK_INNER:-0}" = 1 ]; then
+    [ "$#" -eq 0 ] || fail 'internal runner received arguments'
+    project=${SK_RACKET_PROJECT_CHECK_PROJECT:?}
+    project_command=${SK_RACKET_PROJECT_CHECK_COMMAND:?}
+    cache_home=${XDG_CACHE_HOME:?}
+    state=$cache_home/racket/projects/$(project_key "$project")
+    negative_output=$TMPDIR/racket-negative.out
+
+    make_project() {
+        RACKET_PROJECT=$project_command \
+            make --no-print-directory -s -C "$project" "$1"
+    }
+
+    expect_failure() {
+        label=$1
+        shift
+        if "$@" >"$negative_output" 2>&1; then
+            fail "$label negative control unexpectedly passed"
+        fi
+        printf 'racket-project-check: %s negative control: PASS\n' "$label"
+    }
+
+    result=$(
+        "$project_command" --project "$project" eval \
+            '(begin (require sk/fixture/main) (displayln (fixture-answer)))'
+    )
+    [ "$result" = 42 ] || fail "evaluation returned $result instead of 42"
+    printf '%s\n' 'racket-project-check: evaluation: 42'
+
+    result=$(
+        "$project_command" --project "$project" backend -e \
+            '(begin (require sk/fixture/main) (displayln (fixture-answer)))'
+    )
+    [ "$result" = 42 ] || fail "backend returned $result instead of 42"
+    printf '%s\n' 'racket-project-check: backend: 42'
+
+    expected_environment=$(
+        printf '%s\n' \
+            "$state/user-home" \
+            "$state/addon" \
+            "$state/config" \
+            "$project/src:" \
+            "$state/compiled:"
+    )
+    actual_environment=$(
+        "$project_command" --project "$project" raw -e \
+            '(for ([name '\''("PLTUSERHOME" "PLTADDONDIR" "PLTCONFIGDIR" "PLTCOLLECTS" "PLTCOMPILEDROOTS")]) (displayln (or (getenv name) "")))'
+    )
+    [ "$actual_environment" = "$expected_environment" ] || \
+        fail 'Racket isolation environment differs from keyed state contract'
+    printf '%s\n' 'racket-project-check: isolated PLT environment: PASS'
+
+    "$project_command" --project "$project" make \
+        src/sk/fixture/main.rkt test/sk/fixture/main-test.rkt
+    "$project_command" --project "$project" lint \
+        src/sk/fixture/main.rkt test/sk/fixture/main-test.rkt
+    "$project_command" --project "$project" test \
+        test/sk/fixture/main-test.rkt
+    "$project_command" --project "$project" docs \
+        scribblings/sk-fixture.scrbl
+    expanded=$(
+        "$project_command" --project "$project" expand \
+            src/sk/fixture/main.rkt
+    )
+    [ -n "$expanded" ] || fail 'macro expansion produced no output'
+    printf '%s\n' 'racket-project-check: compile/lint/test/docs/expand: PASS'
+
+    compiled_files=$(rg --files "$state/compiled" || :)
+    [ -n "$compiled_files" ] || fail 'compile produced no keyed cache files'
+    documentation_files=$(rg --files "$state/docs" || :)
+    case $documentation_files in
+        *.html*) ;;
+        *) fail 'Scribble produced no HTML in keyed cache' ;;
+    esac
+
+    result=$(make_project eval)
+    [ "$result" = 42 ] || fail "Make evaluation returned $result instead of 42"
+    printf '%s\n' 'racket-project-check: make evaluation: 42'
+
+    expect_failure syntax \
+        "$project_command" --project "$project" make \
+        negative/syntax-error.rkt
+    "$project_command" --project "$project" make \
+        src/sk/fixture/main.rkt test/sk/fixture/main-test.rkt
+
+    expect_failure lint \
+        "$project_command" --project "$project" lint \
+        negative/unused-require.rkt
+    "$project_command" --project "$project" lint \
+        src/sk/fixture/main.rkt test/sk/fixture/main-test.rkt
+
+    expect_failure test \
+        "$project_command" --project "$project" test \
+        negative/failing-test.rkt
+    "$project_command" --project "$project" test \
+        test/sk/fixture/main-test.rkt
+
+    expect_failure docs \
+        "$project_command" --project "$project" docs \
+        negative/broken-doc.scrbl
+    "$project_command" --project "$project" docs \
+        scribblings/sk-fixture.scrbl
+
+    "$project_command" --project "$project" check
+    make_project check
+    printf '%s\n' 'racket-project-check: direct and Make check: PASS'
+
+    for artifact in compiled doc .racket .pkg target; do
+        [ ! -e "$project/$artifact" ] || \
+            fail "project-local artifact appeared: $project/$artifact"
+    done
+
+    case ${SK_RACKET_PROJECT_CHECK_BREAK:-0} in
+        0) ;;
+        1)
+            printf '%s\n' \
+                'racket-project-check: deliberate failure control: TRIGGERED' >&2
+            exit 91
+            ;;
+        *) fail 'invalid SK_RACKET_PROJECT_CHECK_BREAK value' ;;
+    esac
+    exit 0
+fi
+
+usage() {
+    printf 'usage: %s [REPOSITORY]\n' "$0" >&2
+    exit 64
+}
+
+case $# in
+    0) repository_input=$(dirname "$0")/.. ;;
+    1) repository_input=$1 ;;
+    *) usage ;;
+esac
+
+if ! repository=$(CDPATH='' cd -- "$repository_input" 2>/dev/null && pwd -P); then
+    printf 'racket-project-check: repository is not a directory: %s\n' \
+        "$repository_input" >&2
+    exit 66
+fi
+
+fixture=$repository/fixtures/racket
+project_command=$repository/scripts/racket-project
+lisp_shell=$repository/scripts/guix-lisp-shell
+
+for path in \
+    "$fixture/.projectile" \
+    "$fixture/.gitignore" \
+    "$fixture/Makefile" \
+    "$fixture/info.rkt" \
+    "$fixture/src/sk/fixture/main.rkt" \
+    "$fixture/test/sk/fixture/main-test.rkt" \
+    "$fixture/scribblings/sk-fixture.scrbl" \
+    "$fixture/negative/syntax-error.rkt" \
+    "$fixture/negative/unused-require.rkt" \
+    "$fixture/negative/failing-test.rkt" \
+    "$fixture/negative/broken-doc.scrbl" \
+    "$project_command"; do
+    if [ ! -r "$path" ]; then
+        printf 'racket-project-check: unreadable input: %s\n' "$path" >&2
+        exit 66
+    fi
+done
+if [ ! -x "$project_command" ]; then
+    printf 'racket-project-check: input is not executable: %s\n' \
+        "$project_command" >&2
+    exit 66
+fi
+
+for command in chmod cksum cp dirname env find git make mkdir mktemp rg rm sort; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        printf 'racket-project-check: missing command: %s\n' "$command" >&2
+        exit 127
+    fi
+done
+
+tree_state() {
+    root=$1
+    if [ ! -e "$root" ]; then
+        printf 'MISSING %s\n' "$root"
+        return
+    fi
+    (
+        cd "$root"
+        find . -type d -print | sort
+        find . -type f -exec cksum {} \; | sort
+        find . -type l -print | sort
+    )
+}
+
+repository_state() {
+    if git -C "$repository" rev-parse --is-inside-work-tree \
+        >/dev/null 2>&1; then
+        printf '%s\n' '== status =='
+        git -C "$repository" status --short --untracked-files=all
+        printf '%s\n' '== worktree diff =='
+        git -C "$repository" diff --no-ext-diff --binary
+        printf '%s\n' '== index diff =='
+        git -C "$repository" diff --cached --no-ext-diff --binary
+    else
+        printf '%s\n' NO_GIT_WORK_TREE
+    fi
+}
+
+home_state() {
+    for relative in \
+        .racket \
+        .local/share/racket \
+        .config/racket \
+        .cache/racket; do
+        path=$original_home/$relative
+        printf '== %s ==\n' "$relative"
+        tree_state "$path"
+    done
+}
+
+original_home=${HOME:?HOME must be set}
+before_fixture=$(tree_state "$fixture")
+before_repository=$(repository_state)
+before_home=$(home_state)
+
+sandbox=$(mktemp -d "${TMPDIR:-/tmp}/sk-racket-project-check.XXXXXX")
+sandbox=$(CDPATH='' cd "$sandbox" && pwd -P)
+cleanup() {
+    rm -rf -- "$sandbox"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+isolated_home=$sandbox/home
+isolated_tmp=$sandbox/tmp
+isolated_cache=$sandbox/xdg/cache
+isolated_config=$sandbox/xdg/config
+isolated_data=$sandbox/xdg/data
+isolated_state=$sandbox/xdg/state
+isolated_runtime=$sandbox/xdg/runtime
+project=$sandbox/project
+
+mkdir -p "$isolated_home" "$isolated_tmp" "$isolated_cache" \
+    "$isolated_config" "$isolated_data" "$isolated_state" \
+    "$isolated_runtime" "$project"
+chmod 700 "$sandbox" "$isolated_home" "$isolated_tmp" "$isolated_runtime"
+cp -R "$fixture/." "$project/"
+before_project=$(tree_state "$project")
+
+printf '%s\n' '== Racket project =='
+set -- env \
+    "HOME=$isolated_home" \
+    "TMPDIR=$isolated_tmp" \
+    "XDG_CACHE_HOME=$isolated_cache" \
+    "XDG_CONFIG_HOME=$isolated_config" \
+    "XDG_DATA_HOME=$isolated_data" \
+    "XDG_STATE_HOME=$isolated_state" \
+    "XDG_RUNTIME_DIR=$isolated_runtime" \
+    "PLTUSERHOME=$sandbox/poison/user-home" \
+    "PLTADDONDIR=$sandbox/poison/addon" \
+    "PLTCONFIGDIR=$sandbox/poison/config" \
+    "PLTCOLLECTS=$sandbox/poison/collects" \
+    "PLTCOMPILEDROOTS=$sandbox/poison/compiled" \
+    "LANG=C" \
+    "LC_ALL=C" \
+    "TZ=UTC" \
+    "SK_RACKET_PROJECT_CHECK_INNER=1" \
+    "SK_RACKET_PROJECT_CHECK_BREAK=${SK_RACKET_PROJECT_CHECK_BREAK:-0}" \
+    "SK_RACKET_PROJECT_AUTHENTICATED=1" \
+    "SK_RACKET_PROJECT_CHECK_PROJECT=$project" \
+    "SK_RACKET_PROJECT_CHECK_COMMAND=$project_command" \
+    "$repository/scripts/racket-project-check"
+
+runner_status=0
+guix=${GUIX:-$original_home/.config/guix/current/bin/guix}
+if [ ! -x "$guix" ]; then
+    printf 'racket-project-check: canonical Guix is not executable: %s\n' \
+        "$guix" >&2
+    exit 69
+fi
+if [ ! -x "$lisp_shell" ]; then
+    printf 'racket-project-check: Guix shell wrapper is unavailable: %s\n' \
+        "$lisp_shell" >&2
+    exit 66
+fi
+HOME=$isolated_home \
+TMPDIR=$isolated_tmp \
+XDG_CACHE_HOME=$isolated_cache \
+XDG_CONFIG_HOME=$isolated_config \
+XDG_DATA_HOME=$isolated_data \
+XDG_STATE_HOME=$isolated_state \
+XDG_RUNTIME_DIR=$isolated_runtime \
+GUIX=$guix \
+    "$lisp_shell" racket -- "$@" || runner_status=$?
+
+after_project=$(tree_state "$project")
+after_fixture=$(tree_state "$fixture")
+after_repository=$(repository_state)
+after_home=$(home_state)
+
+[ "$after_project" = "$before_project" ] || \
+    fail 'copied project changed during isolated run'
+[ "$after_fixture" = "$before_fixture" ] || \
+    fail 'source fixture changed during isolated run'
+[ "$after_repository" = "$before_repository" ] || \
+    fail 'repository state changed during isolated run'
+[ "$after_home" = "$before_home" ] || \
+    fail 'real HOME Racket state changed during isolated run'
+
+[ "$runner_status" -eq 0 ] || exit "$runner_status"
+printf '%s\n' 'racket-project-check: no source or real-HOME mutation: PASS'
+printf '%s\n' 'racket-project-check: PASS'

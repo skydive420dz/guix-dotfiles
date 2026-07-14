@@ -63,7 +63,7 @@ else
 fi
 export EMACSLOADPATH="$candidate_emacsloadpath"
 
-required_commands='chmod cp env git mkdir mktemp rm timeout'
+required_commands='chmod cksum cp env git mkdir mktemp rm sort timeout'
 if [ "$batch_only" -eq 0 ]; then
     required_commands="$required_commands emacsclient sed"
 fi
@@ -80,16 +80,34 @@ batch_checks="$repo/tests/emacs/batch-check.el"
 backend_checks="$repo/tests/emacs/backend-check.el"
 guix_lisp_shell="$repo/scripts/guix-lisp-shell"
 clojure_project="$repo/scripts/clojure-project"
+racket_project="$repo/scripts/racket-project"
 
 for file in "$live_expression_file" "$batch_bootstrap" "$batch_checks" \
-    "$backend_checks" "$guix_lisp_shell" "$clojure_project"; do
+    "$backend_checks" "$guix_lisp_shell" "$clojure_project" \
+    "$racket_project"; do
     if [ ! -r "$file" ]; then
         printf 'preflight: unreadable %s\n' "$file" >&2
         exit 2
     fi
 done
 
-repo_status_before="$(git -C "$repo" status --porcelain=v1 --untracked-files=all)"
+repository_state() {
+    printf '%s\n' '== status =='
+    git -C "$repo" status --porcelain=v1 --untracked-files=all
+    printf '%s\n' '== worktree diff =='
+    git -C "$repo" diff --no-ext-diff --binary
+    printf '%s\n' '== index diff =='
+    git -C "$repo" diff --cached --no-ext-diff --binary
+    printf '%s\n' '== untracked content =='
+    git -C "$repo" ls-files --others --exclude-standard | sort |
+        while IFS= read -r relative; do
+            [ -n "$relative" ] || continue
+            cksum "$repo/$relative" ||
+                printf 'UNREADABLE %s\n' "$relative"
+        done
+}
+
+repo_state_before=$(repository_state)
 
 run_live_checks() {
     if [ "${SK_EMACS_CHECK_BREAK_LIVE:-0}" = 1 ]; then
@@ -134,6 +152,7 @@ run_batch_checks() (
     cp -R "$repo/fixtures" "$source_root/fixtures"
     cp "$guix_lisp_shell" "$source_root/scripts/guix-lisp-shell"
     cp "$clojure_project" "$source_root/scripts/clojure-project"
+    cp "$racket_project" "$source_root/scripts/racket-project"
 
     env -i \
         HOME="$isolated_home" \
@@ -244,14 +263,15 @@ else
     printf 'backend: FAIL (status %s)\n' "$backend_status" >&2
 fi
 
-repo_status_after="$(git -C "$repo" status --porcelain=v1 --untracked-files=all)"
-if [ "$repo_status_before" = "$repo_status_after" ]; then
+repo_state_after=$(repository_state)
+if [ "$repo_state_before" = "$repo_state_after" ]; then
     repository_status=0
     printf '%s\n' 'repository state: unchanged'
 else
     repository_status=1
     printf '%s\n' 'repository state: CHANGED' >&2
-    printf '%s\n' '-- before --' "$repo_status_before" '-- after --' "$repo_status_after" >&2
+    printf '%s\n' '-- before --' "$repo_state_before" \
+        '-- after --' "$repo_state_after" >&2
 fi
 
 if [ "$live_status" -eq 0 ] &&

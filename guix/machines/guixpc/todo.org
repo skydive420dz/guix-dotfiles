@@ -191,10 +191,52 @@ Current next action:
     =/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home=, System generation 85,
     and Pull generation 5 pass the fresh checks; Home 38 is the immediate
     fallback.
+- [ ] Accept [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 17: Racket vertical slice][Slice 17: Racket vertical slice]].
+  - [X] Assemble the implementation candidate with manifest-only full Racket
+    9.1, the explicit runtime-detached Home Racket Mode object, the marked
+    source/test/docs fixture, project-keyed PLT wrapper, copied checker, native
+    indentation policy, and explicit project backend/XP plus shared key/window
+    integration.  The focused package build is 44.0 MiB and its full requisites
+    retain no Racket runtime output, avoiding the upstream package's hidden
+    2.135 GiB closure.
+  - [X] Keep dependency/formatting policy explicit: no =raco pkg=, package
+    installation, or catalog mutation; no fake =raco fmt=; native indentation
+    only; reject =DROP=/=ADD=/=BYPASS= recommendations from
+    =raco check-requires=; run RackUnit, Scribble, and macro expansion through
+    the full manifest.  Keep Findutils explicit only in the Racket tier because
+    the containment checker inventories files, symlinks, and empty directories.
+  - [X] Pass the focused disposable Racket project checker on GuixPC, including
+    evaluation/backend at 42, exact keyed PLT state, compilation, lint, tests,
+    docs, expansion, direct/Make gates, and source/real-Home mutation checks.
+    Its deliberate control emits the expected trigger and exits 91; the unused
+    require is diagnosed as =DROP racket/list at 0=.
+  - [X] Pass the complete non-activating candidate gate, including detached
+    package requisites, Home/System package and executable leakage, batch editor
+    tests, the copied project checker, and connected project-keyed backend/XP
+    checks.  Syntax, lint, test, documentation, deliberate checker, and connected
+    process-failure controls must fail cleanly without source, real-Home,
+    user-global package/catalog, source-tree artifact, checker sandbox, or
+    process residue.  Project-keyed cache state remains deliberate.  The exact
+    gate passes with candidate Home
+    =/gnu/store/0qslq27g81snh836mpw4g4n3wgadjq59-home= and unchanged System
+    =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=.  All 49 batch tests,
+    the generic Makefile-owned project policy, authenticated-shell re-entry,
+    XP/xref/docs/macro expansion, native debugger recovery, process-group-scoped
+    stop, and normal/deliberate connected cleanup checks pass.  The deliberate
+    paths return project status 91 and connected outer/inner statuses 1/255.
+    Post-gate live links remain accepted Home =n2hzw6qmz431= and System
+    =m5znrpyizvkk=, with no checker sandbox or process residue.
+  - [ ] Push the exact implementation checkpoint only after the complete gate
+    passes; record candidate Home/System store paths without calling them live
+    or accepted.
+  - [ ] Run =ghr=, reboot, and repeat fresh live Home/editor/project/backend/XP
+    acceptance and cleanup.  Verify persistent Home/System still expose no
+    Racket runtime, rotate the exact Home retention root, and keep Home 39 as
+    the immediate fallback until this step passes.
 
-Next action: implement Slice 17's Racket vertical slice with the same explicit
-runtime/editor/project/test ownership and live acceptance boundary used for
-the accepted Clojure/JVM slice.
+Next action: push the exact Slice 17 implementation checkpoint, then run =ghr=,
+reboot, and perform the fresh live acceptance and cleanup checks.  Do not rotate
+retention or call the slice accepted before those checks pass.
 
 Ordered follow-up:
 
@@ -207,7 +249,7 @@ Slice 13  package ownership and per-dialect environments
 Slice 14  core Lisp editing correctness and structural editing
 Slice 15  Elisp, Guile, and Common Lisp project/test workflows
 Slice 16  Clojure/JVM vertical slice
-Slice 17  Racket vertical slice
+Slice 17  Racket candidate gate, activation, and live acceptance
 Slice 18  optional dialect incubation
 Slice 19  final desktop, security, and documentation polish
 #+end_src

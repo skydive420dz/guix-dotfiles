@@ -24,14 +24,17 @@ home_config=$repo/guix/home/guixpc.scm
 system_config=$repo/guix/systems/guixpc.scm
 module_dir=$repo/guix/modules
 manifest_dir=$repo/guix/manifests
-racket_fixture=$repo/fixtures/racket/basic-test.rkt
+racket_fixture=$repo/fixtures/racket
 elisp_fixture=$repo/fixtures/elisp/sk-example
 guile_fixture=$repo/fixtures/guile
 common_lisp_fixture=$repo/fixtures/common-lisp
 emacs_check=$repo/scripts/emacs-check
 emacs_clojure_check=$repo/scripts/emacs-clojure-check
+emacs_racket_check=$repo/scripts/emacs-racket-check
 lisp_project_check=$repo/scripts/lisp-project-check
 clojure_project_check=$repo/scripts/clojure-project-check
+racket_project_check=$repo/scripts/racket-project-check
+racket_project=$repo/scripts/racket-project
 guile_init=$repo/guile/guile
 frontend_input=${SK_GUIX_FRONTEND_PROFILE:-$home/.config/guix/current}
 substitute_urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
@@ -40,10 +43,21 @@ quarantined_expression='(@ (sk packages shells) fish-latest)'
 
 for file in "$channels" "$home_config" "$system_config" \
     "$module_dir/sk/development-tiers.scm" \
+    "$module_dir/sk/emacs.scm" \
     "$manifest_dir/core-lisp.scm" \
     "$manifest_dir/jvm-lisp.scm" \
     "$manifest_dir/racket.scm" \
-    "$racket_fixture" \
+    "$racket_fixture/.projectile" \
+    "$racket_fixture/.gitignore" \
+    "$racket_fixture/Makefile" \
+    "$racket_fixture/info.rkt" \
+    "$racket_fixture/src/sk/fixture/main.rkt" \
+    "$racket_fixture/test/sk/fixture/main-test.rkt" \
+    "$racket_fixture/scribblings/sk-fixture.scrbl" \
+    "$racket_fixture/negative/syntax-error.rkt" \
+    "$racket_fixture/negative/unused-require.rkt" \
+    "$racket_fixture/negative/failing-test.rkt" \
+    "$racket_fixture/negative/broken-doc.scrbl" \
     "$elisp_fixture/Makefile" \
     "$elisp_fixture/sk-example.el" \
     "$elisp_fixture/test/sk-example-test.el" \
@@ -58,8 +72,11 @@ for file in "$channels" "$home_config" "$system_config" \
     "$common_lisp_fixture/tests/core.lisp" \
     "$emacs_check" \
     "$emacs_clojure_check" \
+    "$emacs_racket_check" \
     "$lisp_project_check" \
     "$clojure_project_check" \
+    "$racket_project_check" \
+    "$racket_project" \
     "$guile_init"; do
     if [ ! -r "$file" ]; then
         printf 'guix-build-gate: unreadable declaration: %s\n' "$file" >&2
@@ -67,8 +84,9 @@ for file in "$channels" "$home_config" "$system_config" \
     fi
 done
 
-for checker in "$emacs_check" "$emacs_clojure_check" "$lisp_project_check" \
-    "$clojure_project_check"; do
+for checker in "$emacs_check" "$emacs_clojure_check" "$emacs_racket_check" \
+    "$lisp_project_check" "$clojure_project_check" "$racket_project_check" \
+    "$racket_project"; do
     if [ ! -x "$checker" ]; then
         printf 'guix-build-gate: candidate checker is not executable: %s\n' \
             "$checker" >&2
@@ -307,14 +325,14 @@ assert_manifest_absent() {
 
 run_home() {
     if [ "$plan" -eq 1 ]; then
-        "$pinned_guix" home \
+        "$pinned_guix" home -L "$module_dir" \
             --dry-run \
             --substitute-urls="$substitute_urls" \
             --max-jobs=1 \
             --cores=4 \
             build "$home_config"
     else
-        "$pinned_guix" home \
+        "$pinned_guix" home -L "$module_dir" \
             --substitute-urls="$substitute_urls" \
             --max-jobs=1 \
             --cores=4 \
@@ -324,14 +342,14 @@ run_home() {
 
 run_system() {
     if [ "$plan" -eq 1 ]; then
-        "$pinned_guix" system \
+        "$pinned_guix" system -L "$module_dir" \
             --dry-run \
             --substitute-urls="$substitute_urls" \
             --max-jobs=1 \
             --cores=4 \
             build "$system_config"
     else
-        "$pinned_guix" system \
+        "$pinned_guix" system -L "$module_dir" \
             --substitute-urls="$substitute_urls" \
             --max-jobs=1 \
             --cores=4 \
@@ -379,10 +397,10 @@ validate_system_recovery_profile() {
         fi
     done
 
-    for command in bb clj clj-kondo cljfmt clojure clojure-lsp gradle java \
-        javac lein mvn; do
+    for command in bb clj clj-kondo cljfmt clojure clojure-lsp drracket \
+        gradle gracket java javac lein mvn mzc plt-help raco racket scribble; do
         if [ -e "$profile/bin/$command" ]; then
-            printf 'guix-build-gate: optional JVM command leaked into System: %s\n' \
+            printf 'guix-build-gate: optional project command leaked into System: %s\n' \
                 "$command" >&2
             exit 1
         fi
@@ -488,7 +506,7 @@ validate_home_profile_artifacts() {
     done
 
     for library in clojure-mode eshell-syntax-highlighting geiser geiser-guile \
-        org package-lint puni sly use-package yasnippet; do
+        org package-lint puni racket-mode sly use-package yasnippet; do
         found=0
         for path in "$profile/share/emacs/site-lisp/$library"-*; do
             if [ -e "$path" ]; then
@@ -510,17 +528,56 @@ validate_home_profile_artifacts() {
         exit 1
     fi
 
-    # cljfmt and clj-kondo are deliberate Home editor tools.  The JVM,
-    # language server, dependency/build clients, and Clojure launchers must
-    # remain confined to the project manifest even when propagated inputs
-    # would not appear as top-level profile package records.
-    for command in bb clj clojure clojure-lsp gradle java javac lein mvn; do
+    # cljfmt, clj-kondo, and runtime-detached Racket Mode are deliberate Home
+    # editor tools.  JVM and Racket runtimes, language servers, dependency
+    # clients, and project launchers remain confined to manifests even when a
+    # propagated reference would not appear as a top-level package record.
+    for command in bb clj clojure clojure-lsp drracket gradle gracket java \
+        javac lein mvn mzc plt-help raco racket scribble; do
         if [ -e "$profile/bin/$command" ]; then
-            printf 'guix-build-gate: optional JVM command leaked into Home: %s\n' \
+            printf 'guix-build-gate: optional project command leaked into Home: %s\n' \
                 "$command" >&2
             exit 1
         fi
     done
+
+    # The pinned upstream recipe embeds its native Racket input into
+    # racket-custom.el.  Home uses a local runtime-detached variant; checking
+    # the realized output references closes the hole that package-record and
+    # profile/bin checks cannot see.
+    racket_site=
+    for path in "$profile"/share/emacs/site-lisp/racket-mode-*; do
+        [ -d "$path" ] || continue
+        if [ -n "$racket_site" ]; then
+            printf '%s\n' \
+                'guix-build-gate: Home profile has multiple Racket Mode generations' >&2
+            exit 1
+        fi
+        racket_site=$path
+    done
+    if [ -z "$racket_site" ]; then
+        printf '%s\n' \
+            'guix-build-gate: Home profile lacks the detached Racket Mode output' >&2
+        exit 1
+    fi
+    racket_site=$(readlink -f "$racket_site")
+    racket_output=${racket_site%%/share/emacs/site-lisp/*}
+    if [ "$racket_output" = "$racket_site" ] || [ ! -d "$racket_output" ]; then
+        printf 'guix-build-gate: cannot resolve Racket Mode package output: %s\n' \
+            "$racket_site" >&2
+        exit 1
+    fi
+    racket_requisites=$tmp/racket-mode-requisites
+    "$pinned_guix" gc --requisites "$racket_output" >"$racket_requisites"
+    if awk '$0 !~ /-emacs-racket-mode-/ &&
+            /-racket(-[[:alnum:]_.+-]+)?-[0-9]/ { found = 1 }
+            END { exit !found }' "$racket_requisites"; then
+        printf '%s\n' \
+            'guix-build-gate: detached Racket Mode still retains a Racket runtime' >&2
+        cat "$racket_requisites" >&2
+        exit 1
+    fi
+    printf '%s\n' 'Detached Racket Mode closure requisites: PASS'
 }
 
 validate_nonlogin_fish_environment() {
@@ -589,7 +646,7 @@ validate_realized_package_ownership() {
     write_declared_package_names \
         %guixpc-recovery-package-specifications "$declared_recovery"
     write_declared_package_names \
-        %guixpc-home-package-specifications "$declared_home"
+        %guixpc-home-package-names "$declared_home"
     require_profile_packages "$system_records" System "$declared_recovery"
     require_profile_packages "$home_records" Home "$declared_home"
     if ! profile_has_package "$system_records" kitty-latest; then
@@ -606,7 +663,8 @@ validate_realized_package_ownership() {
     done
 
     for package in babashka clojure clojure-tools clojure-lsp clj-kondo \
-        cljfmt gradle leiningen maven openjdk racket emacs-clojure-mode \
+        cljfmt gradle leiningen maven openjdk racket racket-minimal \
+        emacs-clojure-mode \
         emacs-cider emacs-flycheck-clj-kondo emacs-racket-mode; do
         if profile_has_package "$system_records" "$package"; then
             printf 'guix-build-gate: optional dialect leaked into System: %s\n' \
@@ -615,8 +673,8 @@ validate_realized_package_ownership() {
         fi
     done
     for package in babashka clojure clojure-tools clojure-lsp gradle \
-        leiningen maven openjdk racket emacs-cider emacs-flycheck-clj-kondo \
-        emacs-racket-mode; do
+        leiningen maven openjdk racket racket-minimal emacs-cider \
+        emacs-flycheck-clj-kondo; do
         if profile_has_package "$home_records" "$package"; then
             printf 'guix-build-gate: optional dialect leaked into Home: %s\n' \
                 "$package" >&2
@@ -792,6 +850,69 @@ validate_jvm_clojure_project() {
     printf '%s\n' 'Clojure project fixture: PASS'
 }
 
+assert_no_racket_cache_escape() {
+    for path in \
+        "$isolated_home/.racket" \
+        "$isolated_home/.local/share/racket" \
+        "$isolated_home/.config/racket" \
+        "$repo/fixtures/racket/compiled" \
+        "$repo/fixtures/racket/doc" \
+        "$repo/fixtures/racket/.racket" \
+        "$repo/fixtures/racket/.pkg" \
+        "$repo/fixtures/racket/target"; do
+        if [ -e "$path" ]; then
+            printf 'guix-build-gate: Racket state escaped isolation: %s\n' \
+                "$path" >&2
+            exit 1
+        fi
+    done
+}
+
+validate_racket_project() {
+    output=$tmp/racket-project-check.out
+    failure_output=$tmp/racket-project-check-break.out
+    assert_no_racket_cache_escape
+    if ! run_manifest_command "$manifest_dir/racket.scm" \
+        env GUIX="$pinned_guix" SK_RACKET_PROJECT_CHECK_BREAK=0 \
+        "$racket_project_check" "$repo" >"$output" 2>&1; then
+        cat "$output" >&2
+        printf '%s\n' \
+            'guix-build-gate: Racket project fixture check failed' >&2
+        exit 1
+    fi
+    cat "$output"
+    if ! awk '$0 == "racket-project-check: PASS" { pass = 1 }
+              END { exit !pass }' "$output"; then
+        printf '%s\n' \
+            'guix-build-gate: Racket project fixture omitted its PASS marker' >&2
+        exit 1
+    fi
+    assert_no_racket_cache_escape
+    printf '%s\n' 'Racket project fixture: PASS'
+
+    failure_status=0
+    run_manifest_command "$manifest_dir/racket.scm" \
+        env GUIX="$pinned_guix" SK_RACKET_PROJECT_CHECK_BREAK=1 \
+        "$racket_project_check" "$repo" >"$failure_output" 2>&1 || \
+        failure_status=$?
+    if [ "$failure_status" -ne 91 ]; then
+        cat "$failure_output" >&2
+        printf 'guix-build-gate: Racket project failure control returned status %s, expected 91\n' \
+            "$failure_status" >&2
+        exit 1
+    fi
+    if ! awk 'index($0, "racket-project-check: deliberate failure control: TRIGGERED") { found = 1 }
+              END { exit !found }' "$failure_output"; then
+        cat "$failure_output" >&2
+        printf '%s\n' \
+            'guix-build-gate: Racket project failure control missed its trigger' >&2
+        exit 1
+    fi
+    cat "$failure_output"
+    assert_no_racket_cache_escape
+    printf '%s\n' 'Racket project deliberate-failure cleanup: PASS'
+}
+
 validate_candidate_emacs() {
     home_result=$1
     system_result=$2
@@ -839,6 +960,76 @@ validate_candidate_emacs_clojure() {
     printf '%s\n' 'Candidate Emacs Clojure backend: PASS'
 }
 
+validate_candidate_emacs_racket() {
+    home_result=$1
+    system_result=$2
+    output=$tmp/emacs-racket-check.out
+
+    if ! HOME="$isolated_home" \
+        TMPDIR="$runtime_work" \
+        XDG_CACHE_HOME="$isolated_cache" \
+        XDG_CONFIG_HOME="$isolated_config" \
+        XDG_DATA_HOME="$isolated_data" \
+        XDG_STATE_HOME="$isolated_state" \
+        GUIX_ENVIRONMENT='' \
+        GUIX="$pinned_guix" \
+        SK_EMACS_CHECK_HOME_PROFILE="$home_result/profile" \
+        SK_EMACS_CHECK_SYSTEM_PROFILE="$system_result/profile" \
+        SK_EMACS_RACKET_CHECK_BREAK=0 \
+        "$emacs_racket_check" "$repo" >"$output" 2>&1; then
+        cat "$output" >&2
+        printf '%s\n' \
+            'guix-build-gate: candidate Emacs Racket backend check failed' >&2
+        exit 1
+    fi
+    cat "$output"
+    if ! awk '$0 == "emacs-racket-check: PASS" { pass = 1 }
+              END { exit !pass }' "$output"; then
+        printf '%s\n' \
+            'guix-build-gate: candidate Emacs Racket backend omitted its PASS marker' >&2
+        exit 1
+    fi
+    printf '%s\n' 'Candidate Emacs Racket backend: PASS'
+
+    failure_output=$tmp/emacs-racket-check-break.out
+    failure_status=0
+    HOME="$isolated_home" \
+        TMPDIR="$runtime_work" \
+        XDG_CACHE_HOME="$isolated_cache" \
+        XDG_CONFIG_HOME="$isolated_config" \
+        XDG_DATA_HOME="$isolated_data" \
+        XDG_STATE_HOME="$isolated_state" \
+        GUIX_ENVIRONMENT='' \
+        GUIX="$pinned_guix" \
+        SK_EMACS_CHECK_HOME_PROFILE="$home_result/profile" \
+        SK_EMACS_CHECK_SYSTEM_PROFILE="$system_result/profile" \
+        SK_EMACS_RACKET_CHECK_BREAK=1 \
+        "$emacs_racket_check" "$repo" >"$failure_output" 2>&1 || \
+        failure_status=$?
+    if [ "$failure_status" -ne 1 ]; then
+        cat "$failure_output" >&2
+        printf 'guix-build-gate: connected Racket failure control returned status %s, expected 1\n' \
+            "$failure_status" >&2
+        exit 1
+    fi
+    if ! awk '
+        index($0, "Deliberate connected failure with Racket backend/REPL live") {
+            deliberate = 1
+        }
+        $0 == "emacs-racket-check: candidate editor process failed with status 255" {
+            cleanup = 1
+        }
+        END { exit !(deliberate && cleanup) }
+    ' "$failure_output"; then
+        cat "$failure_output" >&2
+        printf '%s\n' \
+            'guix-build-gate: connected Racket failure control missed its cleanup proof' >&2
+        exit 1
+    fi
+    cat "$failure_output"
+    printf '%s\n' 'Candidate Emacs Racket deliberate-failure cleanup: PASS'
+}
+
 printf '%s\n' '== promoted sk-guix packages =='
 run_promoted_packages
 
@@ -866,14 +1057,17 @@ if [ "$plan" -eq 0 ]; then
         --eval '(require :asdf)' \
         --eval '(format t "~a~%" (asdf:asdf-version))'
     validate_core_lisp_project_fixtures
+    assert_manifest_absent "$manifest_dir/core-lisp.scm" find
     assert_manifest_absent "$manifest_dir/core-lisp.scm" clojure
     assert_manifest_absent "$manifest_dir/core-lisp.scm" racket
+    assert_manifest_absent "$manifest_dir/core-lisp.scm" raco
 
     run_manifest_command "$manifest_dir/jvm-lisp.scm" java -version
     run_manifest_command "$manifest_dir/jvm-lisp.scm" cljfmt --version
     run_manifest_command "$manifest_dir/jvm-lisp.scm" clj-kondo --version
     run_manifest_command "$manifest_dir/jvm-lisp.scm" clojure-lsp --version
     validate_jvm_clojure_project
+    assert_manifest_absent "$manifest_dir/jvm-lisp.scm" find
     assert_manifest_absent "$manifest_dir/jvm-lisp.scm" bb
     assert_manifest_absent "$manifest_dir/jvm-lisp.scm" clojure
     assert_manifest_absent "$manifest_dir/jvm-lisp.scm" clj
@@ -883,14 +1077,19 @@ if [ "$plan" -eq 0 ]; then
     assert_manifest_absent "$manifest_dir/jvm-lisp.scm" guile
     assert_manifest_absent "$manifest_dir/jvm-lisp.scm" sbcl
     assert_manifest_absent "$manifest_dir/jvm-lisp.scm" racket
+    assert_manifest_absent "$manifest_dir/jvm-lisp.scm" raco
 
+    # The project checker uses find to inventory files, symlinks, and empty
+    # directories.  Probe it independently so a missing manifest dependency
+    # fails before the checker can accidentally inherit an ambient command.
+    run_manifest_command "$manifest_dir/racket.scm" find --version
     run_manifest_command "$manifest_dir/racket.scm" \
         racket -e '(displayln (+ 20 22))'
-    run_manifest_command "$manifest_dir/racket.scm" \
-        raco test "$racket_fixture"
+    validate_racket_project
     assert_manifest_absent "$manifest_dir/racket.scm" guile
     assert_manifest_absent "$manifest_dir/racket.scm" sbcl
     assert_manifest_absent "$manifest_dir/racket.scm" clojure
+    assert_manifest_absent "$manifest_dir/racket.scm" java
 fi
 
 printf '%s\n' '== Guix Home declaration =='
@@ -917,6 +1116,7 @@ else
     validate_elisp_project_fixture "$home_result" "$system_result"
     validate_candidate_emacs "$home_result" "$system_result"
     validate_candidate_emacs_clojure "$home_result" "$system_result"
+    validate_candidate_emacs_racket "$home_result" "$system_result"
 fi
 
 if [ "$plan" -eq 1 ]; then

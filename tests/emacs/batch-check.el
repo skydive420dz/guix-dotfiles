@@ -82,7 +82,7 @@
   "Return non-nil when PROCESS is a configured Lisp runtime or server."
   (seq-some (lambda (argument)
               (string-match-p
-               "\\(?:^\\|/\\)\\(?:guile\\|sbcl\\|java\\|clojure-lsp\\)\\'"
+               "\\(?:^\\|/\\)\\(?:guile\\|sbcl\\|java\\|clojure-lsp\\|racket\\|raco\\|racket-project\\)\\'"
                               argument))
             (or (process-command process) '())))
 
@@ -299,10 +299,26 @@
     (sk/check-with-eldoc-fixture
      (concat "common-lisp/sample." extension)
      (lambda () (should (eq major-mode 'lisp-mode)))))
+  (sk/check-with-eldoc-fixture
+   "racket/src/sk/fixture/main.rkt"
+   (lambda ()
+     (should (eq major-mode 'racket-mode))
+     (should (eq (sk/lisp--dialect) 'racket))
+     (should (bound-and-true-p puni-mode))
+     (should (bound-and-true-p company-mode))
+     (should-not (bound-and-true-p racket-xp-mode))
+     (should sk/racket-project-root)
+     (let ((configuration
+            (sk/racket--backend-configuration sk/racket-project-root)))
+       (should configuration)
+       (should
+        (equal (plist-get configuration :racket-program)
+               (sk/racket--backend-command sk/racket-project-root))))))
   (dolist (case '((inferior-emacs-lisp-mode . elisp)
                   (geiser-repl-mode . scheme)
                   (sly-mrepl-mode . common-lisp)
-                  (sk/clojure-repl-mode . clojure)))
+                  (sk/clojure-repl-mode . clojure)
+                  (racket-repl-mode . racket)))
     (with-temp-buffer
       ;; Do not start a runtime merely to verify the global leader dispatcher
       ;; recognizes its already-connected REPL modes.
@@ -346,6 +362,46 @@
   (should (file-equal-p sk/clojure-repository-directory
                         sk/check-source-root))
   (should-not (seq-some #'sk/check-lisp-runtime-process-p (process-list))))
+
+(ert-deftest sk/check-racket-editing-and-runtime-detachment-contract ()
+  (should (file-equal-p sk/racket-repository-directory
+                        sk/check-source-root))
+  (should (file-executable-p sk/racket-project-wrapper))
+  (should (equal racket-program
+                 (list sk/racket-project-wrapper
+                       "--project" "." "backend")))
+  (should (= 1 (cl-count #'sk/racket-mode-setup racket-mode-hook
+                          :test #'eq)))
+  (should (= 1 (cl-count #'puni-mode racket-mode-hook :test #'eq)))
+  (should-not (memq #'racket-xp-mode racket-mode-hook))
+  (dolist (directory (list racket-doc-index-directory
+                           racket-repl-history-directory))
+    (should (file-in-directory-p (file-truename directory)
+                                 (file-truename sk/cache-directory))))
+  (should (file-in-directory-p
+           (file-truename (file-name-directory racket-repl-command-file))
+           (file-truename sk/cache-directory)))
+  (sk/check-with-fixture
+   "racket/src/sk/fixture/main.rkt"
+   (lambda ()
+     (should (eq major-mode 'racket-mode))
+     (should-not (bound-and-true-p racket-xp-mode))
+     (should-not (sk/racket--backend-process sk/racket-project-root))
+     (should-not (sk/racket--live-repl-buffer sk/racket-project-root))))
+  (should-not (seq-some #'sk/check-lisp-runtime-process-p (process-list))))
+
+(ert-deftest sk/check-dialect-modules-participate-in-config-reload ()
+  (let ((lisp-position (seq-position sk/reload-module-files "sk-lisp"))
+        (clojure-position (seq-position sk/reload-module-files "sk-clojure"))
+        (racket-position (seq-position sk/reload-module-files "sk-racket"))
+        (format-position (seq-position sk/reload-module-files "sk-format")))
+    (should lisp-position)
+    (should clojure-position)
+    (should racket-position)
+    (should format-position)
+    (should (< lisp-position clojure-position))
+    (should (< clojure-position racket-position))
+    (should (< racket-position format-position))))
 
 (ert-deftest sk/check-lisp-activation-and-indent-ownership ()
   (should (= 1 (cl-count #'geiser-mode--maybe-activate scheme-mode-hook
@@ -457,7 +513,8 @@
                    . "elisp/sk-example")
                   ("guile/src/sk/fixture/math.scm" . "guile")
                   ("common-lisp/tests/core.lisp" . "common-lisp")
-                  ("clojure/src/sk/fixture/core.clj" . "clojure")))
+                  ("clojure/src/sk/fixture/core.clj" . "clojure")
+                  ("racket/src/sk/fixture/main.rkt" . "racket")))
     (let* ((file (sk/check-fixture-path (car case)))
            (expected (file-name-as-directory
                       (sk/check-fixture-path (cdr case))))
@@ -472,6 +529,7 @@
          command-directory)
     (with-temp-buffer
       (setq buffer-file-name file)
+      (scheme-mode)
       (cl-letf (((symbol-function 'compile)
                  (lambda (value)
                    (setq command value
@@ -662,7 +720,11 @@
                        (getenv "ASDF_OUTPUT_TRANSLATIONS"))))
   ;; `ob-lisp' uses an independent inferior-lisp/comint path, not the accepted
   ;; SLY connection and strict ASDF environment, so Common Lisp Babel stays off.
-  (should-not (alist-get 'lisp org-babel-load-languages)))
+  (should-not (alist-get 'lisp org-babel-load-languages))
+  ;; Racket Babel would be a second, unwrapped runtime path.  Source editing is
+  ;; enabled through `org-src-lang-modes' while execution stays disabled.
+  (should (equal (cdr (assoc "racket" org-src-lang-modes)) 'racket))
+  (should-not (alist-get 'racket org-babel-load-languages)))
 
 (ert-deftest sk/check-common-lisp-project-connection-isolation ()
   (let* ((root-a (file-name-as-directory
@@ -973,17 +1035,19 @@
 
 (ert-deftest sk/check-puni-lisp-and-org-source-editors ()
   (dolist (mode '(emacs-lisp-mode lisp-interaction-mode scheme-mode lisp-mode
-                  clojure-mode))
+                  clojure-mode racket-mode))
     (sk/check-puni-contract-in-mode mode))
   (dolist (case '(("emacs-lisp" . emacs-lisp-mode)
                   ("scheme" . scheme-mode)
-                  ("lisp" . lisp-mode)))
+                  ("lisp" . lisp-mode)
+                  ("racket" . racket-mode)))
     (sk/check-puni-org-source-edit (car case) (cdr case)))
   (with-temp-buffer
     (org-mode)
     (should-not (bound-and-true-p puni-mode)))
   (dolist (hook '(emacs-lisp-mode-hook lisp-interaction-mode-hook
-                  scheme-mode-hook lisp-mode-hook clojure-mode-hook))
+                  scheme-mode-hook lisp-mode-hook clojure-mode-hook
+                  racket-mode-hook))
     (should (= 1 (cl-count #'puni-mode (symbol-value hook) :test #'eq)))))
 
 (ert-deftest sk/check-authored-snippets-and-eshell-highlighting ()
@@ -1035,7 +1099,7 @@
                      ("SPC l m" . sk/lisp-macroexpand)
                      ("SPC l n" . sk/clojure-reload-namespace)
                      ("SPC l p" . sk/lisp-project-check)
-                     ("SPC l q" . sk/clojure-stop)
+                     ("SPC l q" . sk/lisp-stop)
                      ("SPC l x" . sk/lisp-references)
                      ("SPC l [" . puni-slurp-backward)
                      ("SPC l ]" . puni-slurp-forward)
@@ -1149,7 +1213,8 @@
           (funcall (car case))
           (sk/format-buffer))
         (should (equal route (cdr case))))))
-  (dolist (mode '(lua-mode emacs-lisp-mode scheme-mode lisp-mode org-mode))
+  (dolist (mode '(lua-mode emacs-lisp-mode scheme-mode lisp-mode racket-mode
+                  org-mode))
     (with-temp-buffer
       (let (route)
         (cl-letf (((symbol-function 'lsp-deferred) #'ignore)
@@ -1286,11 +1351,14 @@
     (delete-other-windows)
     (dolist (case '(("*sk-geiser-doc*" geiser-doc-mode nil right 1)
                     ("*sk-clojure-doc*" help-mode nil right 1)
+                    ("*sk-racket-doc*" racket-describe-mode nil right 1)
+                    ("*sk-racket-stepper*" racket-stepper-mode nil right 1)
                     ("*sly-description fixture*" lisp-mode nil right 1)
                     ("*sk-geiser-result*" geiser-debug-mode nil right 1)
                     ("*sk-geiser-xref*" geiser-xref-mode nil right 0)
                     ("*sk-clojure-xref*" xref--xref-buffer-mode nil right 0)
                     ("*sk-clojure-repl*" sk/clojure-repl-mode nil right 0)
+                    ("*sk-racket-repl*" racket-repl-mode nil right 0)
                     ("*sk-sly-mrepl*" sly-mrepl-mode nil right 0)
                     ("*sk-geiser-debug*" geiser-debug-mode t bottom 0)
                     ("*compilation*" compilation-mode nil bottom 0)
@@ -1593,6 +1661,113 @@
                            exwm-update-class-hook :test #'eq)))
     (should (= 1 (cl-count #'sk/exwm-update-title
                            exwm-update-title-hook :test #'eq)))))
+
+(ert-deftest sk/check-racket-shared-dispatch-and-cold-guards ()
+  (with-temp-buffer
+    (setq major-mode 'racket-mode)
+    (insert "fixture-answer")
+    (let (calls)
+      (cl-letf (((symbol-function 'sk/racket-repl)
+                 (lambda () (interactive) (push 'repl calls)))
+                ((symbol-function 'sk/racket-eval-buffer)
+                 (lambda () (interactive) (push 'buffer calls)))
+                ((symbol-function 'sk/racket-eval-defun)
+                 (lambda () (interactive) (push 'defun calls)))
+                ((symbol-function 'sk/racket-eval-last-sexp)
+                 (lambda () (interactive) (push 'sexp calls)))
+                ((symbol-function 'sk/racket-docs)
+                 (lambda () (interactive) (push 'docs calls)))
+                ((symbol-function 'sk/racket-definition)
+                 (lambda () (interactive) (push 'definition calls)))
+                ((symbol-function 'sk/racket-references)
+                 (lambda () (interactive) (push 'references calls)))
+                ((symbol-function 'sk/racket-macroexpand)
+                 (lambda () (interactive) (push 'macroexpand calls)))
+                ((symbol-function 'sk/racket-debug)
+                 (lambda () (interactive) (push 'debug calls)))
+                ((symbol-function 'sk/racket-project-check)
+                 (lambda () (interactive) (push 'project calls)))
+                ((symbol-function 'sk/racket-stop)
+                 (lambda () (interactive) (push 'stop calls))))
+        (sk/lisp-repl)
+        (sk/lisp-eval-buffer)
+        (sk/lisp-eval-defun)
+        (sk/lisp-eval-last-sexp)
+        (sk/lisp-docs)
+        (sk/lisp-definition)
+        (sk/lisp-references)
+        (sk/lisp-macroexpand)
+        (sk/lisp-debug)
+        (sk/lisp-project-check)
+        (sk/lisp-stop))
+      (should
+       (equal (reverse calls)
+              '(repl buffer defun sexp docs definition references
+                     macroexpand debug project stop)))))
+  (sk/check-with-fixture
+   "racket/src/sk/fixture/main.rkt"
+   (lambda ()
+     (dolist (command '(sk/lisp-eval-buffer
+                        sk/lisp-eval-defun
+                        sk/lisp-eval-last-sexp
+                        sk/lisp-docs
+                        sk/lisp-definition
+                        sk/lisp-references
+                        sk/lisp-macroexpand
+                        sk/lisp-debug
+                        sk/lisp-stop))
+       (should-error (funcall command) :type 'user-error)))))
+
+(ert-deftest sk/check-racket-stop-cleans-stale-repl-after-backend-crash ()
+  (let* ((root "/tmp/sk-racket-stale/")
+         (repl (get-buffer-create "*sk-racket-stale-repl*"))
+         (logger (get-buffer-create (sk/racket--logger-buffer-name root)))
+         (exit-calls 0))
+    (unwind-protect
+        (progn
+          (with-current-buffer repl
+            (setq-local racket--repl-session-id 'stale-session))
+          (cl-letf (((symbol-function 'sk/racket--canonical-root)
+                     (lambda (&optional _required) root))
+                    ((symbol-function 'sk/racket--live-repl-buffer)
+                     (lambda (&optional _root) repl))
+                    ((symbol-function 'sk/racket--backend-process)
+                     (lambda (&optional _root) nil))
+                    ((symbol-function 'sk/racket--disable-project-xp) #'ignore)
+                    ((symbol-function 'racket-repl-exit)
+                     (lambda () (setq exit-calls (1+ exit-calls)))))
+            (should (sk/racket-stop)))
+          (should (= exit-calls 0))
+          (should-not (buffer-live-p repl))
+          (should-not (buffer-live-p logger)))
+      (dolist (buffer (list repl logger))
+        (when (buffer-live-p buffer)
+          (kill-buffer buffer))))))
+
+(ert-deftest sk/check-racket-stop-public-fallback-completes-cleanly ()
+  (let* ((root "/tmp/sk-racket-fallback/")
+         (process (make-pipe-process
+                   :name "sk-racket-fallback-process" :noquery t))
+         (public-stop-calls 0))
+    (unwind-protect
+        (cl-letf (((symbol-function 'sk/racket--canonical-root)
+                   (lambda (&optional _required) root))
+                  ((symbol-function 'sk/racket--live-repl-buffer)
+                   (lambda (&optional _root) nil))
+                  ((symbol-function 'sk/racket--backend-process)
+                   (lambda (&optional _root) process))
+                  ((symbol-function 'sk/racket--disable-project-xp) #'ignore)
+                  ((symbol-function 'sk/racket--terminate-backend-group)
+                   (lambda (_process) nil))
+                  ((symbol-function 'racket-stop-back-end)
+                   (lambda ()
+                     (setq public-stop-calls (1+ public-stop-calls))
+                     (delete-process process))))
+          (should (sk/racket-stop))
+          (should (= public-stop-calls 1))
+          (should-not (process-live-p process)))
+      (when (process-live-p process)
+        (delete-process process)))))
 
 (ert-deftest sk/check-live-expression-is-one-form ()
   (let ((file (expand-file-name "tests/emacs/live-check.el"

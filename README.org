@@ -92,9 +92,15 @@ next active slice.
   clojure-lsp integration, 44/44 ERT checks, real connected checks, negative
   cleanup control, and fresh-boot acceptance all pass.  Home 38 is retained as
   the immediate fallback.
-- [ ] Continue Slices 17 through 19 in audit order.  Do not expand dialect
-  breadth ahead of the vertical runtime/editor/project/test acceptance for the
-  currently supported dialects.
+- [ ] Accept Slice 17.  The Racket implementation checkpoint now passes the
+  complete non-activating gate with manifest-only runtime ownership, a
+  runtime-detached Home editor package, a reusable tracked project contract,
+  and real editor/backend/cleanup checks.  It is not accepted until the
+  checkpoint is pushed, =ghr=, reboot, fresh live editor/project checks,
+  cleanup, and retention rotation all pass.
+- [ ] Continue Slices 18 and 19 only after Slice 17 acceptance.  Do not expand
+  dialect breadth ahead of the vertical runtime/editor/project/test acceptance
+  for the currently supported dialects.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 - [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
   the GRUB prompt before making more bootloader changes.
@@ -217,6 +223,18 @@ from 78 to 81 with =emacs-clojure-mode=, =clj-kondo=, and =cljfmt=; four
 Home-service packages bring the active realized profile to 85 packages.  The
 JVM, Clojure JAR, and clojure-lsp remain isolated in the pinned project
 environment rather than leaking into persistent Home or System ownership.
+The unactivated Slice 17 implementation candidate keeps those 81 specification-resolved
+packages and adds one explicit package object, for 82 declared Home packages:
+the local =emacs-racket-mode/runtime-detached= variant.  Upstream Guix patches
+Racket Mode to contain an absolute =racket= store path; the local variant
+restores the plain ="racket"= command after that phase.  Its verified output
+closure is 44.0 MiB, and its complete requisites contain no full, minimal, VM,
+documentation, or other Racket runtime output, avoiding retention of the full
+2.135 GiB Racket 9.1 closure.  The complete non-activating gate realizes Home
+=/gnu/store/0qslq27g81snh836mpw4g4n3wgadjq59-home= and unchanged System
+=/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system= with no persistent Racket
+runtime/package/executable leakage.  The accepted live baseline remains Home
+generation 39 until activation, fresh live, and reboot checks pass.
 The reduced System consumes the 13 recovery specifications recorded in
 =guix/package-ownership.scm= plus =kitty-latest=.  System generation 85 has
 passed a fresh boot; accepted System generation 84 remains its immediate
@@ -232,7 +250,10 @@ Guile from System =%base-packages=; all three must resolve to identical store
 objects.  Any other top-level overlap, missing declared package, internal
 duplicate name, missing recovery/Home artifact, Clojure/JVM runtime leakage
 beyond the three declared Home editor-side packages, or persistent Racket
-leakage fails the gate.
+runtime/package/executable leakage fails the gate.  For Racket Mode the gate
+also inspects every requisite of the realized editor output, because a hidden
+transitive runtime reference would evade top-level package and =profile/bin=
+checks.
 
 Apply with:
 
@@ -622,6 +643,27 @@ Clojure (Slice 16 accepted)
                only; the wrapper does not invoke tools.deps or Maven.
                =fixtures/clojure= supplies source/tests and tracked formatter,
                linter, and language-server settings.
+
+Racket (Slice 17 implementation candidate; not accepted)
+  Mode:        classic racket-mode only
+  Backend:     explicit project-keyed Racket Mode backend/REPL and XP analysis
+               through =scripts/racket-project=
+  Diagnostics: Racket XP/check-syntax only after explicit startup
+  Formatter:   native Emacs indentation through =SPC c f=
+  Notes:       Opening a file starts neither Racket nor XP.  Home owns only the
+               runtime-detached editor package; the full Racket 9.1 runtime,
+               raco, RackUnit, Scribble, docs, and GUI libraries remain in the
+               authenticated =racket= manifest.  =SPC l r= explicitly enables
+               XP and starts or selects the marked project's backend and
+               logical REPL; =SPC l q= disables that project's XP and stops only
+               its REPL/backend.  The tracked fixture supplies source, tests,
+               documentation, macro expansion, strict check-requires lint, and
+               negative controls without installing a package or changing a
+               Racket catalog.  Each project Makefile owns its concrete
+               source/test/docs policy; the production wrapper contains no
+               fixture-specific module path.  =racket-hash-lang-mode= remains deferred because
+               its initialization contacts the backend and therefore violates
+               this slice's cold-open contract.
 #+end_src
 
 Lisp-family editing has a shared leader surface over the native backend for
@@ -632,13 +674,13 @@ SPC l r  start or switch REPL
 SPC l b  evaluate buffer
 SPC l d  evaluate defun / top-level form
 SPC l e  evaluate last sexp
-SPC l D  instrument Elisp or show the active Geiser/SLY debugger
+SPC l D  instrument Elisp, show Geiser/SLY debugger, or debug-run Racket
 SPC l g  visit definition
 SPC l k  show docs at point
 SPC l m  macroexpand at point
 SPC l n  reload the current Clojure namespace
-SPC l p  run the project's make check gate
-SPC l q  stop the current project's Clojure REPL
+SPC l p  run the project's tracked check gate
+SPC l q  stop the current project's Clojure or Racket REPL/backend
 SPC l [ / ]  slurp backward / forward
 SPC l { / }  barf backward / forward
 SPC l (      wrap in round delimiters
@@ -657,25 +699,29 @@ Scheme:       Geiser commands; richer docs/completion after Guile REPL starts
 Common Lisp:  SLY commands; richer docs/completion after SBCL/SLY connects
 Clojure:      direct comint evaluation; clojure-lsp docs/navigation only after
               explicit =SPC c l= startup
+Racket:       Racket Mode commands; semantic XP analysis and the backend start
+              only on an explicit project command
 #+end_src
 
 Cold Lisp files should provide mode detection, indentation, basic syntax, and
 the correct command surface. Rich semantic completion/docs are REPL-backed for
-Scheme and Common Lisp and explicitly clojure-lsp-backed for Clojure.
+Scheme and Common Lisp, explicitly clojure-lsp-backed for Clojure, and
+explicitly XP/backend-backed for the Racket candidate.
 Evaluation checks backend connection state before dispatch, while backend
 failures after that check retain their original error.
 Documentation uniformly reports =No symbol at point= instead of prompting for
 or describing an unintended symbol at whitespace.
 
-The shared display policy routes documentation and macroexpansion to right
-slot 1, REPL and xref buffers to right slot 0, and compilation/debugger output
-to the bottom slot.  Opening a source file still never starts a runtime.
+The shared display policy routes documentation and macroexpansion—including
+Racket description and stepper buffers—to right slot 1, REPL and xref buffers
+to right slot 0, and compilation/debugger output to the bottom slot.  Opening a
+source file still never starts a runtime.
 
 =electric-pair-mode= owns delimiter insertion.  Puni is enabled only in Emacs
-Lisp, Lisp Interaction, Scheme, Common Lisp, and Clojure buffers—including
-those modes inside Org source editing—and owns balanced deletion plus the
-explicit structural commands above.  Evil retains modal state and ordinary
-motions.
+Lisp, Lisp Interaction, Scheme, Common Lisp, Clojure, and classic Racket
+buffers—including those modes inside Org source editing—and owns balanced
+deletion plus the explicit structural commands above.  Evil retains modal state
+and ordinary motions.
 Puni does not redefine stock Evil =d=, =c=, or =x= as structural operators; use
 the Puni commands when balance preservation is required.
 
@@ -709,6 +755,11 @@ JSON:   jq owns strict JSON; JSONC uses clang-format and keeps comments.
 Lua:    native Emacs indentation only. Stylua is the preferred external
         formatter in principle, but it is not packaged in the current Guix
         channel and local Rust crate packaging is out of scope for this setup.
+Racket: native Racket Mode indentation only.  Pinned Racket has no =raco fmt=
+        or =raco format= command, and the recommended external =fmt= package is
+        not packaged in the pinned Guix channels.  Do not install it with
+        =raco pkg=, mutate a catalog, or present indentation/check-requires as a
+        project-wide formatter.
 #+end_src
 
 Do not mark a language complete because a package exists. The buffer has to open
@@ -1239,6 +1290,13 @@ and language server must enter the JVM manifest through the copied production
 runtime and cross-tier leakage probes.  It validates the realized System/Home
 ownership boundary and critical profile artifacts; plan mode remains
 evaluation-only.
+The Slice 17 candidate extends that non-activating contract with the copied
+Racket project checker, the connected Racket Mode backend/XP checker, strict
+Home/System Racket executable absence, and a full-requisite check proving that
+Home's editor package does not retain the manifest-only Racket runtime.  The
+complete gate passes from the exact source candidate before publication; the
+next boundary is the pushed checkpoint followed by activation and fresh-boot
+acceptance.
 Guix may reuse already-authenticated
 immutable store objects; the separate isolated clean-clone test verifies the
 published =sk-guix= refs.  The gate never pulls, reconfigures,
@@ -1270,7 +1328,7 @@ composes three independently evaluable manifests:
 #+begin_src text
 core    Guile, readline/colorized modules, SBCL, and shared project/core tools
 jvm     OpenJDK, the Clojure JAR, clojure-lsp, clj-kondo, and cljfmt
-racket  full Racket with raco, RackUnit, docs, and GUI/runtime libraries
+racket  full Racket, Findutils, raco, RackUnit, docs, and GUI/runtime libraries
 #+end_src
 
 List or enter them through the authenticated channel snapshot:
@@ -1280,7 +1338,8 @@ scripts/guix-lisp-shell list
 scripts/guix-lisp-shell core
 scripts/guix-lisp-shell jvm -- make --no-print-directory -C fixtures/clojure check
 scripts/clojure-project-check
-scripts/guix-lisp-shell racket -- raco test fixtures/racket/basic-test.rkt
+scripts/racket-project --project fixtures/racket check
+scripts/racket-project-check
 scripts/lisp-project-check all
 #+end_src
 
@@ -1300,6 +1359,27 @@ this workflow.  The full build gate supplies isolated HOME/cache/config state
 while proving real Guile/SBCL/Clojure/Racket commands and verifying that Racket
 does not leak into core/JVM and Clojure does not leak into Racket.
 
+The Racket project surface is =backend=, =check=, =docs=, =eval=, =expand=,
+=lint=, =make=, =raw=, =repl=, and =test=.  It re-enters the repository-pinned
+full =racket= manifest unless its internal authenticated sentinel is present,
+so an arbitrary ambient =GUIX_ENVIRONMENT= cannot replace the reviewed runtime.
+It resolves only the marked project's =src= collection and places
+all writable state below
+=${XDG_CACHE_HOME:-$HOME/.cache}/racket/projects/<project-key>/=.  In particular,
+=PLTUSERHOME=, =PLTADDONDIR=, =PLTCONFIGDIR=, and the compiled/docs/tmp outputs
+are project-keyed.  =PLTCOLLECTS= records =ROOT/src:= as an explicit checked
+environment boundary, but =-U= suppresses its lookup; runtime actions therefore
+combine =-U= with =-S ROOT/src= so Racket ignores user-specific startup while
+still resolving the marked source collection.  =PLTCOMPILEDROOTS= puts writable
+compiled output before immutable installation roots.  The generic =check=
+action delegates to the project's =make check=; the tracked fixture Makefile
+owns its concrete source/test/docs paths, runs =raco make=, rejects
+=DROP=/=ADD=/=BYPASS= recommendations from =raco check-requires=, runs RackUnit
+through =raco test=, and generates Scribble HTML.  Macro expansion is available
+separately through =raco expand=.  No
+action invokes =raco pkg=, installs the fixture, changes a package catalog, or
+writes =compiled/= or =doc/= inside the project.
+
 The persistent Home profile owns =emacs-clojure-mode=, =clj-kondo=, and
 =cljfmt= for editor-side mode, diagnostics, and formatting.  The JVM manifest
 owns the complete runtime/tool closure above, while System owns no Clojure/JVM
@@ -1308,12 +1388,30 @@ starts =lsp-mode=/=clojure-lsp= only on an explicit command through the same
 project wrapper.  CIDER is intentionally absent: the pinned channels do not
 provide the Guix-packaged nREPL and cider-nrepl middleware needed for its
 standard jack-in flow, and this slice does not permit Maven downloads to fill
-that gap.  Racket editor integration remains Slice 17 work instead of being
-implied by package presence.
+that gap.  The Slice 17 source candidate similarly gives persistent Home only
+the runtime-detached Racket Mode package; the runtime, =raco= tools, package
+collections, and documentation stay in the project manifest.  Repository
+source configures Racket Mode to use the project wrapper only after explicit
+backend/XP startup.  This ownership and editor path remain unaccepted until the
+checkpoint is activated and its fresh live and reboot evidence exists; the
+complete non-activating gate now passes.
+
+The disposable Racket checker proves evaluation at 42, the backend command,
+project-keyed PLT environment, compilation, strict require-recommendation lint, RackUnit,
+Scribble, macro expansion, and both direct and Makefile =check= paths.  Its
+negative controls are a syntax error, an unused require, a failing RackUnit
+test, broken Scribble, and a deliberate checker failure.  It snapshots the
+copied project, source fixture, repository, and real Home Racket paths before
+and after the run, and rejects project-local =compiled=, =doc=, =.racket=,
+=.pkg=, or =target= artifacts.
 
 All three manifests explicitly include Coreutils because the pure project
-wrappers require =env=, =cp=, =mkdir=, =mktemp=, =rm=, and related primitives;
-they do not rely on an inherited workstation PATH.
+wrappers require =env=, =cp=, =mkdir=, =mktemp=, =rm=, and related primitives.
+The Racket tier alone also owns Findutils because its containment checker
+inventories files, symlinks, and empty directories.  The production Racket
+wrapper re-enters the repository-pinned authenticated shell even when an
+unrelated =GUIX_ENVIRONMENT= is already present; none of these paths rely on an
+inherited workstation =PATH=.
 
 The Common Lisp dependency policy is deliberately smaller than a second package
 manager: the tracked ASDF system has no external dependency, discovery uses a

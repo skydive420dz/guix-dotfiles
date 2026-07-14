@@ -58,7 +58,7 @@
   "Org agenda priority commands under `sk/org-agenda-localleader-map'.")
 
 (defconst sk/org-source-block-languages
-  '("emacs-lisp" "scheme" "lisp" "sh" "bash" "c" "python" "lua" "json")
+  '("emacs-lisp" "scheme" "lisp" "racket" "sh" "bash" "c" "python" "lua" "json")
   "Languages offered when inserting Org source blocks.")
 
 ;; Buffer setup:
@@ -336,6 +336,9 @@
      (lua . t)
      (C . t)
      (scheme . t)))
+  ;; Racket source blocks use the declared editor mode, but Babel execution is
+  ;; intentionally absent: every runtime action must cross racket-project.
+  (add-to-list 'org-src-lang-modes '("racket" . racket))
   (require 'org-habit)
   (add-to-list 'org-modules 'org-habit)
   (setq org-habit-graph-column 60)
@@ -345,6 +348,7 @@
                       ("el" . "src emacs-lisp")
                       ("scm" . "src scheme")
                       ("cl" . "src lisp")
+                      ("rkt" . "src racket")
                       ("lua" . "src lua")
                       ("c" . "src c")
                       ("py" . "src python")

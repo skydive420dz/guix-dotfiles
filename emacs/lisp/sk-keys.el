@@ -79,7 +79,7 @@
     "lm" '(sk/lisp-macroexpand :which-key "macroexpand")
     "ln" '(sk/clojure-reload-namespace :which-key "reload namespace")
     "lp" '(sk/lisp-project-check :which-key "project check")
-    "lq" '(sk/clojure-stop :which-key "stop clojure repl")
+    "lq" '(sk/lisp-stop :which-key "stop project repl")
     "lr" '(sk/lisp-repl :which-key "repl")
     "lx" '(sk/lisp-references :which-key "references")
     "l[" '(puni-slurp-backward :which-key "slurp backward")

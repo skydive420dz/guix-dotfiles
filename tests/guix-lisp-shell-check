@@ -26,6 +26,18 @@ cp "$source_repo/guix/modules/sk/development-tiers.scm" \
     "$repo/guix/modules/sk/development-tiers.scm"
 chmod +x "$wrapper"
 
+[ "$(grep -c '"findutils"' \
+    "$repo/guix/modules/sk/development-tiers.scm")" -eq 1 ] ||
+    fail 'findutils must be declared exactly once for the Racket tier'
+if ! awk '
+    /\(define %sk-racket-specifications/ { racket = 1 }
+    racket && /"findutils"/ { found = 1 }
+    /\(define %sk-development-tier-registry/ { exit !found }
+    END { exit !found }
+' "$repo/guix/modules/sk/development-tiers.scm"; then
+    fail 'Racket tier does not own its findutils checker dependency'
+fi
+
 cat >"$fake_guix" <<'EOF'
 #!/bin/sh
 set -eu

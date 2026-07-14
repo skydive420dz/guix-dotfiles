@@ -1,0 +1,299 @@
+#!/bin/sh
+
+set -eu
+
+case ${0##*/} in
+    guix-lisp-shell)
+        fake_root=$(CDPATH='' cd "$(dirname "$0")/../.." && pwd -P)
+        [ "$#" -ge 3 ] || exit 70
+        [ "$1" = racket ] || exit 71
+        [ "$2" = -- ] || exit 72
+        shift 2
+        printf '%s\n' GUIX_SHELL >>"$fake_root/tool.log"
+        GUIX_ENVIRONMENT=$fake_root/profile "$@"
+        exit 0
+        ;;
+    racket)
+        fake_root=$(CDPATH='' cd "$(dirname "$0")/../.." && pwd -P)
+        {
+            printf '%s' RACKET
+            for argument do
+                printf ' <%s>' "$argument"
+            done
+            printf ' |PLTCOLLECTS=%s|PLTCOMPILEDROOTS=%s|PLTUSERHOME=%s\n' \
+                "${PLTCOLLECTS:-}" "${PLTCOMPILEDROOTS:-}" \
+                "${PLTUSERHOME:-}"
+        } >>"$fake_root/tool.log"
+
+        if [ "${1:-}" = -U ]; then
+            shift
+        fi
+        if [ "${1:-}" = -S ]; then
+            shift
+            [ "$#" -gt 0 ] || exit 77
+            shift
+        fi
+        if [ "${1:-}" = -l ] && [ "${2:-}" = raco ] && \
+            [ "${3:-}" = -- ]; then
+            shift 3
+            raco_action=${1:?}
+            shift
+            case $raco_action in
+                make)
+                    case " $* " in
+                        *' negative/syntax-error.rkt '*) exit 1 ;;
+                    esac
+                    compiled_root=${PLTCOMPILEDROOTS%:}
+                    mkdir -p "$compiled_root/fake"
+                    : >"$compiled_root/fake/main_rkt.zo"
+                    ;;
+                check-requires)
+                    case " $* " in
+                        *' negative/unused-require.rkt '*)
+                            printf '%s\n' 'DROP racket/list'
+                            ;;
+                    esac
+                    ;;
+                test)
+                    case " $* " in
+                        *' negative/failing-test.rkt '*) exit 1 ;;
+                    esac
+                    printf '%s\n' '4 tests passed'
+                    ;;
+                scribble)
+                    destination=
+                    broken=0
+                    while [ "$#" -gt 0 ]; do
+                        case $1 in
+                            --dest)
+                                shift
+                                [ "$#" -gt 0 ] || exit 73
+                                destination=$1
+                                ;;
+                            *negative/broken-doc.scrbl) broken=1 ;;
+                        esac
+                        shift
+                    done
+                    [ "$broken" -eq 0 ] || exit 1
+                    [ -n "$destination" ] || exit 74
+                    mkdir -p "$destination"
+                    : >"$destination/sk-fixture.html"
+                    ;;
+                expand)
+                    printf '%s\n' \
+                        '(module main racket/base (define-values (fixture-answer) ...))'
+                    ;;
+                *) exit 75 ;;
+            esac
+            exit 0
+        fi
+
+        case $* in
+            *'"PLTUSERHOME"'*)
+                printf '%s\n' \
+                    "${PLTUSERHOME:-}" \
+                    "${PLTADDONDIR:-}" \
+                    "${PLTCONFIGDIR:-}" \
+                    "${PLTCOLLECTS:-}" \
+                    "${PLTCOMPILEDROOTS:-}"
+                ;;
+            *fixture-answer*) printf '%s\n' 42 ;;
+            *) exit 76 ;;
+        esac
+        exit 0
+        ;;
+esac
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+sandbox=$(mktemp -d "${TMPDIR:-/tmp}/racket-project-check-test.XXXXXX")
+sandbox=$(CDPATH='' cd "$sandbox" && pwd -P)
+trap 'rm -rf -- "$sandbox"' EXIT HUP INT TERM
+
+fail() {
+    printf 'racket-project-check-test: %s\n' "$1" >&2
+    exit 1
+}
+
+contains() {
+    case $output in
+        *"$1"*) ;;
+        *) fail "acceptance output omitted: $1" ;;
+    esac
+}
+
+fake_repo=$sandbox/repo
+fake_home=$sandbox/real-home
+outer_tmp=$sandbox/outer-tmp
+profile=$sandbox/profile
+log=$sandbox/tool.log
+
+mkdir -p "$fake_repo/scripts" "$fake_repo/fixtures" "$fake_home" \
+    "$outer_tmp" "$profile/bin"
+cp "$repo/scripts/racket-project" "$fake_repo/scripts/racket-project"
+cp "$repo/scripts/racket-project-check" \
+    "$fake_repo/scripts/racket-project-check"
+cp -R "$repo/fixtures/racket" "$fake_repo/fixtures/racket"
+cp "$repo/tests/racket-project-check" \
+    "$fake_repo/scripts/guix-lisp-shell"
+cp "$repo/tests/racket-project-check" "$profile/bin/racket"
+chmod +x "$fake_repo/scripts/racket-project" \
+    "$fake_repo/scripts/racket-project-check" \
+    "$fake_repo/scripts/guix-lisp-shell" "$profile/bin/racket"
+: >"$sandbox/fake-guix"
+chmod +x "$sandbox/fake-guix"
+: >"$log"
+
+if rg -q 'sk/fixture|sk-fixture' "$fake_repo/scripts/racket-project"; then
+    fail 'production Racket wrapper embeds fixture-specific paths'
+fi
+
+run_check() {
+    HOME=$fake_home TMPDIR=$outer_tmp \
+        GUIX=$CHECK_GUIX GUIX_ENVIRONMENT=$CHECK_GUIX_ENVIRONMENT \
+        "$fake_repo/scripts/racket-project-check" "$@"
+}
+
+CHECK_GUIX=$sandbox/fake-guix
+CHECK_GUIX_ENVIRONMENT=
+output=$(run_check "$fake_repo") || \
+    fail 'self-entering acceptance run failed'
+for proof in \
+    'racket-project-check: evaluation: 42' \
+    'racket-project-check: backend: 42' \
+    'racket-project-check: isolated PLT environment: PASS' \
+    'racket-project-check: compile/lint/test/docs/expand: PASS' \
+    'racket-project-check: syntax negative control: PASS' \
+    'racket-project-check: lint negative control: PASS' \
+    'racket-project-check: test negative control: PASS' \
+    'racket-project-check: docs negative control: PASS' \
+    'racket-project-check: direct and Make check: PASS' \
+    'racket-project-check: no source or real-HOME mutation: PASS' \
+    'racket-project-check: PASS'; do
+    contains "$proof"
+done
+
+[ "$(grep -c '^GUIX_SHELL$' "$log")" -eq 1 ] || \
+    fail 'checker did not enter exactly one authenticated Racket shell'
+grep '^RACKET <-U> <-S> <' "$log" >/dev/null || \
+    fail 'Racket actions did not disable user paths before appended arguments'
+
+: >"$log"
+CHECK_GUIX=$sandbox/fake-guix
+CHECK_GUIX_ENVIRONMENT=$profile
+output=$(run_check "$fake_repo") || \
+    fail 'ambient-profile acceptance run failed to re-enter pins'
+contains 'racket-project-check: PASS'
+[ "$(grep -c '^GUIX_SHELL$' "$log")" -eq 1 ] || \
+    fail 'ambient GUIX_ENVIRONMENT bypassed the authenticated Racket shell'
+
+: >"$log"
+wrapper_cache=$sandbox/wrapper-cache
+result=$(
+    HOME=$fake_home XDG_CACHE_HOME=$wrapper_cache \
+        GUIX=$sandbox/fake-guix GUIX_ENVIRONMENT=$profile \
+        "$fake_repo/scripts/racket-project" \
+        --project "$fake_repo/fixtures/racket" eval \
+        '(begin (require sk/fixture/main) (displayln (fixture-answer)))'
+)
+[ "$result" = 42 ] || fail 'standalone wrapper shell entry returned wrong value'
+[ "$(grep -c '^GUIX_SHELL$' "$log")" -eq 1 ] || \
+    fail 'standalone wrapper did not enter exactly one authenticated shell'
+
+set +e
+export SK_RACKET_PROJECT_CHECK_BREAK=1
+output=$(run_check "$fake_repo" 2>&1)
+failure_status=$?
+unset SK_RACKET_PROJECT_CHECK_BREAK
+set -e
+[ "$failure_status" -eq 91 ] || \
+    fail 'deliberate checker failure returned the wrong status'
+contains 'racket-project-check: deliberate failure control: TRIGGERED'
+
+if [ -n "$(find "$outer_tmp" -mindepth 1 -print -quit)" ]; then
+    fail 'isolated run directory survived cleanup'
+fi
+for artifact in compiled doc .racket .pkg target; do
+    [ ! -e "$fake_repo/fixtures/racket/$artifact" ] || \
+        fail "source fixture gained $artifact"
+done
+
+if run_check "$sandbox/missing" >/dev/null 2>&1; then
+    fail 'missing repository passed'
+else
+    [ "$?" -eq 66 ] || fail 'missing repository returned the wrong status'
+fi
+if run_check "$fake_repo" extra >/dev/null 2>&1; then
+    fail 'extra argument passed'
+else
+    [ "$?" -eq 64 ] || fail 'extra argument returned the wrong status'
+fi
+
+project=$fake_repo/fixtures/racket
+if HOME=$fake_home GUIX_ENVIRONMENT=/nonexistent \
+    SK_RACKET_PROJECT_AUTHENTICATED=1 \
+    "$fake_repo/scripts/racket-project" --project "$project" \
+        eval '(displayln 42)' >/dev/null 2>&1; then
+    fail 'project command accepted an invalid GUIX_ENVIRONMENT'
+else
+    [ "$?" -eq 69 ] || fail 'invalid Racket profile returned wrong status'
+fi
+if HOME=$fake_home GUIX_ENVIRONMENT=$profile \
+    "$fake_repo/scripts/racket-project" --project "$project" \
+        unknown >/dev/null 2>&1; then
+    fail 'unknown project action passed'
+else
+    [ "$?" -eq 64 ] || fail 'unknown project action returned wrong status'
+fi
+if HOME=$fake_home GUIX_ENVIRONMENT=$profile \
+    "$fake_repo/scripts/racket-project" --project "$project" \
+        eval >/dev/null 2>&1; then
+    fail 'eval without an expression passed'
+else
+    [ "$?" -eq 64 ] || fail 'invalid eval returned wrong status'
+fi
+
+project_key() {
+    canonical=$(CDPATH='' cd "$1" && pwd -P)
+    printf '%s\n' "$canonical" | cksum |
+        while read -r checksum octets _rest; do
+            printf '%s-%s\n' "$checksum" "$octets"
+        done
+}
+
+cache=$sandbox/cache
+project_two=$sandbox/project-two
+cp -R "$project" "$project_two"
+run_make() {
+    HOME=$fake_home XDG_CACHE_HOME=$cache GUIX_ENVIRONMENT=$profile \
+        "$fake_repo/scripts/racket-project" --project "$1" make \
+            src/sk/fixture/main.rkt test/sk/fixture/main-test.rkt
+}
+
+: >"$log"
+run_make "$project" || fail 'first project compile failed'
+run_make "$project" || fail 'stable project compile rerun failed'
+run_make "$project_two" || fail 'second project compile failed'
+
+state_root=$cache/racket/projects
+state_a=$state_root/$(project_key "$project")
+state_b=$state_root/$(project_key "$project_two")
+[ "$state_a" != "$state_b" ] || fail 'two project roots shared one state key'
+for state in "$state_a" "$state_b"; do
+    for directory in user-home addon config compiled tmp; do
+        [ -d "$state/$directory" ] || \
+            fail "missing keyed state directory: $state/$directory"
+    done
+    [ -f "$state/compiled/fake/main_rkt.zo" ] || \
+        fail "missing external compiled artifact: $state"
+    grep -F "|PLTCOMPILEDROOTS=$state/compiled:" "$log" >/dev/null || \
+        fail "compile did not use keyed compiled root: $state"
+done
+[ "$(grep -F -c "|PLTCOMPILEDROOTS=$state_a/compiled:" "$log")" -eq 2 ] || \
+    fail 'same project root did not reuse its stable cache key'
+[ "$(grep -F -c "|PLTCOMPILEDROOTS=$state_b/compiled:" "$log")" -eq 1 ] || \
+    fail 'second project did not receive one isolated cache key'
+
+[ ! -e "$fake_home/.cache" ] || fail 'real HOME gained cache state'
+[ ! -e "$fake_home/.racket" ] || fail 'real HOME gained Racket state'
+
+printf '%s\n' 'racket-project-check-test: PASS'

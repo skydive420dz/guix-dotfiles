@@ -103,6 +103,7 @@ parser explicitly through a .json suffix."
          "--project-root" root "-")))
      ((derived-mode-p 'emacs-lisp-mode 'lisp-interaction-mode
                       'scheme-mode 'lisp-mode 'common-lisp-mode
+                      'racket-mode
                       'org-mode)
       (sk/format--indent-buffer))
      (t

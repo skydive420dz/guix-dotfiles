@@ -12,6 +12,17 @@
 (declare-function sk/clojure-project-check "sk-clojure")
 (declare-function sk/clojure-references "sk-clojure")
 (declare-function sk/clojure-repl "sk-clojure")
+(declare-function sk/racket-debug "sk-racket")
+(declare-function sk/racket-definition "sk-racket")
+(declare-function sk/racket-docs "sk-racket")
+(declare-function sk/racket-eval-buffer "sk-racket")
+(declare-function sk/racket-eval-defun "sk-racket")
+(declare-function sk/racket-eval-last-sexp "sk-racket")
+(declare-function sk/racket-macroexpand "sk-racket")
+(declare-function sk/racket-project-check "sk-racket")
+(declare-function sk/racket-references "sk-racket")
+(declare-function sk/racket-repl "sk-racket")
+(declare-function sk/racket-stop "sk-racket")
 
 ;; Emacs Lisp is native to Emacs:
 ;; Eldoc gives signatures/docs at point.  Rich help/eval/navigation come from
@@ -203,7 +214,8 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
          (lisp-interaction-mode . puni-mode)
          (scheme-mode . puni-mode)
          (lisp-mode . puni-mode)
-         (clojure-mode . puni-mode)))
+         (clojure-mode . puni-mode)
+         (racket-mode . puni-mode)))
 
 (defun sk/lisp--dialect ()
   "Return the active Lisp dialect symbol for the current buffer."
@@ -217,6 +229,8 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     'common-lisp)
    ((derived-mode-p 'clojure-mode 'sk/clojure-repl-mode)
     'clojure)
+   ((derived-mode-p 'racket-mode 'racket-repl-mode)
+    'racket)
    (t
     (user-error "Not in a Lisp-family buffer"))))
 
@@ -291,19 +305,25 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
         (t
          (sk/lisp--start-common-lisp-project root)))))
     ('clojure
-     (sk/clojure-repl))))
+     (sk/clojure-repl))
+    ('racket
+     (sk/racket-repl))))
 
 (defun sk/lisp-project-check ()
   "Run the current Lisp project's warning-fatal `make check' gate."
   (interactive)
-  (if (derived-mode-p 'clojure-mode 'sk/clojure-repl-mode)
-      (sk/clojure-project-check)
-    (let* ((root (sk/lisp--project-root t))
-           (makefile (expand-file-name "Makefile" root))
-           (default-directory root))
-      (unless (file-readable-p makefile)
-        (user-error "Lisp project has no readable Makefile: %s" makefile))
-      (compile "make check"))))
+  (pcase (sk/lisp--dialect)
+    ('clojure
+     (sk/clojure-project-check))
+    ('racket
+     (sk/racket-project-check))
+    (_
+     (let* ((root (sk/lisp--project-root t))
+            (makefile (expand-file-name "Makefile" root))
+            (default-directory root))
+       (unless (file-readable-p makefile)
+         (user-error "Lisp project has no readable Makefile: %s" makefile))
+       (compile "make check")))))
 
 (defun sk/lisp-eval-buffer ()
   "Evaluate the current buffer with the current Lisp dialect backend."
@@ -316,7 +336,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     ('common-lisp
      (sk/lisp--call-common-lisp #'sly-eval-buffer))
     ('clojure
-     (sk/clojure-eval-buffer))))
+     (sk/clojure-eval-buffer))
+    ('racket
+     (sk/racket-eval-buffer))))
 
 (defun sk/lisp-eval-defun ()
   "Evaluate the current top-level form with the Lisp dialect backend."
@@ -329,7 +351,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     ('common-lisp
      (sk/lisp--call-common-lisp #'sly-eval-defun))
     ('clojure
-     (sk/clojure-eval-defun))))
+     (sk/clojure-eval-defun))
+    ('racket
+     (sk/racket-eval-defun))))
 
 (defun sk/lisp-eval-last-sexp ()
   "Evaluate the sexp before point with the Lisp dialect backend."
@@ -342,7 +366,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     ('common-lisp
      (sk/lisp--call-common-lisp #'sly-eval-last-expression))
     ('clojure
-     (sk/clojure-eval-last-sexp))))
+     (sk/clojure-eval-last-sexp))
+    ('racket
+     (sk/racket-eval-last-sexp))))
 
 (defun sk/lisp-docs ()
   "Show docs for the symbol at point using the active Lisp backend."
@@ -359,7 +385,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
       ('common-lisp
        (sk/lisp--call-common-lisp #'sly-describe-symbol symbol))
       ('clojure
-       (sk/clojure-docs)))))
+       (sk/clojure-docs))
+      ('racket
+       (sk/racket-docs)))))
 
 (defun sk/lisp-definition ()
   "Visit the definition at point through the active Lisp backend."
@@ -374,7 +402,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
       ('common-lisp
        (sk/lisp--call-common-lisp #'sly-edit-definition symbol))
       ('clojure
-       (sk/clojure-definition)))))
+       (sk/clojure-definition))
+      ('racket
+       (sk/racket-definition)))))
 
 (defun sk/lisp-references ()
   "Show callers or references at point through the active Lisp backend."
@@ -391,7 +421,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
       ('common-lisp
        (sk/lisp--call-common-lisp #'sly-who-calls symbol))
       ('clojure
-       (sk/clojure-references)))))
+       (sk/clojure-references))
+      ('racket
+       (sk/racket-references)))))
 
 (defun sk/lisp-macroexpand ()
   "Macroexpand the form at point through the active Lisp backend."
@@ -405,7 +437,9 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
     ('common-lisp
      (sk/lisp--call-common-lisp #'sly-macroexpand-1))
     ('clojure
-     (sk/clojure-macroexpand))))
+     (sk/clojure-macroexpand))
+    ('racket
+     (sk/racket-macroexpand))))
 
 (defun sk/lisp-debug ()
   "Instrument Elisp or display an active Geiser/SLY debugger."
@@ -434,7 +468,20 @@ When ROOT is nil, use the current project or a tagged buffer-local connection."
            (user-error "No active SLY debugger"))
          (pop-to-buffer buffer))))
     ('clojure
-     (sk/clojure-debug))))
+     (sk/clojure-debug))
+    ('racket
+     (sk/racket-debug))))
+
+(defun sk/lisp-stop ()
+  "Stop the current project REPL/backend without touching other projects."
+  (interactive)
+  (pcase (sk/lisp--dialect)
+    ('clojure
+     (sk/clojure-stop))
+    ('racket
+     (sk/racket-stop))
+    (_
+     (user-error "No scoped stop command for this Lisp dialect"))))
 
 (provide 'sk-lisp)
 

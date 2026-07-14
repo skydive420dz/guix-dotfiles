@@ -36,6 +36,7 @@ POLICY    deliberate tradeoff that needs an explicit keep/change decision
 LIMIT     audit boundary; do not infer health beyond the available evidence
 CLOSED    accepted remediation passed the owning slice's live gates
 PARTIAL   accepted portion passed, with a named residual owned by a later slice
+CANDIDATE source implementation exists and may pass a non-activating gate, but live acceptance is pending
 #+end_src
 
 Priorities mean:
@@ -157,6 +158,7 @@ Live runtime convergence:  strong; fresh System 85 and Home 39 runtime passes,
 Display/resource health:   good
 Validation safety:         strong; isolated editor and activation gates
 Lisp foundation:           accepted Elisp/Guile/SBCL/Clojure editing, REPL, and project/test base
+Slice 17 Racket candidate:  complete non-activating gate passes; checkpoint, activation, live, and reboot pending
 Lisp ecosystem breadth:    early; most dialect families absent
 Reproducibility:            strong; clean-clone authentication and build gates pass
 Operational reliability:   restored; bounded SSH cleanup passes
@@ -165,8 +167,10 @@ Operational reliability:   restored; bounded SSH cleanup passes
 The project is a credible Guix/EXWM workstation foundation.  It is not yet a
 full Lisp ecosystem.  The P0/P1 runtime, validation, and reproducibility
 prerequisites, package ownership, core editing correctness, and the first four
-project/test workflows are now closed.  The next vertical slice is the Racket
-stack in Slice 17.
+project/test workflows are now closed.  Slice 17's exact Racket implementation
+candidate passes its complete non-activating gate, but the accepted baseline
+remains unchanged until the checkpoint is published, activated, exercised by
+fresh live checks and cleanup, and rebooted.
 
 * Finding register
 
@@ -248,6 +252,8 @@ reported as a confirmed bug without a focused test.
 | L-11 | P2  | CLOSED   | The unused ELPA tree is quarantined outside =package-user-dir= and no user ELPA path or Breadcrumb registration remains live. | 8 |
 | L-12 | P3  | CLOSED   | Yasnippet eagerly exposes the four reviewed repository-authored templates and no unowned snippet directory. | 14 |
 | L-13 | P3  | POLICY   | Org offers Common Lisp block insertion, but Babel execution stays disabled because =ob-lisp= starts an independent comint process that bypasses the accepted project-tagged SLY environment, failure handling, and cleanup boundaries. | 15 |
+| L-14 | P2  | CANDIDATE | Slice 17 keeps full Racket 9.1 in its authenticated project manifest and adds only a local runtime-detached =emacs-racket-mode= object to Home.  Its 44.0 MiB closure has no full/minimal/VM/docs Racket requisite, and the complete candidate gate proves System/Home package and executable absence while avoiding the upstream recipe's hidden 2.135 GiB runtime closure.  Activation and fresh-live proof remain pending. | 17 |
+| L-15 | P2  | CANDIDATE | The reusable marked Racket project contract, project-keyed PLT wrapper, native-indentation policy, strict =check-requires= lint, RackUnit, Scribble, macro expansion, shared keys/windows, and explicit backend/XP path pass the complete candidate gate.  Syntax/lint/test/docs and connected-process failures clean up; native debugger recovery and process-group-scoped stop pass.  No =raco pkg=, catalog mutation, or fake formatter is allowed.  Activation, live, and reboot evidence remain pending. | 17 |
 
 * Current Lisp capability matrix
 
@@ -338,13 +344,85 @@ Accepted boundary:
   Future external libraries require an authenticated, explicitly designed
   classpath extension rather than mutable dependency downloads.
 
+** Racket implementation candidate
+
+Present in source, but not accepted:
+
+- the authenticated =racket= manifest owns the full Racket 9.1 distribution,
+  including =raco=, RackUnit, Scribble, local documentation, macro expansion,
+  and GUI/runtime libraries;
+- Home selects the explicit =emacs-racket-mode/runtime-detached= variant at
+  =1-9.71f27c6= while System and persistent Home own no Racket runtime.  The
+  variant restores =racket-program= to plain ="racket"= after the upstream
+  absolute-path substitution;
+- the package-only build produced a 44.0 MiB output closure whose complete
+  requisites include no full, minimal, VM, documentation, or other Racket
+  runtime output, avoiding the upstream package's hidden retention of the
+  2.135 GiB full distribution;
+- the Racket manifest alone adds Findutils for the disposable file/directory/
+  symlink inventory; Core/JVM do not inherit it.  An internal sentinel is set
+  only after entering the repository-pinned authenticated Racket shell, so an
+  unrelated ambient =GUIX_ENVIRONMENT= cannot replace the reviewed runtime;
+- =scripts/racket-project --project ROOT COMMAND= provides =backend=, =check=,
+  =docs=, =eval=, =expand=, =lint=, =make=, =raw=, =repl=, and =test= through
+  the manifest runtime.  Its keyed cache contains isolated user-home, addon,
+  configuration, compiled, documentation, and temporary roots; the project
+  =src= collection is prepended without installing the project;
+- runtime actions use =-U -S ROOT/src=: user startup is disabled while the
+  marked source collection remains resolvable.  Each project Makefile owns its
+  concrete source, test, documentation, evaluation, and =check= policy; the
+  production wrapper contains no fixture module path.  The tracked policy
+  combines compilation, rejection of =DROP=/=ADD=/=BYPASS= recommendations
+  from =raco check-requires=, RackUnit, and Scribble HTML.  =raco expand=
+  supplies the macro-expansion path;
+- Classic Racket buffers use native Emacs indentation for =SPC c f=.
+  Pinned Racket has no =raco fmt=/=raco format=, and the external =fmt= package
+  is absent from the pinned Guix channels.  The candidate neither invents a
+  formatter nor permits =raco pkg= or catalog mutation;
+- =racket-hash-lang-mode= remains deferred: its mode initialization
+  unconditionally contacts the backend, which violates this slice's cold-open
+  no-process contract;
+- opening a file starts no runtime.  The project-keyed Racket Mode backend/REPL
+  and XP/check-syntax analysis are explicit, and the dialect joins the shared
+  =SPC l= evaluation/docs/navigation/macro/debug/check/stop surface, Puni
+  structural editing, Org insertion menu, and right-side helper/REPL window
+  slots;
+- the disposable checker covers evaluation at 42, backend invocation, exact
+  PLT isolation, compile/lint/test/docs/expand, direct and Makefile gates, and
+  absence of source, repository, real-Home, and project-local artifact writes.
+  Negative fixtures cover syntax, unused require, failing RackUnit, and broken
+  Scribble, plus a deliberate checker failure;
+- the complete non-activating gate realizes candidate Home
+  =/gnu/store/0qslq27g81snh836mpw4g4n3wgadjq59-home= and unchanged System
+  =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=.  It passes 49/49
+  candidate batch tests, cold-open and two-root isolation, real evaluation and
+  recovery, XP diagnostics and xref in both directions, documentation, macro
+  stepping, native debugger break/go/recovery, project checking, and a
+  process-group-scoped stop that preserves an unrelated canary.  The deliberate
+  live failure returns outer status 1 with exact inner Emacs status 255; every
+  recorded descendant and sandbox-token process is gone before the gate accepts
+  the cleanup proof.
+
+Pending acceptance boundary:
+
+- publish the exact implementation checkpoint that passed the complete
+  non-activating gate;
+- activate with =ghr= only after that checkpoint is available, reboot, and repeat fresh live
+  editor/project/backend/XP and cleanup checks;
+- prove that Home/System expose no Racket runtime executable or package, no
+  user-global Racket package/catalog state is installed or changed, and no
+  checker-owned process, sandbox, or source-tree artifact survives; deliberate
+  project-keyed cache state remains allowed;
+- rotate retention only after the fresh run.  Until then Home generation 39,
+  System generation 85, and Pull generation 5 remain the accepted baseline.
+
 ** Absent dialect families
 
-The Clojure/JVM runtime/editor/REPL/test slice is accepted.  No complete
-candidate slice exists for:
+The Clojure/JVM runtime/editor/REPL/test slice is accepted.  Racket has the
+unaccepted implementation candidate above.  No complete candidate slice exists
+for:
 
 - ClojureScript, Leiningen, or Babashka;
-- Racket;
 - Fennel;
 - Janet;
 - Hy;
@@ -1232,7 +1310,9 @@ executable.  This floor independently guarantees the tty shell, Kitty, and
 =emacs -Q= for repair; configured EXWM still consumes the accepted base Home
 D-Bus services and editor profile.  A fixture rejects duplicate specifications,
 unexpected ownership overlap, or optional Clojure/Racket packages leaking into
-Home.
+Home.  This is historical Slice 13 ownership evidence; the accepted Slice 16
+and candidate Slice 17 records below supersede the source lists without
+rewriting what this checkpoint built.
 
 At the Slice 13 checkpoint, the shared development-tier module composed
 independently evaluable
@@ -1243,6 +1323,12 @@ for =raco=, RackUnit, documentation, and later editor parity.  The accepted
 Slice 16 implementation below deliberately supersedes that historical JVM
 manifest with its direct Guix JAR policy.  No experimental dialect is installed
 merely to fill a tier.
+
+The Slice 17 implementation candidate below now supersedes “later editor
+parity” in source: it adds only the runtime-detached Racket Mode object to Home
+and retains the complete runtime in this manifest.  It does not supersede this
+accepted historical evidence or change the live baseline until activation and
+fresh live/reboot acceptance pass; its non-activating gate now passes.
 
 =scripts/guix-lisp-shell= enters those manifests with =--pure= through a
 snapshot of the authenticated channel lock.  The pinned build gate evaluates
@@ -2038,17 +2124,95 @@ Slice 16.
 :PROPERTIES:
 :audit_priority: P2
 :depends_on: 7 8 12 13 15
+:candidate_status: complete-gate-passed-activation-pending
 :END:
 
-Land together:
+Implementation candidate:
 
-- declarative Racket runtime;
-- Racket major mode and REPL;
-- module/project discovery;
-- formatter/linter and test policy;
-- documentation and macro-expansion workflow;
-- tracked fixture and isolated acceptance probe;
-- shared leader and window-policy integration.
+- runtime ownership remains entirely in the existing authenticated full Racket
+  9.1 manifest.  Neither System nor persistent Home may contain =racket=,
+  =racket-minimal=, =raco=, =drracket=, =gracket=, =mzc=, =scribble=, or
+  =plt-help=;
+- Home adds one explicit package object instead of resolving its name through
+  =specification->package=: =emacs-racket-mode/runtime-detached=.  This brings
+  candidate declarative Home ownership from 81 ordinary specifications to 82
+  total packages while keeping the accepted Home 39 baseline unchanged;
+- the local inherited package lets the pinned upstream configure phase run,
+  then restores =racket-program= to plain ="racket"= before compilation.  A
+  focused pinned build produced
+  =/gnu/store/5sjvhvmby01pci8smmqa722rn6wb0wf5-emacs-racket-mode-1-9.71f27c6=.
+  Its closure is 44.0 MiB, its installed default is plain ="racket"=, and
+  =guix gc --requisites= contains no full, minimal, VM, documentation, or other
+  Racket runtime output.  The avoided full Racket closure is 2.135 GiB;
+- =scripts/racket-project --project ROOT COMMAND= always enters the
+  repository-pinned full Racket manifest unless its internal authenticated
+  sentinel is present; an arbitrary ambient =GUIX_ENVIRONMENT= is not trusted.
+  It owns the public =backend=, =check=, =docs=,
+  =eval=, =expand=, =lint=, =make=, =raw=, =repl=, and =test= surface.  It keys
+  =PLTUSERHOME=, =PLTADDONDIR=,
+  =PLTCONFIGDIR=, compiled output, generated HTML, and temporary state below the
+  project cache.  =PLTCOLLECTS= records the checked source boundary,
+  =PLTCOMPILEDROOTS= redirects writable compilation, and explicit
+  =-U -S ROOT/src= arguments resolve the source while suppressing user paths;
+  no package install is involved.  Project Makefiles own concrete source/test/
+  documentation paths and =make check= policy, so the production wrapper is
+  reusable and contains no fixture-specific module path;
+- =scripts/racket-project-check= copies the marked =fixtures/racket= project and
+  exercises evaluation/backend at 42, exact isolation variables, compilation,
+  strict require lint, RackUnit, Scribble, macro expansion, direct =check=, and
+  Makefile =check=.  It compares copied/source/repository/real-Home state and
+  rejects project-local compiled, documentation, package, and target artifacts;
+- Classic Racket Mode joins Puni, native =SPC c f= indentation, the shared
+  =SPC l= evaluation/REPL/docs/navigation/reference/macro/debug/project-check/stop
+  commands, and the existing right-side helper and REPL window slots.  Opening
+  source remains cold; the project wrapper, backend/REPL, and XP check-syntax
+  path start only through explicit project commands.  =racket-hash-lang-mode=
+  remains deferred because its initialization contacts the backend;
+- formatting policy is intentionally honest: pinned Racket provides neither
+  =raco fmt= nor =raco format=, and the recommended external =fmt= package is not
+  in the pinned Guix channels.  Native indentation is not described as a
+  project-wide formatter.  =raco check-requires= is a strict require linter only
+  because the wrapper rejects its =DROP=/=ADD=/=BYPASS= recommendations.
+  =raco pkg= is never invoked; mutable package installation and catalog
+  mutation remain forbidden.
+
+Current evidence remains candidate-only but now includes the complete GuixPC
+non-activating gate.  It realizes candidate Home
+=/gnu/store/0qslq27g81snh836mpw4g4n3wgadjq59-home= and unchanged candidate
+System =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system= without switching
+either profile.  Realized ownership, Home/System executable absence, and the
+detached editor's full closure requisites pass.  Findutils is explicit only in
+the Racket manifest; the checker no longer borrows =find= from an ambient
+profile.  All 49 candidate batch ERT checks pass, including stale-backend and
+public-stop fallback cleanup.
+
+The full disposable project checker passes evaluation/backend at 42, keyed PLT
+state, compilation, strict lint, RackUnit, Scribble, macro expansion, and both
+direct and Makefile entry points.  Its syntax, lint, test, documentation, and
+status-91 deliberate controls fail for the intended reasons without mutation or
+residue; the unused require is =DROP racket/list at 0=.  The connected checker
+passes cold-open no-process behavior, two-root isolation, real REPL evaluation
+and exception recovery, XP diagnostics, definition/reference xref, docs, macro
+stepper, native debugger break/go/recovery, project checking, and scoped
+process-group stop while an unrelated canary survives.  Its deliberate live
+failure returns outer status 1 and exact inner Emacs status 255, then proves all
+recorded descendants and sandbox-token processes are gone.  This evidence does
+not activate or accept a new generation.  A post-gate read-only check still
+resolves live Home to
+=/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home= and live System to
+=/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system=; no build-gate, Racket
+project-check, or connected-editor sandbox/process remains.
+
+Pending activation controls:
+
+- push the exact implementation checkpoint that produced the candidate evidence;
+- run =ghr=, reboot, and repeat the fresh live Home/editor/project/backend/XP,
+  native-debugger, scoped-stop, and cleanup checks;
+- re-prove the activated Home/System expose no Racket runtime and that no
+  user-global package/catalog state, source-tree artifact, sandbox, or process
+  residue appears;
+- rotate the exact Home retention root only after fresh acceptance.  Preserve
+  Home 39 as the immediate rollback until that record exists.
 
 ** TODO Slice 18: Optional dialect incubation
 :PROPERTIES:
