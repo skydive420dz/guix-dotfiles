@@ -167,8 +167,8 @@ else
     fail "X DPMS policy is $dpms_policy or disabled"
 fi
 
-picom_processes=$(ps -u "$uid" -o comm=,args= | awk '
-    $1 == "picom" {
+picom_processes=$(ps -u "$uid" -o stat=,comm=,args= | awk '
+    $2 == "picom" && $1 !~ /^[ZX]/ {
         count += 1
         if (index($0, "--config /dev/null") &&
             index($0, "--backend glx") && index($0, "--vsync") &&

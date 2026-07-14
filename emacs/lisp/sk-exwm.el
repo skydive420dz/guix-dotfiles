@@ -459,12 +459,55 @@ applications whose new window belongs to an existing process."
 (defconst sk/picom-opacity-rule "85:class_g = \"Emacs\""
   "Picom opacity rule for Emacs frame transparency.")
 
+(defconst sk/picom-stop-timeout 2.0
+  "Seconds to wait for the previous Picom process to stop.")
+
+(defun sk/picom--active-pids ()
+  "Return this user's non-dead Picom process IDs on the local host."
+  (let ((default-directory "/")
+        (uid (user-uid)))
+    (seq-filter
+     (lambda (pid)
+       (let ((attributes (process-attributes pid)))
+         (and (equal (cdr (assq 'comm attributes)) "picom")
+              (equal (cdr (assq 'euid attributes)) uid)
+              (not (member (cdr (assq 'state attributes)) '("Z" "X"))))))
+     (list-system-processes))))
+
+(defun sk/picom--occupied-p ()
+  "Return non-nil while Picom or the X screen-0 compositor owns the session."
+  (or (sk/picom--active-pids)
+      (and (eq window-system 'x)
+           (gui-backend-selection-exists-p '_NET_WM_CM_S0))))
+
+(defun sk/picom--wait-for-stop ()
+  "Wait boundedly for Picom and its X compositor selection to clear."
+  (let ((deadline (+ (float-time) sk/picom-stop-timeout))
+        occupied)
+    (while (and (setq occupied (sk/picom--occupied-p))
+                (< (float-time) deadline))
+      (accept-process-output nil 0.05))
+    (not occupied)))
+
 (defun sk/start-picom ()
   "Start the session compositor with the managed EXWM opacity rule."
   (interactive)
   (when (executable-find "picom")
-    (when (executable-find "pkill")
-      (call-process "pkill" nil nil nil "-x" "picom"))
+    (unless (executable-find "pkill")
+      (user-error "Cannot restart Picom without pkill"))
+    (let ((status (call-process
+                   "pkill" nil nil nil
+                   "-u" (number-to-string (user-uid)) "-x" "picom")))
+      (unless (memq status '(0 1))
+        (user-error "pkill failed while stopping Picom (status %s)" status))
+      (unless (sk/picom--wait-for-stop)
+        (let ((survivors (sk/picom--active-pids)))
+          (user-error
+           "Picom/X compositor selection did not clear within %.1f seconds; active PIDs: %s"
+           sk/picom-stop-timeout
+           (if survivors
+               (mapconcat #'number-to-string survivors ",")
+             "none")))))
     (start-process "picom" nil
                    "picom"
                    "--config" "/dev/null"
