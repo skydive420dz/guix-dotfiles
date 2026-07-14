@@ -159,7 +159,8 @@ Display/resource health:   good
 Validation safety:         strong; isolated editor and activation gates
 Lisp foundation:           accepted Elisp/Guile/SBCL/Clojure/Racket editing, REPL, and project/test base
 Slice 17 Racket workflow:   accepted after published checkpoint, Home 40 activation, reboot, and fresh live gates
-Lisp ecosystem breadth:    early; most dialect families absent
+Slice 18 Fennel workflow:   candidate implementation and non-activating gate pass; publication/live acceptance pending
+Lisp ecosystem breadth:    early; one additional dialect candidate exists, while most families remain absent
 Reproducibility:            strong; clean-clone authentication and build gates pass
 Operational reliability:   restored; bounded SSH cleanup passes
 #+end_src
@@ -171,6 +172,9 @@ project/test workflows are now closed.  Slice 17's exact Racket implementation
 checkpoint is published and accepted after Home generation 40 activation, a
 normal reboot, fresh live editor/project/backend checks, deliberate cleanup
 controls, and read-only retention rotation.
+Slice 18's Fennel source and complete non-activating candidate gate pass, but
+the candidate is not accepted and does not change the live generation or
+retention baseline.
 
 * Finding register
 
@@ -239,7 +243,7 @@ reported as a confirmed bug without a focused test.
 
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
-| L-01 | P1  | VERIFIED | Accepted families are Emacs Lisp, Guile Scheme, SBCL Common Lisp, Clojure/JVM, and Racket; later dialect families remain absent. | 14-18 |
+| L-01 | P1  | VERIFIED | Accepted families are Emacs Lisp, Guile Scheme, SBCL Common Lisp, Clojure/JVM, and Racket.  Fennel now has an unaccepted complete candidate; other later dialect families remain absent. | 14-18 |
 | L-02 | P1  | CLOSED   | Fixture-rooted Geiser/Guile and SLY/SBCL checks cover evaluation, semantic completion, documentation, exact definition navigation, controlled failure, and recovery; SLY also proves ASDF =test-op=, who-calls xref, and debugger abort, while batch gates prove project dispatch and shared window routing. | 8, 14, 15 |
 | L-03 | P2  | CLOSED   | Puni owns balanced structural transforms in the five accepted Lisp-family modes and Org source-edit buffers while Evil retains modal motions. | 14, 16 |
 | L-04 | P2  | CLOSED   | Evaluation guards inspect stable Geiser/SLY connection state and preserve backend errors after dispatch. | 14 |
@@ -254,6 +258,7 @@ reported as a confirmed bug without a focused test.
 | L-13 | P3  | POLICY   | Org offers Common Lisp block insertion, but Babel execution stays disabled because =ob-lisp= starts an independent comint process that bypasses the accepted project-tagged SLY environment, failure handling, and cleanup boundaries. | 15 |
 | L-14 | P2  | CLOSED   | Slice 17 keeps full Racket 9.1 in its authenticated project manifest and adds only a local runtime-detached =emacs-racket-mode= object to Home.  Its 44.0 MiB closure has no full/minimal/VM/docs Racket requisite, and fresh Home 40 acceptance proves persistent System/Home package and executable absence while avoiding the upstream recipe's hidden 2.135 GiB runtime closure. | 17 |
 | L-15 | P2  | CLOSED   | The reusable marked Racket project contract, project-keyed PLT wrapper, native-indentation policy, strict =check-requires= lint, RackUnit, Scribble, macro expansion, shared keys/windows, and explicit backend/XP path pass fresh project and connected-editor gates.  Syntax/lint/test/docs and connected-process failures clean up; native debugger recovery and process-group-scoped stop pass.  No =raco pkg=, catalog mutation, or fake formatter is allowed. | 17 |
+| L-16 | P3  | CANDIDATE | Fennel 1.6.1, fnlfmt 0.3.0, fennel-ls 0.2.3, a marked fixture, authenticated SHA-256-keyed wrapper, runtime-free Home editor mode, explicit protocol REPL/LSP integration, and normal/negative cleanup gates pass the full non-activating build.  The pinned server's exact version warning and its basic non-macro semantic boundary remain explicit; publication and live acceptance are pending. | 18 |
 
 * Current Lisp capability matrix
 
@@ -434,13 +439,68 @@ Accepted boundary:
   rollback drill promote Home 40 while preserving Home 39 as the preferred
   immediate rollback.  System 85 and Pull 5 remain unchanged.
 
-** Absent dialect families
+** Fennel
 
-The Clojure/JVM and Racket runtime/editor/REPL/test slices are accepted.  No
-complete candidate slice exists for:
+Present as an implementation candidate, not accepted:
+
+- the disposable =fennel= manifest pins Fennel 1.6.1, fnlfmt 0.3.0,
+  fennel-ls 0.2.3, and checker-only Findutils.  The accepted live Home
+  generation 40 remains at 82 declared packages; candidate Home adds only the
+  runtime-free =emacs-fennel-mode= package for 83.  System is unchanged, and
+  neither persistent profile owns a Fennel runtime, formatter, or language
+  server;
+- =scripts/fennel-project --project ROOT COMMAND= owns =check=, =compile=,
+  =eval=, =expand=, =format=, =format-check=, =lint=, =lsp=, =make=, =raw=,
+  =repl=, =run=, and =test=.  Public calls always enter the repository-pinned
+  =guix-lisp-shell fennel= environment.  The internal =--authenticated= route
+  accepts only an exact canonical, non-writable =/gnu/store/*-profile= with a
+  readable manifest and the required tools.  Missing, writable, manifest-less,
+  and read-only lookalike profiles outside the Guix store are rejected; ambient
+  =GUIX_ENVIRONMENT= and the retired boolean sentinel cannot bypass public shell
+  entry;
+- the canonical project root's SHA-256 digest keys isolated HOME, XDG cache,
+  config, data, state, runtime, and temporary roots.  Ambient Lua/Fennel paths
+  and startup hooks are cleared, Fennel runs with =--no-fennelrc=, and recursive
+  Make actions reuse the original cache root.  The wrapper neither installs
+  dependencies nor writes generated Lua, LuaRocks/fnx state, =.fennelrc=,
+  caches, or targets into the project;
+- the marked fixture covers source, imported macros, tests, formatting, lint,
+  compilation, direct and Makefile checks, plus syntax/format/lint/test,
+  runaway-macro instruction-limit, and deliberate status-91 controls.  The
+  checker snapshots the fixture, repository, source Home, and isolated state
+  and proves cleanup/non-mutation;
+- opening =.fnl= remains cold.  Explicit project commands start a project-keyed
+  protocol REPL or fennel-ls workspace through the same wrapper.  The candidate
+  joins the shared evaluation, docs, navigation, macro-expansion, project-check,
+  stop, Puni, fnlfmt, Org edit-only source-block, and helper-window contracts.
+  Fennel debugging is explicitly unsupported rather than simulated;
+- connected checks pass two-root REPL/LSP isolation, evaluation/error recovery,
+  formatting, project checking, basic non-macro diagnostics, hover, definition
+  and distinct definition/use references, project-scoped stop, unrelated-process
+  preservation, and deliberate descendant/sandbox cleanup; and
+- the complete non-activating GuixPC gate passes at candidate Home
+  =/gnu/store/8q8dki5ka0b7ayby2kg1c7gk1cc9mrfh-home= and unchanged System
+  =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=.  These are gate-only
+  paths, not live profile claims; accepted generation pins remain unchanged.
+
+Candidate boundary:
+
+- pinned fennel-ls emits the exact warning =--WARNING: plugin fennel-ls does
+  not support Fennel version 1.6.1=.  Clean lint must exit zero and may emit
+  only that warning;
+- LSP acceptance covers basic non-macro source.  Imported-macro navigation or
+  semantic analysis, a debugger, code lenses, automatic REPL/LSP/format/Babel,
+  and mutable Lua dependency managers are not claimed; and
+- publication, =ghr=, reboot, fresh live project/editor/ownership checks,
+  residue cleanup, and retention rotation must pass before Fennel is accepted.
+
+** Dialect families without a complete candidate
+
+The Clojure/JVM and Racket runtime/editor/REPL/test slices are accepted.  Fennel
+has a complete but unaccepted candidate.  No complete candidate slice exists
+for:
 
 - ClojureScript, Leiningen, or Babashka;
-- Fennel;
 - Janet;
 - Hy;
 - Chez, Chicken, Gambit, MIT Scheme, or Scheme48;
@@ -2286,10 +2346,60 @@ This closes findings L-14 and L-15 and completes Slice 17.
 :depends_on: 16 17
 :END:
 
-Evaluate Fennel, Janet, Hy, alternate Schemes, and alternate Common Lisp
-implementations one at a time.  Each candidate needs a written value proposition
-and the same vertical acceptance contract as Clojure and Racket.  Do not turn
-=sk-guix= into a general newer-package dumping ground to satisfy this slice.
+Fennel is the selected first incubation candidate.  It adds a genuinely new
+Lisp-on-Lua family while reusing a small runtime ecosystem, and the pinned
+channels provide a coherent interpreter, formatter, language server, and Emacs
+mode.  The evaluated stack is about 86.2 MiB and the persistent runtime-free
+mode output is about 0.4 MiB.  Janet's roughly 77.1 MiB runtime did not offer a
+complete pinned formatter/LSP path; Hy's roughly 302.5 MiB closure adds Python
+semantic complexity without a Hy-specific language server; Chez Scheme's
+roughly 89.1 MiB closure duplicates the accepted Guile family; and alternate
+Common Lisps duplicate the accepted SBCL/SLY contract while generally costing
+more.  Incubating all candidates simultaneously would weaken the one-dialect
+acceptance boundary.
+
+Candidate implementation and evidence:
+
+- [X] Add the manifest-only Fennel 1.6.1, fnlfmt 0.3.0, fennel-ls 0.2.3, and
+  Findutils tool stack.  Add only =emacs-fennel-mode= to persistent Home, taking
+  candidate ownership from the accepted live Home 40/82 declaration to 83;
+  keep System and =sk-guix= ownership unchanged.
+- [X] Add the generic marked-project wrapper, SHA-256-keyed isolated state,
+  canonical immutable Guix-store-profile check (including non-store lookalike
+  rejection), cleared Lua/Fennel environment,
+  =--no-fennelrc= runtime policy, direct/Make actions, and explicit prohibition
+  on mutable dependency managers or project-local generated state.
+- [X] Add the source/macro/test fixture, normal and negative runtime checker,
+  cold editor mode, explicit project-keyed protocol REPL/fennel-ls integration,
+  shared keys/Puni/formatter/Org/window policy, batch/live tests, and connected
+  cleanup checker.
+- [X] Pass the focused GuixPC project and editor checks and the complete
+  non-activating gate.  The full gate realizes candidate Home
+  =/gnu/store/8q8dki5ka0b7ayby2kg1c7gk1cc9mrfh-home= and unchanged System
+  =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system= without activation.
+
+Known limitation: pinned fennel-ls reports =--WARNING: plugin fennel-ls does not
+support Fennel version 1.6.1=.  The gate permits only that exact warning and
+proves basic diagnostics, hover, definition, and references on non-macro source.
+It does not claim imported-macro LSP navigation or semantic analysis.
+
+Non-goals: no =sk-guix= expansion; no persistent runtime, formatter, or language
+server; no LuaRocks, fnx, or =.fennelrc=; no automatic REPL, LSP, formatting, or
+Babel execution; no debugger, code-lens, or imported-macro LSP claim; no
+project-local artifacts; and no simultaneous Janet, Hy, Chez, or alternate
+Common Lisp incubation.
+
+Acceptance remains open:
+
+- [ ] Publish the exact implementation/documentation checkpoint.
+- [ ] Run =ghr= only after publication, reboot, and pass fresh live project,
+  editor, connected-backend, ownership/leakage, and deliberate cleanup checks.
+- [ ] Confirm checker/project residue and repository mutation are absent, then
+  rotate retention while keeping the previous accepted Home as rollback.
+
+Do not mark Fennel accepted or change accepted generation pins until every open
+control passes.  Do not turn =sk-guix= into a general newer-package dumping
+ground to satisfy this slice.
 
 ** TODO Slice 19: Final desktop, security, and documentation polish
 :PROPERTIES:

@@ -246,10 +246,39 @@ Current next action:
     =2d6587fe707892acc9dd33f605ccba6ab839c161= first, switch exactly to Home 39
     through the protected Pull 5 Guix, and reboot.  Home rollback alone does not
     restore repository-linked source; System 85 needs no change.
+- [ ] Accept [[file:../../../docs/audits/2026-07-12-full-configuration-audit.org::*Slice 18: Optional dialect incubation][Slice 18: Fennel incubation candidate]].
+  - [X] Select Fennel over Janet, Hy, Chez Scheme, and alternate Common Lisp
+    implementations.  It adds a new Lisp-on-Lua family with a complete pinned
+    interpreter/formatter/LSP/editor path while keeping only the runtime-free
+    editor mode persistent.
+  - [X] Implement the manifest-only Fennel 1.6.1, fnlfmt 0.3.0, fennel-ls 0.2.3,
+    and Findutils stack; generic authenticated wrapper with canonical immutable
+    Guix-store-profile enforcement; SHA-256-keyed isolated state; marked fixture;
+    project/editor/connectivity checks; and shared
+    REPL/LSP/format/Puni/Org/window integration.  Candidate Home adds only
+    =emacs-fennel-mode= for 83 declared packages versus accepted live Home
+    generation 40's 82; System remains unchanged.
+  - [X] Pass focused project and connected-editor checks plus the complete
+    non-activating candidate gate.  Exact gate-only paths are Home
+    =/gnu/store/8q8dki5ka0b7ayby2kg1c7gk1cc9mrfh-home= and unchanged System
+    =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=.  Runtime/tool leakage,
+    mutable dependency state, source/repository mutation, and checker-process
+    cleanup controls pass.  The exact fennel-ls/Fennel 1.6.1 compatibility
+    warning is documented; semantic LSP acceptance is basic non-macro source
+    only.
+  - [ ] Push the exact implementation/documentation checkpoint.  Do not run
+    =ghr= from unpublished source.
+  - [ ] Run =ghr=, reboot, and pass fresh live project, editor, cold-open,
+    two-root REPL/LSP, formatting, basic non-macro LSP, ownership/leakage, and
+    deliberate cleanup checks.
+  - [ ] Confirm no checker/project residue or repository mutation remains, then
+    rotate exact retention pins while keeping the previous accepted Home as the
+    immediate rollback.  Until then, Home 40/82 and the existing System/Pull
+    generations remain the accepted baseline.
 
-Next action: begin Slice 18 optional dialect incubation.  Evaluate one dialect
-at a time behind a written value proposition and the same complete vertical
-acceptance contract; do not broaden =sk-guix= package ownership by default.
+Next action: publish the Slice 18 Fennel candidate checkpoint, then activate it
+through =ghr=, reboot, and the fresh-live acceptance sequence above.  Do not
+broaden =sk-guix= package ownership or rotate retention before those checks.
 
 Ordered follow-up:
 

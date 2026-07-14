@@ -98,9 +98,11 @@ next active slice.
   49/49 editor tests, live cold-open probe, connected backend/XP/debugger checks,
   deliberate 1/255 cleanup control, runtime-absence checks, and exact retention
   rotation all pass.  Home 39 is retained as the immediate fallback.
-- [ ] Begin Slice 18 optional dialect incubation, then Slice 19 polish.  Keep
-  each additional dialect behind the same vertical runtime/editor/project/test
-  acceptance contract.
+- [ ] Finish Slice 18's Fennel candidate acceptance, then Slice 19 polish.
+  Fennel was selected over Janet, Hy, Chez Scheme, and alternate Common Lisp
+  implementations; its implementation and complete non-activating gate pass.
+  Publication, =ghr=, reboot, fresh live checks, cleanup, and retention rotation
+  remain required before the candidate is accepted.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 - [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
   the GRUB prompt before making more bootloader changes.
@@ -239,6 +241,15 @@ System =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=; neither gate-only
 path was activated.  Fresh live checks prove the active Home and System expose
 no persistent Racket runtime/package/executable leakage.  Home generation 39 at
 =/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home= is the immediate fallback.
+Slice 18's unaccepted Fennel candidate adds only =emacs-fennel-mode= to that
+accepted 82-package Home declaration, producing an 83-package candidate Home at
+=/gnu/store/8q8dki5ka0b7ayby2kg1c7gk1cc9mrfh-home=.  Fennel 1.6.1, fnlfmt
+0.3.0, fennel-ls 0.2.3, and its checker-only Findutils remain outside
+persistent profiles in the disposable =fennel= manifest.  The candidate System
+remains unchanged at
+=/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=.  Both paths are
+non-activating build-gate evidence: accepted live ownership is still Home
+generation 40 with 82 declared packages and System generation 85.
 The reduced System consumes the 13 recovery specifications recorded in
 =guix/package-ownership.scm= plus =kitty-latest=.  System generation 85 has
 passed a fresh boot; accepted System generation 84 remains its immediate
@@ -254,8 +265,10 @@ Guile from System =%base-packages=; all three must resolve to identical store
 objects.  Any other top-level overlap, missing declared package, internal
 duplicate name, missing recovery/Home artifact, Clojure/JVM runtime leakage
 beyond the three declared Home editor-side packages, or persistent Racket
-runtime/package/executable leakage fails the gate.  For Racket Mode the gate
-also inspects every requisite of the realized editor output, because a hidden
+runtime/package/executable leakage fails the gate.  The Slice 18 candidate also
+fails if Fennel, fnlfmt, fennel-ls, LuaRocks, or generated Lua/dependency state
+leaks into persistent Home, System, or the project source.  For Racket Mode the
+gate also inspects every requisite of the realized editor output, because a hidden
 transitive runtime reference would evade top-level package and =profile/bin=
 checks.
 
@@ -668,6 +681,26 @@ Racket (accepted Slice 17)
                fixture-specific module path.  =racket-hash-lang-mode= remains deferred because
                its initialization contacts the backend and therefore violates
                this slice's cold-open contract.
+
+Fennel (Slice 18 candidate; not accepted)
+  Mode:        fennel-mode
+  Backend:     explicit project-keyed protocol REPL; explicit
+               lsp-mode + fennel-ls through =SPC c l=
+  Diagnostics: fennel-ls only after explicit language-server startup
+  Formatter:   fnlfmt through =SPC c f=
+  Notes:       Opening a file starts no interpreter or language server.  The
+               83-package candidate Home adds only =emacs-fennel-mode=; Fennel
+               1.6.1, fnlfmt 0.3.0, fennel-ls 0.2.3, and Findutils remain in
+               the authenticated =fennel= manifest.  The tracked fixture covers
+               source, macros, tests, formatting, lint, compilation, deliberate
+               failures, and bounded runaway-macro rejection without LuaRocks,
+               fnx, =.fennelrc=, or project-local generated Lua.  The pinned
+               server emits =--WARNING: plugin fennel-ls does not support Fennel
+               version 1.6.1=; the gate permits that exact warning only.  Basic
+               diagnostics, hover, definition, and distinct definition/use
+               references pass on non-macro source, but imported-macro semantic
+               navigation is not claimed.  Publication and live acceptance are
+               still pending.
 #+end_src
 
 Lisp-family editing has a shared leader surface over the native backend for
@@ -678,13 +711,14 @@ SPC l r  start or switch REPL
 SPC l b  evaluate buffer
 SPC l d  evaluate defun / top-level form
 SPC l e  evaluate last sexp
-SPC l D  instrument Elisp, show Geiser/SLY debugger, or debug-run Racket
+SPC l D  instrument Elisp, show Geiser/SLY debugger, debug-run Racket, or
+         report Fennel debugging as unsupported
 SPC l g  visit definition
 SPC l k  show docs at point
 SPC l m  macroexpand at point
 SPC l n  reload the current Clojure namespace
 SPC l p  run the project's tracked check gate
-SPC l q  stop the current project's Clojure or Racket REPL/backend
+SPC l q  stop the current project's Clojure, Racket, or Fennel REPL/backend
 SPC l [ / ]  slurp backward / forward
 SPC l { / }  barf backward / forward
 SPC l (      wrap in round delimiters
@@ -705,29 +739,37 @@ Clojure:      direct comint evaluation; clojure-lsp docs/navigation only after
               explicit =SPC c l= startup
 Racket:       Racket Mode commands; semantic XP analysis and the backend start
               only on an explicit project command
+Fennel:       protocol REPL commands; fennel-ls docs/navigation start only on
+              explicit =SPC c l= and currently cover basic non-macro source
 #+end_src
 
 Cold Lisp files should provide mode detection, indentation, basic syntax, and
 the correct command surface. Rich semantic completion/docs are REPL-backed for
 Scheme and Common Lisp, explicitly clojure-lsp-backed for Clojure, and
-explicitly XP/backend-backed for Racket.
+explicitly XP/backend-backed for Racket.  The unaccepted Fennel candidate stays
+cold until its protocol REPL or fennel-ls command is invoked explicitly.
 Evaluation checks backend connection state before dispatch, while backend
 failures after that check retain their original error.
 Documentation uniformly reports =No symbol at point= instead of prompting for
 or describing an unintended symbol at whitespace.
 
 The shared display policy routes documentation and macroexpansion—including
-Racket description and stepper buffers—to right slot 1, REPL and xref buffers
-to right slot 0, and compilation/debugger output to the bottom slot.  Opening a
-source file still never starts a runtime.
+Racket description and stepper buffers—to right slot 1, routes REPL and xref
+buffers to right slot 0, and routes compilation, debugger, and Fennel error
+output to the bottom slot.  Opening a source file still never starts a runtime.
 
 =electric-pair-mode= owns delimiter insertion.  Puni is enabled only in Emacs
-Lisp, Lisp Interaction, Scheme, Common Lisp, Clojure, and classic Racket
-buffers—including those modes inside Org source editing—and owns balanced
+Lisp, Lisp Interaction, Scheme, Common Lisp, Clojure, classic Racket, and the
+Fennel candidate's source/protocol-REPL modes—including those source modes
+inside Org source editing—and owns balanced
 deletion plus the explicit structural commands above.  Evil retains modal state
 and ordinary motions.
 Puni does not redefine stock Evil =d=, =c=, or =x= as structural operators; use
 the Puni commands when balance preservation is required.
+
+Org offers Fennel source-block insertion and =fennel-mode= editing only.  It
+does not enable =ob-fennel=; every runtime action must cross the authenticated
+project wrapper.
 
 Yasnippet reads only the tracked =emacs/snippets= tree for authored templates:
 
@@ -1301,6 +1343,13 @@ Home's editor package does not retain the manifest-only Racket runtime.  The
 complete gate passed from the exact source candidate before publication;
 checkpoint =18bdc80= was then published, activated as Home 40, rebooted, and
 accepted through the corresponding fresh-live checks.
+The Slice 18 candidate extends the gate again with the copied Fennel project
+checker, connected protocol-REPL/fennel-ls checker, exact warning policy,
+runtime/tool leakage probes, and source/state/process cleanup controls.  The
+complete non-activating gate passes with candidate Home
+=/gnu/store/8q8dki5ka0b7ayby2kg1c7gk1cc9mrfh-home= and unchanged System
+=/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=.  Neither path has been
+activated; the accepted live profiles and generation pins remain unchanged.
 Guix may reuse already-authenticated
 immutable store objects; the separate isolated clean-clone test verifies the
 published =sk-guix= refs.  The gate never pulls, reconfigures,
@@ -1327,12 +1376,13 @@ lock; do not use a relative roll-back when the intended generation is known.
 The base workstation keeps normal Emacs, Geiser/SLY, Guile, and SBCL available
 through Home.  Optional dialect runtimes are project shells, not global machine
 packages.  The shared module in =guix/modules/sk/development-tiers.scm=
-composes three independently evaluable manifests:
+composes four independently evaluable manifests:
 
 #+begin_src text
 core    Guile, readline/colorized modules, SBCL, and shared project/core tools
 jvm     OpenJDK, the Clojure JAR, clojure-lsp, clj-kondo, and cljfmt
 racket  full Racket, Findutils, raco, RackUnit, docs, and GUI/runtime libraries
+fennel  Fennel 1.6.1, fnlfmt 0.3.0, fennel-ls 0.2.3, and Findutils
 #+end_src
 
 List or enter them through the authenticated channel snapshot:
@@ -1344,6 +1394,8 @@ scripts/guix-lisp-shell jvm -- make --no-print-directory -C fixtures/clojure che
 scripts/clojure-project-check
 scripts/racket-project --project fixtures/racket check
 scripts/racket-project-check
+scripts/fennel-project --project fixtures/fennel check
+scripts/fennel-project-check
 scripts/lisp-project-check all
 #+end_src
 
@@ -1360,8 +1412,9 @@ directories.  Its generic surface is =classpath=, =clojure=, =format=,
 evaluation, reload, test, and =check= policy.  =deps.edn= records project
 paths/root metadata only; tools.deps and Maven dependency downloads are outside
 this workflow.  The full build gate supplies isolated HOME/cache/config state
-while proving real Guile/SBCL/Clojure/Racket commands and verifying that Racket
-does not leak into core/JVM and Clojure does not leak into Racket.
+while proving real Guile/SBCL/Clojure/Racket/Fennel commands and verifying that
+Racket does not leak into core/JVM, Clojure does not leak into Racket, and
+Fennel's runtime/tool stack remains confined to its own manifest.
 
 The Racket project surface is =backend=, =check=, =docs=, =eval=, =expand=,
 =lint=, =make=, =raw=, =repl=, and =test=.  It re-enters the repository-pinned
@@ -1384,6 +1437,22 @@ separately through =raco expand=.  No
 action invokes =raco pkg=, installs the fixture, changes a package catalog, or
 writes =compiled/= or =doc/= inside the project.
 
+The Fennel project surface is =check=, =compile=, =eval=, =expand=, =format=,
+=format-check=, =lint=, =lsp=, =make=, =raw=, =repl=, =run=, and =test=.
+Every public invocation re-enters =guix-lisp-shell fennel=; its internal
+=--authenticated= worker mode accepts only an exact canonical
+=/gnu/store/*-profile= =GUIX_ENVIRONMENT= below the non-writable Guix store,
+with a readable manifest, a non-writable profile, and the required tools.  A
+read-only lookalike directory outside the store is a tested rejection.  A SHA-256 digest of the
+canonical project root keys isolated HOME, XDG cache/config/data/state/runtime,
+and temporary directories below the caller's cache root.  The wrapper clears
+ambient Lua and Fennel search/startup variables, invokes Fennel with
+=--no-fennelrc=, and limits its module/macro search paths to the marked =src=
+and =test= trees.  Recursive Make targets preserve the authenticated mode and
+original cache root rather
+than nesting state.  No action installs a dependency or permits =.fennelrc=,
+LuaRocks/fnx state, project-local cache/target state, or generated Lua output.
+
 The persistent Home profile owns =emacs-clojure-mode=, =clj-kondo=, and
 =cljfmt= for editor-side mode, diagnostics, and formatting.  The JVM manifest
 owns the complete runtime/tool closure above, while System owns no Clojure/JVM
@@ -1399,6 +1468,16 @@ source configures Racket Mode to use the project wrapper only after explicit
 backend/XP startup.  The complete non-activating gate and the activated,
 fresh-reboot Home/editor/backend acceptance both pass.
 
+The Fennel candidate declaration gives Home only =emacs-fennel-mode=; its
+interpreter, formatter, language server, and checker-only Findutils stay in the
+project manifest.  Repository source adds explicit project-keyed protocol REPL
+and fennel-ls startup, shared evaluation/docs/navigation/macro/check/stop keys,
+Puni, wrapper-backed formatting, edit-only Org source blocks, and the existing
+helper/REPL window policy.  Opening =.fnl= starts no process, debugging reports
+an explicit unsupported error, and stopping one project preserves other
+projects and unrelated processes.  This remains candidate source until the
+publication and fresh-live acceptance sequence completes.
+
 The disposable Racket checker proves evaluation at 42, the backend command,
 project-keyed PLT environment, compilation, strict require-recommendation lint, RackUnit,
 Scribble, macro expansion, and both direct and Makefile =check= paths.  Its
@@ -1408,11 +1487,24 @@ copied project, source fixture, repository, and real Home Racket paths before
 and after the run, and rejects project-local =compiled=, =doc=, =.racket=,
 =.pkg=, or =target= artifacts.
 
-All three manifests explicitly include Coreutils because the pure project
+The disposable Fennel checker proves evaluation and imported-macro evaluation
+at 42, compilation, fnlfmt formatting, fennel-ls lint, tests, macro expansion,
+direct and Makefile checks, exact keyed isolation, source/Home/repository
+non-mutation, and absence of project-local Lua/dependency artifacts.  Its
+syntax, format, lint, runaway-macro instruction-limit, failing-test, and
+status-91 controls fail for the intended reasons and recover cleanly.  The
+connected checker proves cold open, two-root REPL/LSP isolation, evaluation and
+error recovery, formatter/project gates, basic non-macro diagnostics, hover,
+definition/references, project-scoped stop, and deliberate process cleanup.
+Pinned fennel-ls emits the exact compatibility warning =--WARNING: plugin
+fennel-ls does not support Fennel version 1.6.1=.  Only that warning is allowed;
+imported-macro LSP navigation or semantic analysis is not claimed.
+
+All four manifests explicitly include Coreutils because the pure project
 wrappers require =env=, =cp=, =mkdir=, =mktemp=, =rm=, and related primitives.
-The Racket tier alone also owns Findutils because its containment checker
-inventories files, symlinks, and empty directories.  The production Racket
-wrapper re-enters the repository-pinned authenticated shell even when an
+The Racket and Fennel tiers each own Findutils because their containment
+checkers inventory files, symlinks, and empty directories.  The production
+Racket wrapper re-enters the repository-pinned authenticated shell even when an
 unrelated =GUIX_ENVIRONMENT= is already present; none of these paths rely on an
 inherited workstation =PATH=.
 
