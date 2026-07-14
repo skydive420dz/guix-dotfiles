@@ -27,6 +27,7 @@ shellcheck \
     "$repo/fixtures/shell/sample.sh" \
     "$repo/ranger/scope.sh" \
     "$repo/scripts/editor-tools-check" \
+    "$repo/scripts/desktop-audio-output-check" \
     "$repo/scripts/desktop-session-check" \
     "$repo/scripts/emacs-check" \
     "$repo/scripts/emacs-clojure-check" \
@@ -47,6 +48,8 @@ shellcheck \
     "$repo/shell/xinitrc" \
     "$repo/shell/zprofile" \
     "$repo/tests/exwm-session-check" \
+    "$repo/tests/desktop-audio-output-check" \
+    "$repo/tests/desktop-policy-check" \
     "$repo/tests/emacs-fennel-check" \
     "$repo/tests/guix-bootstrap-check" \
     "$repo/tests/guix-build-gate-check" \
@@ -60,6 +63,8 @@ shellcheck \
     "$repo/tests/guix-reconfigure-check"
 
 "$repo/tests/exwm-session-check"
+"$repo/tests/desktop-audio-output-check"
+"$repo/tests/desktop-policy-check"
 "$repo/tests/emacs-fennel-check"
 "$repo/tests/guix-bootstrap-check"
 "$repo/tests/guix-build-gate-check"

@@ -1962,6 +1962,40 @@
         (kill-buffer original)
         (kill-buffer client)))))
 
+(ert-deftest sk/check-start-picom-isolates-ambient-config ()
+  (require 'sk-exwm)
+  (let ((pkill-count 0)
+        (start-count 0)
+        pkill-call
+        start-call)
+    (cl-letf (((symbol-function 'executable-find)
+               (lambda (program)
+                 (and (member program '("picom" "pkill"))
+                      (concat "/mock/" program))))
+              ((symbol-function 'call-process)
+               (lambda (program &optional infile destination display &rest args)
+                 (setq pkill-count (1+ pkill-count))
+                 (setq pkill-call
+                       (list program infile destination display args))
+                 0))
+              ((symbol-function 'start-process)
+               (lambda (name buffer program &rest args)
+                 (setq start-count (1+ start-count))
+                 (setq start-call (list name buffer program args))
+                 'mock-picom-process)))
+      (sk/start-picom))
+    (should (= pkill-count 1))
+    (should (= start-count 1))
+    (should (equal pkill-call
+                   '("pkill" nil nil nil ("-x" "picom"))))
+    (should
+     (equal start-call
+            (list "picom" nil "picom"
+                  (list "--config" "/dev/null"
+                        "--backend" "glx"
+                        "--vsync"
+                        "--opacity-rule" "85:class_g = \"Emacs\""))))))
+
 (ert-deftest sk/check-exwm-start-has-single-visual-owner ()
   (require 'sk-exwm)
   (let ((exwm-update-class-hook nil)

@@ -456,7 +456,7 @@ applications whose new window belongs to an existing process."
     (start-process "xset-repeat" nil
                    "xset" "r" "rate" "210" "67")))
 
-(defvar sk/picom-opacity-rule "85:class_g = \"Emacs\""
+(defconst sk/picom-opacity-rule "85:class_g = \"Emacs\""
   "Picom opacity rule for Emacs frame transparency.")
 
 (defun sk/start-picom ()
@@ -467,6 +467,7 @@ applications whose new window belongs to an existing process."
       (call-process "pkill" nil nil nil "-x" "picom"))
     (start-process "picom" nil
                    "picom"
+                   "--config" "/dev/null"
                    "--backend" "glx"
                    "--vsync"
                    "--opacity-rule" sk/picom-opacity-rule)))

@@ -74,11 +74,8 @@ fi
 
 if command -v picom >/dev/null 2>&1; then
     pkill -x picom 2>/dev/null || true
-    picom --backend glx --vsync --opacity-rule '85:class_g = "Emacs"' &
-fi
-
-if command -v xhost >/dev/null 2>&1; then
-    xhost +SI:localuser:"$USER" >/dev/null 2>&1 || true
+    picom --config /dev/null --backend glx --vsync \
+        --opacity-rule '85:class_g = "Emacs"' &
 fi
 
 exec emacs -fs --eval '(load-file "~/.exwm")'

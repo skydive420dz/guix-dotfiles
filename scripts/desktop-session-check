@@ -1,6 +1,8 @@
 #!/bin/sh
 set -u
 
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+
 usage() {
     printf 'usage: %s [--require-bluetooth]\n' "$0" >&2
     exit 2
@@ -27,7 +29,6 @@ for command in awk bluetoothctl busctl dbus-send emacsclient env getent grep hea
 done
 
 failures=0
-bluetooth_skipped=0
 
 pass() {
     printf 'PASS: %s\n' "$1"
@@ -169,7 +170,8 @@ fi
 picom_processes=$(ps -u "$uid" -o comm=,args= | awk '
     $1 == "picom" {
         count += 1
-        if (index($0, "--backend glx") && index($0, "--vsync") &&
+        if (index($0, "--config /dev/null") &&
+            index($0, "--backend glx") && index($0, "--vsync") &&
             index($0, "85:class_g = ") && index($0, "Emacs")) expected += 1
     }
     END { print count + 0, expected + 0 }
@@ -177,7 +179,7 @@ picom_processes=$(ps -u "$uid" -o comm=,args= | awk '
 picom_count=$(printf '%s\n' "$picom_processes" | awk '{ print $1 }')
 expected_picom_count=$(printf '%s\n' "$picom_processes" | awk '{ print $2 }')
 if [ "$picom_count" -eq 1 ] && [ "$expected_picom_count" -eq 1 ]; then
-    pass 'Xinit owns exactly one Picom process with the declared policy'
+    pass 'exactly one Picom process uses the declared isolated policy'
 else
     fail "Picom process/policy counts are $picom_count/$expected_picom_count; expected 1/1"
 fi
@@ -217,42 +219,18 @@ else
     fail 'RTKit account or daemon ownership is missing'
 fi
 
-audio_status=$(env XDG_RUNTIME_DIR="$runtime_dir" \
-    DBUS_SESSION_BUS_ADDRESS="$expected_bus" wpctl status 2>&1)
-if printf '%s\n' "$audio_status" | grep -q "PipeWire 'pipewire-0'" && \
-   printf '%s\n' "$audio_status" | grep -q 'Sinks:'; then
-    pass 'PipeWire graph and sinks are visible'
-else
-    fail 'PipeWire graph or sinks are unavailable'
-fi
-if printf '%s\n' "$audio_status" | grep -q 'RTKit error'; then
-    fail 'a fresh PipeWire client still reports an RTKit error'
-else
-    pass 'fresh PipeWire client reports no RTKit error'
-fi
-
-sink_info=$(env XDG_RUNTIME_DIR="$runtime_dir" \
+if [ ! -x "$repo/scripts/desktop-audio-output-check" ]; then
+    fail 'desktop audio output checker is missing or not executable'
+elif [ "$require_bluetooth" -eq 1 ]; then
+    if ! env XDG_RUNTIME_DIR="$runtime_dir" \
+        DBUS_SESSION_BUS_ADDRESS="$expected_bus" \
+        "$repo/scripts/desktop-audio-output-check" --require-bluetooth; then
+        failures=$((failures + 1))
+    fi
+elif ! env XDG_RUNTIME_DIR="$runtime_dir" \
     DBUS_SESSION_BUS_ADDRESS="$expected_bus" \
-    wpctl inspect '@DEFAULT_AUDIO_SINK@' 2>&1)
-sink_target=$(printf '%s\n' "$sink_info" |
-    sed -n 's/.*node\.name = "\([^"]*\)".*/\1/p' | sed -n '1p')
-sink_description=$(printf '%s\n' "$sink_info" |
-    sed -n 's/.*node\.description = "\([^"]*\)".*/\1/p' | sed -n '1p')
-physical_sink=0
-case $sink_target in
-    alsa_output.*|bluez_output.*) physical_sink=1 ;;
-esac
-if [ "$physical_sink" -eq 1 ]; then
-    pass "default output is physical: $sink_description ($sink_target)"
-else
-    fail "default output is not physical: ${sink_description:-unknown} (${sink_target:-unknown})"
-fi
-
-if env XDG_RUNTIME_DIR="$runtime_dir" DBUS_SESSION_BUS_ADDRESS="$expected_bus" \
-    wpctl get-volume '@DEFAULT_AUDIO_SINK@' >/dev/null 2>&1; then
-    pass 'default audio sink and volume control are available'
-else
-    fail 'default audio sink volume query failed'
+    "$repo/scripts/desktop-audio-output-check"; then
+    failures=$((failures + 1))
 fi
 
 volume_bindings=$(emacsclient --socket-name=server --alternate-editor=false --eval '
@@ -264,16 +242,6 @@ if printf '%s\n' "$volume_bindings" | grep -q 'sk/volume-raise' && \
     pass 'EXWM volume keys retain their wpctl command bindings'
 else
     fail "EXWM volume bindings are $volume_bindings"
-fi
-
-if [ "$physical_sink" -eq 1 ] && \
-   head -c 19200 /dev/zero |
-   env XDG_RUNTIME_DIR="$runtime_dir" DBUS_SESSION_BUS_ADDRESS="$expected_bus" \
-       pw-cat --playback --raw --target "$sink_target" --rate 48000 \
-       --channels 2 --format s16 --volume 0.001 - >/dev/null 2>&1; then
-    pass 'finite low-volume stream reached the physical output'
-else
-    fail 'finite playback stream did not reach a physical output'
 fi
 
 pipewire_pid=$(pgrep -u "$uid" -x pipewire | sed -n '1p')
@@ -312,28 +280,8 @@ else
     fail 'EXWM has no XDG_SESSION_ID'
 fi
 
-bluetooth_device=${SK_BLUETOOTH_DEVICE:-04:52:C7:86:93:08}
-bluetooth_info=$(bluetoothctl info "$bluetooth_device" 2>&1 || true)
-if printf '%s\n' "$bluetooth_info" | grep -q 'Connected: yes'; then
-    if printf '%s\n' "$audio_status" | grep -qi 'bluez\|Bose Mini II'; then
-        pass 'Bluetooth speaker is connected and visible to PipeWire'
-    else
-        fail 'Bluetooth speaker is connected but absent from PipeWire'
-    fi
-elif [ "$require_bluetooth" -eq 1 ]; then
-    fail "Bluetooth speaker $bluetooth_device is not connected"
-else
-    printf 'SKIP: Bluetooth speaker %s is not connected; rerun with --require-bluetooth for the manual gate\n' \
-        "$bluetooth_device"
-    bluetooth_skipped=1
-fi
-
 if [ "$failures" -eq 0 ]; then
-    if [ "$bluetooth_skipped" -eq 1 ]; then
-        printf '%s\n' 'desktop-session-check: PASS (Bluetooth gate skipped)'
-    else
-        printf '%s\n' 'desktop-session-check: PASS'
-    fi
+    printf '%s\n' 'desktop-session-check: PASS'
     exit 0
 fi
 

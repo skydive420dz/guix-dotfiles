@@ -1,0 +1,198 @@
+#!/bin/sh
+set -u
+
+usage() {
+    printf 'usage: %s [--require-bluetooth]\n' "$0" >&2
+    exit 2
+}
+
+require_bluetooth=0
+case ${1:-} in
+    '') ;;
+    --require-bluetooth) require_bluetooth=1 ;;
+    *) usage ;;
+esac
+[ "$#" -le 1 ] || usage
+
+for command in bluetoothctl env grep head id pw-cat sed wpctl; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        printf 'desktop-audio-output-check: missing command: %s\n' \
+            "$command" >&2
+        exit 2
+    fi
+done
+
+failures=0
+
+pass() {
+    printf 'PASS: %s\n' "$1"
+}
+
+fail() {
+    printf 'FAIL: %s\n' "$1" >&2
+    failures=$((failures + 1))
+}
+
+uid=$(id -u)
+runtime_dir=${XDG_RUNTIME_DIR:-/run/user/$uid}
+session_bus=${DBUS_SESSION_BUS_ADDRESS:-unix:path=$runtime_dir/bus}
+bluetooth_device=${SK_BLUETOOTH_DEVICE:-04:52:C7:86:93:08}
+bluetooth_description=${SK_BLUETOOTH_DESCRIPTION:-Bose Mini II}
+
+audio_status_code=0
+audio_status=$(env XDG_RUNTIME_DIR="$runtime_dir" \
+    DBUS_SESSION_BUS_ADDRESS="$session_bus" wpctl status 2>&1) || \
+    audio_status_code=$?
+audio_graph_ok=0
+if [ "$audio_status_code" -eq 0 ] && \
+   printf '%s\n' "$audio_status" | grep -q "PipeWire 'pipewire-0'" && \
+   printf '%s\n' "$audio_status" | grep -q 'Sinks:'; then
+    audio_graph_ok=1
+    pass 'PipeWire graph and sinks are visible'
+else
+    fail "PipeWire graph or sinks are unavailable (status $audio_status_code)"
+fi
+if [ "$audio_graph_ok" -eq 1 ]; then
+    if printf '%s\n' "$audio_status" | grep -q 'RTKit error'; then
+        fail 'a fresh PipeWire client still reports an RTKit error'
+    else
+        pass 'fresh PipeWire client reports no RTKit error'
+    fi
+fi
+
+sink_status=0
+sink_info=$(env XDG_RUNTIME_DIR="$runtime_dir" \
+    DBUS_SESSION_BUS_ADDRESS="$session_bus" \
+    wpctl inspect '@DEFAULT_AUDIO_SINK@' 2>&1) || sink_status=$?
+sink_target=$(printf '%s\n' "$sink_info" |
+    sed -n 's/.*node\.name = "\([^"]*\)".*/\1/p' | sed -n '1p')
+sink_description=$(printf '%s\n' "$sink_info" |
+    sed -n 's/.*node\.description = "\([^"]*\)".*/\1/p' | sed -n '1p')
+
+bluetooth_status=0
+bluetooth_info=$(bluetoothctl info "$bluetooth_device" 2>&1) || \
+    bluetooth_status=$?
+bluetooth_connected=0
+if [ "$bluetooth_status" -ne 0 ]; then
+    fail "Bluetooth device query failed with status $bluetooth_status"
+elif printf '%s\n' "$bluetooth_info" | grep -q 'Connected: yes'; then
+    bluetooth_connected=1
+fi
+
+output_state=invalid
+if [ "$sink_status" -ne 0 ]; then
+    fail "default audio sink inspection failed with status $sink_status"
+else
+    case $sink_target in
+        alsa_output.*|bluez_output.*)
+            output_state=physical
+            pass "default output is physical: $sink_description ($sink_target)"
+            ;;
+        auto_null)
+            if [ "$bluetooth_status" -eq 0 ] && \
+               [ "$bluetooth_connected" -eq 0 ]; then
+                output_state=absent
+                printf '%s\n' \
+                    'SKIP: no used physical audio endpoint is available; default output is auto_null'
+            elif [ "$bluetooth_status" -eq 0 ]; then
+                fail 'Bluetooth is connected but the default output is auto_null'
+            else
+                printf '%s\n' \
+                    'INFO: auto_null classification deferred because the Bluetooth query failed'
+            fi
+            ;;
+        *)
+            fail "default output is unsupported: ${sink_description:-unknown} (${sink_target:-unknown})"
+            ;;
+    esac
+fi
+
+if env XDG_RUNTIME_DIR="$runtime_dir" DBUS_SESSION_BUS_ADDRESS="$session_bus" \
+    wpctl get-volume '@DEFAULT_AUDIO_SINK@' >/dev/null 2>&1; then
+    pass 'default audio sink and volume control are available'
+else
+    fail 'default audio sink volume query failed'
+fi
+
+strict_target_valid=0
+if [ "$bluetooth_connected" -eq 1 ]; then
+    if [ "$audio_graph_ok" -eq 1 ] && \
+       printf '%s\n' "$audio_status" | grep -Fqi "$bluetooth_description"; then
+        pass "Bluetooth speaker $bluetooth_description is visible to PipeWire"
+    elif [ "$audio_graph_ok" -eq 1 ]; then
+        fail "Bluetooth speaker $bluetooth_description is connected but absent from PipeWire"
+    fi
+
+    if [ "$require_bluetooth" -eq 1 ] && \
+       [ "$audio_graph_ok" -eq 1 ] && [ "$output_state" = physical ]; then
+        case $sink_target in
+            bluez_output.*)
+                case $sink_description in
+                    *"$bluetooth_description"*)
+                        strict_target_valid=1
+                        pass "strict Bluetooth output is the default sink: $sink_description ($sink_target)"
+                        ;;
+                    *)
+                        fail "default BlueZ sink is not $bluetooth_description: ${sink_description:-unknown}"
+                        ;;
+                esac
+                ;;
+            *)
+                fail "strict Bluetooth output is not the default sink: ${sink_target:-unknown}"
+                ;;
+        esac
+    elif [ "$require_bluetooth" -eq 1 ]; then
+        printf '%s\n' \
+            'INFO: strict Bluetooth target check skipped because an audio prerequisite failed'
+    fi
+elif [ "$require_bluetooth" -eq 1 ] && [ "$bluetooth_status" -eq 0 ]; then
+    fail "Bluetooth speaker $bluetooth_device is not connected"
+elif [ "$bluetooth_status" -eq 0 ]; then
+    printf 'SKIP: Bluetooth speaker %s is not connected; power the adapter and speaker before rerunning with --require-bluetooth\n' \
+        "$bluetooth_device"
+fi
+
+playback_allowed=0
+if [ "$output_state" = physical ]; then
+    if [ "$require_bluetooth" -eq 0 ] || [ "$strict_target_valid" -eq 1 ]; then
+        playback_allowed=1
+    else
+        printf '%s\n' \
+            'INFO: finite playback skipped because strict mode has no accepted BlueZ default sink'
+    fi
+elif [ "$output_state" = absent ]; then
+    printf '%s\n' 'SKIP: finite playback requires a used physical audio endpoint'
+else
+    printf '%s\n' 'INFO: finite playback skipped because the sink policy failed'
+fi
+
+if [ "$playback_allowed" -eq 1 ] && [ "$failures" -eq 0 ]; then
+    if head -c 19200 /dev/zero |
+       env XDG_RUNTIME_DIR="$runtime_dir" \
+           DBUS_SESSION_BUS_ADDRESS="$session_bus" \
+           pw-cat --playback --raw --target "$sink_target" --rate 48000 \
+           --channels 2 --format s16 --volume 0.001 - >/dev/null 2>&1; then
+        pass "finite low-volume stream reached $sink_description ($sink_target)"
+    else
+        fail "finite playback stream failed for $sink_description ($sink_target)"
+    fi
+elif [ "$playback_allowed" -eq 1 ]; then
+    printf '%s\n' \
+        'INFO: finite playback skipped because an audio prerequisite failed'
+fi
+
+if [ "$failures" -eq 0 ]; then
+    if [ "$output_state" = absent ] && [ "$bluetooth_connected" -eq 0 ]; then
+        printf '%s\n' \
+            'desktop-audio-output-check: PASS (physical output and Bluetooth gates skipped)'
+    elif [ "$bluetooth_connected" -eq 0 ]; then
+        printf '%s\n' \
+            'desktop-audio-output-check: PASS (Bluetooth gate skipped)'
+    else
+        printf '%s\n' 'desktop-audio-output-check: PASS'
+    fi
+    exit 0
+fi
+
+printf 'desktop-audio-output-check: FAIL (%s checks)\n' "$failures" >&2
+exit 1

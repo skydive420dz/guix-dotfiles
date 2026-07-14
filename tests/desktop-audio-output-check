@@ -1,0 +1,165 @@
+#!/bin/sh
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+check=$repo/scripts/desktop-audio-output-check
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/sk-desktop-audio-output-check.XXXXXX")
+trap 'rm -rf "$tmp"' EXIT HUP INT TERM
+
+fail() {
+    printf 'desktop-audio-output-check fixture: %s\n' "$1" >&2
+    exit 1
+}
+
+mkdir -p "$tmp/bin" "$tmp/home" "$tmp/runtime"
+
+cat >"$tmp/bin/wpctl" <<'EOF'
+#!/bin/sh
+case ${1:-} in
+    status)
+        printf "%s\n" "PipeWire 'pipewire-0'" 'Audio' ' Sinks:'
+        if [ -n "${SK_FAKE_AUDIO_STATUS_EXTRA:-}" ]; then
+            printf '%s\n' "$SK_FAKE_AUDIO_STATUS_EXTRA"
+        fi
+        exit "${SK_FAKE_STATUS_STATUS:-0}"
+        ;;
+    inspect)
+        printf '  * node.name = "%s"\n' "${SK_FAKE_SINK_TARGET:?}"
+        printf '  * node.description = "%s"\n' "${SK_FAKE_SINK_DESCRIPTION:?}"
+        exit "${SK_FAKE_INSPECT_STATUS:-0}"
+        ;;
+    get-volume)
+        printf '%s\n' 'Volume: 1.00'
+        exit "${SK_FAKE_VOLUME_STATUS:-0}"
+        ;;
+    *) exit 64 ;;
+esac
+EOF
+
+cat >"$tmp/bin/bluetoothctl" <<'EOF'
+#!/bin/sh
+printf 'Connected: %s\n' "${SK_FAKE_CONNECTED:?}"
+exit "${SK_FAKE_BLUETOOTH_STATUS:-0}"
+EOF
+
+cat >"$tmp/bin/pw-cat" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >>"${SK_FAKE_PW_LOG:?}"
+cat >/dev/null
+exit "${SK_FAKE_PW_STATUS:-0}"
+EOF
+
+chmod +x "$tmp/bin/wpctl" "$tmp/bin/bluetoothctl" "$tmp/bin/pw-cat"
+
+run_case() {
+    case_name=$1
+    case_mode=$2
+    case_connected=$3
+    case_target=$4
+    case_description=$5
+    case_status_extra=$6
+    case_pw_status=$7
+    case_status_status=${8:-0}
+    case_inspect_status=${9:-0}
+    case_volume_status=${10:-0}
+    case_bluetooth_status=${11:-0}
+    case_output=$tmp/$case_name.out
+    case_log=$tmp/$case_name.pw-cat
+    : >"$case_log"
+
+    case $case_mode in
+        normal) set -- "$check" ;;
+        strict) set -- "$check" --require-bluetooth ;;
+        *) fail "invalid fixture mode: $case_mode" ;;
+    esac
+
+    set +e
+    env -i HOME="$tmp/home" \
+        PATH="$tmp/bin:$PATH" \
+        XDG_RUNTIME_DIR="$tmp/runtime" \
+        DBUS_SESSION_BUS_ADDRESS="unix:path=$tmp/runtime/bus" \
+        SK_BLUETOOTH_DEVICE="04:52:C7:86:93:08" \
+        SK_BLUETOOTH_DESCRIPTION="Bose Mini II" \
+        SK_FAKE_CONNECTED="$case_connected" \
+        SK_FAKE_SINK_TARGET="$case_target" \
+        SK_FAKE_SINK_DESCRIPTION="$case_description" \
+        SK_FAKE_AUDIO_STATUS_EXTRA="$case_status_extra" \
+        SK_FAKE_PW_STATUS="$case_pw_status" \
+        SK_FAKE_PW_LOG="$case_log" \
+        SK_FAKE_STATUS_STATUS="$case_status_status" \
+        SK_FAKE_INSPECT_STATUS="$case_inspect_status" \
+        SK_FAKE_VOLUME_STATUS="$case_volume_status" \
+        SK_FAKE_BLUETOOTH_STATUS="$case_bluetooth_status" \
+        "$@" >"$case_output" 2>&1
+    case_result=$?
+    set -e
+}
+
+run_case dummy-normal normal no auto_null 'Dummy Output' '' 0
+[ "$case_result" -eq 0 ] || fail 'normal auto_null policy did not pass'
+grep -q 'SKIP: no used physical audio endpoint' "$case_output" || \
+    fail 'normal auto_null policy omitted the physical-output skip'
+grep -q 'SKIP: Bluetooth speaker' "$case_output" || \
+    fail 'normal auto_null policy omitted the Bluetooth skip'
+[ ! -s "$case_log" ] || fail 'normal auto_null policy invoked pw-cat'
+
+run_case dummy-strict strict no auto_null 'Dummy Output' '' 0
+[ "$case_result" -ne 0 ] || fail 'strict disconnected-Bose policy passed'
+[ "$(grep -c '^FAIL:' "$case_output")" -eq 1 ] || \
+    fail 'strict disconnected-Bose policy emitted duplicate failures'
+grep -q 'is not connected' "$case_output" || \
+    fail 'strict disconnected-Bose policy omitted its causal failure'
+[ ! -s "$case_log" ] || fail 'strict disconnected-Bose policy invoked pw-cat'
+
+run_case bose-strict strict yes bluez_output.04_52_C7_86_93_08.1 \
+    'Bose Mini II' 'Bose Mini II [bluez]' 0
+[ "$case_result" -eq 0 ] || fail 'strict Bose default policy did not pass'
+grep -q -- '--target bluez_output.04_52_C7_86_93_08.1' "$case_log" || \
+    fail 'strict Bose policy did not target the BlueZ sink'
+
+run_case alsa-strict strict yes alsa_output.pci-0000_06_00.1.hdmi-stereo \
+    'HDMI Output' 'Bose Mini II [bluez]' 0
+[ "$case_result" -ne 0 ] || fail 'strict ALSA-default policy passed'
+grep -q 'strict Bluetooth output is not the default sink' "$case_output" || \
+    fail 'strict ALSA-default policy omitted its default-sink failure'
+[ ! -s "$case_log" ] || fail 'strict ALSA-default policy targeted ALSA playback'
+
+run_case card-only-strict strict yes auto_null 'Dummy Output' \
+    'Bose Mini II card [bluez]' 0
+[ "$case_result" -ne 0 ] || fail 'strict BlueZ-card-only policy passed'
+[ "$(grep -c '^FAIL:' "$case_output")" -eq 1 ] || \
+    fail 'strict BlueZ-card-only policy emitted duplicate failures'
+[ ! -s "$case_log" ] || fail 'strict BlueZ-card-only policy invoked pw-cat'
+
+run_case wrong-bose-strict strict yes bluez_output.04_52_C7_86_93_08.1 \
+    'Different Speaker' 'Bose Mini II [bluez]' 0
+[ "$case_result" -ne 0 ] || fail 'strict wrong-Bose-description policy passed'
+[ ! -s "$case_log" ] || fail 'strict wrong-Bose-description policy invoked pw-cat'
+
+run_case status-failure normal no \
+    alsa_output.pci-0000_06_00.1.hdmi-stereo 'HDMI Output' '' 0 9
+[ "$case_result" -ne 0 ] || fail 'failed PipeWire status policy passed'
+[ ! -s "$case_log" ] || fail 'failed PipeWire status policy invoked pw-cat'
+
+run_case inspect-failure normal no auto_null 'Dummy Output' '' 0 0 8
+[ "$case_result" -ne 0 ] || fail 'failed sink-inspection policy passed'
+[ ! -s "$case_log" ] || fail 'failed sink-inspection policy invoked pw-cat'
+
+run_case volume-failure normal no \
+    alsa_output.pci-0000_06_00.1.hdmi-stereo 'HDMI Output' '' 0 0 0 7
+[ "$case_result" -ne 0 ] || fail 'failed volume-query policy passed'
+[ ! -s "$case_log" ] || fail 'failed volume-query policy invoked pw-cat'
+
+run_case bluetooth-query-failure normal no auto_null 'Dummy Output' '' \
+    0 0 0 0 6
+[ "$case_result" -ne 0 ] || fail 'failed Bluetooth query policy passed'
+[ ! -s "$case_log" ] || fail 'failed Bluetooth query policy invoked pw-cat'
+
+run_case alsa-playback-failure normal no \
+    alsa_output.pci-0000_06_00.1.hdmi-stereo 'HDMI Output' '' 7
+[ "$case_result" -ne 0 ] || fail 'failed physical playback policy passed'
+grep -q 'finite playback stream failed' "$case_output" || \
+    fail 'failed physical playback omitted its causal failure'
+[ -s "$case_log" ] || fail 'failed physical playback did not invoke pw-cat'
+
+printf '%s\n' 'desktop-audio-output-check fixture: PASS'

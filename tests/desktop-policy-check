@@ -1,0 +1,53 @@
+#!/bin/sh
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+
+kitty_policy=$(awk '
+    $1 == "allow_remote_control" {
+        count += 1
+        if ($2 == "no") disabled += 1
+    }
+    END { print count + 0 ":" disabled + 0 }
+' "$repo/kitty/kitty.conf")
+[ "$kitty_policy" = 1:1 ] || {
+    printf 'desktop-policy-check: Kitty remote-control policy is %s; expected 1:1\n' \
+        "$kitty_policy" >&2
+    exit 1
+}
+
+if awk '$1 == "listen_on" || $1 == "remote_control_password" ||
+        $1 == "include" || $1 == "globinclude" ||
+        $1 == "envinclude" || $1 == "geninclude" { found = 1 }
+        END { exit !found }' "$repo/kitty/kitty.conf"; then
+    printf '%s\n' \
+        'desktop-policy-check: Kitty exposes or imports remote-control policy' >&2
+    exit 1
+fi
+
+if awk '
+    !/^[[:space:]]*#/ &&
+    $0 ~ /(^|[[:space:]])([^[:space:]]*\/)?xhost([[:space:]]|$)/ {
+        found = 1
+    }
+    END { exit !found }
+' "$repo/shell/xinitrc"; then
+    printf '%s\n' 'desktop-policy-check: Xinit still expands access with xhost' >&2
+    exit 1
+fi
+
+picom_count=$(grep -Ec '^[[:space:]]*picom[[:space:]]' \
+    "$repo/shell/xinitrc" || true)
+picom_prefix_count=$(grep -Fxc \
+    "    picom --config /dev/null --backend glx --vsync \\" \
+    "$repo/shell/xinitrc" || true)
+picom_rule_count=$(grep -Fxc \
+    "        --opacity-rule '85:class_g = \"Emacs\"' &" \
+    "$repo/shell/xinitrc" || true)
+if [ "$picom_count:$picom_prefix_count:$picom_rule_count" != 1:1:1 ]; then
+    printf 'desktop-policy-check: Xinit Picom policy counts are %s:%s:%s; expected 1:1:1\n' \
+        "$picom_count" "$picom_prefix_count" "$picom_rule_count" >&2
+    exit 1
+fi
+
+printf '%s\n' 'desktop-policy-check: PASS'
