@@ -69,7 +69,8 @@ EndSection")
      (append
       ;; Kitty stays in the System recovery floor because EXWM's terminal
       ;; launcher requires it.  Home owns normal applications and tooling.
-      (list kitty-latest)
+      (list kitty-latest
+            (list kitty-latest "terminfo"))
       (map specification->package %guixpc-recovery-package-specifications)
 
       %base-packages))

@@ -64,6 +64,7 @@ mkdir -p "$sandbox_repo/scripts" "$sandbox_repo/guix/home" \
     "$fake_profile/bin" "$fake_system/profile/bin" \
     "$fake_system/profile/share/emacs/site-lisp/exwm-0.35" \
     "$fake_system/profile/share/guile/site/3.0/ice-9" \
+    "$fake_system/profile/share/terminfo/x" \
     "$fake_home/profile/bin" "$fake_home/profile/share/fish/functions" \
     "$fake_home/files/.config/fish"
 cp "$repo/scripts/guix-build-gate" "$gate"
@@ -223,6 +224,10 @@ printf '%s\n' ';; fake readline module' \
     >"$fake_system/profile/share/guile/site/3.0/ice-9/readline.scm"
 printf '%s\n' ';; fake colorized module' \
     >"$fake_system/profile/share/guile/site/3.0/ice-9/colorized.scm"
+printf '%s\n' 'fake compiled Kitty terminfo' \
+    >"$fake_system/profile/share/terminfo/x/xterm-kitty"
+printf '%s\n' 'fake compiled xterm-256color terminfo' \
+    >"$fake_system/profile/share/terminfo/x/xterm-256color"
 
 for command in bluetoothctl curl dbus-update-activation-environment emacs fish \
     git kitty picom reset rg startx vim xrandr xset xwallpaper; do
@@ -230,6 +235,16 @@ for command in bluetoothctl curl dbus-update-activation-environment emacs fish \
         >"$fake_system/profile/bin/$command"
     chmod +x "$fake_system/profile/bin/$command"
 done
+cat >"$fake_system/profile/bin/infocmp" <<'EOF'
+#!/bin/sh
+set -eu
+[ "$#" -eq 3 ]
+[ "$1" = -A ]
+database=$2
+terminal=$3
+[ -r "$database/x/$terminal" ]
+EOF
+chmod +x "$fake_system/profile/bin/infocmp"
 for command in chmod cp dirname env mkdir mktemp rm; do
     ln -s "$(command -v "$command")" "$fake_system/profile/bin/$command"
 done
@@ -362,6 +377,8 @@ reset_fake_system_manifest() {
         bluez curl emacs emacs-exwm fish git guile guile-colorized \
         guile-readline kitty-latest ncurses picom ripgrep vim xrandr xset \
         xwallpaper
+    printf '%s\t1\tterminfo\t/gnu/store/fake-kitty-latest-terminfo\n' \
+        kitty-latest >>"$fake_system_manifest"
 }
 
 reset_fake_home_manifest() {
@@ -378,6 +395,16 @@ remove_fake_manifest_package() {
     manifest=$1
     package=$2
     awk -v package="$package" '$1 != package { print }' "$manifest" \
+        >"$manifest.new"
+    mv "$manifest.new" "$manifest"
+}
+
+remove_fake_manifest_package_output() {
+    manifest=$1
+    package=$2
+    package_output=$3
+    awk -v package="$package" -v package_output="$package_output" \
+        '$1 != package || $3 != package_output { print }' "$manifest" \
         >"$manifest.new"
     mv "$manifest.new" "$manifest"
 }
@@ -831,6 +858,16 @@ fi
 contains "$output" 'System recovery profile lacks fish'
 write_fake_fish
 
+for terminal in xterm-kitty xterm-256color; do
+    terminfo=$fake_system/profile/share/terminfo/x/$terminal
+    mv "$terminfo" "$terminfo.absent"
+    if output=$(run_gate 2>&1); then
+        fail "System profile missing $terminal terminfo passed the gate"
+    fi
+    contains "$output" "System profile lacks usable terminfo: $terminal"
+    mv "$terminfo.absent" "$terminfo"
+done
+
 rm "$fake_home/profile/bin/btop"
 if output=$(run_gate 2>&1); then
     fail 'Home profile missing btop passed the gate'
@@ -929,6 +966,17 @@ for package in guile-readline guile-colorized; do
         fail "System manifest missing $package passed the gate"
     fi
     contains "$output" "System profile lacks base package: $package"
+    reset_fake_system_manifest
+done
+
+for package_output in out terminfo; do
+    remove_fake_manifest_package_output "$fake_system_manifest" \
+        kitty-latest "$package_output"
+    if output=$(run_gate 2>&1); then
+        fail "System manifest missing kitty-latest:$package_output passed the gate"
+    fi
+    contains "$output" \
+        "System profile lacks declared package output: kitty-latest:$package_output"
     reset_fake_system_manifest
 done
 
@@ -1115,9 +1163,9 @@ contains "$output" \
 printf '%s\t1\tout\t/gnu/store/fake-guile\n' guile \
     >>"$fake_system_manifest"
 if output=$(run_gate 2>&1); then
-    fail 'duplicate System manifest name passed the gate'
+    fail 'duplicate System manifest package output passed the gate'
 fi
-contains "$output" 'duplicate System profile package: guile'
+contains "$output" 'duplicate System profile package output: guile:out'
 reset_fake_system_manifest
 
 replace_fake_manifest_path "$fake_home_manifest" fish \

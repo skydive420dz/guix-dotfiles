@@ -32,7 +32,8 @@ chmod +x "$fake_bin/startx"
 printf '%s\n' '#!/bin/sh' \
     'printf "%s\n" "${SK_FAKE_TTY:-/dev/tty1}"' >"$fake_bin/tty"
 chmod +x "$fake_bin/tty"
-printf '%s\n' '#!/bin/sh' 'exit 0' >"$fake_bin/fastfetch"
+printf '%s\n' '#!/bin/sh' 'printf "%s\n" FASTFETCH_FIXTURE' \
+    >"$fake_bin/fastfetch"
 chmod +x "$fake_bin/fastfetch"
 
 printf '%s\n' 'legacy startx evidence' >"$home/.cache/sk-exwm-startx.log"
@@ -130,6 +131,13 @@ if command -v fish >/dev/null 2>&1; then
             "$fish_output" >&2
         exit 1
     fi
+    fastfetch_count=$(printf '%s\n' "$fish_output" | \
+        grep -c '^FASTFETCH_FIXTURE$' || true)
+    if [ "$fastfetch_count" -ne 1 ]; then
+        printf 'Fish interactive greeter ran Fastfetch %s times; expected once: %s\n' \
+            "$fastfetch_count" "$fish_output" >&2
+        exit 1
+    fi
     grep -q 'fake startx attempt=4' "$current_log"
     grep -q 'status=44' "$current_log"
 
@@ -206,9 +214,8 @@ if command -v fish >/dev/null 2>&1; then
             "$nonlogin_output" >&2
         exit 1
     fi
-    if ! printf '%s\n' "$nonlogin_output" | \
-         grep -q 'FISH_NONLOGIN_HOME_REACHED'; then
-        printf 'Fish non-login SSH marker is absent: %s\n' \
+    if [ "$nonlogin_output" != FISH_NONLOGIN_HOME_REACHED ]; then
+        printf 'Fish non-login SSH output is not byte-clean: %s\n' \
             "$nonlogin_output" >&2
         exit 1
     fi

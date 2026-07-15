@@ -248,9 +248,9 @@ Emacs server are healthy.  Manually redefining =TERM= hides the ownership bug.
 
 ** Accepted scope
 
-- [ ] Add the separate =terminfo= output beside =kitty-latest= in the GuixPC
+- [X] Add the separate =terminfo= output beside =kitty-latest= in the GuixPC
   System recovery package list.
-- [ ] Add a regression probe for both =xterm-kitty= and =xterm-256color=.
+- [X] Add a regression probe for both =xterm-kitty= and =xterm-256color=.
 - [ ] Prove noninteractive SSH remains byte-clean.
 - [ ] Preserve one Fastfetch greeting in interactive local and SSH Fish.
 - [ ] Prove the Emacs server RPC and a paired real =emacsclient -t= session.
@@ -274,9 +274,9 @@ Emacs server are healthy.  Manually redefining =TERM= hides the ownership bug.
 
 ** Validation plan
 
-- [ ] Guile/Scheme source checks and focused negative controls pass.
-- [ ] The pinned Guix System build succeeds without activation.
-- [ ] Candidate closure contains both Kitty =out= and =terminfo= outputs.
+- [X] Guile/Scheme source checks and focused negative controls pass.
+- [X] The pinned Guix System build succeeds without activation.
+- [X] Candidate closure contains both Kitty =out= and =terminfo= outputs.
 - [ ] =infocmp xterm-kitty= and =infocmp xterm-256color= succeed from the normal
   profile search path without an environment workaround.
 - [ ] =ssh -T guixpc true= exits zero with zero output.
@@ -304,11 +304,18 @@ Emacs server are healthy.  Manually redefining =TERM= hides the ownership bug.
 ** Completion evidence
 
 - Commit: pending
-- System/Home/Pull generation: baseline =86 / 42 / 5=; candidate pending
-- Commands/results: pending
+- System/Home/Pull generation: baseline =86 / 42 / 5=; non-activated candidate
+  =/gnu/store/lfm4xrqhc1jxa87q084cp0bb5yx9f0yl-system=
+- Commands/results: =scripts/shell-check --strict= and
+  =scripts/guix-build-gate --plan= pass; the non-activating System build passes;
+  its profile records both =kitty-latest:out= and =kitty-latest:terminfo=;
+  candidate-local =infocmp -A= parses =xterm-kitty= and =xterm-256color=.
+- Pre-activation SSH controls: =ssh -T ... true= exits zero with zero bytes;
+  the marker command emits exactly =NONINTERACTIVE_OK=.
 - Residual risks: preserve Phase 0 follow-ups P0-F01 through P0-F08; none is
   caused or masked by the terminfo output change
-- Next action: checkpoint this accepted baseline, then implement P1.1
+- Next action: checkpoint and push the P1.1 implementation, then run =gsr=;
+  cold reboot and paired Kitty/=emacsclient -t= acceptance remain separate.
 
 * Phase 0 acceptance
 

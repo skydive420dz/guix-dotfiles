@@ -1380,8 +1380,9 @@ with an activated System.  It is not the project lock and must never replace
 the exact commits and introductions in =guix/channels.scm=.
 
 =sk-guix= owns =kitty-latest= only. The system imports it through =(sk packages
-terminals)= and installs =kitty-latest= directly, instead of resolving =kitty=
-through =specification->package=. Other applications should stay on upstream
+terminals)= and installs its default and =terminfo= outputs explicitly, instead
+of resolving =kitty= through =specification->package=. Other applications should
+stay on upstream
 Guix/Nonguix unless we explicitly decide to package and maintain them in
 =sk-guix=.  =fish-latest= remains quarantined: the gate proves its derivation
 evaluates, but does not promote or build the known-incomplete recipe.

@@ -73,8 +73,12 @@
                   "(map specification->package %guixpc-recovery-package-specifications)")
  "System declaration lacks the reviewed recovery-list wiring")
 (assert
- (string-contains system-source "(list kitty-latest)")
- "System declaration lacks the Kitty recovery-floor wiring")
+ (string-contains
+  system-source
+  (string-append
+   "(list kitty-latest\n"
+   "            (list kitty-latest \"terminfo\"))"))
+ "System declaration must retain Kitty's default output and add terminfo")
 (assert
  (string-contains home-source
                   "(map specification->package %guixpc-home-package-specifications)")
