@@ -38,10 +38,62 @@
 ;; Diagnostics frontend:
 ;; Flycheck renders errors/warnings.  lsp-mode can publish diagnostics into it
 ;; for LSP buffers, and non-LSP modes can use their own Flycheck checkers.
+;; The compatibility filter below updates Flycheck error structs through their
+;; generated `setf' accessors, so make those accessors available to both the
+;; interpreter and the byte/native compiler.  Flycheck itself is already an
+;; eager `use-package' dependency here; this does not load Org.
+(eval-and-compile
+  (when (locate-library "flycheck")
+    (require 'flycheck)))
+
+(defun sk/flycheck--org-lint-line-number (line)
+  "Return LINE as a positive Org lint line number, or nil.
+
+Org 9.8 may return a propertized decimal string carrying an
+`org-lint-marker' property, while Flycheck 36 later sorts lint errors by a
+numeric line field.  Preserve positive integers and normalize only positive
+decimal strings; malformed protocol values remain explicit failures."
+  (cond
+   ((and (integerp line) (> line 0)) line)
+   ((stringp line)
+    (let ((plain-line (substring-no-properties line)))
+      (when (string-match-p "\\`[0-9]+\\'" plain-line)
+        (let ((number (string-to-number plain-line)))
+          (and (> number 0) number)))))))
+
+(defun sk/flycheck-org-lint-filter (errors)
+  "Normalize Org 9.8 line fields in Flycheck ERRORS.
+
+Valid fields become integers before Flycheck sorts them.  Turn any malformed
+field into an explicit line-one warning instead of silently relocating the
+original finding.  Finally apply Flycheck's normal error sanitization."
+  (dolist (lint-error errors)
+    (let* ((line (flycheck-error-line lint-error))
+           (number (sk/flycheck--org-lint-line-number line)))
+      (if number
+          (setf (flycheck-error-line lint-error) number)
+        (setf (flycheck-error-line lint-error) 1
+              (flycheck-error-level lint-error) 'warning
+              (flycheck-error-message lint-error)
+              (format "Unexpected org-lint line %S: %s"
+                      line
+                      (or (flycheck-error-message lint-error)
+                          "no message"))))))
+  (flycheck-sanitize-errors errors))
+
 (use-package flycheck
   :if (locate-library "flycheck")
   :hook ((after-init . global-flycheck-mode)
-         (lsp-mode . flycheck-mode)))
+         (lsp-mode . flycheck-mode))
+  :config
+  ;; Flycheck 36 assumes that `org-lint' always returns a numeric line field,
+  ;; while Org 9.8 returns a propertized string.  Preserve a downstream or
+  ;; future backport if it already supplied a checker-specific filter.
+  (when (and (equal flycheck-version "36.0")
+             (memq (flycheck-checker-get 'org-lint 'error-filter)
+                   '(nil identity)))
+    (setf (flycheck-checker-get 'org-lint 'error-filter)
+          #'sk/flycheck-org-lint-filter)))
 
 ;; LSP client:
 ;; This is the shared backend for external language servers.  Root guessing is

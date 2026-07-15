@@ -380,6 +380,73 @@
      (should-not (bound-and-true-p flycheck-mode))
      (should-not flycheck-checker))))
 
+(ert-deftest sk/check-org-lint-flycheck-compatibility ()
+  (require 'org-lint)
+  (should (equal flycheck-version "36.0"))
+  (should (eq (flycheck-checker-get 'org-lint 'error-filter)
+              #'sk/flycheck-org-lint-filter))
+  (with-temp-buffer
+    (insert "* One\n"
+            ":PROPERTIES:\n"
+            ":CUSTOM_ID: duplicate\n"
+            ":END:\n\n"
+            "* Two\n"
+            ":PROPERTIES:\n"
+            ":CUSTOM_ID: duplicate\n"
+            ":END:\n")
+    (org-mode)
+    (let (status errors)
+      (funcall
+       (flycheck-checker-get 'org-lint 'start)
+       'org-lint
+       (lambda (new-status new-errors)
+         (setq status new-status
+               errors new-errors)))
+      (should (eq status 'finished))
+      (should (= 2 (length errors)))
+      (should (equal (mapcar #'flycheck-error-line errors)
+                     '("3" "8")))
+      (dolist (lint-error errors)
+        (let ((line (flycheck-error-line lint-error)))
+          (should (stringp line))
+          (should (markerp (get-text-property 0 'org-lint-marker line)))))
+      (let ((objects (copy-sequence errors))
+            (messages (mapcar #'flycheck-error-message errors)))
+        (should (eq errors (flycheck-filter-errors errors 'org-lint)))
+        (should (equal (mapcar #'flycheck-error-line errors) '(3 8)))
+        (should (equal (mapcar #'flycheck-error-message errors) messages))
+        (should (equal (mapcar #'flycheck-error-level errors)
+                       '(info info)))
+        (should (equal (mapcar #'flycheck-error-checker errors)
+                       '(org-lint org-lint)))
+        (cl-mapc (lambda (before after) (should (eq before after)))
+                 objects errors)
+        (should (eq errors (flycheck-filter-errors errors 'org-lint)))
+        (should (equal (mapcar #'flycheck-error-line errors) '(3 8))))))
+  (let* ((valid
+          (flycheck-error-new-at
+           4 nil 'info "Valid fixture" :checker 'org-lint))
+         (zero
+          (flycheck-error-new-at
+           (propertize "0" 'org-lint-marker 'fixture)
+           nil 'info "Zero fixture" :checker 'org-lint))
+         (malformed
+          (flycheck-error-new-at
+           (propertize "oops" 'org-lint-marker 'fixture)
+           nil 'info "Malformed fixture" :checker 'org-lint))
+         (errors (list valid zero malformed)))
+    (should (eq errors (flycheck-filter-errors errors 'org-lint)))
+    (should (= 4 (flycheck-error-line valid)))
+    (should (eq 'info (flycheck-error-level valid)))
+    (dolist (lint-error (list zero malformed))
+      (should (= 1 (flycheck-error-line lint-error)))
+      (should (eq 'warning (flycheck-error-level lint-error)))
+      (should (string-prefix-p "Unexpected org-lint line"
+                               (flycheck-error-message lint-error))))
+    (let ((messages (mapcar #'flycheck-error-message errors)))
+      (should (eq errors (flycheck-filter-errors errors 'org-lint)))
+      (should (equal messages (mapcar #'flycheck-error-message errors))))))
+
 (ert-deftest sk/check-lisp-hooks-and-backends ()
   (sk/check-with-eldoc-fixture
    "elisp/sample.el"
