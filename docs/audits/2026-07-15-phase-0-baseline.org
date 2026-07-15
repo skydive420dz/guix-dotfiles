@@ -1,0 +1,355 @@
+#+title: GuixPC Phase 0 Baseline and First Polishing Slice
+#+date: 2026-07-15
+#+status: complete
+
+* Purpose and boundary
+
+This is the durable, measurement-only Phase 0 refresh for the workstation
+polishing roadmap.  It updates the dated observations in
+[[file:2026-07-12-full-configuration-audit.org][the full configuration audit]] without reopening that completed remediation
+roadmap.
+
+The unprivileged sample was taken on =guixpc= at =192.168.1.221= between
+approximately =2026-07-15 00:19= and =00:25 EDT=.  The privileged read-only
+follow-up ran at =06:35 EDT=.  Repository files, Guix channels, profiles,
+generations, services, and GC roots were not changed.  No build, pull,
+reconfigure, cleanup, or garbage collection ran.  The existing desktop checker
+opened only its finite near-silent zero-PCM validation stream.
+
+Observed state below is not a performance target.  Targets are chosen only
+after the user reviews this snapshot.
+
+* Snapshot identity and reproducibility
+
+** Repositories
+
+The live GuixPC checkouts, not the separate dirty macOS checkout, are the
+authoritative implementation base.
+
+| Repository | Branch/upstream | Ahead/behind | HEAD | State |
+|------------+-----------------+--------------+------+-------|
+| =~/Projects/guix-dotfiles= | =main= / =origin/main= | =0/0= | =d20e6da74cabef600cf510016e1e8f3a992c0fe9= | clean |
+| =~/Projects/sk-guix= | =main= / =origin/main= | =0/0= | =b84ff24a515b2b6d0db85c0da30960c96e20ad22= | clean |
+
+The macOS checkout of =guix-dotfiles= was deliberately not used for edits: it
+was at =f3b6e24=, ahead by four commits, and had unrelated modified files.
+
+** Channels and active Guix
+
+Active Pull generation 5 is
+=/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile=.  The checked-in lock,
+=guix describe=, and the active profile agree exactly:
+
+| Channel | Revision |
+|---------+----------|
+| Guix | =a8391f2d7451c2463ba253ffa9872fa6f27485d7= |
+| Nonguix | =3b66965566fe8c96edb5a41fd39a9e5a90ad9b61= |
+| sk-guix | =b84ff24a515b2b6d0db85c0da30960c96e20ad22= |
+
+All three channels have introductions.  The =sk-guix= introduction is
+=eaade3680892ce74ebae68f4922cd0eb4a463a17= with fingerprint
+=6B09 4D15 B02E 54B0 F6B5 E9E8 6F83 FC62 D232 E5EC=.
+
+** Generations and storage
+
+| Kind | Current | Store target | Retained links |
+|------+---------+--------------+----------------|
+| System | 86, current and booted | =/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system= | 85 |
+| Home | 42 | =/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home= | 42 |
+| Pull | 5 | =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile= | 5 |
+
+=scripts/guix-generation-retention verify= passes.  It reports 27 duplicate
+System-generation candidates and 17 duplicate Home-generation candidates;
+there are no duplicate Pull candidates.  These are later cleanup candidates,
+not permission to delete anything.
+
+| Storage | Used / total | Free or use |
+|---------+--------------+-------------|
+| Root and =/gnu/store= filesystem | 37 GiB / 76 GiB | 35 GiB free; 52% used |
+| Home filesystem | 2.1 GiB / 149 GiB | 139 GiB free; 2% used |
+| =/gnu/store= apparent size | 35 GiB | 32,082 entries |
+| GC roots | 124 | no failed substitutions listed |
+
+There is no disk-pressure emergency.  Retention policy remains a later
+backup-gated decision; this phase performed no reclaim estimate or collection.
+
+* Runtime and performance observations
+
+** System and desktop
+
+The machine runs Linux 7.0.14 on a four-core Ryzen 3 2200G.  At the idle sample:
+
+- load was =0.00 / 0.01 / 0.00=;
+- CPU was 92--100% idle with zero sampled I/O wait;
+- CPU, memory, and I/O PSI averages were all =0.00=;
+- 31 GiB RAM was installed, about 1.5 GiB was used, and 29 GiB was available;
+- 3.7 GiB swap was configured and unused;
+- the four CPU frequency policies used =schedutil= with boost enabled;
+- drive, CPU =Tctl=, Wi-Fi, and GPU edge temperatures were respectively about
+  29, 28, 32, and 28 degrees Celsius.
+
+Boot timing is reconstructed from process timestamps rather than a native
+critical-path tracer:
+
+| Event/metric | Observation |
+|--------------+-------------|
+| PID 1 start | =2026-07-14 22:32:59= |
+| Xorg start | about 8 seconds after PID 1 |
+| EXWM Emacs process start | about 9 seconds after PID 1 |
+| Emacs initialization | =8.664269= seconds |
+| Approximate boot-to-Emacs-init completion | about 17.7 seconds |
+| Repeated server-only =emacsclient --eval nil= | 4.63--5.46 ms across five runs |
+
+After about 1 hour 49 minutes, the live graphical Emacs 30.2/EXWM process had:
+
+- approximately 346 MiB RSS and 1.37 GiB virtual size;
+- 45 buffers and five visible frames;
+- 580 garbage collections totaling 46.039 seconds, about 79 ms per collection
+  on average;
+- =gc-cons-threshold= 800,000 and =gc-cons-percentage= 0.1;
+- a live EXWM connection and the canonical =server= socket;
+- no =*Warnings*= buffer.
+
+These figures make EXWM/Emacs initialization and GC pauses useful Phase 2
+measurement targets.  One idle sample is not evidence that either value should
+be tuned yet.  Launcher latency was not measured because invoking the GUI would
+have introduced a user-visible side effect; the current launcher is the
+in-process Counsel/Ivy =sk/exwm-launch-app= path and had no pending launch
+intents.
+
+** Desktop and user-service acceptance
+
+=scripts/desktop-session-check= passed completely:
+
+- one canonical user D-Bus and the live EXWM server;
+- D-Bus, PipeWire, PipeWire-Pulse, and WirePlumber running with no replacement
+  pending;
+- the intended X11/EXWM metadata, screen blanking, DPMS, and one isolated Picom;
+- a powered Bluetooth controller;
+- active RTKit and one PipeWire realtime thread;
+- Bose Mini II as the exact default BlueZ sink plus finite low-volume stream;
+- EXWM volume bindings and active local elogind session =c1=.
+
+The current-boot user Shepherd log contains one actionable warning:
+
+#+begin_src text
+2026-07-14 22:33:08 WARNING: Use of `load' in declarative module (#{ g110}#).  Add #:declarative? #f to your define-module invocation.
+#+end_src
+
+Current Xorg evidence contains no actual =(EE)= record.  Historical logs contain
+older failures and warnings, but they are not treated as current regressions.
+
+** Privileged system-health acceptance and follow-ups
+
+The root probe closed the final boundary.  Every registered System Shepherd
+service and timer was started, including NetworkManager, Bluetooth, elogind,
+the system D-Bus, Guix daemon, NTP, SSH, system logging, filesystems, swap, udev,
+and WPA supplicant.  The filtered tails of =secure=, =debug=, and
+=guix-daemon.log= contained no matching warning or error.  The raw 119,940-byte
+probe output had SHA-256
+=7c9a56253f4251f594360804a8b3858ff906a822af16326e4e36647bd71c8c54=.
+
+The result is accepted as a complete baseline, not as a claim that the boot is
+warning-free.  The privileged evidence added this follow-up register:
+
+| ID | Evidence | Classification | Routing |
+|----+----------+----------------+---------|
+| P0-F01 | Early =init[1]= Guile segmentation fault; the same Shepherd PID 1 then loaded its configuration and remained healthy for more than eight hours | current-boot unknown; medium | track recurrence across cold boots before changing Guile, Shepherd, or kernel |
+| P0-F02 | IRQ 7 reached 100,000 unhandled =pinctrl_amd= interrupts and the kernel disabled it; the live counter remains 100,000 | current-boot actionable; medium-high | dedicated kernel/firmware investigation; identify affected GPIO consumers and compare a retained kernel generation; never add =irqpoll= blindly |
+| P0-F03 | TSC skewed by 871,760 ns over a 479,983,210 ns watchdog interval and was rejected; live clocksource is =hpet= | current-boot performance/firmware concern; medium | preserve correctness fallback, then compare latency and recurrence during Phase 2 before any kernel argument |
+| P0-F04 | =regulatory.db= firmware load failed | current configuration gap; low-medium | verify the active regulatory domain and package ownership before changing wireless policy |
+| P0-F05 | WPA supplicant reports =send_event_marker= unsupported about every 30--35 minutes while Wi-Fi and SSH remain connected | recurring log noise; low | correlate with an actual reconnect/scan/roam failure before intervention |
+| P0-F06 | TPM CRB ACPI region/probe failed and no TPM device is available | firmware/feature unavailable; low unless TPM is required | revisit only if measured boot, sealing, or another TPM use enters scope |
+| P0-F07 | BlueZ/WirePlumber D-Bus rejections are historical or boot-edge entries; current Bluetooth autoconnect, sink selection, and audio pass | historical/boot noise; low | do not change D-Bus policy without a current audio/profile symptom |
+| P0-F08 | ACPI FADT/DSM, SPI metadata, USB power-management, Bluetooth LE capability, and one udev credential warning | firmware/capability noise; low absent symptoms | retain as comparison evidence for later boots |
+
+These findings do not block the narrow terminfo correction.  P0-F01 through
+P0-F04 join the Phase 2 measurement/log track and must be reviewed before any
+performance or kernel tuning.
+
+* SSH and terminal contract
+
+** Observed matrix
+
+| Probe | Result |
+|-------+--------|
+| Noninteractive =ssh -T ... true= | exit 0; zero output |
+| Noninteractive marker command | only the requested marker; Fish 4.7.1 reports noninteractive, no TTY, and =TERM= unset |
+| Forced PTY with truthful =TERM=xterm-kitty= and interactive Fish | Fastfetch appears once; =TERM=xterm-kitty= preserved |
+| =infocmp xterm-256color= / =tput colors= | succeeds from the System profile; 256 colors |
+| =infocmp xterm-kitty= / =tput colors= | fails; =tput= exits 3 with unknown terminal |
+| Emacs server prerequisite | Home =emacsclient= exists; Emacs 30.2 RPC succeeds; five frames exist |
+
+Fish is behaving correctly.  =shell/config.fish= gates Fastfetch on
+=status is-interactive= and shows it only once.  There is no reason to suppress
+the desired interactive greeting or to rewrite =TERM=.
+
+** Root cause and ownership
+
+=kitty-latest= publishes four outputs: =out=, =terminfo=, =shell-integration=,
+and =kitten=.  =guix/systems/guixpc.scm= installs only the default =out= output.
+The profile therefore lacks the separate
+=share/terminfo/x/xterm-kitty= entry even though =TERMINFO_DIRS= already names
+the correct System profile =share/terminfo= directory.
+
+Adding the old package-private =lib/kitty/terminfo= directory to the environment
+makes the probe pass, but that is diagnostic evidence, not the fix.  The narrow
+declarative correction is to retain =kitty-latest= and add its =terminfo= output
+to the System recovery package list:
+
+#+begin_src scheme
+(list kitty-latest
+      (list kitty-latest "terminfo"))
+#+end_src
+
+* Observed state versus desired state
+
+| Area | Observed | Desired / decision |
+|------+----------+--------------------|
+| Repositories and channels | clean, synchronized, and provenance-aligned | preserve |
+| Interactive Fastfetch | appears once locally and over interactive SSH | preserve |
+| Noninteractive SSH | emits only requested output | preserve and regression-test |
+| Kitty terminfo | separate output is not installed | install the output; never falsify =TERM= |
+| User desktop services/audio | complete checker passes | preserve |
+| Emacs/EXWM performance | 8.664 s init; 580 GCs/46.039 s in 1h49m | retain as Phase 2 baseline; choose targets later |
+| Generations/store | many duplicate candidates; 52% root use | inventory only; cleanup waits for backup policy |
+| System Shepherd/root logs | all registered services/timers started; no filtered secure/debug/Guix-daemon finding; boot warnings are registered above | Phase 0 boundary complete; route P0-F01 through P0-F08 without hiding them |
+
+* Activation and acceptance boundaries
+
+| Change type | Minimum gate | Activation/restart boundary |
+|-------------+--------------+-----------------------------|
+| Documentation or test-only | Org/source lint plus focused fixtures | none |
+| Guix Home packages, Fish, or user Shepherd config | source checks, Home build, link preflight | =ghr=; start a fresh shell or restart the affected user service |
+| Emacs/EXWM source loaded through live repo links | isolated ERT/batch gate first | explicit safe reload for reloadable code; fresh EXWM session for startup/package/native-cache changes |
+| System packages or system services | source checks, focused tests, pinned System build | =gsr=; new login where sufficient; cold reboot for promoted boot/session policy |
+| Kernel, bootloader, Xinit, elogind/PAM, or Bluetooth boot policy | complete System and recovery gates | retained rollback generation plus mandatory cold reboot |
+
+* Privileged boundary
+
+Status: =VERIFIED 2026-07-15 06:35 EDT=.
+
+The user ran the staged read-only probe through local interactive sudo.  System
+Shepherd enumeration and current-boot kernel/root-log inspection completed.
+The service layer is converged, while P0-F01 through P0-F08 preserve every
+non-clean finding and its follow-up boundary.
+
+* READY Slice P1.1 -- Install the Kitty terminfo output
+:PROPERTIES:
+:WORKSTREAM: Phase 1 -- SSH and terminal contract
+:DEPENDS_ON: Phase 0 accepted 2026-07-15
+:END:
+
+** Problem and evidence
+
+Truthful Kitty SSH sessions export =TERM=xterm-kitty=, but GuixPC installs only
+Kitty's =out= output.  =infocmp xterm-kitty= fails while =xterm-256color= and the
+Emacs server are healthy.  Manually redefining =TERM= hides the ownership bug.
+
+** Accepted scope
+
+- [ ] Add the separate =terminfo= output beside =kitty-latest= in the GuixPC
+  System recovery package list.
+- [ ] Add a regression probe for both =xterm-kitty= and =xterm-256color=.
+- [ ] Prove noninteractive SSH remains byte-clean.
+- [ ] Preserve one Fastfetch greeting in interactive local and SSH Fish.
+- [ ] Prove the Emacs server RPC and a paired real =emacsclient -t= session.
+- [ ] Build, checkpoint, activate, and cold-accept the System generation.
+
+** Explicit non-goals
+
+- Replacing Fish or changing its greeter.
+- Setting =TERM=xterm-256color= globally or overriding the connecting terminal.
+- Adding package-private terminfo paths to shell startup files.
+- Changing Kitty, Emacs, SSH daemon, or EXWM behavior beyond the missing output.
+- Beginning performance tuning, GC, theme, or Lisp-dialect work.
+
+** Ownership and files likely affected
+
+- =guix/systems/guixpc.scm=: add =(list kitty-latest "terminfo")= while
+  retaining the existing default output.
+- Existing focused validation scripts/tests: add the smallest terminfo and SSH
+  contract regression that fits their current ownership.
+- This document and the agenda roadmap: record build/live/reboot evidence.
+
+** Validation plan
+
+- [ ] Guile/Scheme source checks and focused negative controls pass.
+- [ ] The pinned Guix System build succeeds without activation.
+- [ ] Candidate closure contains both Kitty =out= and =terminfo= outputs.
+- [ ] =infocmp xterm-kitty= and =infocmp xterm-256color= succeed from the normal
+  profile search path without an environment workaround.
+- [ ] =ssh -T guixpc true= exits zero with zero output.
+- [ ] Interactive SSH shows Fastfetch once and preserves =TERM=xterm-kitty=.
+- [ ] =ssh -t guixpc emacsclient -t= works in a real Kitty terminal without a
+  =TERM= override; the pair test closes the client normally.
+- [ ] Existing desktop/session, shell, retention, and rollback gates pass.
+- [ ] A cold reboot leaves the promoted System generation current and booted.
+
+** Rollback and stop conditions
+
+- Roll back source first, then restore exact retained System generation 86 and
+  reboot if the candidate affects Kitty startup, generic terminfo, SSH output,
+  EXWM, or desktop acceptance.
+- Stop before activation if the candidate closure lacks either Kitty output,
+  the repository/channel baseline drifts, or any noninteractive probe emits
+  unsolicited bytes.
+- Do not substitute a =TERM= override when a validation fails.
+
+** User decisions still required
+
+- Other SSH terminal clients beyond Kitty and generic =xterm-256color=: TBD,
+  not blocking the initial regression matrix.
+
+** Completion evidence
+
+- Commit: pending
+- System/Home/Pull generation: baseline =86 / 42 / 5=; candidate pending
+- Commands/results: pending
+- Residual risks: preserve Phase 0 follow-ups P0-F01 through P0-F08; none is
+  caused or masked by the terminfo output change
+- Next action: checkpoint this accepted baseline, then implement P1.1
+
+* Phase 0 acceptance
+
+- [X] Repository, channel, generation, storage, desktop, audio, Bluetooth, SSH,
+  terminfo, and performance state are refreshed.
+- [X] Every unprivileged baseline command/result is represented in this durable
+  artifact.
+- [X] Observed state is separated from desired state.
+- [X] Activation/restart boundaries are defined.
+- [X] The first implementation slice has scope, tests, rollback, and stop
+  conditions.
+- [X] Privileged System Shepherd and root-owned-log health is verified; every
+  non-clean finding is routed explicitly.
+- [X] Numeric performance targets remain deliberately deferred to Phase 2 user
+  review; Phase 0 introduced no tuning assumption.
+
+Provisional high-value interactions for later measurement are EXWM/Emacs
+startup and SSH terminal/=emacsclient= use.  The user can replace either choice
+before Phase 2 begins.
+
+* Commands used
+
+Representative read-only commands:
+
+#+begin_src sh
+git -C ~/Projects/guix-dotfiles status --short --branch
+git -C ~/Projects/sk-guix status --short --branch
+~/.config/guix/current/bin/guix describe
+~/.config/guix/current/bin/guix pull --list-generations
+guix system describe
+guix home describe
+df -h / /gnu/store "$HOME"
+guix gc --list-roots
+./scripts/guix-generation-retention inventory
+./scripts/guix-generation-retention verify
+./scripts/desktop-session-check
+infocmp xterm-256color
+infocmp xterm-kitty
+ssh -T guixpc true
+/run/setuid-programs/sudo /tmp/guixpc-phase0-privileged-health
+#+end_src
+
+The detailed live Emacs sample used a server-only =emacsclient --eval=
+expression; it did not create, close, or display a frame.
