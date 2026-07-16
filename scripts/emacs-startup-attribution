@@ -1,0 +1,815 @@
+#!/usr/bin/env python3
+"""Emit a guarded, read-only Emacs/EXWM startup attribution trace as TSV."""
+
+from __future__ import annotations
+
+import ast
+from datetime import datetime, timezone
+import json
+import math
+import os
+from pathlib import Path
+import subprocess
+import sys
+from typing import Any, NoReturn
+
+
+PROTOCOL = "sk-emacs-startup-attribution-v1"
+STATE_PROTOCOL = "sk-emacs-startup-attribution-v1"
+TRACE_ACTIVATION = "p2.2-v1"
+TIMER = "emacs-current-time-realtime"
+EPSILON = 1e-6
+
+EXPECTED_INIT_FEATURES = (
+    "use-package",
+    "sk-core",
+    "sk-ui",
+    "sk-windows",
+    "sk-dired",
+    "sk-terminal",
+    "sk-dashboard",
+    "sk-completion",
+    "sk-evil",
+    "sk-project",
+    "sk-lsp",
+    "sk-lisp",
+    "sk-clojure",
+    "sk-racket",
+    "sk-fennel",
+    "sk-lua",
+    "sk-python",
+    "sk-shell",
+    "sk-json",
+    "sk-c",
+    "sk-format",
+    "sk-keys",
+    "sk-org",
+    "sk-notes",
+)
+
+EXPECTED_MARKS = (
+    "early-init-enter",
+    "early-init-exit",
+    "init-enter",
+    "init-exit",
+    "after-init-hook-tail",
+    "exwm-loader-enter",
+    "exwm-config-enter",
+    "exwm-config-exit",
+    "exwm-loader-exit",
+    "emacs-startup-hook-tail",
+    "window-setup-hook-tail",
+    "trace-complete",
+)
+
+EXPECTED_CALLS = (
+    "observer-bootstrap",
+    "load:~/.emacs.d/exwm.el",
+    "sk/exwm-start",
+    "exwm-wm-mode",
+    "sk/dashboard-buffer",
+)
+
+PHASES = (
+    ("emacs-before-early-init", "before-init-time", "early-init-enter"),
+    ("early-init", "early-init-enter", "early-init-exit"),
+    ("emacs-core-before-init", "early-init-exit", "init-enter"),
+    ("init-file", "init-enter", "init-exit"),
+    ("emacs-core-after-init", "init-exit", "after-init-time"),
+    ("after-init-hooks", "after-init-time", "after-init-hook-tail"),
+    (
+        "command-line-before-exwm-loader",
+        "after-init-hook-tail",
+        "exwm-loader-enter",
+    ),
+    ("exwm-loader-before-config", "exwm-loader-enter", "exwm-config-enter"),
+    ("exwm-config", "exwm-config-enter", "exwm-config-exit"),
+    ("exwm-loader-after-config", "exwm-config-exit", "exwm-loader-exit"),
+    (
+        "command-line-after-exwm-loader",
+        "exwm-loader-exit",
+        "emacs-startup-hook-tail",
+    ),
+    (
+        "startup-to-window-setup",
+        "emacs-startup-hook-tail",
+        "window-setup-hook-tail",
+    ),
+    ("trace-finalization", "window-setup-hook-tail", "trace-complete"),
+)
+
+
+class AttributionError(RuntimeError):
+    """A causal provenance, payload, or attribution validation failure."""
+
+
+def fail(message: str) -> NoReturn:
+    raise AttributionError(message)
+
+
+def run(
+    argv: list[str],
+    *,
+    timeout: float = 10.0,
+    cwd: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            argv,
+            cwd=cwd,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        fail(f"command failed to execute: {argv[0]}: {error}")
+
+
+def checked_output(
+    argv: list[str],
+    *,
+    timeout: float = 10.0,
+    cwd: Path | None = None,
+) -> str:
+    result = run(argv, timeout=timeout, cwd=cwd)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        fail(
+            f"command exited {result.returncode}: {' '.join(argv)}"
+            + (f": {detail}" if detail else "")
+        )
+    return result.stdout.strip()
+
+
+def fixture_value(name: str, default: str, fixture: bool) -> str:
+    if name not in os.environ:
+        return default
+    if not fixture:
+        fail(f"{name} is fixture-only")
+    return os.environ[name]
+
+
+def resolve_existing(path: str, label: str) -> Path:
+    try:
+        return Path(path).expanduser().resolve(strict=True)
+    except OSError as error:
+        fail(f"cannot resolve {label} at {path}: {error}")
+
+
+def git_output(repo: Path, *args: str) -> str:
+    return checked_output(["git", "-C", str(repo), *args])
+
+
+def repository_identity(repo: Path) -> dict[str, str]:
+    head = git_output(repo, "rev-parse", "HEAD")
+    status = checked_output(
+        [
+            "git",
+            "-C",
+            str(repo),
+            "status",
+            "--porcelain=v1",
+            "--untracked-files=all",
+        ]
+    )
+    if status:
+        fail("repository is dirty; checkpoint or restore it before attribution")
+    upstream = git_output(repo, "rev-parse", "@{upstream}")
+    counts = git_output(
+        repo, "rev-list", "--left-right", "--count", "HEAD...@{upstream}"
+    )
+    if counts.split() != ["0", "0"]:
+        fail(f"repository is not synchronized with its upstream: {counts}")
+    if head != upstream:
+        fail(f"HEAD and upstream disagree despite zero counts: {head} != {upstream}")
+    return {"head": head, "upstream": upstream, "ahead_behind": "0/0"}
+
+
+def profile_identity(paths: dict[str, str]) -> dict[str, str]:
+    identity = {
+        label: str(resolve_existing(path, label)) for label, path in paths.items()
+    }
+    system_targets = {
+        identity["booted_system"],
+        identity["current_system"],
+        identity["system_profile"],
+    }
+    if len(system_targets) != 1:
+        fail(
+            "booted/current/profile System mismatch: "
+            + ", ".join(sorted(system_targets))
+        )
+    return identity
+
+
+def read_first(path: Path, label: str) -> str:
+    try:
+        return path.read_text(encoding="utf-8").splitlines()[0]
+    except (OSError, IndexError) as error:
+        fail(f"cannot read {label} at {path}: {error}")
+
+
+def read_emacs_json(emacsclient: Path, payload: Path) -> dict[str, Any]:
+    try:
+        expression = payload.read_text(encoding="utf-8")
+    except OSError as error:
+        fail(f"cannot read Emacs payload {payload}: {error}")
+    result = run(
+        [
+            str(emacsclient),
+            "--socket-name=server",
+            "--alternate-editor=false",
+            "--eval",
+            expression,
+        ],
+        timeout=10.0,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        fail(f"Emacs payload {payload.name} failed: {detail or result.returncode}")
+    if result.stderr.strip():
+        fail(f"Emacs payload {payload.name} wrote stderr: {result.stderr.strip()}")
+    printed = result.stdout.strip()
+    try:
+        encoded = ast.literal_eval(printed)
+        if not isinstance(encoded, str):
+            raise ValueError("Emacs result is not a string")
+        decoded = json.loads(encoded)
+    except (SyntaxError, ValueError, json.JSONDecodeError) as error:
+        fail(
+            f"Emacs payload {payload.name} returned malformed JSON: {error}: {printed}"
+        )
+    if not isinstance(decoded, dict):
+        fail(f"Emacs payload {payload.name} did not return an object")
+    return decoded
+
+
+def canonical(value: Any, label: str) -> Path:
+    if not isinstance(value, str) or not value:
+        fail(f"live Emacs {label} is not a path: {value!r}")
+    return resolve_existing(value, f"live Emacs {label}")
+
+
+def finite_number(value: Any, label: str, *, nonnegative: bool = True) -> float:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(float(value))
+    ):
+        fail(f"{label} is not a finite number: {value!r}")
+    result = float(value)
+    if nonnegative and result < 0:
+        fail(f"{label} is negative: {value!r}")
+    return result
+
+
+def nonnegative_integer(value: Any, label: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        fail(f"{label} is not a nonnegative integer: {value!r}")
+    return value
+
+
+def close(left: float, right: float) -> bool:
+    return math.isclose(left, right, rel_tol=1e-9, abs_tol=EPSILON)
+
+
+def validate_state_identity(
+    state: dict[str, Any], repo: Path, profiles: dict[str, str]
+) -> None:
+    if state.get("protocol") != STATE_PROTOCOL:
+        fail(f"invalid startup-attribution protocol: {state.get('protocol')!r}")
+    if state.get("trace_activation") != TRACE_ACTIVATION:
+        fail(f"invalid trace activation: {state.get('trace_activation')!r}")
+    if state.get("timer") != TIMER:
+        fail(f"invalid trace timer identity: {state.get('timer')!r}")
+    if state.get("trace_complete") != "true":
+        fail(f"startup trace is incomplete: {state.get('trace_complete')!r}")
+    if isinstance(state.get("pid"), bool) or not isinstance(state.get("pid"), int):
+        fail(f"live Emacs PID is invalid: {state.get('pid')!r}")
+    if state["pid"] <= 0:
+        fail(f"live Emacs PID is not positive: {state['pid']!r}")
+    for key in ("version", "started_utc"):
+        if not isinstance(state.get(key), str) or not state[key]:
+            fail(f"live Emacs field {key} is invalid: {state.get(key)!r}")
+    event_count = nonnegative_integer(state.get("event_count"), "event_count")
+    events = state.get("events")
+    if not isinstance(events, list):
+        fail(f"startup events are not an array: {events!r}")
+    if event_count != len(events):
+        fail(f"event_count does not match events: {event_count} != {len(events)}")
+    if state.get("expected_init_features") != list(EXPECTED_INIT_FEATURES):
+        fail(
+            "payload expected_init_features does not match init.el source order: "
+            f"{state.get('expected_init_features')!r}"
+        )
+
+    before = finite_number(state.get("before_init_seconds"), "before_init_seconds")
+    after = finite_number(state.get("after_init_seconds"), "after_init_seconds")
+    elapsed = finite_number(state.get("init_seconds"), "init_seconds")
+    if after + EPSILON < before:
+        fail("after_init_seconds precedes before_init_seconds")
+    if not close(elapsed, after - before):
+        fail(f"init_seconds disagrees with Emacs init boundaries: {elapsed!r}")
+
+    for key in (
+        "exwm_loaded",
+        "exwm_connected",
+        "exwm_wm_mode",
+        "server_running",
+    ):
+        if state.get(key) != "true":
+            fail(f"live Emacs identity field {key} is not true: {state.get(key)!r}")
+    for key in (
+        "observer_require_advice",
+        "observer_dashboard_advice",
+        "observer_exwm_mode_advice",
+        "observer_hooks",
+    ):
+        if state.get(key) != "false":
+            fail(
+                f"startup observer was not removed after capture: {key}={state.get(key)!r}"
+            )
+    if nonnegative_integer(state.get("gc_cons_threshold"), "gc_cons_threshold") == 0:
+        fail("gc_cons_threshold must be positive")
+    finite_number(state.get("gc_cons_percentage"), "gc_cons_percentage")
+
+    expected_source = (repo / "emacs").resolve(strict=True)
+    expected_init = (repo / "emacs/init.el").resolve(strict=True)
+    expected_exwm = (repo / "emacs/lisp/sk-exwm.el").resolve(strict=True)
+    expected_home = Path(profiles["home_profile"])
+    expected_emacs = (expected_home / "bin/emacs").resolve(strict=True)
+    if canonical(state.get("source_root"), "source root") != expected_source:
+        fail("live Emacs source root does not match the attributed checkout")
+    if canonical(state.get("user_init_file"), "user init") != expected_init:
+        fail("live Emacs init file does not match the attributed checkout")
+    if canonical(state.get("sk_exwm_file"), "sk-exwm source") != expected_exwm:
+        fail("live sk-exwm source does not match the attributed checkout")
+    if canonical(state.get("running_executable"), "executable") != expected_emacs:
+        fail("live Emacs executable does not match the active Home profile")
+    if canonical(state.get("home_profile"), "Home profile") != expected_home:
+        fail("live Emacs Home profile does not match the active Home profile")
+    if state.get("native_profile_key") != expected_home.name:
+        fail("live native-comp profile key does not match the active Home profile")
+
+
+def validate_events(
+    state: dict[str, Any],
+) -> tuple[list[dict[str, Any]], dict[tuple[str, str], dict[str, Any]]]:
+    events: list[dict[str, Any]] = []
+    by_identity: dict[tuple[str, str], dict[str, Any]] = {}
+    previous_sort_key: tuple[float, float] | None = None
+    sequences: set[int] = set()
+    for index, raw in enumerate(state["events"], start=1):
+        if not isinstance(raw, dict):
+            fail(f"startup event {index} is not an object")
+        kind = raw.get("kind")
+        name = raw.get("name")
+        if kind not in ("mark", "call", "require"):
+            fail(f"startup event {index} has invalid kind: {kind!r}")
+        if not isinstance(name, str) or not name:
+            fail(f"startup event {index} has invalid name: {name!r}")
+        sequence = nonnegative_integer(raw.get("sequence"), f"event {index} sequence")
+        if sequence == 0 or sequence in sequences:
+            fail(f"startup event sequence is zero or duplicated: {sequence}")
+        sequences.add(sequence)
+        identity = (kind, name)
+        if identity in by_identity:
+            fail(f"startup event is duplicated: {kind}:{name}")
+        start = finite_number(raw.get("start_seconds"), f"event {kind}:{name} start")
+        end = finite_number(raw.get("end_seconds"), f"event {kind}:{name} end")
+        elapsed = finite_number(
+            raw.get("elapsed_seconds"), f"event {kind}:{name} elapsed"
+        )
+        if end + EPSILON < start:
+            fail(f"startup event ends before it starts: {kind}:{name}")
+        if not close(elapsed, max(0.0, end - start)):
+            fail(f"startup event elapsed time is inconsistent: {kind}:{name}")
+        status = raw.get("status")
+        already_loaded = raw.get("already_loaded")
+        if status != "ok":
+            fail(f"startup event did not complete normally: {kind}:{name}:{status!r}")
+        if kind == "require":
+            if already_loaded not in ("true", "false"):
+                fail(f"require event has invalid already_loaded value: {name}")
+        elif already_loaded != "not-applicable":
+            fail(f"non-require event has already_loaded state: {kind}:{name}")
+        gc_count = nonnegative_integer(
+            raw.get("gc_count_delta"), f"event {kind}:{name} gc_count_delta"
+        )
+        gc_elapsed = finite_number(
+            raw.get("gc_elapsed_seconds"),
+            f"event {kind}:{name} gc_elapsed_seconds",
+        )
+        if kind == "mark" and (
+            not close(start, end)
+            or not close(elapsed, 0.0)
+            or gc_count != 0
+            or not close(gc_elapsed, 0.0)
+        ):
+            fail(f"mark event is not zero-width and observational: {name}")
+        sort_key = (start, end)
+        if previous_sort_key is not None:
+            if start < previous_sort_key[0] - EPSILON or (
+                close(start, previous_sort_key[0])
+                and end < previous_sort_key[1] - EPSILON
+            ):
+                fail(f"startup events are not chronologically sorted at {kind}:{name}")
+        previous_sort_key = sort_key
+        event = dict(raw)
+        event.update(
+            {
+                "start_seconds": start,
+                "end_seconds": end,
+                "elapsed_seconds": elapsed,
+                "gc_count_delta": gc_count,
+                "gc_elapsed_seconds": gc_elapsed,
+                "sequence": sequence,
+            }
+        )
+        events.append(event)
+        by_identity[identity] = event
+
+    if sequences != set(range(1, len(events) + 1)):
+        fail("startup event completion sequences are not contiguous")
+
+    expected = (
+        {("mark", name) for name in EXPECTED_MARKS}
+        | {("call", name) for name in EXPECTED_CALLS}
+        | {("require", name) for name in (*EXPECTED_INIT_FEATURES, "sk-exwm")}
+    )
+    actual = set(by_identity)
+    if actual != expected:
+        missing = sorted(expected - actual)
+        unexpected = sorted(actual - expected)
+        detail = []
+        if missing:
+            detail.append(
+                "missing=" + ",".join(f"{kind}:{name}" for kind, name in missing)
+            )
+        if unexpected:
+            detail.append(
+                "unexpected=" + ",".join(f"{kind}:{name}" for kind, name in unexpected)
+            )
+        fail(
+            "startup trace event set is incomplete or unexpected: " + "; ".join(detail)
+        )
+    return events, by_identity
+
+
+def contained(inner: dict[str, Any], outer_start: float, outer_end: float) -> bool:
+    return (
+        inner["start_seconds"] + EPSILON >= outer_start
+        and inner["end_seconds"] <= outer_end + EPSILON
+    )
+
+
+def validate_attribution(
+    state: dict[str, Any], by_identity: dict[tuple[str, str], dict[str, Any]]
+) -> tuple[
+    list[tuple[str, float, float, float]], list[dict[str, Any]], dict[str, float]
+]:
+    marks = {
+        name: by_identity[("mark", name)]["start_seconds"] for name in EXPECTED_MARKS
+    }
+    boundaries = {
+        **marks,
+        "before-init-time": float(state["before_init_seconds"]),
+        "after-init-time": float(state["after_init_seconds"]),
+    }
+    phases: list[tuple[str, float, float, float]] = []
+    for phase, start_name, end_name in PHASES:
+        start = boundaries[start_name]
+        end = boundaries[end_name]
+        if end + EPSILON < start:
+            fail(f"startup phase boundary regressed: {phase}: {start} -> {end}")
+        phases.append((phase, start, end, max(0.0, end - start)))
+    for previous, current in zip(phases, phases[1:]):
+        if not close(previous[2], current[1]):
+            fail(
+                f"startup phases do not form an adjacent partition: {previous[0]} -> {current[0]}"
+            )
+    partition_elapsed = sum(phase[3] for phase in phases)
+    trace_elapsed = boundaries["trace-complete"] - boundaries["before-init-time"]
+    if not close(partition_elapsed, trace_elapsed):
+        fail("startup phase partition does not cover the traced interval")
+
+    trace_start = boundaries["before-init-time"]
+    trace_end = boundaries["trace-complete"]
+    for identity, event in by_identity.items():
+        if not contained(event, trace_start, trace_end):
+            fail(f"event lies outside the traced interval: {identity[0]}:{identity[1]}")
+
+    init_start = boundaries["init-enter"]
+    init_end = boundaries["init-exit"]
+    init_events = [
+        by_identity[("require", feature)] for feature in EXPECTED_INIT_FEATURES
+    ]
+    previous_end = init_start
+    observed_order = sorted(init_events, key=lambda event: event["start_seconds"])
+    if [event["name"] for event in observed_order] != list(EXPECTED_INIT_FEATURES):
+        fail("direct init require events are not in source order")
+    for event in init_events:
+        if not contained(event, init_start, init_end):
+            fail(f"direct require lies outside init.el: {event['name']}")
+        if event["start_seconds"] + EPSILON < previous_end:
+            fail(f"direct init require spans overlap at {event['name']}")
+        previous_end = event["end_seconds"]
+
+    init_file_elapsed = init_end - init_start
+    direct_elapsed = sum(event["elapsed_seconds"] for event in init_events)
+    init_file_residual = init_file_elapsed - direct_elapsed
+    if init_file_residual < -EPSILON:
+        fail("direct init require time exceeds the init-file phase")
+    init_file_residual = max(0.0, init_file_residual)
+
+    personal_events = init_events[1:]
+    personal_window = (
+        personal_events[-1]["end_seconds"] - personal_events[0]["start_seconds"]
+    )
+    personal_elapsed = sum(event["elapsed_seconds"] for event in personal_events)
+    module_residual = personal_window - personal_elapsed
+    if module_residual < -EPSILON:
+        fail("direct personal-module time exceeds its enclosing window")
+    module_residual = max(0.0, module_residual)
+
+    early_start = boundaries["early-init-enter"]
+    early_end = boundaries["early-init-exit"]
+    config_start = boundaries["exwm-config-enter"]
+    config_end = boundaries["exwm-config-exit"]
+    loader_start = boundaries["exwm-loader-enter"]
+    loader_end = boundaries["exwm-loader-exit"]
+    observer = by_identity[("call", "observer-bootstrap")]
+    loader = by_identity[("call", "load:~/.emacs.d/exwm.el")]
+    exwm_require = by_identity[("require", "sk-exwm")]
+    exwm_start = by_identity[("call", "sk/exwm-start")]
+    wm_mode = by_identity[("call", "exwm-wm-mode")]
+    dashboard = by_identity[("call", "sk/dashboard-buffer")]
+    if not contained(observer, early_start, early_end):
+        fail("observer bootstrap span is outside early-init")
+    if not contained(loader, loader_start, loader_end):
+        fail("EXWM load-file bridge span is outside exwm-loader")
+    if not (
+        loader["start_seconds"] <= config_start + EPSILON
+        and loader["end_seconds"] + EPSILON >= config_end
+    ):
+        fail("EXWM load-file bridge does not contain exwm config evaluation")
+    for event, label in (
+        (exwm_require, "sk-exwm require"),
+        (exwm_start, "sk/exwm-start"),
+    ):
+        if not contained(event, config_start, config_end):
+            fail(f"{label} span is outside exwm config")
+    if exwm_start["start_seconds"] + EPSILON < exwm_require["end_seconds"]:
+        fail("sk/exwm-start began before sk-exwm require returned")
+    if not contained(wm_mode, exwm_start["start_seconds"], exwm_start["end_seconds"]):
+        fail("exwm-wm-mode span is outside sk/exwm-start")
+    if not contained(
+        dashboard,
+        boundaries["exwm-loader-exit"],
+        boundaries["emacs-startup-hook-tail"],
+    ):
+        fail("initial sk/dashboard-buffer span is outside the post-EXWM startup window")
+
+    ranked = sorted(
+        personal_events,
+        key=lambda event: (
+            -event["elapsed_seconds"],
+            EXPECTED_INIT_FEATURES.index(event["name"]),
+        ),
+    )
+    summaries = {
+        "init_file_seconds": init_file_elapsed,
+        "init_use_package_seconds": init_events[0]["elapsed_seconds"],
+        "init_direct_requires_seconds": direct_elapsed,
+        "init_file_residual_seconds": init_file_residual,
+        "init_personal_window_seconds": personal_window,
+        "init_personal_requires_seconds": personal_elapsed,
+        "init_module_residual_seconds": module_residual,
+    }
+    return phases, ranked, summaries
+
+
+def tsv_value(value: Any) -> str:
+    if isinstance(value, float):
+        rendered = f"{value:.6f}"
+    elif isinstance(value, bool):
+        rendered = "true" if value else "false"
+    else:
+        rendered = str(value)
+    if any(character in rendered for character in "\t\r\n"):
+        fail(f"TSV value contains a control separator: {rendered!r}")
+    return rendered
+
+
+def emit(lines: list[str], family: str, *values: Any) -> None:
+    lines.append("\t".join([family, *(tsv_value(value) for value in values)]))
+
+
+def main() -> int:
+    if len(sys.argv) != 1:
+        print("usage: emacs-startup-attribution", file=sys.stderr)
+        return 2
+
+    fixture = os.environ.get("SK_EMACS_STARTUP_ATTRIBUTION_FIXTURE") == "1"
+    script = Path(__file__).resolve(strict=True)
+    source_root = script.parent.parent
+    repo = resolve_existing(
+        fixture_value("SK_EMACS_STARTUP_ATTRIBUTION_REPO", str(source_root), fixture),
+        "repository",
+    )
+    profile_paths = {
+        "booted_system": fixture_value(
+            "SK_EMACS_STARTUP_ATTRIBUTION_BOOTED_SYSTEM_LINK",
+            "/run/booted-system",
+            fixture,
+        ),
+        "current_system": fixture_value(
+            "SK_EMACS_STARTUP_ATTRIBUTION_CURRENT_SYSTEM_LINK",
+            "/run/current-system",
+            fixture,
+        ),
+        "system_profile": fixture_value(
+            "SK_EMACS_STARTUP_ATTRIBUTION_SYSTEM_PROFILE_LINK",
+            "/var/guix/profiles/system",
+            fixture,
+        ),
+        "home_profile": fixture_value(
+            "SK_EMACS_STARTUP_ATTRIBUTION_HOME_LINK",
+            str(Path.home() / ".guix-home/profile"),
+            fixture,
+        ),
+        "pull_profile": fixture_value(
+            "SK_EMACS_STARTUP_ATTRIBUTION_PULL_LINK",
+            str(Path.home() / ".config/guix/current"),
+            fixture,
+        ),
+    }
+    payload = source_root / "scripts/emacs-startup-attribution-state.el"
+    if not payload.is_file():
+        fail(f"missing Emacs payload: {payload}")
+
+    boot_id_file = resolve_existing(
+        fixture_value(
+            "SK_EMACS_STARTUP_ATTRIBUTION_BOOT_ID_FILE",
+            "/proc/sys/kernel/random/boot_id",
+            fixture,
+        ),
+        "boot ID",
+    )
+    repo_before = repository_identity(repo)
+    profiles_before = profile_identity(profile_paths)
+    boot_id = read_first(boot_id_file, "boot ID")
+    expected_emacsclient = resolve_existing(
+        str(Path(profiles_before["home_profile"]) / "bin/emacsclient"),
+        "active Home emacsclient",
+    )
+    selected_emacsclient = fixture_value(
+        "SK_EMACS_STARTUP_ATTRIBUTION_EMACSCLIENT",
+        str(expected_emacsclient),
+        fixture,
+    )
+    emacsclient = resolve_existing(selected_emacsclient, "emacsclient")
+    if not os.access(emacsclient, os.X_OK):
+        fail(f"emacsclient is not executable: {emacsclient}")
+    if emacsclient != expected_emacsclient:
+        fail(
+            "selected emacsclient does not belong to the active Home profile: "
+            f"{emacsclient} != {expected_emacsclient}"
+        )
+
+    state = read_emacs_json(emacsclient, payload)
+    validate_state_identity(state, repo, profiles_before)
+    events, by_identity = validate_events(state)
+    phases, ranked, summaries = validate_attribution(state, by_identity)
+
+    state_after = read_emacs_json(emacsclient, payload)
+    validate_state_identity(state_after, repo, profiles_before)
+    validate_events(state_after)
+    if state_after != state:
+        fail("protected live startup trace changed during extraction")
+
+    repo_after = repository_identity(repo)
+    profiles_after = profile_identity(profile_paths)
+    boot_id_after = read_first(boot_id_file, "boot ID after extraction")
+    if repo_after != repo_before:
+        fail("repository identity changed during attribution")
+    if profiles_after != profiles_before:
+        fail("profile identity changed during attribution")
+    if boot_id_after != boot_id:
+        fail("boot ID changed during attribution")
+
+    lines: list[str] = []
+    emit(lines, "meta", "protocol", PROTOCOL)
+    emit(lines, "meta", "run_mode", "fixture" if fixture else "live")
+    emit(
+        lines,
+        "meta",
+        "captured_at_utc",
+        datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+    emit(lines, "meta", "hostname", os.uname().nodename)
+    emit(lines, "meta", "kernel", os.uname().release)
+    emit(lines, "meta", "boot_id", boot_id)
+    emit(lines, "meta", "repo_head", repo_before["head"])
+    emit(lines, "meta", "repo_upstream", repo_before["upstream"])
+    emit(lines, "meta", "repo_ahead_behind", repo_before["ahead_behind"])
+    for key, value in profiles_before.items():
+        emit(lines, "meta", key, value)
+    emit(lines, "meta", "emacsclient", emacsclient)
+    for key in (
+        "trace_activation",
+        "timer",
+        "trace_complete",
+        "event_count",
+        "expected_init_features",
+        "pid",
+        "version",
+        "started_utc",
+        "before_init_seconds",
+        "after_init_seconds",
+        "init_seconds",
+        "source_root",
+        "user_init_file",
+        "sk_exwm_file",
+        "running_executable",
+        "home_profile",
+        "native_profile_key",
+        "gc_cons_threshold",
+        "gc_cons_percentage",
+        "exwm_loaded",
+        "exwm_connected",
+        "exwm_wm_mode",
+        "server_running",
+        "observer_require_advice",
+        "observer_dashboard_advice",
+        "observer_exwm_mode_advice",
+        "observer_hooks",
+    ):
+        emit(lines, "state", key, state[key])
+
+    for index, event in enumerate(events, start=1):
+        emit(
+            lines,
+            "event",
+            index,
+            event["sequence"],
+            event["kind"],
+            event["name"],
+            event["start_seconds"],
+            event["end_seconds"],
+            event["elapsed_seconds"],
+            event["status"],
+            event["already_loaded"],
+            event["gc_count_delta"],
+            event["gc_elapsed_seconds"],
+        )
+    for phase, start, end, elapsed in phases:
+        emit(lines, "phase", phase, start, end, elapsed)
+    for key, value in summaries.items():
+        emit(lines, "summary", key, value)
+    for rank, event in enumerate(ranked, start=1):
+        emit(
+            lines,
+            "rank",
+            "init_personal_require",
+            rank,
+            event["name"],
+            event["elapsed_seconds"],
+            (
+                100.0
+                * event["elapsed_seconds"]
+                / summaries["init_personal_window_seconds"]
+                if summaries["init_personal_window_seconds"]
+                else 0.0
+            ),
+            event["already_loaded"],
+            event["gc_count_delta"],
+            event["gc_elapsed_seconds"],
+        )
+    for invariant in (
+        "repository_and_upstream_stable",
+        "system_and_profiles_stable",
+        "boot_identity_stable",
+        "live_source_and_server_provenance",
+        "trace_activation_and_completeness",
+        "protected_trace_state_stable",
+        "event_schema_and_order",
+        "phase_partition_nonoverlapping",
+        "direct_init_requires_complete",
+        "init_module_residual_nonnegative",
+        "exwm_bridge_attributed",
+        "collector_stdout_only",
+    ):
+        emit(lines, "invariant", invariant, "PASS")
+
+    print("\n".join(lines))
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except AttributionError as error:
+        print(f"emacs-startup-attribution: {error}", file=sys.stderr)
+        raise SystemExit(1)

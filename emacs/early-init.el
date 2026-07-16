@@ -4,6 +4,20 @@
 ;; it.  Keep each Guix Home profile in its own XDG cache instead of allowing an
 ;; older ~/.emacs.d/eln-cache to shadow the current profile's Lisp sources.
 
+;; P2.2's startup observer is opt-in and one-shot.  Ordinary sessions take only
+;; this exact string comparison; they do not load the observer or install any
+;; hook/advice.  An attributed session retains its trace in memory for a later
+;; read-only client extraction.
+(when (equal (getenv "SK_EMACS_STARTUP_TRACE") "p2.2-v1")
+  (let ((observer-started (current-time))
+        (gc-count-start gcs-done)
+        (gc-elapsed-start gc-elapsed))
+    (load (expand-file-name "lisp/sk-startup-trace.el"
+                            user-emacs-directory)
+          nil t)
+    (sk/startup-trace-bootstrap observer-started
+                                gc-count-start gc-elapsed-start)))
+
 (defun sk/native-comp--profile-key (&optional profile)
   "Return PROFILE's resolved basename, or nil when it is unavailable.
 PROFILE defaults to the current Guix Home package profile."
@@ -71,5 +85,8 @@ PROFILE defaults to the current Guix Home package profile."
   (setq native-comp-eln-load-path
         (delete sk/native-comp-legacy-cache-directory
                 native-comp-eln-load-path)))
+
+(when (fboundp 'sk/startup-trace-mark)
+  (sk/startup-trace-mark "early-init-exit"))
 
 ;;; early-init.el ends here

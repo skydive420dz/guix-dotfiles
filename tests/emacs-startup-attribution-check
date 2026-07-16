@@ -1,0 +1,449 @@
+#!/usr/bin/env python3
+"""Black-box checks for the guarded P2.2 startup attribution collector."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+from typing import NoReturn
+
+
+ROOT = Path(__file__).resolve().parent.parent
+COLLECTOR = ROOT / "scripts/emacs-startup-attribution"
+
+
+def fail(message: str) -> NoReturn:
+    print(f"emacs-startup-attribution-check: {message}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def command(
+    argv: list[str],
+    *,
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
+    check: bool = True,
+) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
+        argv,
+        cwd=cwd,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if check and result.returncode != 0:
+        fail(
+            f"command failed ({result.returncode}): {' '.join(argv)}: "
+            f"{result.stderr or result.stdout}"
+        )
+    return result
+
+
+def write(path: Path, content: str, *, executable: bool = False) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    if executable:
+        path.chmod(0o755)
+
+
+def initialize_git(repo: Path, remote: Path) -> None:
+    command(["git", "init", "--bare", str(remote)])
+    command(["git", "init", str(repo)])
+    command(["git", "-C", str(repo), "config", "user.name", "Fixture"])
+    command(["git", "-C", str(repo), "config", "user.email", "fixture@example.invalid"])
+    command(["git", "-C", str(repo), "add", "."])
+    command(["git", "-C", str(repo), "commit", "-m", "fixture"])
+    command(["git", "-C", str(repo), "branch", "-M", "main"])
+    command(["git", "-C", str(repo), "remote", "add", "origin", str(remote)])
+    command(["git", "-C", str(repo), "push", "-u", "origin", "main"])
+
+
+FAKE_EMACSCLIENT = r"""#!/usr/bin/env python3
+import json
+import os
+from pathlib import Path
+
+FEATURES = (
+    "use-package", "sk-core", "sk-ui", "sk-windows", "sk-dired",
+    "sk-terminal", "sk-dashboard", "sk-completion", "sk-evil",
+    "sk-project", "sk-lsp", "sk-lisp", "sk-clojure", "sk-racket",
+    "sk-fennel", "sk-lua", "sk-python", "sk-shell", "sk-json", "sk-c",
+    "sk-format", "sk-keys", "sk-org", "sk-notes",
+)
+
+repo = Path(os.environ["SK_FAKE_REPO"]).resolve()
+home = Path(os.environ["SK_FAKE_HOME_PROFILE"]).resolve()
+
+if os.environ.get("SK_FAKE_MALFORMED") == "1":
+    print("malformed")
+    raise SystemExit(0)
+
+events = []
+
+def add(kind, name, start, end=None, already="not-applicable", gc=0, gc_elapsed=0.0):
+    if end is None:
+        end = start
+    events.append({
+        "sequence": len(events) + 1,
+        "kind": kind,
+        "name": name,
+        "start_seconds": start,
+        "end_seconds": end,
+        "elapsed_seconds": end - start,
+        "status": "ok",
+        "already_loaded": already,
+        "gc_count_delta": gc,
+        "gc_elapsed_seconds": gc_elapsed,
+    })
+
+add("mark", "early-init-enter", 1000.010)
+add("call", "observer-bootstrap", 1000.011, 1000.020)
+add("mark", "early-init-exit", 1000.100)
+add("mark", "init-enter", 1000.300)
+
+cursor = 1000.310
+for feature in FEATURES:
+    duration = 0.090 if feature == "sk-core" else 0.010
+    end = cursor + duration
+    add(
+        "require",
+        feature,
+        cursor,
+        end,
+        "true" if feature == "use-package" else "false",
+        1 if feature == "sk-core" else 0,
+        0.002 if feature == "sk-core" else 0.0,
+    )
+    cursor = end + 0.002
+
+add("mark", "init-exit", 1001.000)
+add("mark", "after-init-hook-tail", 1001.200)
+add("mark", "exwm-loader-enter", 1001.300)
+add("call", "load:~/.emacs.d/exwm.el", 1001.310, 1001.800)
+add("mark", "exwm-config-enter", 1001.320)
+add("require", "sk-exwm", 1001.330, 1001.400, "false")
+add("call", "sk/exwm-start", 1001.410, 1001.700)
+add("call", "exwm-wm-mode", 1001.500, 1001.600)
+add("mark", "exwm-config-exit", 1001.710)
+add("mark", "exwm-loader-exit", 1001.810)
+add("call", "sk/dashboard-buffer", 1001.820, 1001.850)
+add("mark", "emacs-startup-hook-tail", 1001.900)
+add("mark", "window-setup-hook-tail", 1002.000)
+add("mark", "trace-complete", 1002.010)
+events.sort(key=lambda event: (event["start_seconds"], event["end_seconds"]))
+
+if os.environ.get("SK_FAKE_MISSING_EVENT") == "1":
+    events = [event for event in events if event["name"] != "sk-notes"]
+    for sequence, event in enumerate(sorted(events, key=lambda item: item["sequence"]), start=1):
+        event["sequence"] = sequence
+if os.environ.get("SK_FAKE_OVERLAP") == "1":
+    core = next(event for event in events if event["name"] == "sk-core")
+    ui = next(event for event in events if event["name"] == "sk-ui")
+    ui["start_seconds"] = core["end_seconds"] - 0.005
+    ui["elapsed_seconds"] = ui["end_seconds"] - ui["start_seconds"]
+    events.sort(key=lambda event: (event["start_seconds"], event["end_seconds"]))
+if os.environ.get("SK_FAKE_BAD_ELAPSED") == "1":
+    next(event for event in events if event["name"] == "sk-core")["elapsed_seconds"] += 1.0
+if os.environ.get("SK_FAKE_UNSORTED") == "1":
+    events[0], events[1] = events[1], events[0]
+if os.environ.get("SK_FAKE_BAD_SEQUENCE") == "1":
+    events[0]["sequence"] = events[1]["sequence"]
+
+source_root = repo / "emacs"
+if os.environ.get("SK_FAKE_BAD_SOURCE") == "1":
+    source_root = Path(os.environ["SK_FAKE_WRONG_SOURCE"])
+
+state = {
+    "protocol": (
+        "invalid-protocol"
+        if os.environ.get("SK_FAKE_BAD_PROTOCOL") == "1"
+        else "sk-emacs-startup-attribution-v1"
+    ),
+    "trace_activation": "p2.2-v1",
+    "timer": "emacs-current-time-realtime",
+    "trace_complete": (
+        "false" if os.environ.get("SK_FAKE_TRACE_INCOMPLETE") == "1" else "true"
+    ),
+    "event_count": len(events) + (1 if os.environ.get("SK_FAKE_BAD_COUNT") == "1" else 0),
+    "expected_init_features": list(FEATURES),
+    "pid": 4242,
+    "version": "30.2",
+    "started_utc": "2026-07-16T05:00:00Z",
+    "before_init_seconds": 1000.000,
+    "after_init_seconds": 1001.100,
+    "init_seconds": 1.100,
+    "source_root": str(source_root.resolve()),
+    "user_init_file": str((repo / "emacs/init.el").resolve()),
+    "sk_exwm_file": str((repo / "emacs/lisp/sk-exwm.el").resolve()),
+    "running_executable": str((home / "bin/emacs").resolve()),
+    "home_profile": str(home),
+    "native_profile_key": home.name,
+    "gc_cons_threshold": 800000,
+    "gc_cons_percentage": 0.1,
+    "exwm_loaded": "true",
+    "exwm_connected": (
+        "false" if os.environ.get("SK_FAKE_EXWM_FALSE") == "1" else "true"
+    ),
+    "exwm_wm_mode": "true",
+    "server_running": "true",
+    "observer_require_advice": "false",
+    "observer_dashboard_advice": "false",
+    "observer_exwm_mode_advice": "false",
+    "observer_hooks": "false",
+    "events": events,
+}
+drift_file = os.environ.get("SK_FAKE_STATE_DRIFT_FILE")
+if drift_file:
+    drift_path = Path(drift_file)
+    if drift_path.exists():
+        state["pid"] = 4243
+    else:
+        drift_path.write_text("first read\n", encoding="utf-8")
+boot_file = os.environ.get("SK_FAKE_CHANGE_BOOT_FILE")
+if boot_file:
+    Path(boot_file).write_text("changed-boot-id\n", encoding="utf-8")
+print(json.dumps(json.dumps(state, separators=(",", ":"))))
+"""
+
+
+def expect_failure(environment: dict[str, str], needle: str, label: str) -> None:
+    result = command([str(COLLECTOR)], env=environment, check=False)
+    if result.returncode == 0 or needle not in result.stderr:
+        fail(
+            f"{label} was not rejected causally: "
+            f"stdout={result.stdout!r} stderr={result.stderr!r}"
+        )
+    if result.stdout:
+        fail(f"{label} leaked a partial TSV report to stdout")
+
+
+def main() -> int:
+    if not os.access(COLLECTOR, os.X_OK):
+        fail(f"collector is not executable: {COLLECTOR}")
+    if not (ROOT / "scripts/emacs-startup-attribution-state.el").is_file():
+        fail("startup attribution state payload is missing")
+    emacs = shutil.which("emacs")
+    if not emacs:
+        fail("Emacs is required for the trace observer fixture")
+    trace_check = ROOT / "tests/emacs/startup-attribution-trace-check.el"
+    trace_result = command(
+        [emacs, "--batch", "-Q", "-l", str(trace_check)],
+        check=False,
+    )
+    if (
+        trace_result.returncode != 0
+        or "emacs-startup-attribution-trace-check: PASS" not in trace_result.stdout
+    ):
+        fail(
+            "real Emacs trace observer fixture failed: "
+            f"{trace_result.stderr or trace_result.stdout}"
+        )
+
+    with tempfile.TemporaryDirectory(
+        prefix="sk-emacs-startup-attribution-check."
+    ) as raw:
+        tmp = Path(raw)
+        repo = tmp / "repo"
+        remote = tmp / "remote.git"
+        profiles = tmp / "profiles"
+        store = tmp / "store"
+        home = store / "home"
+        fake_emacsclient = home / "bin/emacsclient"
+        wrong_emacsclient = tmp / "wrong/bin/emacsclient"
+        wrong_source = tmp / "wrong-source"
+        emacs_test_home = tmp / "emacs-test-home"
+        boot_id_file = tmp / "boot-id"
+
+        write(repo / "marker", "fixture\n")
+        write(repo / "emacs/init.el", "; fixture\n")
+        write(repo / "emacs/lisp/sk-exwm.el", "; fixture\n")
+        initialize_git(repo, remote)
+
+        for target in ("system", "other-system", "home", "pull"):
+            (store / target).mkdir(parents=True)
+        write(home / "bin/emacs", "fixture\n", executable=True)
+        write(fake_emacsclient, FAKE_EMACSCLIENT, executable=True)
+        write(wrong_emacsclient, FAKE_EMACSCLIENT, executable=True)
+        wrong_source.mkdir()
+        write(boot_id_file, "fixture-boot-id\n")
+
+        profiles.mkdir()
+        (profiles / "booted-system").symlink_to(store / "system")
+        (profiles / "current-system").symlink_to(store / "system")
+        (profiles / "system-profile").symlink_to(store / "system")
+        (profiles / "home").symlink_to(home)
+        (profiles / "pull").symlink_to(store / "pull")
+
+        (emacs_test_home / ".guix-home").mkdir(parents=True)
+        (emacs_test_home / ".guix-home/profile").symlink_to(home)
+        state_check = ROOT / "tests/emacs/startup-attribution-state-check.el"
+        state_environment = os.environ.copy()
+        state_environment.update(
+            {
+                "HOME": str(emacs_test_home),
+                "SK_EMACS_STARTUP_TRACE": "p2.2-v1",
+                "SK_EMACS_STARTUP_ATTRIBUTION_SOURCE_ROOT": str(ROOT),
+            }
+        )
+        state_result = command(
+            [emacs, "--batch", "-Q", "-l", str(state_check)],
+            env=state_environment,
+            check=False,
+        )
+        if (
+            state_result.returncode != 0
+            or "emacs-startup-attribution-state-check: PASS" not in state_result.stdout
+        ):
+            fail(
+                "real Emacs startup-state payload fixture failed: "
+                f"{state_result.stderr or state_result.stdout}"
+            )
+
+        environment = os.environ.copy()
+        environment.update(
+            {
+                "SK_EMACS_STARTUP_ATTRIBUTION_FIXTURE": "1",
+                "SK_EMACS_STARTUP_ATTRIBUTION_REPO": str(repo),
+                "SK_EMACS_STARTUP_ATTRIBUTION_EMACSCLIENT": str(fake_emacsclient),
+                "SK_EMACS_STARTUP_ATTRIBUTION_BOOTED_SYSTEM_LINK": str(
+                    profiles / "booted-system"
+                ),
+                "SK_EMACS_STARTUP_ATTRIBUTION_CURRENT_SYSTEM_LINK": str(
+                    profiles / "current-system"
+                ),
+                "SK_EMACS_STARTUP_ATTRIBUTION_SYSTEM_PROFILE_LINK": str(
+                    profiles / "system-profile"
+                ),
+                "SK_EMACS_STARTUP_ATTRIBUTION_HOME_LINK": str(profiles / "home"),
+                "SK_EMACS_STARTUP_ATTRIBUTION_PULL_LINK": str(profiles / "pull"),
+                "SK_EMACS_STARTUP_ATTRIBUTION_BOOT_ID_FILE": str(boot_id_file),
+                "SK_FAKE_REPO": str(repo),
+                "SK_FAKE_HOME_PROFILE": str(home),
+                "SK_FAKE_WRONG_SOURCE": str(wrong_source),
+            }
+        )
+
+        good = command([str(COLLECTOR)], env=environment, check=False)
+        if good.returncode != 0:
+            fail(f"deterministic attribution failed: {good.stderr or good.stdout}")
+        if good.stderr:
+            fail(f"successful attribution wrote stderr: {good.stderr!r}")
+        required = (
+            "meta\tprotocol\tsk-emacs-startup-attribution-v1",
+            "meta\trun_mode\tfixture",
+            "phase\tinit-file\t1000.300000\t1001.000000\t0.700000",
+            "summary\tinit_file_seconds\t0.700000",
+            "summary\tinit_use_package_seconds\t0.010000",
+            "summary\tinit_direct_requires_seconds\t0.320000",
+            "summary\tinit_file_residual_seconds\t0.380000",
+            "summary\tinit_personal_window_seconds\t0.354000",
+            "summary\tinit_personal_requires_seconds\t0.310000",
+            "summary\tinit_module_residual_seconds\t0.044000",
+            "rank\tinit_personal_require\t1\tsk-core\t0.090000\t25.423729\tfalse\t1\t0.002000",
+            "invariant\texwm_bridge_attributed\tPASS",
+            "invariant\tcollector_stdout_only\tPASS",
+        )
+        for marker in required:
+            if marker not in good.stdout:
+                fail(f"attribution output omitted {marker!r}")
+        event_rows = [
+            line for line in good.stdout.splitlines() if line.startswith("event\t")
+        ]
+        phase_rows = [
+            line for line in good.stdout.splitlines() if line.startswith("phase\t")
+        ]
+        rank_rows = [
+            line for line in good.stdout.splitlines() if line.startswith("rank\t")
+        ]
+        if len(event_rows) != 42:
+            fail(f"attribution emitted {len(event_rows)} raw events instead of 42")
+        if len(phase_rows) != 13:
+            fail(f"attribution emitted {len(phase_rows)} phases instead of 13")
+        if len(rank_rows) != 23:
+            fail(
+                f"attribution emitted {len(rank_rows)} personal rankings instead of 23"
+            )
+
+        wrong_client = environment | {
+            "SK_EMACS_STARTUP_ATTRIBUTION_EMACSCLIENT": str(wrong_emacsclient)
+        }
+        expect_failure(
+            wrong_client,
+            "does not belong to the active Home profile",
+            "non-Home emacsclient",
+        )
+
+        for variable, needle, label in (
+            (
+                "SK_FAKE_BAD_PROTOCOL",
+                "invalid startup-attribution protocol",
+                "bad protocol",
+            ),
+            (
+                "SK_FAKE_TRACE_INCOMPLETE",
+                "startup trace is incomplete",
+                "incomplete trace",
+            ),
+            ("SK_FAKE_BAD_COUNT", "event_count does not match", "bad event count"),
+            ("SK_FAKE_BAD_SOURCE", "source root does not match", "wrong source"),
+            ("SK_FAKE_EXWM_FALSE", "exwm_connected is not true", "disconnected EXWM"),
+            ("SK_FAKE_MISSING_EVENT", "event set is incomplete", "missing event"),
+            ("SK_FAKE_OVERLAP", "require spans overlap", "overlapping init requires"),
+            ("SK_FAKE_BAD_ELAPSED", "elapsed time is inconsistent", "bad elapsed time"),
+            ("SK_FAKE_UNSORTED", "not chronologically sorted", "unsorted events"),
+            (
+                "SK_FAKE_BAD_SEQUENCE",
+                "sequence is zero or duplicated",
+                "bad event sequence",
+            ),
+            ("SK_FAKE_MALFORMED", "returned malformed JSON", "malformed payload"),
+        ):
+            expect_failure(environment | {variable: "1"}, needle, label)
+
+        expect_failure(
+            environment | {"SK_FAKE_STATE_DRIFT_FILE": str(tmp / "state-drift")},
+            "protected live startup trace changed",
+            "state drift between guarded reads",
+        )
+        expect_failure(
+            environment | {"SK_FAKE_CHANGE_BOOT_FILE": str(boot_id_file)},
+            "boot ID changed during attribution",
+            "boot identity drift",
+        )
+        write(boot_id_file, "fixture-boot-id\n")
+
+        (profiles / "current-system").unlink()
+        (profiles / "current-system").symlink_to(store / "other-system")
+        expect_failure(
+            environment,
+            "booted/current/profile System mismatch",
+            "mismatched System profile",
+        )
+        (profiles / "current-system").unlink()
+        (profiles / "current-system").symlink_to(store / "system")
+
+        write(repo / "marker", "dirty\n")
+        expect_failure(environment, "repository is dirty", "dirty repository")
+        write(repo / "marker", "fixture\n")
+
+        write(repo / "marker", "ahead\n")
+        command(["git", "-C", str(repo), "add", "marker"])
+        command(["git", "-C", str(repo), "commit", "-m", "ahead fixture"])
+        expect_failure(environment, "not synchronized", "ahead repository")
+        command(["git", "-C", str(repo), "push", "origin", "main"])
+
+        live_override = environment.copy()
+        live_override.pop("SK_EMACS_STARTUP_ATTRIBUTION_FIXTURE")
+        expect_failure(live_override, "is fixture-only", "live fixture override")
+
+    print("emacs-startup-attribution-check: PASS")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

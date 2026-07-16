@@ -1,6 +1,9 @@
 ;;; Package setup
 
 ;; Emacs packages are installed by Guix. This file only wires behavior.
+(when (fboundp 'sk/startup-trace-mark)
+  (sk/startup-trace-mark "init-enter"))
+
 (require 'use-package)
 
 (defvar sk/user-directory
@@ -52,3 +55,6 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
+
+(when (fboundp 'sk/startup-trace-mark)
+  (sk/startup-trace-mark "init-exit"))

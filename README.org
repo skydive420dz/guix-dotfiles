@@ -5,34 +5,42 @@ Source of truth for the guixpc experiment machine.
 * Current progress
 
 The numbered stabilization pass is complete through Slice 19.  The later dated
-polishing roadmap has accepted Phase 1's SSH/terminal contract and promoted
-Phase 2's first measurement-only Emacs/EXWM baseline slice.  Keep this section
-aligned with accepted machine state so the repo records intent, not only
-implementation commits.
+polishing roadmap has accepted Phase 1's SSH/terminal contract and Phase 2's
+first measurement-only Emacs/EXWM baseline.  Its active follow-on attributes
+one fresh startup before any tuning decision.  Keep this section aligned with
+accepted machine state so the repo records intent, not only implementation
+commits.
 
 The canonical record for the completed numbered roadmap is
 [[file:docs/audits/2026-07-12-full-configuration-audit.org][the 2026-07-12 full configuration audit]].  It records verified state,
 confirmed defects, qualified risks, strengths, Lisp coverage, and acceptance
 gates.  [[file:docs/audits/2026-07-15-phase-0-baseline.org][The 2026-07-15 Phase 0 baseline and P1.1 record]] owns current follow-on
 machine state and boot-comparison evidence.
-[[file:docs/audits/2026-07-15-p2.1-emacs-exwm-measurement.org][The P2.1 Emacs/EXWM measurement record]] owns the active versioned protocol,
-truth boundaries, and acceptance gates.  [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise
-machine queue for separate deferred work.  There is no successor numbered
-stabilization slice; new work is promoted through the dated roadmap.
+[[file:docs/audits/2026-07-15-p2.1-emacs-exwm-measurement.org][The P2.1 Emacs/EXWM measurement record]] owns the versioned protocol, truth
+boundaries, and accepted baseline.  [[file:docs/audits/2026-07-16-p2.2-emacs-startup-attribution.org][The P2.2 startup-attribution record]] owns
+the opt-in observer, source path, and interpretation rules.
+[[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
+There is no successor numbered stabilization slice; new work is promoted
+through the dated roadmap.
 
 ** Active follow-on
 
-- [ ] P2.1: establish a reproducible Emacs/EXWM responsiveness baseline.  The
-  published implementation checkpoint adds a stdout-only TSV sampler for live
-  state, host-local RPC latency, PSS/RSS, cumulative GC state, and
-  preparation-only launcher timing.  Its first valid protocol-v1 baseline is
-  preserved with all eight invariants passing: RPC median/p95 were 4.937/7.492
-  ms, and launcher preparation was 37.714 ms first with a 16.175 ms repeated
-  median.  It performs no tuning, GUI launch, cache reset, reload, activation,
-  or reboot.  Numeric targets and P2.2 selection remain deliberately pending
-  user review.
+- [ ] P2.2: attribute one fresh Emacs/EXWM startup without tuning.  Source
+  proves that P2.1's 8.742822-second value ends before after-init hooks,
+  =~/.exwm=, EXWM activation, and dashboard construction.  The dormant
+  observer records the 24 direct init requirements, the later EXWM/dashboard
+  bridge, GC co-occurrence, and explicit residual time only when
+  =SK_EMACS_STARTUP_TRACE=p2.2-v1=.  Implementation and fixtures must be
+  published before Rafael pairs on the fresh-session boundary; no restart is
+  implied by the source checkpoint.
 
 ** Completed
+
+- [X] P2.1: reproducible Emacs/EXWM responsiveness baseline
+  The first valid protocol-v1 artifact is preserved with all eight invariants
+  passing: RPC median/p95 were 4.937/7.492 ms, and launcher preparation was
+  37.714 ms first with a 16.175 ms repeated median.  It selected no tuning
+  target; P2.2 first attributes the aggregate initialization boundary.
 
 - [X] Slice 0: Runtime sanity
   Confirmed the live EXWM/Emacs path, clean repo state, active Guix
@@ -554,6 +562,34 @@ counts, invariants, and SHA-256.  Only then add the unchanged TSV in a separate
 evidence commit and record its digest/interpretation in the P2.1 Evidence
 section.  Redirecting directly into the checkout correctly fails the clean-tree
 preflight.
+
+P2.2 keeps startup attribution separate from ordinary performance sampling.
+The 8.742822-second P2.1 value ends at =after-init-time=: it includes early
+init, package/window/frame setup, and =init.el=, but excludes after-init hooks,
+the =~/.exwm= command-line argument, EXWM activation, dashboard construction,
+and startup/window hooks.  Static source ownership is documented, but timing
+“blame” requires a fresh process.
+
+The observer is dormant unless the new Emacs process inherits the exact token
+=SK_EMACS_STARTUP_TRACE=p2.2-v1=.  It records selected outer synchronous
+boundaries in memory, seals the trace at the configured window-setup hook tail,
+and removes all observer hooks/advice.  It never writes a report from Emacs.
+After a deliberately attributed fresh session, extract through SSH from the
+clean synchronized checkout:
+
+#+begin_src sh
+cd ~/Projects/guix-dotfiles
+scripts/emacs-startup-attribution
+#+end_src
+
+The command emits guarded protocol-v1 TSV to stdout with raw events,
+non-overlapping phases, 23 personal-module inclusive timings, explicit
+residual, GC co-occurrence, provenance, and invariants.  Preserve the first
+valid output outside the checkout with empty stderr and a SHA-256; do not rerun
+for a prettier number.  A module row includes its synchronous nested work and
+is association in one trace, not exclusive CPU time, causality, stable rank,
+or predicted savings.  See
+[[file:docs/audits/2026-07-16-p2.2-emacs-startup-attribution.org][the P2.2 attribution and paired-start protocol]] before activating it.
 
 The unmanaged Breadcrumb ELPA tree found by the audit was not used by this
 configuration.  It is quarantined outside =package-user-dir= at

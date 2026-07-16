@@ -1,0 +1,319 @@
+#+title: GuixPC P2.2 Emacs Startup Attribution
+#+date: 2026-07-16
+#+status: implementation
+
+* Outcome and boundary
+
+P2.2 explains one fresh Emacs/EXWM startup before any performance policy is
+changed.  It owns attribution only: a versioned, opt-in observer records named
+synchronous boundaries in memory, and a guarded client extracts the completed
+trace to stdout after the desktop is running.
+
+No GC setting, eager/deferred decision, package, module order, cache, native
+compilation policy, message advice, launcher path, EXWM behavior, Home profile,
+System profile, or kernel setting changes in this slice.  A later P2.3 may test
+at most one replicated, user-relevant hypothesis.
+
+Related records:
+
+- [[file:2026-07-15-p2.1-emacs-exwm-measurement.org][P2.1's accepted performance baseline]];
+- [[file:2026-07-15-phase-0-baseline.org][Phase 0 and P1.1 baseline]];
+- [[file:2026-07-12-full-configuration-audit.org][completed numbered-slice audit]];
+- [[file:~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org][editable agenda roadmap]].
+
+* What “blame” can mean here
+
+=Blame= is useful conversational shorthand, but the evidence uses
+=attribution=.  An attributed row is inclusive elapsed wall time observed
+between timestamps immediately around one named synchronous boundary in one
+instrumented process.
+
+For a module, the boundary is the outer top-level =require= from =init.el=.
+It includes any nested synchronous requirements, autoload work, file/native
+code loading, top-level configuration, hooks or advice invoked before return,
+GC that happens inside the interval, I/O, and scheduler delay.  It is not:
+
+- exclusive CPU time or source-line ownership;
+- proof of causal responsibility or user-visible harm;
+- the amount removable by deferring or deleting the module;
+- an expected saving;
+- a stable ranking from one observation.
+
+Chronological phase rows are primary.  A ranked module view is secondary and
+is called the “largest observed inclusive boundary”, never the slowest module
+or the cause.  Percentages use the named measured parent window.  Gaps remain
+an explicit residual instead of being forced onto a module.
+
+* Source-confirmed startup process
+
+** Before Emacs
+
+The graphical path is:
+
+#+begin_src text
+tty1 Fish policy
+  -> sk-start-exwm
+  -> scripts/exwm-session
+  -> startx
+  -> ~/.xinitrc -> shell/xinitrc
+  -> exec emacs -fs --eval '(load-file "~/.exwm")'
+#+end_src
+
+Before =exec emacs=, =shell/xinitrc= synchronously:
+
+1. sources =/etc/profile= and =~/.profile=;
+2. validates the canonical Guix Home D-Bus address and waits at most five
+   seconds for its socket;
+3. updates the graphical D-Bus activation environment;
+4. applies X blanking/DPMS policy with =xset=;
+5. queries XRandR and applies the 3440x1440/100 Hz fallback if necessary;
+6. sets the wallpaper synchronously;
+7. stops the prior Picom instance and backgrounds the replacement.
+
+These are confirmed owners in the login path, but P2.1's 8.742822-second value
+contains none of them.  P2.2 maps them as an external path and does not invent
+timestamps for work that the current session did not record.  Xorg readiness,
+boot-to-login, and a full pre-Emacs critical-path trace remain separate P2.S1
+work.
+
+** What the 8.742822 seconds actually contains
+
+The active Emacs 30.2 source sets =before-init-time= at the start of Lisp
+startup.  Its =command-line= then loads =early-init.el=, performs package and
+window-system initialization, creates the initial X frame, loads =init.el=,
+and sets =after-init-time=.  =emacs-init-time= is the difference between those
+two timestamps.
+
+Only afterward does Emacs run =after-init-hook= and process remaining command
+arguments, including this session's =--eval '(load-file "~/.exwm")'=.  The
+source order proves that the P2.1 value includes Emacs bootstrap, early init,
+package/window/frame setup, and user init, but excludes:
+
+- =after-init-hook=;
+- =~/.exwm= and =emacs/exwm-loader.el=;
+- =require sk-exwm= and =sk/exwm-start=;
+- =exwm-wm-mode= activation;
+- =initial-buffer-choice= dashboard construction;
+- =emacs-startup-hook= and =window-setup-hook=;
+- first visible frame, first managed X client, and first usable input.
+
+It is therefore an Emacs initialization value, not an EXWM-ready or perceived
+desktop-ready value.
+
+** Direct init boundaries
+
+=init.el= directly requires =use-package=, then these 23 personal features in
+exact order:
+
+#+begin_src text
+sk-core sk-ui sk-windows sk-dired sk-terminal sk-dashboard sk-completion
+sk-evil sk-project sk-lsp sk-lisp sk-clojure sk-racket sk-fennel sk-lua
+sk-python sk-shell sk-json sk-c sk-format sk-keys sk-org sk-notes
+#+end_src
+
+=sk-window-policy= is pulled transitively before its later direct consumer, and
+=sk-exwm= is loaded through the post-init EXWM bridge.  Thus all 25 repository
+personal modules have evaluated by =sk/exwm-start=, but only 23 are direct
+=init.el= boundaries.
+
+There are 42 top-level =use-package= declarations across the personal modules.
+That is not an eager-package count.  Lazy keywords, dumped features,
+transitive dependencies, native code, and package configuration make a static
+count unsuitable for timing attribution.
+
+** Confirmed synchronous candidates, not measured costs
+
+Source inspection confirms work inside the initialization boundary including:
+
+- profile/native-cache identity and directory setup in early init;
+- cache directories, persistent modes, and server setup in =sk-core=;
+- font, theme, and modeline setup in =sk-ui=;
+- a real =ls= process during Dired configuration;
+- eager Yasnippet reload in =sk-completion=;
+- Magit/Counsel/Projectile startup edges in =sk-project=;
+- explicit Flycheck loading and after-init setup in =sk-lsp=;
+- five demanded dialect frontends;
+- Org, six Babel backends, habit, and tempo setup;
+- recursive agenda discovery and inbox setup in =sk-notes=.
+
+This list identifies where work is owned.  It cannot assign any share of
+8.742822 seconds without a fresh trace.
+
+* Protocol v1 design
+
+** Activation and observer lifetime
+
+Ordinary startup checks one exact environment value and otherwise does not load
+the observer:
+
+#+begin_src text
+SK_EMACS_STARTUP_TRACE=p2.2-v1
+#+end_src
+
+When present, =early-init.el= loads =sk-startup-trace.el= before the native
+cache body.  The observer:
+
+- stores events only in =sk/startup-trace-events=;
+- installs a temporary =require= advice that records only selected outermost
+  direct calls while preserving their order, return values, and errors;
+- temporarily advises dashboard construction and =exwm-wm-mode= after their
+  defining features load;
+- adds tail markers to =after-init-hook=, =emacs-startup-hook=, and
+  =window-setup-hook=;
+- seals the trace at the configured window-setup tail and removes every
+  observer hook and advice.
+
+The observer writes no file, emits no measurement message, starts no process,
+opens no UI, forces no GC, and changes no GC/cache/loading policy.  Its own
+loading, advice, timestamps, list allocation, and extraction-related retained
+objects are observer overhead.  That overhead is included and is not
+subtractable.
+
+** Recorded boundaries
+
+The raw trace owns these classes:
+
+| Class | Boundaries |
+|-------+------------|
+| marks | early-init enter/exit; init enter/exit; after-init hook tail; EXWM loader/config enter/exit; startup hook tail; window-setup tail; trace complete |
+| direct requirements | =use-package=; 23 =init.el= personal features; later =sk-exwm= |
+| named calls | observer bootstrap; =~/.emacs.d/exwm.el= load; =sk/exwm-start=; =exwm-wm-mode=; initial dashboard construction |
+
+Each span retains raw start/end/elapsed seconds, completion status,
+already-loaded state where applicable, and GC count/time delta.  A GC delta is
+temporal co-occurrence, not proof that GC caused the interval.
+
+The collector derives non-overlapping phases from =before-init-time= through
+the final trace marker and reports:
+
+- the complete init-file window;
+- all 24 direct init requirements chronologically;
+- the 23-personal-module window and sum;
+- residual time between personal-module boundaries;
+- the EXWM/dashboard/startup bridge without adding nested inclusive spans;
+- a secondary duration ranking for the 23 direct personal requirements.
+
+** Extraction boundary
+
+After the attributed desktop settles, run from a separate SSH connection:
+
+#+begin_src sh
+cd ~/Projects/guix-dotfiles
+scripts/emacs-startup-attribution
+#+end_src
+
+The collector selects the exact active-Home =emacsclient=, reads the sealed
+trace twice, and emits versioned TSV to stdout only after validation.  It
+fails closed for dirty/unsynchronized source, profile or source mismatch,
+inactive EXWM/server, incomplete observer cleanup, malformed/nonfinite/
+negative times, missing/duplicate/out-of-order boundaries, wrong feature
+order, overlapping direct requirements, inconsistent elapsed values, or phase
+arithmetic that does not close within timer precision.
+
+Live provenance includes the repository commit, boot ID, kernel, exact Home
+profile/client/server, native-cache identity, Emacs version/PID/start time,
+timer identity, activation token, GC policy, and observer event count.
+
+* Truth boundaries
+
+- One fresh trace is an =OBSERVED= natural-state sample, not a distribution,
+  stable rank, cold start, or warm start.
+- Emacs =current-time= is a realtime wall clock.  The collector rejects
+  negative or internally inconsistent values, but this is not a monotonic
+  timer and a clock adjustment remains a run-invalidating risk.
+- Natural Guix/native/filesystem caches are uncontrolled and are not reset.
+- Inclusive module time may contain dependency, GC, I/O, advice, or scheduler
+  work; asynchronous work after return is outside that module.
+- The configured hook-tail markers are exact for the current source-owned hook
+  order, not universal Emacs internals after arbitrary future hooks.
+- First visible frame, first EXWM-managed client, first usable input, and the
+  user's perception remain =UNMEASURED=.
+- =after-init-time= and the later EXWM bridge have different boundaries.  Do
+  not add or compare them as if both were =emacs-init-time=.
+- A large row does not prove harm, causality, removability, repeatability, or
+  expected savings.  Replication is required before P2.3.
+
+* Accepted implementation scope
+
+- [X] Map the complete source-owned path and establish the P2.1 timestamp
+  boundary from active Emacs 30.2 source.
+- [X] Define attribution language that separates inclusive association from
+  causality.
+- [X] Add the exact opt-in in-memory observer and cleanup boundary.
+- [X] Add a read-only, stdout-only guarded collector and versioned TSV schema.
+- [X] Add deterministic clock, order, error-propagation, cleanup, payload, phase
+  algebra, residual, malformed/incomplete, and provenance fixtures.
+- [ ] Pass reader, byte-compile, Checkdoc, ERT, strict shell, candidate Emacs,
+  and desktop source gates.
+- [ ] Publish the implementation checkpoint before activation.
+- [ ] Pair with Rafael for exactly one fresh attributed EXWM process.
+- [ ] Preserve the first valid output externally with empty stderr and a
+  reviewed SHA-256, then add it in a separate evidence commit.
+- [ ] Run live editor/desktop/source gates after extraction.
+- [ ] Review whether the observed startup is materially felt; select no tuning
+  target in P2.2.
+
+* Non-goals and stop conditions
+
+- No lazy-loading conversion, module reorder/removal, GC threshold, message
+  advice, native-comp, package, Org, launcher, dashboard, EXWM, or visual change.
+- No profiler, ELP, esup, benchmark macro, forced GC, cache clearing, repeated
+  cosmetic run, or reload substituted for a fresh process.
+- No Home/System activation, reboot, application launch, generation cleanup,
+  privilege, boot/kernel/IRQ/TSC/HPET, build, thermal, or storage experiment.
+- No first-ready claim from the final hook marker.
+
+Stop and split the work if observation requires behavioral refactoring,
+persistent normal-session overhead, a cache reset, privilege, or an invented
+readiness marker.  A startup error must propagate normally; the observer may
+record it but must never swallow it.
+
+* Paired activation and recovery
+
+The implementation must first be committed, pushed, present in the clean live
+checkout, and pass candidate checks.  Activation is a fresh Emacs/EXWM process,
+not a config reload.  It is not authorized merely by committing this dormant
+observer.
+
+When Rafael is ready and all graphical work is saved:
+
+1. exit the current Emacs normally so =scripts/exwm-session= returns to tty1;
+2. from the tty1 Fish prompt run exactly:
+
+   #+begin_src sh
+   env SK_EMACS_STARTUP_TRACE=p2.2-v1 \
+     ~/Projects/guix-dotfiles/scripts/exwm-session
+   #+end_src
+
+3. leave that fresh graphical session running and collect through SSH;
+4. preserve the first valid external TSV; do not restart for a prettier value.
+
+If the attributed session fails, return to a tty, inspect
+=~/.local/state/sk-exwm/startx-current.log=, and run the same session script
+without the environment variable.  The observer is dormant without the exact
+token.  Source rollback is to revert the implementation checkpoint before a
+later normal restart; no Home/System generation rollback is involved.
+
+* Decision rule and successor
+
+P2.2 closes with an attribution map only.  Good evidence wording is:
+
+#+begin_quote
+In trace R, the inclusive =sk-org= require boundary observed N ms (P percent of
+the direct-personal-module window), including synchronous dependency and GC
+work; causality and repeatability are untested.
+#+end_quote
+
+Do not write “=sk-org= caused N ms”, “=sk-org= is slow”, or “removing it will
+save N ms”.
+
+P2.3 remains =BACKLOG=: replicate the same protocol, pair at most one boundary
+with a user-felt delay, and test one reversible hypothesis.  Diffuse attribution
+or no material user complaint closes startup tuning with no configuration
+change.
+
+* Evidence
+
+Implementation checkpoint, activation process, artifact digest, live trace,
+and interpretation remain pending.  No attributed restart has occurred in
+this implementation phase.

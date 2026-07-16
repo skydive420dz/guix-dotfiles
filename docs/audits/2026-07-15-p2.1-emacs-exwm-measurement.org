@@ -1,6 +1,6 @@
 #+title: GuixPC P2.1 Emacs and EXWM Measurement Baseline
 #+date: 2026-07-15
-#+status: active
+#+status: complete
 
 * Purpose and boundary
 
@@ -75,8 +75,9 @@ Those are implementation facts.  Their performance impact remains a
   =docs/audits/data/2026-07-15-p2.1-emacs-exwm-baseline.tsv= evidence commit.
 - [X] Run existing editor, desktop, and strict source gates outside the timing
   window.
-- [ ] Review the distribution with the user before choosing a target or P2.2
-  experiment.
+- [X] Review the distribution with the user before choosing a target or P2.2
+  experiment.  The user selected attribution of the aggregate startup boundary,
+  not a tuning target.
 
 * Protocol v1
 
@@ -265,9 +266,9 @@ P2.1 records boot ID, kernel, and clocksource only as run identity.  It adds no
 - [X] Preserve the first valid run.  RPC warm-up drift requires a later labeled
   replication before an RPC-based decision, not an immediate cosmetic rerun or
   tweak.
-- [ ] At most one dominant measured hypothesis is promoted to P2.2.
-- [ ] If no cost is dominant or user-visible, P2.1 closes with no tuning
-  justified.
+- [X] No module-level or setting-level hypothesis is promoted from the aggregate
+  initialization value.  P2.2 is attribution-only and precedes any hypothesis.
+- [X] P2.1 closes with no tuning justified by this baseline.
 
 * Stop and rollback
 
@@ -381,5 +382,7 @@ sample remained below 8 ms.  Launcher measurements replay preparation only,
 with five-sample p95 equal to the maximum.  Zero GC during these probes does not
 prove ordinary use has no GC cost, and current memory does not establish a leak
 trend.  Client absence is proven only at the three guard boundaries; continuous
-idleness remains an operator condition.  No P2.2 hypothesis or numeric target
-is selected from this capture.
+idleness remains an operator condition.  No tuning hypothesis or numeric target
+is selected from this capture.  The user instead promoted
+[[file:2026-07-16-p2.2-emacs-startup-attribution.org][P2.2's one-shot startup attribution]] to determine which synchronous boundaries
+are associated with the aggregate value before considering an experiment.
