@@ -1,0 +1,388 @@
+#+title: GuixPC P2.K1a Boot-Edge Kernel Attribution
+#+date: 2026-07-16
+#+status: complete
+
+* Outcome and boundary
+
+P2.K1a is a read-only attribution review of Phase 0 findings P0-F01 through
+P0-F03.  It changes no System or Home declaration, package, kernel, initrd,
+boot parameter, module, firmware, runtime service, or machine state.  It also
+does not authorize a reboot.
+
+The evidence supports these conclusions:
+
+- P0-F01 is not evidence that PID 1, Guile, or Shepherd crashed.  The exact
+  signal is attributable to BDWGC's intentional, handled address-limit probe
+  while the Guix initrd's static Guile was PID 1.  This finding is closed for
+  the recorded signature.
+- P0-F02 is a real, concentrated IRQ 7 storm followed by the kernel's
+  defensive disable path.  The originating interrupt source and whether the
+  cause belongs to firmware, routing, hardware, or the driver remain unknown.
+- P0-F03 is a real disagreement between TSC and HPET.  Linux continued
+  timekeeping through its automatic selection of HPET.  The evidence does not
+  prove which clock or subsystem was wrong, and no material performance cost
+  has been measured.
+- The IRQ storm precedes the TSC watchdog warning by about one second, but no
+  causal relationship is established.
+- No mitigation is justified by the current evidence.
+
+P0-F04 and P0-F05 are outside P2.K1a.  Their wireless regulatory-database and
+WPA-marker work remain deferred and require a separately named slice.
+
+Related records:
+
+- [[file:2026-07-15-phase-0-baseline.org][Phase 0 and P1.1 baseline]];
+- [[file:2026-07-15-p2.1-emacs-exwm-measurement.org][P2.1 performance baseline]];
+- [[file:2026-07-16-p2.2-emacs-startup-attribution.org][P2.2 startup attribution]];
+- [[file:~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org][editable agenda roadmap]].
+
+* Truth vocabulary
+
+- =OBSERVED=: directly present in retained machine evidence.
+- =ATTRIBUTED=: the exact observation is explained by matching live artifact,
+  instruction, and implementation source.
+- =INFERENCE=: the narrowest explanation supported by several observations.
+- =UNKNOWN=: the evidence does not distinguish the remaining cause classes.
+- =NOT AUTHORIZED=: no configuration mutation follows from this document.
+
+* Evidence and provenance
+
+** Repository and live identity
+
+- Review base:
+  =a54f4cc28af2302697aad122ab98e4cacf3e993c=, clean and synchronized at
+  =0/0= before the read-only inspection.
+- Host and user: =guixpc=, =skydive420dz=, UID 1000.
+- Current inspected boot ID:
+  =6a94d3ec-1c03-40cd-a678-d8a372bf7df2=.
+- Kernel: Linux =7.0.14=.
+- Current and booted System:
+  =/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system=, generation 87.
+- Current Home profile:
+  =/gnu/store/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile=.
+- Current Guix pull profile:
+  =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile=.
+- Phase 0 privileged probe: 119,940 bytes, recorded SHA-256
+  =7c9a56253f4251f594360804a8b3858ff906a822af16326e4e36647bd71c8c54=.
+  The raw file is not repository-retained; the relevant observations and
+  digest are preserved in the Phase 0 record.
+
+Unprivileged =dmesg= and =/var/log/messages= access are denied on this host.
+This slice uses the accepted privileged excerpts already supplied by the user
+plus current read-only =/proc=, =/sys=, store, generation, source, and binary
+inspection.  It does not imply that an unfiltered raw log was archived.
+
+** Independently inspected boots
+
+| Boot | Identity | P0-F01 | P0-F02 | P0-F03 |
+|------+----------+--------+--------+--------|
+| A | PID 1 started =2026-07-14 22:32:59 EDT=; System 86 =/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system=; Linux 7.0.14; boot ID not captured | At +1 second: address =0x3fff00=, IP =0x4d5593=, error 4, Guile offset =d5593=, CPU 1; Shepherd subsequently started normally | At +2 seconds: IRQ 7 crossed the spurious-interrupt threshold; captured handler =amd_gpio_irq_handler=; IRQ disabled at count 100,000 | At +3 seconds: TSC differed from HPET by 871,760 ns over 479,983,210 ns, approximately 1,816 ppm; HPET selected |
+| B | Cold boot =2026-07-15 17:47 EDT=; System 87 =/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system=; Linux 7.0.14; boot ID =6a94d3ec-1c03-40cd-a678-d8a372bf7df2= | Same address, IP, error, Guile offset, and CPU; only the stack address differed | Same IRQ number, 100,000-count threshold, =pinctrl_amd= registration, and defensive disable | TSC differed from HPET by 876,317 ns over 475,133,152 ns, approximately 1,844 ppm; HPET selected |
+
+This is recurrence on two of two inspected boots.  It is not a failure-rate
+estimate across all historical boots.  P2.1 and P2.2 carry Boot B's same boot
+ID; they corroborate that the machine remained operational with HPET, but they
+are not additional recurrence samples.
+
+** Boot-stack ownership and comparison boundary
+
+The repository adds =modprobe.blacklist=pcspkr= and the accepted HDMI mode to
+Guix's default kernel arguments.  Guix adds the =usbmouse,usbkbd= blacklist and
+=quiet=.  The active command line contains no =irqpoll=, ~tsc=~ argument or clocksource
+override, HPET override, or =pinctrl_amd= blacklist.
+
+The operating-system declaration does not explicitly replace =kernel=,
+=firmware=, =initrd=, initrd modules, or Shepherd.  Its pinned Guix/Nonguix
+closure supplies:
+
+| Component | Active version or identity |
+|-----------+----------------------------|
+| Nonguix kernel | Linux 7.0.14 |
+| Firmware | =linux-firmware= 20260622 |
+| Initrd Guile | static Guile 3.0.11 with libgc 8.2.8 |
+| Root Shepherd | Shepherd 1.0.9 |
+| Shepherd runtime Guile | Guile 3.0.9 |
+
+The combined initrd SHA-256 is
+=272871fb13980a9957ff0aa617c4f6f84eecb354c40caabfe87d658994854739= and it
+contains both AMD and Intel early-microcode payloads.
+
+Every accepted retained System generation 75, 80, 81, 83, 84, 85, 86, and 87
+resolves to kernel profile
+=/gnu/store/6wpk0sp8hxikw0n1cihm5am1x1kz80f1-profile= and kernel
+=/gnu/store/p195id1irkxvak63zcrr0nl51v3knk84-linux-7.0.14/bzImage=.  Systems
+85 through 87 also share the exact initrd and kernel parameters, and Systems
+86 and 87 share the exact boot program.  Their recurrence demonstrates
+repeatability under the same boot stack; it is not a kernel comparison.
+
+No accepted retained generation currently supplies a distinct-kernel control.
+Ancient unaccepted generations with Linux-libre differ in kernel, initrd, and
+firmware policy and must not be treated as ready rollback or one-variable
+comparison candidates.
+
+* P0-F01 -- early =init[1]= Guile signal
+
+** Observed facts
+
+- Both inspected boots emitted the exact fault address =0x3fff00= and
+  instruction pointer =0x4d5593=.
+- The initrd's static Guile executable begins at =0x400000= with executable
+  text at =0x401000=.  Its text size matches the kernel's =401000+202000=
+  report, and =0x4d5593= lies inside it.
+- The address =0x3fff00= is exactly one 256-byte scan step below the first
+  mapping.
+- The runtime Guile 3.0.9 launcher used by Shepherd is only 14,512 bytes with a
+  =0x255=-byte text segment; =0x4d5593= cannot belong to it.
+- Shepherd loaded its configuration immediately afterward, retained PID 1,
+  and remained healthy with five threads.
+- No PID 1 exit, kernel panic, service loss, repeated post-startup fault, or
+  user-visible failure was observed.
+
+** Exact attribution
+
+Static disassembly around =0x4d5593= installs =SIGSEGV= and =SIGBUS= handlers,
+uses =sigsetjmp=, walks memory downward in =0x100= increments, reads the
+candidate address, then restores the handlers after the boundary fault.  The
+identical installed libgc 8.2.8 sequence resolves through its debug symbols to
+=GC_find_limit_with_bound= at =os_dep.c:1029=.
+
+BDWGC's =GC_find_limit= deliberately probes an address-space boundary and
+handles the resulting signal.  Linux's global-init signal-reporting special
+case explains why the handled signal is nevertheless printed as
+=init[1]: segfault=.  The log line therefore does not describe process death.
+
+Classification: =ATTRIBUTED / CLOSED=.  For this exact signature, “PID 1
+crashed,” “Guile crashed,” and “Shepherd crashed” are incorrect descriptions.
+
+Primary sources:
+
+- [[https://github.com/ivmai/bdwgc/blob/v8.2.8/os_dep.c#L454-L470][BDWGC warning about its intentional SIGSEGV probe]];
+- [[https://github.com/ivmai/bdwgc/blob/v8.2.8/os_dep.c#L954-L1034][BDWGC address-limit probing implementation]];
+- [[https://github.com/gregkh/linux/blob/v7.0.14/arch/x86/mm/fault.c][Linux 7.0.14 x86 fault reporting]];
+- [[https://github.com/gregkh/linux/blob/v7.0.14/kernel/signal.c][Linux global-init signal handling]];
+- [[https://guix.gnu.org/manual/devel/en/html_node/Initial-RAM-Disk.html][Guix initial-RAM-disk architecture]].
+
+** Impact and reopen conditions
+
+No adverse impact is established, and no Guile, Shepherd, kernel, or boot
+change is required.  The attribution applies only to the exact recorded
+address, IP, executable mapping, and early-init path.  Reopen P0-F01 if PID 1
+exits, Shepherd fails to load, the kernel panics, the fault repeats after early
+startup, the signature changes, or a service failure is tied to the event.
+
+* P0-F02 -- IRQ 7 storm and defensive disable
+
+** Observed facts
+
+- Both inspected boots reached a live IRQ 7 count of 100,000 before Linux
+  printed =irq 7: nobody cared= and disabled IRQ 7.
+- The first retained stack names =amd_gpio_irq_handler=; the live registration
+  identifies =pinctrl_amd=.
+- Current =/sys/kernel/irq/7/= data records action =pinctrl_amd=, hardware IRQ
+  7, chip =IR-IO-APIC=, type =level=, name =fasteoi=, and per-CPU counts
+  =0,0,0,100000=.
+- =CONFIG_PINCTRL_AMD=y=: this driver is built into the kernel, so absence from
+  =lsmod= or =modinfo= is expected.
+- The driver owns platform device =AMDI0030:00=, ACPI HID =AMDI0030=, path
+  =\\_SB_.GPIO=, and a 256-line GPIO chip.
+- Core boot, networking, desktop, Bluetooth, and audio acceptance subsequently
+  passed.
+
+** Attribution boundary
+
+Linux disables an IRQ after its spurious-interrupt accounting observes roughly
+99,900 unhandled interrupts among 100,000 closely spaced interrupts.  The
+100,000 counter is the threshold observation; it is not proof that every one
+of 100,000 deliveries was unhandled.
+
+The AMD GPIO driver uses a shared parent IRQ.  Its handler returns handled only
+when it finds a pending, unmasked GPIO with a valid Linux IRQ mapping.  The
+narrow defensible inference is:
+
+#+begin_quote
+The AMD GPIO parent IRQ repeatedly fired, but the registered handler could not
+associate the deliveries with a valid claimed GPIO source, so Linux disabled
+the parent IRQ defensively.
+#+end_quote
+
+This does not establish that =pinctrl_amd= generated the electrical interrupt
+or that the driver itself is defective.
+
+Primary sources:
+
+- [[https://github.com/gregkh/linux/blob/v7.0.14/kernel/irq/spurious.c#L143-L178][Linux spurious-IRQ reporting and disable path]];
+- [[https://github.com/gregkh/linux/blob/v7.0.14/kernel/irq/spurious.c#L320-L419][Linux unhandled-interrupt accounting]];
+- [[https://github.com/gregkh/linux/blob/v7.0.14/drivers/pinctrl/pinctrl-amd.c#L608-L691][AMD GPIO interrupt handler]];
+- [[https://github.com/gregkh/linux/blob/v7.0.14/drivers/pinctrl/pinctrl-amd.c#L1160-L1251][AMD GPIO parent-IRQ registration]];
+- [[https://docs.kernel.org/PCI/boot-interrupts.html][Linux =irqpoll= documentation]].
+
+** Unknowns and impact
+
+Remaining cause classes are a firmware-enabled or asserted unclaimed GPIO,
+incorrect ACPI routing or GPIO status, a physically asserted line, IRQ/SCI
+sharing, or a Linux 7.0.14 driver regression.  Upstream AMD GPIO changes show
+that these classes exist; none is an established fix for this machine.
+
+The kernel stopped the storm, but disabling the parent IRQ may also suppress a
+real button, wake source, sensor, or other platform event.  Successful daily
+desktop checks do not prove that every GPIO consumer remains functional.
+P0-F02 remains =OPEN / IMPACT UNKNOWN=.
+
+* P0-F03 -- TSC/HPET watchdog disagreement
+
+** Observed facts
+
+- Both inspected boots initially selected TSC and rejected it within seconds.
+- Boot A differed by 871,760 ns over 479,983,210 ns, about 1,816 ppm.
+- Boot B differed by 876,317 ns over 475,133,152 ns, about 1,844 ppm.
+- Linux marked TSC unstable and selected HPET.  The current clocksource is
+  =hpet= and the available list is =hpet acpi_pm=; TSC is no longer eligible.
+- No kernel-command-line override selected this state.
+- The Ryzen 3 2200G advertises =constant_tsc= and =nonstop_tsc=.
+
+** Attribution boundary
+
+The clocksource watchdog detected disagreement beyond its allowance and
+invoked the normal unstable-clocksource path.  This proves relative
+disagreement between TSC and HPET.  It does not identify which clock or
+intervening platform behavior was wrong.
+
+The kernel's “most likely due to broken BIOS” sentence is generic source text,
+not a machine-specific diagnosis.  The CPU flags argue against ordinary
+P-state frequency changes, but do not guarantee cross-core synchronization,
+HPET correctness, or freedom from firmware/SMI interference.
+
+Primary sources:
+
+- [[https://github.com/gregkh/linux/blob/v7.0.14/kernel/time/clocksource.c#L110-L150][Linux clocksource-watchdog thresholds]];
+- [[https://github.com/gregkh/linux/blob/v7.0.14/kernel/time/clocksource.c#L470-L540][Linux watchdog comparison and unstable decision]];
+- [[https://github.com/gregkh/linux/blob/v7.0.14/arch/x86/kernel/tsc.c#L1141-L1229][x86 TSC unstable handling]];
+- [[https://github.com/gregkh/linux/blob/v7.0.14/kernel/sched/clock.c#L144-L178][generic broken-BIOS warning source]];
+- [[https://www.amd.com/content/dam/amd/en/documents/processor-tech-docs/programmer-references/56255_OSRR.pdf][AMD invariant-TSC documentation]].
+
+** Unknowns and impact
+
+Remaining cause classes are TSC synchronization or a platform defect, an
+HPET/reference-clock error, firmware or SMI interference, kernel calibration
+or watchdog behavior, or another hardware timing fault.  The roughly
+one-second ordering after P0-F02 is correlation only.
+
+Linux continued timekeeping through the automatic HPET fallback.  That does
+not establish HPET as the correct side.  A performance cost is possible but
+has not been isolated, and no disruptive normal-use behavior is currently
+attributed to it.  P0-F03 remains =OPEN / IMPACT UNMEASURED=, not an
+authorization to force either clocksource.
+
+* Firmware boundary
+
+Observed identity:
+
+- Lenovo IdeaCentre 510A-15ARR;
+- machine type =90J0000PUS=;
+- board =36EE=;
+- BIOS =O3TKT34A=;
+- BIOS date =2018-06-01=;
+- CPU microcode =0x8101007= on the inspected boot.
+
+Firmware age and the ACPI-facing findings make firmware a plausible
+investigation area, not an established cause.  Lenovo's generic support result
+for this model family refers to an =O4D= BIOS family while this machine reports
+=O3T=.  No firmware image is compatible merely because it appears on that
+generic page.  Require serial-specific Lenovo confirmation before
+recommending, downloading, or flashing anything.
+
+Reference:
+
+- [[https://support.lenovo.com/us/en/downloads/ds505038-flash-bios-update-lenovo-v530-15arr-v55t-15api][Lenovo model-family BIOS page; compatibility not established]].
+
+* Safe successor gates
+
+No successor experiment is selected by P2.K1a.  If the user later promotes
+one, it must preserve these gates.
+
+** G1 -- complete read-only boot artifact
+
+Capture and checksum one unfiltered artifact containing:
+
+- boot ID, System generation, kernel, initrd, boot program, and arguments;
+- full boot log including the complete IRQ stack and handler list;
+- =/proc/interrupts= and =/proc/irq/7/spurious=;
+- read-only IRQ identity, action, chip, hardware IRQ, type, and per-CPU counts;
+- ACPI resource routing and read-only GPIO/pinctrl debug state;
+- TSC calibration and all clocksource-watchdog messages;
+- CPU family, flags, microcode, DMI, and BIOS identity;
+- MCE, EDAC, RAS, thermal, and other hardware-error messages.
+
+Preserve the external raw file privately and verify its digest.  Review it for
+serials, UUIDs, MAC addresses, command-line details, firmware-table contents,
+and other sensitive identifiers.  Only a separately redacted derivative may
+be considered for =docs/audits/data/=, with its own digest and an explicit
+sanitization label; repository retention is not automatic.
+
+** G2 -- controlled cold-boot recurrence
+
+Choose the replication count before rebooting.  Each run must record a new
+boot ID and the complete G1 artifact.  Do not count repeated probes, P2.1, or
+P2.2 on one boot as additional recurrence.
+
+** G3 -- genuine comparison candidate
+
+Before claiming a kernel comparison:
+
+- select one justified prior or alternate maintained kernel;
+- build it without activation;
+- verify hardware closure, firmware, initrd, boot parameters, and recovery;
+- retain current System 87 and an accepted rollback generation;
+- define exact pass, fail, and rollback conditions;
+- obtain explicit authorization before activation and cold reboot.
+
+** G4 -- at most one reversible experiment
+
+Only after G1 through G3 may a later slice select one hypothesis.  Source
+comparison, build, activation, reboot, runtime verification, and physical hand
+tests remain separate gates.
+
+* No-change and stop conditions
+
+P2.K1a authorizes none of the following:
+
+- =irqpoll=;
+- ~tsc=unstable~ or another clocksource override;
+- disabling HPET, the watchdog, or TSC checks;
+- blacklisting, unbinding, masking, or writing state for =pinctrl_amd=;
+- ACPI overrides or debugfs writes;
+- BIOS setting changes or firmware flashing;
+- booting ancient unaccepted generations as an assumed safe comparison;
+- custom-kernel or =amdgpu= initrd work;
+- treating P0-F04 or P0-F05 as implicitly included.
+
+Stop if evidence capture requires a mutation rather than a read, live identity
+drifts during capture, a comparison lacks verified rollback, firmware
+compatibility cannot be established for the exact machine, or a new GPIO,
+clock, thermal, storage, kernel, or PID 1 failure appears.
+
+* Qualification ledger
+
+| Avoid this claim | Evidence-safe wording |
+|------------------+-----------------------|
+| “Guile or Shepherd crashed during boot.” | The exact logged PID 1 signal matches BDWGC's intentional handled address-limit probe; Shepherd then started normally. |
+| “All PID 1 segfault logs are benign.” | Only the exact repeated address, IP, mapping, and early-init path are attributed; a changed or repeated signature must reopen the finding. |
+| “There were 100,000 unhandled IRQs.” | IRQ 7 reached a count of 100,000 and crossed Linux's spurious/unhandled threshold before defensive disable. |
+| “=pinctrl_amd= caused the interrupt.” | The AMD GPIO handler was registered but could not claim the repeatedly delivered parent interrupt; the originating source is unknown. |
+| “The BIOS broke TSC.” | TSC and HPET disagreed beyond the watchdog allowance; the generic kernel message does not identify the faulty side. |
+| “TSC is broken.” | Linux rejected TSC relative to HPET on two inspected boots; TSC, HPET, firmware, and kernel behavior remain candidate classes. |
+| “IRQ 7 caused the TSC failure.” | IRQ disable preceded the watchdog warning by about one second; this is correlation only. |
+| “A retained kernel comparison is ready.” | All accepted retained System generations currently use the same Linux 7.0.14 kernel. |
+| “The findings occurred on every prior boot.” | They recurred on two of two boots with privileged evidence; earlier boots were not inspected. |
+| “A compatible BIOS update is available.” | The generic Lenovo page names a different BIOS family; compatibility requires serial-specific confirmation. |
+
+* Closeout state
+
+- P0-F01: closed as an attributed handled probe; no change required.
+- P0-F02: real IRQ storm; source and functional impact remain unknown.
+- P0-F03: real clocksource disagreement with an automatic HPET fallback;
+  faulty side and performance impact remain unknown.
+- P0-F04/P0-F05: outside P2.K1a and explicitly deferred.
+- P2.K1a: read-only attribution complete with no activation or reboot.
+- Successor: no mitigation slice is selected.  Promote G1 evidence collection
+  or a later controlled experiment only through a separate user decision.

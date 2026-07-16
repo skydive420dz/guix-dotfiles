@@ -399,9 +399,31 @@ CLOSED: [2026-07-15 Wed]
 - [X] Pass desktop/session/audio, strict source, retention, and rollback gates;
   retain System 86 as the immediate fallback and System 85 as an older accepted
   fallback without deleting generations or collecting garbage.
-- [X] Record recurrence of the pre-existing Guile PID 1 segfault, IRQ 7 disable,
-  and TSC-to-HPET fallback for later dedicated investigation; do not hide them
-  with a terminal, IRQ, or clocksource workaround.
+- [X] Record recurrence of the early =init[1]= fault log line, IRQ 7 disable,
+  and TSC-to-HPET fallback for later dedicated attribution; do not hide them
+  with a terminal, IRQ, or clocksource workaround.  P2.K1a later proved that
+  the first line is libgc's handled initrd address-limit probe, not a PID 1
+  crash.
+
+* DONE P2.K1a read-only boot-edge attribution
+CLOSED: [2026-07-16 Thu]
+
+- Evidence: [[file:../../../docs/audits/2026-07-16-p2.k1a-boot-kernel-attribution.org][2026-07-16 P2.K1a attribution record]].
+- [X] Close P0-F01 for the exact =0x3fff00= / =0x4d5593= signature: static
+  initrd Guile 3.0.11 was running libgc 8.2.8's intentional handled
+  address-limit probe; Shepherd subsequently remained healthy.
+- [X] Retain P0-F02 as a recurring AMD GPIO parent-IRQ storm whose source and
+  functional impact remain unknown.  The event does not justify =irqpoll= or a
+  =pinctrl_amd= blacklist.
+- [X] Retain P0-F03 as a recurring TSC/HPET disagreement with a
+  defensive automatic HPET fallback and unmeasured performance impact.  The
+  faulty side remains unknown, and the event does not justify a clocksource
+  override.
+- [X] Confirm that accepted retained Systems 75, 80, 81, 83, 84, 85, 86, and
+  87 all use Linux 7.0.14, so no retained-kernel control currently exists.
+- [X] Exclude P0-F04/P0-F05 and defer them to separate wireless work.
+- [X] Make no declaration, boot argument, module, kernel, firmware, generation,
+  activation, reboot, or runtime change.  No successor experiment is selected.
 
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:

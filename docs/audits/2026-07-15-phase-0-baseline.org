@@ -162,30 +162,44 @@ warning-free.  The privileged evidence added this follow-up register:
 
 | ID | Evidence | Classification | Routing |
 |----+----------+----------------+---------|
-| P0-F01 | Early =init[1]= Guile segmentation fault; the same Shepherd PID 1 then loaded its configuration and remained healthy for more than eight hours | current-boot unknown; medium | track recurrence across cold boots before changing Guile, Shepherd, or kernel |
-| P0-F02 | IRQ 7 reached 100,000 unhandled =pinctrl_amd= interrupts and the kernel disabled it; the live counter remains 100,000 | current-boot actionable; medium-high | dedicated kernel/firmware investigation; identify affected GPIO consumers and compare a retained kernel generation; never add =irqpoll= blindly |
-| P0-F03 | TSC skewed by 871,760 ns over a 479,983,210 ns watchdog interval and was rejected; live clocksource is =hpet= | current-boot performance/firmware concern; medium | preserve correctness fallback, then compare latency and recurrence in P2.K1 before any kernel argument |
-| P0-F04 | =regulatory.db= firmware load failed | current configuration gap; low-medium | verify the active regulatory domain and package ownership before changing wireless policy |
-| P0-F05 | WPA supplicant reports =send_event_marker= unsupported about every 30--35 minutes while Wi-Fi and SSH remain connected | recurring log noise; low | correlate with an actual reconnect/scan/roam failure before intervention |
+| P0-F01 | Early =init[1]= logged address =0x3fff00= at IP =0x4d5593= in the initrd's static Guile; Shepherd then started normally | CLOSED by P2.K1a: exact signature is libgc's intentional handled address-limit probe, not a PID 1, Guile, or Shepherd crash | preserve the attribution; no Guile, Shepherd, kernel, or boot workaround |
+| P0-F02 | IRQ 7 reached count 100,000 after crossing Linux's spurious/unhandled threshold with =pinctrl_amd= registered; the kernel disabled it | recurs on two of two inspected boots; source and functional impact unknown; medium-high | retain for a separately accepted complete boot capture and genuine comparison; never add =irqpoll= or blacklist the driver blindly |
+| P0-F03 | TSC disagreed with HPET beyond the watchdog allowance and was rejected; live clocksource is =hpet= | recurs on two of two inspected boots; automatic fallback with unmeasured performance impact and unknown faulty side; medium | leave the fallback unchanged; any comparison requires a separate accepted slice and a genuinely distinct control |
+| P0-F04 | =regulatory.db= firmware load failed | current configuration gap; low-medium; outside P2.K1a | defer to a wireless/regulatory ownership slice before changing wireless policy |
+| P0-F05 | WPA supplicant reports =send_event_marker= unsupported about every 30--35 minutes while Wi-Fi and SSH remain connected | recurring log noise; low; outside P2.K1a | defer unless correlated with an actual reconnect, scan, roam, or connectivity failure |
 | P0-F06 | TPM CRB ACPI region/probe failed and no TPM device is available | firmware/feature unavailable; low unless TPM is required | revisit only if measured boot, sealing, or another TPM use enters scope |
 | P0-F07 | BlueZ/WirePlumber D-Bus rejections are historical or boot-edge entries; current Bluetooth autoconnect, sink selection, and audio pass | historical/boot noise; low | do not change D-Bus policy without a current audio/profile symptom |
 | P0-F08 | ACPI FADT/DSM, SPI metadata, USB power-management, Bluetooth LE capability, and one udev credential warning | firmware/capability noise; low absent symptoms | retain as comparison evidence for later boots |
 
 These findings do not block the narrow terminfo correction or P2.1's
-application-level measurement.  P0-F01 through P0-F05 are routed to the
-separate P2.K1 boot/kernel/firmware track and must be reviewed before any boot or
-kernel tuning.
+application-level measurement.  P0-F01 through P0-F03 were routed to the
+separate P2.K1a read-only attribution track.  P0-F04 and P0-F05 are explicitly
+outside that scope and remain deferred to a later wireless track.
 
-The P1.1 cold-reboot comparison at =2026-07-15 17:47 EDT= confirmed that
-P0-F01, P0-F02, and P0-F03 recur.  The boot again logged an early =init[1]=
-Guile segmentation fault, disabled =pinctrl_amd= IRQ 7 after exactly 100,000
-unhandled interrupts, and rejected unstable TSC before selecting HPET.  The
-new TSC sample skewed by 876,317 ns over 475,133,152 ns, and the live
-clocksource is =hpet=.  P0-F04 through P0-F08 were not evaluated by this narrow
-comparison probe.  These are confirmed pre-existing boot findings, not new
-Kitty/terminfo regressions; they remain routed to P2.K1 without adding =irqpoll=,
-=tsc=unstable=, or
-another workaround in P1.1.
+The P1.1 cold-reboot comparison at =2026-07-15 17:47 EDT= confirmed that the
+three exact boot-edge signatures recur: the early =init[1]= fault log line,
+IRQ 7 disable at count 100,000 with =pinctrl_amd= registered, and TSC rejection
+before HPET selection.  The new TSC sample differed by 876,317 ns over
+475,133,152 ns, and the live clocksource is =hpet=.  P0-F04 through P0-F08 were
+not evaluated by this narrow probe.  These are pre-existing observations, not
+Kitty/terminfo regressions.
+
+** P2.K1a read-only follow-up -- 2026-07-16
+
+[[file:2026-07-16-p2.k1a-boot-kernel-attribution.org][The dedicated P2.K1a record]] proves that the first signature is the initrd's
+static Guile 3.0.11 executing libgc 8.2.8's handled address-limit probe.  It
+closes P0-F01 without a change.  P0-F02 remains a real AMD GPIO parent-IRQ
+storm whose originating consumer and functional impact are unknown.  P0-F03
+remains a real TSC/HPET disagreement for which Linux selected HPET
+automatically; the faulty side and material cost are unknown.
+
+The two inspected boots used the same Linux 7.0.14 boot stack.  All accepted
+retained System generations also resolve to that kernel, so no retained-kernel
+comparison is currently available.  P2.K1a made no boot-parameter, module,
+kernel, firmware, activation, or runtime change.  In particular, it did not add
+=irqpoll=, force a clocksource, blacklist =pinctrl_amd=, or recommend a BIOS
+image.  Any later privileged capture, cold boot, or controlled comparison is a
+separate acceptance decision.
 
 * SSH and terminal contract
 
@@ -233,7 +247,7 @@ to the System recovery package list:
 | User desktop services/audio | complete checker passes | preserve |
 | Emacs/EXWM performance | 8.664 s init; 580 GCs/46.039 s in 1h49m | retain as a dated feasibility observation; P2.1 owns the comparison baseline |
 | Generations/store | many duplicate candidates; 52% root use | inventory only; cleanup waits for backup policy |
-| System Shepherd/root logs | all registered services/timers started; no filtered secure/debug/Guix-daemon finding; boot warnings are registered above | Phase 0 boundary complete; route P0-F01 through P0-F08 without hiding them |
+| System Shepherd/root logs | all registered services/timers started; no filtered secure/debug/Guix-daemon finding; boot messages are registered above | Phase 0 boundary complete; P0-F01 is attributed and closed, while P0-F02 through P0-F08 retain their explicit routes |
 
 * Activation and acceptance boundaries
 
@@ -251,8 +265,8 @@ Status: =VERIFIED 2026-07-15 06:35 EDT=.
 
 The user ran the staged read-only probe through local interactive sudo.  System
 Shepherd enumeration and current-boot kernel/root-log inspection completed.
-The service layer is converged, while P0-F01 through P0-F08 preserve every
-non-clean finding and its follow-up boundary.
+The service layer is converged.  The register preserves P0-F01's later
+resolution and the follow-up boundary for P0-F02 through P0-F08.
 
 * DONE Slice P1.1 -- Install the Kitty terminfo output
 CLOSED: [2026-07-15 Wed]
@@ -344,10 +358,11 @@ Emacs server are healthy.  Manually redefining =TERM= hides the ownership bug.
   physical default sink and finite playback; retention verification and the
   read-only rollback drill pass; profile, current, and booted System links all
   converge on System 87.
-- Residual risks: P0-F01 through P0-F03 recur as recorded above; P0-F04 through
-  P0-F08 remain registered.  None is caused or masked by the terminfo change.
-- Next action: publish and run P2.1's accepted measurement protocol; P2.K1
-  remains backlog and numeric targets remain unset.
+- Residual risks: P0-F01's exact recurring signature is now attributed and
+  closed; P0-F02/P0-F03 remain open; P0-F04 through P0-F08 remain registered.
+  None is caused or masked by the terminfo change.
+- Later follow-on: P2.1, P2.2, and P2.K1a completed without selecting a tuning
+  or mitigation target.  Any successor remains separately promoted.
 
 * Phase 0 acceptance
 
