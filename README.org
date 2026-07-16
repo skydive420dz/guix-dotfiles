@@ -6,15 +6,15 @@ Source of truth for the guixpc experiment machine.
 
 The numbered stabilization pass is complete through Slice 19.  The later dated
 polishing roadmap has accepted Phase 1's SSH/terminal contract, Phase 2's first
-measurement-only Emacs/EXWM baseline, and P2.2's one-shot startup-attribution
-evidence.  P2.K1a also completed the read-only attribution of three recurring
-boot-edge messages: it closed P0-F01 as a handled libgc probe and retained the
-IRQ 7 storm and TSC/HPET disagreement as unresolved P0-F02/P0-F03.  Rafael
-judged R1's 8.712893-second instrumented Emacs/EXWM
-session-start window not materially disruptive in normal use because Emacs
-starts once during boot.  P2.2 therefore closed without tuning; P2.3 remains
-=BACKLOG= and unselected.  Keep this section aligned with accepted machine state
-so the repo records intent, not only implementation commits.
+measurement-only Emacs/EXWM baseline, P2.2's one-shot startup attribution,
+P2.K1a's read-only boot-edge attribution, and P2.S1a's passive
+system/build/storage baseline.  P2.S1a found a healthy low-pressure idle state
+and ample current capacity.  It also confirmed that periodic SSD TRIM and SMART
+visibility have no declared owner, while Guix's one-job/four-core build policy,
+HPET cost, sustained thermals, and real boot-to-ready time remain unmeasured.
+No tuning or maintenance action follows from that point sample.  Keep this
+section aligned with accepted machine state so the repo records intent, not
+only implementation commits.
 
 The canonical record for the completed numbered roadmap is
 [[file:docs/audits/2026-07-12-full-configuration-audit.org][the 2026-07-12 full configuration audit]].  It records verified state,
@@ -27,21 +27,38 @@ the opt-in observer, rejected attempts and corrections, accepted trace, and
 non-causal interpretation rules.  [[file:docs/audits/2026-07-16-p2.k1a-boot-kernel-attribution.org][The P2.K1a boot-edge attribution record]] owns
 the two-boot recurrence matrix, resolved P0-F01 signature, unresolved
 P0-F02/P0-F03 boundaries, and successor gates.
+[[file:docs/audits/2026-07-16-p2.s1a-system-performance-baseline.org][The P2.S1a system-performance baseline]] owns the passive CPU, thermal,
+memory, storage, Guix-build, generation, and timing observations; its confirmed
+coverage gaps; and the boundary between observation, benchmarking, tuning, and
+destructive maintenance.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
 
 ** Active follow-on
 
-No performance follow-on is currently promoted.  P2.3 remains =BACKLOG=: one
-natural-state trace does not establish repeatability, causality, removability,
-or an expected saving, and there is no material user complaint to investigate.
-No IRQ, clocksource, kernel, or firmware mitigation is promoted either.
-P2.K1a found no accepted retained kernel control and authorizes no boot or
-runtime change; any successor needs a separately accepted evidence or
-experiment slice.
+No performance or maintenance follow-on is currently promoted.  P2.3 remains
+=BACKLOG= because there is no material Emacs-startup complaint.  P2.S1b retains
+controlled system/build measurement, and P2.S1c retains at most one later
+reversible experiment; neither has a selected workload, target, or change.
+Generation deletion and store collection remain separate Phase 5 work behind
+the restore-tested-backup gate.  No IRQ, clocksource, kernel, firmware, TRIM,
+SMART, governor, swap, scheduler, or Guix-build-policy change is authorized by
+the completed passive reviews.
 
 ** Completed
+
+- [X] P2.S1a: passive system/build/storage baseline
+  The synchronized System 87 host was observed without privilege, load,
+  cleanup, activation, or reboot.  CPU, memory, I/O pressure, swap, idle
+  temperatures, and filesystem capacity were healthy at capture time.  The
+  discard-capable SSD has neither a continuous-discard mount nor a declared
+  periodic =fstrim= owner, and SMART health is not observable with the current
+  package/service set.  Guix explicitly permits one four-core derivation at a
+  time; that is a conservative policy and an untested throughput hypothesis,
+  not a confirmed defect.  Forty-four duplicate profile links remain only
+  Phase 5 inventory evidence; no generation was deleted and no garbage was
+  collected.
 
 - [X] P2.K1a: read-only boot-edge kernel attribution
   Two of two inspected boots reproduced the exact early initrd-Guile signal,

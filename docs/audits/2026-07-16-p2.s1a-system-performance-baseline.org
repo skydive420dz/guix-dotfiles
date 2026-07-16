@@ -1,0 +1,605 @@
+#+title: GuixPC P2.S1a Passive System, Build, and Storage Baseline
+#+date: 2026-07-16
+#+status: complete
+
+* Outcome and boundary
+
+P2.S1a establishes a passive, read-only baseline for GuixPC's system,
+build, and storage state.  It observes the machine in its natural low-load
+state and maps each important runtime value to repository, channel, kernel, or
+platform ownership.
+
+Rafael authorized this bounded slice with =proceed= on 2026-07-16.  The live
+capture ran as the ordinary UID 1000 user.
+
+The slice changed no declaration, package, mount, service, process, governor,
+scheduler, swap setting, build policy, generation, garbage-collection state,
+or runtime state.  It used no privilege, synthetic load, benchmark, SMART
+self-test, trim command, cleanup, activation, or reboot.
+
+The evidence supports these conclusions:
+
+- The machine had negligible CPU, memory, and I/O pressure, cool idle sensors,
+  unused swap, and ample filesystem and inode headroom at capture time.
+- Periodic SSD TRIM has no current declarative or runtime owner.  This is a
+  confirmed maintenance-coverage gap, not evidence of current SSD failure or
+  slowness.
+- SMART health is not observable with the current package and service set.
+  This is a confirmed observability gap, not evidence that the drive is
+  unhealthy.
+- Guix explicitly permits one derivation at a time with four cores available
+  inside that derivation.  This is a conservative, deterministic policy whose
+  throughput and interactivity effects remain unmeasured.
+- Current store and profile state does not make cleanup urgent.  Forty-four
+  duplicate generation links remain inventory evidence only; generation
+  deletion and store collection are separate Phase 5 operations behind the
+  accepted backup and rollback gates.
+- The current graphical process timestamps do not measure boot-to-desktop
+  readiness because that session was deliberately restarted long after boot.
+- No evidence from this point sample justifies changing the CPU governor,
+  clocksource, transparent huge pages, swap or zram, I/O scheduler, read-ahead,
+  Guix job count, or thermal policy.
+
+P2.S1b measurement and P2.S1c experimentation remain =BACKLOG= and unselected.
+No numeric performance target follows from P2.S1a.
+
+This is deliberately narrower than the agenda's former broad P2.S1 heading:
+passive observation is complete here; a controlled benchmark needs a separately
+accepted workload and protocol; and any tuning or maintenance change needs its
+own source, build, activation, runtime, rollback, and stop gates.  Generation
+pruning and store collection are not performance tuning.
+
+Related records:
+
+- [[file:2026-07-15-phase-0-baseline.org][Phase 0 and P1.1 baseline]];
+- [[file:2026-07-15-p2.1-emacs-exwm-measurement.org][P2.1 Emacs/EXWM measurement]];
+- [[file:2026-07-16-p2.2-emacs-startup-attribution.org][P2.2 startup attribution]];
+- [[file:2026-07-16-p2.k1a-boot-kernel-attribution.org][P2.K1a boot-edge attribution]];
+- [[file:~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org][editable agenda roadmap]].
+
+* Truth vocabulary
+
+- =OBSERVED=: directly read from the synchronized live host during this slice.
+- =CONFIRMED CONFIGURATION=: directly matched between source and runtime; it
+  does not by itself establish performance impact.
+- =COVERAGE GAP=: an expected maintenance owner is absent from both source and
+  the generated runtime graph; impact remains separately qualified.
+- =HYPOTHESIS=: a plausible measurable effect that has not been tested.
+- =UNKNOWN=: the evidence does not establish the value, history, or effect.
+- =NOT AUTHORIZED=: no mutation, load, activation, cleanup, or reboot follows
+  from this document.
+
+A low-pressure point sample is not a claim that the machine is never
+pressured.  An absent monitor is not a fault report.  A configured limit is not
+a benchmark result.  A duplicate profile link is not a reclaimable byte count.
+
+* Evidence provenance and controls
+
+** Host, repository, and generations
+
+| Item | Accepted value |
+|------+----------------|
+| Host and user | =guixpc=; =skydive420dz=; UID 1000 |
+| Kernel | Linux =7.0.14= |
+| Repository base | =c4ec911ac1faa7aad5b006394ed59266eb1a4832= |
+| Repository state | clean, synchronized with =origin/main= at =0/0= before and after collection |
+| Current boot ID | =6a94d3ec-1c03-40cd-a678-d8a372bf7df2= |
+| Current and booted System | generation 87; =/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system= |
+| Current Home | generation 42; canonical Home =/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home= |
+| Current Guix pull | generation 5; =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile= |
+| Channel pins | Guix =a8391f2=; Nonguix =3b66965=; sk-guix =b84ff24= |
+
+The active stored operating-system declaration is byte-identical to
+=guix/systems/guixpc.scm=, SHA-256
+=34398678c3fe52e31f7f0cbf623b9f6f6e5796b132d3e9ce25dd30aeac1ed887=.
+Current and booted System convergence therefore holds for this inspection.
+
+** Collection conditions
+
+- Observation occurred approximately 22 hours into the current boot.
+- The desktop and Emacs were active, but no build, substitute download,
+  compilation, benchmark, stress workload, or intentional I/O workload was
+  started.
+- Multiple quick frequency and load reads are natural-state samples, not a
+  controlled distribution.
+- The retention tool was used only through its =inventory=, =plan=, and
+  =verify= paths.  Verification passed and left no temporary residue.
+- Repository identity, boot ID, current/booted System, and clean state were
+  rechecked after collection.
+- Persistent evidence omits MAC addresses, disk serials, UUIDs, and PARTUUIDs.
+
+* Ranked findings
+
+| ID | Classification | Finding | Current impact | Successor gate |
+|----+----------------+---------+----------------+----------------|
+| P2S1-F01 | confirmed coverage gap | The discard-capable SSD has no continuous-discard mount and no periodic =fstrim= service or scheduler | No current latency or failure symptom established | Review a bounded periodic-TRIM ownership slice; build, activation, schedule, and rollback remain separate |
+| P2S1-F02 | confirmed observability gap | =smartctl=, =smartd=, and a SMART service are absent | Drive health, wear, and device error history are unknown; no failure is inferred | First choose a sanitized, read-only capture or a declarative monitoring contract; do not start a self-test implicitly |
+| P2S1-F03 | confirmed configuration plus performance hypothesis | Guix uses =--max-jobs=1 --cores=4= | One derivation can use four cores; comparative throughput and responsiveness are unknown | Select a representative source-build workload and controlled matrix before changing the policy |
+| P2S1-F04 | measured maintenance inventory | Store size is about 35 GiB and 44 duplicate profile links are identified | Root/store filesystem is only 52 percent used; cleanup is not urgent | Restore-tested backup, retention decision, deletion plan, and store collection remain separate Phase 4/5 gates |
+| P2S1-F05 | confirmed observability gap | No durable boot-to-desktop-ready marker exists | Current session timestamps cannot answer boot-to-ready latency | Define readiness and retain timestamps across a separately accepted ordinary cold boot |
+| P2S1-F06 | unknown | Sustained thermals, fan behavior, and throttling history were not measured | Idle temperatures are cool; load behavior remains unknown | Promote only for a concrete thermal complaint or a bounded load-observation question |
+| P2S1-F07 | configuration-hygiene risk | Build concurrency and substitute constants have multiple source owners | Values agree enough to operate today, but later drift is possible | Consolidate only in a dedicated refactor with unchanged-behavior gates |
+
+P0-F03 remains a separate unresolved clocksource finding.  Current HPET use is
+an unquantified workload variable, not a new P2.S1a defect or an authorization
+to force TSC.
+
+* CPU, idle policy, and clocksource
+
+** Observed topology and policy
+
+| Item | Observation |
+|------+-------------|
+| Processor | AMD Ryzen 3 2200G |
+| Topology | 4 physical cores, 4 threads, 1 socket, 1 NUMA node |
+| Frequency driver | =acpi-cpufreq= |
+| Active governor | =schedutil= on policies 0 through 3 |
+| Available governors | =conservative ondemand userspace powersave performance schedutil= |
+| Nominal policy bounds | 1.6 through 3.5 GHz |
+| Boost | enabled, =1= |
+| Idle driver/governor | =acpi_idle= / =menu= |
+| Enabled idle states | =POLL=, =C1=, and =C2= |
+| Current clocksource | =hpet=; available =hpet acpi_pm= |
+
+Sequential instantaneous frequency reads ranged approximately from 2.10 to
+3.69 GHz.  A value above the nominal policy maximum is consistent with enabled
+boost; it is not evidence of a frequency-control defect.  Frequency reads are
+not residency percentages or performance measurements.
+
+The final natural-state load sample was =0.21 0.07 0.02=.  CPU pressure-stall
+averages for 10, 60, and 300 seconds were all zero.  A five-second =vmstat=
+observation showed 100 percent idle and no I/O wait after its cumulative first
+row.  These facts establish a quiet capture window only.
+
+No GuixPC declaration selects a CPU governor.  The active kernel has
+=CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y=, so the runtime governor is inherited
+kernel/platform behavior.  No repository kernel argument selects a
+clocksource, CPU scheduler, frequency policy, discard mode, or zram behavior.
+
+The current HPET clocksource is the automatic fallback documented by P2.K1a
+after Linux rejected TSC in this boot.  P2.S1a did not compare clocksource
+performance.  Any later microbenchmark must record HPET as a confounder rather
+than silently overriding it.
+
+* Thermals and fan visibility
+
+| Sensor | Natural-state observation |
+|--------+---------------------------|
+| CPU =k10temp= Tctl | 28.625 C |
+| GPU =amdgpu= edge | 28.0 C |
+| SSD =drivetemp= | 29.0 C |
+| Wi-Fi | 34.0 C |
+
+The kernel exposes these sensors through =hwmon= without requiring a separate
+=sensors= command.  No readable fan RPM/PWM channel, thermal history,
+critical-threshold ledger, or throttling counter was found in the inspected
+interfaces.  No =thermald=, TLP, TuneD, power-profiles-daemon, Powertop service,
+logging owner, or alert owner is declared or generated.
+
+Classification: cool =OBSERVED= idle readings and sustained behavior
+=UNKNOWN=.  “No thermal throttling” would exceed the evidence.
+
+* Memory, swap, and pressure
+
+| Item | Observation |
+|------+-------------|
+| Physical memory | approximately 31 GiB total; 1.8 GiB used; 29 GiB available |
+| Swap | approximately 3.7 GiB partition; priority -1; 0 used |
+| Memory PSI | =some= and =full= averages all zero |
+| zram | no device or service |
+| zswap | disabled |
+| =vm.swappiness= | 60 |
+| =vm.vfs_cache_pressure= | 100 |
+| Transparent huge pages | enabled =always=; defrag =madvise= |
+
+The approximately 2.5 GiB slab snapshot was mostly reclaimable
+(=SReclaimable= approximately 2.216 GiB), so it does not establish a leak.
+The largest resident process in the point sample was Emacs at approximately
+381 MiB; X, PID 1, and Picom were each below 100 MiB.  P2.1/P2.2, not this
+system baseline, own application-specific interpretation.
+
+The disk swap partition is explicitly declared at
+=guix/systems/guixpc.scm:139-141=; its no-priority and no-discard behavior is
+inherited from pinned Guix defaults.  No pressure or swap I/O symptom supports
+adding zram, changing swappiness, or altering transparent huge pages now.
+
+* Storage and filesystem state
+
+** Device and queue
+
+| Item | Observation |
+|------+-------------|
+| Device model | Samsung SSD 860 EVO 250GB, SATA, non-rotational |
+| Active scheduler | =mq-deadline= |
+| Read-ahead | 128 KiB |
+| Request queue | 64 requests |
+| Write cache | write back |
+| Discard granularity | 512 bytes |
+| Maximum discard bytes | 2,147,450,880 |
+
+No repository kernel argument or udev rule selects =mq-deadline=.  The active
+kernel builds the deadline scheduler in; its comparative performance on this
+workload is unmeasured.  Presence and a quiet I/O snapshot do not establish
+that it is optimal.
+
+** Filesystems and capacity
+
+| Mount | Type and relationship | Use at capture | Relevant options |
+|-------+-----------------------+----------------+------------------|
+| =/= | ext4 on the approximately 76 GiB root partition | 37 GiB used; 35 GiB available; 52 percent; 31 percent inode use | =rw,relatime=; no continuous =discard= |
+| =/gnu/store= | read-only bind on the root filesystem | shares root capacity; store content about 35 GiB | =ro,noatime= |
+| =/home= | ext4 on the approximately 152 GiB partition | 2.2 GiB used; 139 GiB available; 2 percent; 1 percent inode use | =rw,relatime=; no continuous =discard= |
+| EFI | vfat | approximately 260 MiB partition; negligible use | inherited mount policy |
+
+The repository declares =/=, =/home=, and EFI without performance flags or
+custom mount options at =guix/systems/guixpc.scm:143-156=.  Their empty/default
+options come from pinned Guix.  The immutable store bind is inherited Guix
+behavior.
+
+The ext4 superblock interfaces reported =errors_count= zero for the root and
+home filesystems and zero first/last error timestamps.  This is limited
+filesystem evidence, not a substitute for device SMART health or a lifetime
+guarantee.
+
+** TRIM ownership
+
+The following facts jointly establish P2S1-F01:
+
+1. The SSD advertises discard support.
+2. Neither ext4 mount uses continuous =discard=.
+3. Current-boot block counters recorded zero discard requests.
+4. No =fstrim= or mcron service appears in the generated root Shepherd graph.
+5. No periodic =fstrim= declaration exists in the repository.
+6. The =fstrim= binary is present through =util-linux=, but a binary is not a
+   scheduler or maintenance owner.
+
+Zero discard operations in a roughly 22-hour boot do not prove that the drive
+has never been trimmed or that no historical manual command was run.  The last
+manual trim is =UNKNOWN=.  The source/runtime ownership gap is nevertheless
+=CONFIRMED=.
+
+Pinned Guix provides an optional =fstrim-service-type= at
+=gnu/services/linux.scm:397-464=, with a weekly Sunday-midnight default.  That
+available implementation was inspected only; P2.S1a did not add or invoke it.
+
+** SMART ownership
+
+Pinned Guix offers =smartmontools= 7.5, but the package is neither declared nor
+installed and the generated service graph contains neither =smartctl= nor
+=smartd=.  Device health, wear indicators, media/device errors, and self-test
+history therefore remain unknown.
+
+A later read-only capture must be explicitly bounded, privileged only as
+needed, and sanitized of serial/WWN identifiers.  Starting a short or extended
+SMART self-test is a stateful experiment and is not implied by “inspect SMART.”
+
+* Guix daemon and build ownership
+
+** Confirmed runtime policy
+
+The live daemon includes:
+
+#+begin_src text
+--cores=4
+--max-jobs=1
+--max-silent-time=3600
+--timeout=86400
+--log-compression=gzip
+--discover=no
+#+end_src
+
+The configured substitute set is Bordeaux, Guix CI, and Nonguix.  No active
+daemon builder child was present during the idle snapshot.
+
+Pinned Guix documents =--cores=N= as the number of cores usable by each
+derivation and =--max-jobs=N= as the maximum number of parallel build jobs.
+The accepted interpretation is therefore:
+
+#+begin_quote
+Guix may build one derivation at a time, and that derivation may use up to four
+cores when its build system honors the exported core count.
+#+end_quote
+
+This can cap inter-derivation concurrency while preserving CPU availability for
+one internally parallel build.  It does not prove that normal operations are
+slow, that a different pair is faster, or that four cores would be safe for
+each of several simultaneous jobs.  Many normal operations use substitutes,
+which further limits what can be inferred from configuration alone.
+
+** Source ownership and drift risk
+
+- =guix/systems/guixpc.scm:115-119= explicitly owns
+  =--cores=4 --max-jobs=1=; the live daemon matches.
+- =scripts/guix-build-gate= repeats the fixed concurrency in its candidate
+  build paths.
+- =scripts/guix-bootstrap:401-403= repeats it for bootstrap.
+- Substitute URL constants also exist in the System/Nonguix assembly and in
+  =guix-build-gate=, =guix-reconfigure=, and =guix-bootstrap=.  The effective
+  set agrees today, while ordering and ownership differ.
+
+The explicit cap and consistent gates are a strength: builds are deterministic
+and the policy cannot silently expand local load.  The duplicated literals and
+missing recorded rationale are a configuration-hygiene risk.  Consolidation is
+not justified inside a measurement slice because unchanged behavior would need
+its own tests.
+
+The Guix client revision in the current pull profile and the package hosting
+the long-running daemon serve different lifecycle roles.  Their different
+identities are not classified as a version mismatch without a demonstrated
+protocol or behavior problem.
+
+* Store, generation, and garbage-collection boundary
+
+| Item | Observation |
+|------+-------------|
+| Store content | approximately 35 GiB; 32,162 entries |
+| Root/store filesystem | 52 percent used; approximately 35 GiB available |
+| GC roots | 122 at capture |
+| Current generation numbers | System 87; Home 42; Pull 5 |
+| Existing generation-link counts | System 86; Home 42; Pull 5 |
+| Duplicate-link candidates | System 27; Home 17; Pull 0 |
+| Retention verifier | =PASS=; current and protected targets resolve; no residue |
+
+The 44 duplicate-link candidates are profile links whose target duplicates
+another retained link.  They are not 44 independently reclaimable closures,
+and their removal would not itself collect store objects.  Generation-link
+deletion and =guix gc= are separate operations with separate rollback and
+impact boundaries.
+
+No automatic generation-cleanup or store-GC timer exists.  Guix's inherited
+=log-cleanup= service removes old build logs only; it is not store garbage
+collection.  =scripts/guix-generation-retention= intentionally has no apply or
+GC action and continues to fail closed around current/protected targets.
+
+Current capacity makes destructive cleanup non-urgent.  D-08 and D-09 remain
+hard gates: restore-tested backup precedes cleanup/GC, and the retention policy
+must follow inventory and rollback evidence.  P2.S1a authorizes neither.
+
+The Phase 0 values are a dated neighboring snapshot, not a trend series.  The
+small differences in store entries, GC-root counts, memory use, and Home use
+cannot establish growth rate, leak, or reclaim opportunity from two nearby
+observations.
+
+* Boot and session timing boundary
+
+The current boot began at =2026-07-15 17:47:20 EDT=.  Read-only process start
+times yielded these milestones:
+
+| Process boundary | Approximate offset from PID 1 start |
+|------------------+-------------------------------------|
+| PID 1 Shepherd process | +0.23 seconds |
+| System D-Bus process | +7.14 seconds |
+| User Shepherd, user D-Bus, PipeWire, and WirePlumber processes | +8.46 seconds |
+| NetworkManager process | +9.16 seconds |
+
+Process creation is not necessarily service readiness and does not identify a
+critical path.
+
+The current =xinit=, X, Emacs, and Picom processes began approximately 14 hours
+22 minutes after boot during the accepted P2.2 fresh-session run.  Their useful
+within-session observations were:
+
+| Boundary | Current restarted-session observation |
+|----------+----------------------------------------|
+| X process to Emacs process | approximately 0.63 seconds |
+| Emacs process to server socket | approximately 2.43 seconds |
+| Emacs process to =after-init-time= | approximately 8.84 seconds |
+| Emacs-reported =emacs-init-time= | 7.919856 seconds |
+
+These rows are not boot-to-EXWM or desktop-ready measurements.  P2.2 owns their
+instrumentation and interpretation.  =after-init-time= is also not a defined
+visible-EXWM-ready marker.
+
+Phase 0 reconstructed one earlier boot at approximately 17.7 seconds from PID
+1 start to Emacs initialization completion.  That remains a historical,
+single-boot reconstruction; it is not a current sample, distribution,
+first-ready marker, or critical-path attribution.
+
+A valid successor needs a versioned definition of “ready,” retained timestamps
+that survive an ordinary cold boot, and explicit source/build/activation/
+runtime/hand-test gates.  P2.S1a did not add instrumentation or request a
+reboot.
+
+* Declarative and inherited ownership matrix
+
+| Surface | Current owner | P2.S1a conclusion |
+|---------+---------------+-------------------|
+| Kernel and firmware | Nonguix transformation pinned by =guix/channels.scm= | Linux 7.0.14 and current firmware are accepted provenance, not a tuning choice |
+| Kernel arguments | Guix defaults plus =guix/systems/guixpc.scm:52-55= | No performance, governor, scheduler, discard, zram, or TSC argument |
+| CPU governor | active kernel default and platform driver | inherited =schedutil=; no repo override |
+| Session/display power | =guix/systems/guixpc.scm:121-128= and =shell/xinitrc:53-62= | idle/suspend handling is explicit; X blanking/DPMS is ten minutes |
+| Thermal sensing/control | kernel =hwmon=; no declarative userspace owner | current sensors visible; history, alerting, fan data, and load behavior absent |
+| Swap | =guix/systems/guixpc.scm:139-141= plus Guix defaults | disk swap exists and was unused; no zram/zswap policy |
+| Filesystems | =guix/systems/guixpc.scm:143-156= plus Guix defaults | ordinary ext4 options; no continuous discard |
+| Store mount | inherited Guix filesystem assembly | read-only, no-atime bind on root filesystem |
+| Block scheduler | active kernel/platform | inherited =mq-deadline=; comparative performance unknown |
+| Periodic TRIM | no owner | confirmed coverage gap; optional Guix service exists but is not configured |
+| SMART | no package/service owner | confirmed observability gap |
+| Guix build concurrency | =guix/systems/guixpc.scm:115-119= and helper literals | one job/four cores; performance hypothesis only |
+| Generation retention | =scripts/guix-generation-retention= | strong read-only inventory and rollback verification; no apply/GC action |
+| Store collection | no timer or repo action | intentionally manual/unimplemented; Phase 5 only |
+| Boot/session instrumentation | bounded Startx logs plus Emacs-specific collectors | no durable whole-system desktop-ready marker |
+
+* Strong points
+
+- Current and booted System converge, the live declaration matches repository
+  source, channel pins are explicit, and the checkout stayed synchronized and
+  clean through collection.
+- Natural-state CPU, memory, and I/O pressure were negligible; idle
+  temperatures were cool; swap was unused; and there is substantial current
+  capacity and inode headroom.
+- CPU boost, ACPI idle states, discard capability, and ext4 error counters are
+  visible through standard kernel interfaces without adding a monitoring stack.
+- Guix build limits are explicit and consistent across the daemon and guarded
+  build workflows, even though the policy has not been comparatively measured.
+- Generation tooling inventories, protects, plans, and verifies without
+  implementing a destructive apply path.
+- Existing build and activation helpers preserve channel/source provenance and
+  keep candidate build verification separate from live activation.
+- The repository already has bounded log and invariant patterns that a later
+  collector can reuse instead of inventing an unrelated framework.
+
+* Weak points, unknowns, and non-findings
+
+** Confirmed weak points
+
+- Periodic TRIM and SMART visibility have no current owner.
+- Build/substitute policy literals have multiple owners and can drift.
+- Whole-system boot-to-ready, sustained thermal, and broad performance history
+  are not durably instrumented.
+
+** Unknowns that remain open
+
+- actual SMART health, wear, error counts, and self-test history;
+- last historical manual trim;
+- sustained thermal behavior, fan response, and throttling;
+- HPET's cost in real user workloads;
+- scheduler/read-ahead comparative behavior;
+- swap behavior under real pressure;
+- Guix build throughput and interactivity under another concurrency policy;
+- boot-to-visible-desktop-ready latency and its critical path;
+- reclaimable store bytes after any future generation-link decision.
+
+** Configuration changes not supported by this evidence
+
+- replacing =schedutil= or =mq-deadline=;
+- forcing TSC or another clocksource;
+- enabling zram/zswap or changing swap/sysctl/THP values;
+- changing read-ahead or write-cache policy;
+- increasing =--max-jobs= or changing =--cores=;
+- installing a thermal-control daemon solely because one exists;
+- deleting generations, scheduling =guix gc=, or estimating reclaim from link
+  count alone.
+
+* Qualification ledger
+
+| Claim | Status | Qualification |
+|-------+--------+---------------|
+| The machine was healthy in the captured natural state | =OBSERVED= | low pressure, cool sensors, no swap, and ample space; not a load test |
+| CPU governor, boost, and idle policy are active | =OBSERVED= | capability and configuration, not proof of optimality |
+| Memory or slab is leaking | =NOT ESTABLISHED= | one snapshot; most observed slab was reclaimable |
+| The SSD supports discard | =OBSERVED= | support does not establish a maintenance schedule |
+| Periodic TRIM is declaratively configured | =FALSE FOR CURRENT SYSTEM= | no repository or generated-service owner; historical manual use unknown |
+| The SSD is healthy or failing | =UNKNOWN= | SMART unavailable; ext4 error counters alone are insufficient |
+| One build job is too conservative | =HYPOTHESIS= | no representative build or concurrency comparison |
+| Store cleanup is urgent | =NOT ESTABLISHED= | 52 percent use and 35 GiB free; cleanup remains recovery-gated |
+| Current timestamps measure boot-to-EXWM | =FALSE= | graphical session was manually restarted long after boot |
+| HPET causes material user-visible slowness | =UNKNOWN= | no matching workload comparison |
+| Sustained thermal throttling exists | =UNKNOWN= | no load protocol, throttle history, or fan telemetry |
+
+* Explicit non-goals and stop conditions
+
+P2.S1a did not and does not authorize:
+
+- =stress-ng=, =fio=, =dd=, =hdparm= timing, or another synthetic load;
+- a timed Guix build, =--no-substitutes= build, cache reset, download,
+  substitute comparison, or change to cores, jobs, timeouts, or endpoints;
+- a SMART short, long, or conveyance test or an assertion about drive health;
+- =fstrim= or a discard, mount, scheduler, read-ahead, or write-cache change;
+- a governor, boost, idle-state, THP, swappiness, zram/zswap, NUMA, sysctl, or
+  clocksource change;
+- a generation deletion, reclaim estimate, store collection, automatic GC, or
+  retention-policy change;
+- a Home/System build or activation, service restart, EXWM restart, reboot, or
+  cold-boot measurement;
+- a persistent monitoring daemon, package addition, or alert policy.
+
+Stop and split the work when observation requires privilege, sustained load,
+cache manipulation, a device command with side effects, a new readiness marker,
+an activation, or a reboot.  A missing metric stays =UNKNOWN= until that new
+boundary is explicitly accepted.
+
+* Successor choices and gates
+
+No successor is promoted by this document.  The next decision may select one
+of these narrow questions:
+
+1. A storage-maintenance ownership slice: decide whether Guix should own a
+   periodic trim schedule and a sanitized SMART visibility contract.  Package,
+   service, schedule, privilege, build, activation, runtime, hand-test, and
+   rollback decisions must be explicit.
+2. P2.S1b build measurement: choose one representative source-build workload
+   and compare a small safe concurrency matrix without cache manipulation or
+   policy activation.
+3. P2.S1b boot instrumentation: define a user-relevant readiness boundary and
+   retain timestamps across a separately approved ordinary cold boot.
+4. P2.S1b thermal observation: only in response to a concrete thermal question,
+   observe a bounded representative workload without an unreviewed stress test.
+5. P2.S1c: after a measured problem exists, test at most one reversible change
+   with an expected direction, stop condition, rollback, and unchanged-system
+   acceptance gates.
+
+Generation pruning and store collection are not choices in P2.S1b/P2.S1c.
+They remain Phase 5 work behind restore-tested backup and an accepted retention
+contract.
+
+* Representative read-only commands
+
+These command families produced the privacy-safe passive observations.  They
+are reproducible state queries, not a persistent collector or a benchmark:
+
+#+begin_src sh
+hostname; id; date; uname
+cat /proc/sys/kernel/random/boot_id
+git -C ~/Projects/guix-dotfiles status --short --branch
+git -C ~/Projects/guix-dotfiles rev-parse HEAD '@{upstream}'
+readlink -f /run/current-system /run/booted-system
+guix system describe
+
+lscpu
+cat /proc/loadavg
+cat /proc/pressure/cpu /proc/pressure/memory /proc/pressure/io
+cat /sys/devices/system/cpu/cpufreq/policy*/scaling_driver
+cat /sys/devices/system/cpu/cpufreq/policy*/scaling_governor
+cat /sys/devices/system/cpu/cpufreq/policy*/scaling_cur_freq
+cat /sys/devices/system/cpu/cpuidle/current_driver
+cat /sys/class/hwmon/hwmon*/name /sys/class/hwmon/hwmon*/temp*_input
+
+free -h
+cat /proc/swaps
+cat /proc/sys/vm/swappiness /proc/sys/vm/vfs_cache_pressure
+cat /sys/kernel/mm/transparent_hugepage/enabled
+cat /sys/kernel/mm/transparent_hugepage/defrag
+
+lsblk -o NAME,TYPE,SIZE,ROTA,DISC-GRAN,DISC-MAX,SCHED
+findmnt -o TARGET,SOURCE,FSTYPE,OPTIONS
+df -hT / /gnu/store "$HOME"
+df -i / /gnu/store "$HOME"
+cat /sys/block/sda/stat
+
+scripts/guix-generation-retention inventory
+scripts/guix-generation-retention plan
+scripts/guix-generation-retention verify
+#+end_src
+
+Identifier-bearing columns are intentionally absent.  Repeating these commands
+later refreshes state, but values are comparable only when time, uptime,
+workload, kernel, System, source, mounts, and protocol boundaries are recorded.
+
+* Validation and closeout
+
+P2.S1a passes when all of these statements remain true:
+
+- [X] Live host, checkout, boot, current/booted System, Home, Pull, and channel
+  provenance were captured and rechecked.
+- [X] CPU, thermal, memory/swap, pressure, storage/filesystem, Guix daemon,
+  store/profile, and process-timing families were observed without privilege or
+  synthetic load.
+- [X] Runtime values were mapped to explicit repository, inherited Guix,
+  Nonguix, kernel, or platform ownership.
+- [X] Periodic TRIM and SMART visibility were classified as absent owners, not
+  performance regressions or device failures.
+- [X] Guix build concurrency was interpreted from primary manual semantics and
+  retained as an untested policy tradeoff.
+- [X] The current graphical session was rejected as boot-to-ready evidence.
+- [X] Duplicate generation links were kept separate from reclaimable closures,
+  generation deletion, and store garbage collection.
+- [X] MAC addresses, serials, UUIDs, and PARTUUIDs were omitted from retained
+  documentation.
+- [X] No configuration, package, service, mount, benchmark, cleanup,
+  generation, GC, activation, runtime, or reboot mutation occurred.
+- [X] P2.S1b and P2.S1c remain unpromoted and no numeric target was invented.
+
+P2.S1a is complete.  Its most actionable result is the unowned SSD
+maintenance/health contract; its most important performance result is that no
+tuning target has yet earned promotion.

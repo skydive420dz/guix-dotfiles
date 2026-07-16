@@ -425,6 +425,29 @@ CLOSED: [2026-07-16 Thu]
 - [X] Make no declaration, boot argument, module, kernel, firmware, generation,
   activation, reboot, or runtime change.  No successor experiment is selected.
 
+* DONE P2.S1a passive system/build/storage baseline
+CLOSED: [2026-07-16 Thu]
+
+- Evidence: [[file:../../../docs/audits/2026-07-16-p2.s1a-system-performance-baseline.org][2026-07-16 P2.S1a baseline]].
+- [X] Capture CPU policy and idle state, natural-state thermals, memory and
+  swap, filesystem and SSD capabilities, Guix daemon/build ownership, current
+  store/profile pressure, and process timing on the synchronized System 87
+  host.
+- [X] Confirm a healthy point-in-time baseline: negligible pressure, cool idle
+  sensors, no swap use, and ample root, store, home, and inode headroom.
+- [X] Record periodic TRIM as an unowned maintenance gap and SMART as an
+  observability gap.  Neither is evidence that the SSD is currently failing or
+  slow.
+- [X] Keep =--max-jobs=1 --cores=4=, HPET cost, sustained thermals, and true
+  boot-to-ready time as measurement hypotheses or unknowns, not tuning
+  findings.
+- [X] Preserve the 44 duplicate profile-link candidates as Phase 5 inventory
+  only.  Backup/restore evidence remains a hard gate before generation cleanup
+  or store collection.
+- [X] Make no declaration, package, mount, service, governor, scheduler, swap,
+  build-policy, generation, garbage-collection, activation, runtime, or reboot
+  change.  P2.S1b/P2.S1c remain unpromoted.
+
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:
 :created: 2026-07-03
