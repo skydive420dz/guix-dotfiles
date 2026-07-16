@@ -1,6 +1,6 @@
 #+title: GuixPC P2.2 Emacs Startup Attribution
 #+date: 2026-07-16
-#+status: accepted evidence
+#+status: complete
 
 * Outcome and boundary
 
@@ -13,6 +13,11 @@ No GC setting, eager/deferred decision, package, module order, cache, native
 compilation policy, message advice, launcher path, EXWM behavior, Home profile,
 System profile, or kernel setting changes in this slice.  A later P2.3 may test
 at most one replicated, user-relevant hypothesis.
+
+Rafael judged R1's 8.712893-second instrumented Emacs/EXWM session-start window
+not materially disruptive in normal use because Emacs starts once during boot.
+P2.2 therefore closes with no tuning target or configuration change.  P2.3
+remains =BACKLOG= and unselected.
 
 Related records:
 
@@ -433,8 +438,9 @@ delay, that the ordering will repeat, or that changing it would save time.
   work; asynchronous work after return is outside that module.
 - The configured hook-tail markers are exact for the current source-owned hook
   order, not universal Emacs internals after arbitrary future hooks.
-- First visible frame, first EXWM-managed client, first usable input, and the
-  user's perception remain =UNMEASURED=.
+- First visible frame, first EXWM-managed client, and first usable input remain
+  =UNMEASURED=.  Rafael's qualitative no-disruption judgment is acceptance
+  evidence, not a new timestamp or timing invariant.
 - =after-init-time= and the later EXWM bridge have different boundaries.  Do
   not add or compare them as if both were =emacs-init-time=.
 - A large row does not prove harm, causality, removability, repeatability, or
@@ -459,8 +465,9 @@ delay, that the ordering will repeat, or that changing it would save time.
 - [X] Preserve the first valid output externally with empty stderr and reviewed
   SHA-256, then stage its byte-identical copy for the evidence commit.
 - [X] Run live editor/desktop/source gates after extraction.
-- [ ] Review with Rafael whether the observed startup is materially felt.
-  P2.3 remains unselected; P2.2 selects no tuning target from R1 alone.
+- [X] Review with Rafael whether the observed startup is materially felt.  He
+  reported no disruptive behavior in normal use because Emacs starts once
+  during boot; P2.2 selects no tuning target and P2.3 remains unselected.
 
 * Non-goals and stop conditions
 
@@ -505,8 +512,8 @@ later normal restart; no Home/System generation rollback is involved.
 
 * Decision rule and successor
 
-P2.2's evidence portion closes with an attribution map only.  Good evidence
-wording for the accepted observation is:
+P2.2 closes with an attribution map and no tuning change.  Good evidence wording
+for the accepted observation is:
 
 #+begin_quote
 In trace R1, the inclusive =sk-racket= require boundary observed 1.316815
@@ -517,10 +524,10 @@ synchronous dependency and GC work; causality and repeatability are untested.
 Do not write “=sk-racket= caused 1.316815 seconds”, “=sk-racket= is slow”, or
 “changing it will save 1.316815 seconds”.
 
-P2.3 remains =BACKLOG= and unselected pending Rafael's user-felt review.  If it
-is promoted, replicate the same protocol, pair at most one boundary with a
-user-felt delay, and test one reversible hypothesis.  Diffuse attribution or
-no material user complaint closes startup tuning with no configuration change.
+Rafael reported no material disruption from the once-per-boot startup, so P2.3
+remains =BACKLOG= and unselected.  Promote it only if a later concrete user-felt
+complaint emerges; then replicate the same protocol, pair at most one boundary
+with that complaint, and test one reversible hypothesis.
 
 * Evidence
 
@@ -536,5 +543,6 @@ Trace R1 was collected from published =ba087f5= on 2026-07-16.  Its tracked
 artifact, digest, provenance, exact phase partition, inclusive-boundary map,
 collector invariants, rejected attempts, and post-extraction gates are recorded
 above.  No configuration tuning, Home/System activation, or reboot was part of
-P2.2.  The remaining decision is a human review of whether startup delay is
-materially felt; until then P2.3 is not selected.
+P2.2.  Rafael completed the qualitative review on 2026-07-16 and reported no
+material disruption in normal use.  P2.2 is complete without a configuration
+change, and P2.3 remains unselected.

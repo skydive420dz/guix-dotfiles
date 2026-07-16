@@ -7,9 +7,11 @@ Source of truth for the guixpc experiment machine.
 The numbered stabilization pass is complete through Slice 19.  The later dated
 polishing roadmap has accepted Phase 1's SSH/terminal contract, Phase 2's first
 measurement-only Emacs/EXWM baseline, and P2.2's one-shot startup-attribution
-evidence.  Its active follow-on is a user-felt review before any tuning decision
-or P2.3 hypothesis is selected.  Keep this section aligned with accepted machine
-state so the repo records intent, not only implementation commits.
+evidence.  Rafael judged R1's 8.712893-second instrumented Emacs/EXWM
+session-start window not materially disruptive in normal use because Emacs
+starts once during boot.  P2.2 therefore closed without tuning; P2.3 remains
+=BACKLOG= and unselected.  Keep this section aligned with accepted machine state
+so the repo records intent, not only implementation commits.
 
 The canonical record for the completed numbered roadmap is
 [[file:docs/audits/2026-07-12-full-configuration-audit.org][the 2026-07-12 full configuration audit]].  It records verified state,
@@ -26,9 +28,9 @@ through the dated roadmap.
 
 ** Active follow-on
 
-- [ ] Review P2.2 trace R1 with Rafael for a materially felt startup delay.
-  P2.3 remains =BACKLOG= and unselected: one natural-state trace does not
-  establish repeatability, causality, removability, or an expected saving.
+No performance follow-on is currently promoted.  P2.3 remains =BACKLOG=: one
+natural-state trace does not establish repeatability, causality, removability,
+or an expected saving, and there is no material user complaint to investigate.
 
 ** Completed
 
@@ -40,13 +42,16 @@ through the dated roadmap.
   phase.  The largest observed inclusive personal-require boundaries were
   =sk-racket= at 1.316815 seconds, =sk-project= at 1.233377 seconds, and
   =sk-notes= at 1.035355 seconds.  These are associations in one trace, not
-  causal findings or selected tuning targets.
+  causal findings or selected tuning targets.  Rafael judged the instrumented
+  session-start window not materially disruptive, so the slice closed with no
+  configuration change.
 
 - [X] P2.1: reproducible Emacs/EXWM responsiveness baseline
   The first valid protocol-v1 artifact is preserved with all eight invariants
   passing: RPC median/p95 were 4.937/7.492 ms, and launcher preparation was
   37.714 ms first with a 16.175 ms repeated median.  It selected no tuning
-  target; P2.2 first attributes the aggregate initialization boundary.
+  target; P2.2 subsequently attributed the aggregate initialization boundary
+  and also closed without tuning.
 
 - [X] Slice 0: Runtime sanity
   Confirmed the live EXWM/Emacs path, clean repo state, active Guix
@@ -574,7 +579,7 @@ The 8.742822-second P2.1 value ends at =after-init-time=: it includes early
 init, package/window/frame setup, and =init.el=, but excludes after-init hooks,
 the =~/.exwm= command-line argument, EXWM activation, dashboard construction,
 and startup/window hooks.  Static source ownership is documented, but timing
-“blame” requires a fresh process.
+“blame” required the fresh process preserved as trace R1.
 
 The observer is dormant unless the new Emacs process inherits the exact token
 =SK_EMACS_STARTUP_TRACE=p2.2-v1=.  It records selected outer synchronous
@@ -595,7 +600,8 @@ valid output outside the checkout with empty stderr and a SHA-256; do not rerun
 for a prettier number.  A module row includes its synchronous nested work and
 is association in one trace, not exclusive CPU time, causality, stable rank,
 or predicted savings.  See
-[[file:docs/audits/2026-07-16-p2.2-emacs-startup-attribution.org][the P2.2 attribution and paired-start protocol]] before activating it.
+[[file:docs/audits/2026-07-16-p2.2-emacs-startup-attribution.org][the P2.2 attribution record]] for the activation protocol, accepted evidence,
+ranking, and no-tuning decision.
 
 The unmanaged Breadcrumb ELPA tree found by the audit was not used by this
 configuration.  It is quarantined outside =package-user-dir= at
