@@ -23,11 +23,14 @@ stabilization slice; new work is promoted through the dated roadmap.
 ** Active follow-on
 
 - [ ] P2.1: establish a reproducible Emacs/EXWM responsiveness baseline.  The
-  implementation checkpoint adds a stdout-only TSV sampler for live state,
-  host-local RPC latency, PSS/RSS, cumulative GC state, and preparation-only
-  launcher timing.  It performs no tuning, GUI launch, cache reset, reload,
-  activation, or reboot.  Numeric targets remain deliberately unset until the
-  clean-checkpoint baseline distribution is reviewed.
+  published implementation checkpoint adds a stdout-only TSV sampler for live
+  state, host-local RPC latency, PSS/RSS, cumulative GC state, and
+  preparation-only launcher timing.  Its first valid protocol-v1 baseline is
+  preserved with all eight invariants passing: RPC median/p95 were 4.937/7.492
+  ms, and launcher preparation was 37.714 ms first with a 16.175 ms repeated
+  median.  It performs no tuning, GUI launch, cache reset, reload, activation,
+  or reboot.  Numeric targets and P2.2 selection remain deliberately pending
+  user review.
 
 ** Completed
 

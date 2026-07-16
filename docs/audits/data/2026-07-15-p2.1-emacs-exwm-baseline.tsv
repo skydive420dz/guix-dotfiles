@@ -1,0 +1,169 @@
+meta	protocol	sk-emacs-performance-v1
+meta	run_mode	live
+meta	captured_at_utc	2026-07-16T02:08:01Z
+meta	hostname	guixpc
+meta	kernel	7.0.14
+meta	boot_id	6a94d3ec-1c03-40cd-a678-d8a372bf7df2
+meta	clocksource	hpet
+meta	host_uptime_seconds	15640.17
+meta	load_average	0.00 0.05 0.02 1/259 25439
+meta	repo_head	39c4d7216b8c658dcc94887de05277100aa190db
+meta	repo_upstream	39c4d7216b8c658dcc94887de05277100aa190db
+meta	repo_ahead_behind	0/0
+meta	booted_system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+meta	current_system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+meta	system_profile	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+meta	home_profile	/gnu/store/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile
+meta	pull_profile	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+meta	emacsclient	/gnu/store/jbqsprk039wqdb53ljqw9rhm9wg27f5v-emacs-30.2/bin/emacsclient
+meta	python_executable	/gnu/store/gp20syp5vcyg7y6rksyp6fpvjcv4yf1c-python-3.12.12/bin/python3.12
+meta	python_version	3.12.12
+meta	rpc_timer	python-perf-counter-ns
+meta	rpc_clock_monotonic	true
+meta	rpc_clock_adjustable	false
+meta	rpc_clock_resolution_seconds	1e-09
+meta	rpc_sample_count	21
+meta	launcher_timer	emacs-current-time
+meta	launcher_cache_mode	already-loaded-natural-cache
+meta	launcher_initial_cache_populated	true
+meta	launcher_initial_cached_files_count	18
+meta	launcher_sample_count	5
+state	before	protocol	sk-emacs-performance-state-v1
+state	before	pid	498
+state	before	version	30.2
+state	before	init_seconds	8.742822
+state	before	started_utc	2026-07-15T21:47:30Z
+state	before	uptime_seconds	15630.342761
+state	before	gc_count	185
+state	before	gc_elapsed_seconds	7.886122
+state	before	gc_cons_threshold	800000
+state	before	gc_cons_percentage	0.100000
+state	before	rss_kib	346756
+state	before	vsize_kib	1434624
+state	before	buffer_count	21
+state	before	frame_count	5
+state	before	visible_frame_count	5
+state	before	process_count	3
+state	before	pending_launch_intents	0
+state	before	messages_bytes	1156
+state	before	exwm_loaded	true
+state	before	exwm_connected	true
+state	before	exwm_wm_mode	true
+state	before	server_running	true
+state	before	source_root	/home/skydive420dz/Projects/guix-dotfiles/emacs/
+state	before	user_init_file	/home/skydive420dz/Projects/guix-dotfiles/emacs/init.el
+state	before	sk_exwm_file	/home/skydive420dz/Projects/guix-dotfiles/emacs/lisp/sk-exwm.el
+state	before	running_executable	/gnu/store/jbqsprk039wqdb53ljqw9rhm9wg27f5v-emacs-30.2/bin/emacs
+state	before	home_profile	/gnu/store/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile
+state	before	native_profile_key	bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile
+state	before	message_advice	true
+state	before	counsel_loaded	true
+state	before	counsel_cache_fingerprint	190f12a3c76464bbdc6e497851b4e81a9ad75a270bdf7624159d5f793ad8de3b
+proc	before	status_VmPeak_kib	1434624
+proc	before	status_VmSize_kib	1434624
+proc	before	status_VmHWM_kib	347300
+proc	before	status_VmRSS_kib	347300
+proc	before	status_VmSwap_kib	0
+proc	before	status_Threads	11
+proc	before	smaps_Rss_kib	347300
+proc	before	smaps_Pss_kib	319113
+proc	before	smaps_Private_Clean_kib	98296
+proc	before	smaps_Private_Dirty_kib	200984
+proc	before	smaps_Swap_kib	0
+sample	rpc_ms	1	7.476065
+sample	rpc_ms	2	7.492338
+sample	rpc_ms	3	5.410287
+sample	rpc_ms	4	7.577614
+sample	rpc_ms	5	7.375213
+sample	rpc_ms	6	7.319549
+sample	rpc_ms	7	7.408388
+sample	rpc_ms	8	4.936970
+sample	rpc_ms	9	7.166386
+sample	rpc_ms	10	5.095301
+sample	rpc_ms	11	4.179257
+sample	rpc_ms	12	3.906107
+sample	rpc_ms	13	3.892627
+sample	rpc_ms	14	5.165492
+sample	rpc_ms	15	4.268305
+sample	rpc_ms	16	3.889135
+sample	rpc_ms	17	3.827534
+sample	rpc_ms	18	4.782340
+sample	rpc_ms	19	3.928176
+sample	rpc_ms	20	3.883966
+sample	rpc_ms	21	3.864481
+summary	rpc_ms	count	21
+summary	rpc_ms	first	7.476065
+summary	rpc_ms	min	3.827534
+summary	rpc_ms	median	4.936970
+summary	rpc_ms	p95	7.492338
+summary	rpc_ms	max	7.577614
+summary	rpc_ms	p95_to_median	1.517598
+sample	launcher_prepare_ms	1	37.713678	desktop_files=18	all_candidates=17	supported_candidates=10	gc_count_delta=0	gc_ms_delta=0.0
+sample	launcher_prepare_ms	2	20.757720	desktop_files=18	all_candidates=17	supported_candidates=10	gc_count_delta=0	gc_ms_delta=0.0
+sample	launcher_prepare_ms	3	16.166327	desktop_files=18	all_candidates=17	supported_candidates=10	gc_count_delta=0	gc_ms_delta=0.0
+sample	launcher_prepare_ms	4	16.183997	desktop_files=18	all_candidates=17	supported_candidates=10	gc_count_delta=0	gc_ms_delta=0.0
+sample	launcher_prepare_ms	5	16.140696	desktop_files=18	all_candidates=17	supported_candidates=10	gc_count_delta=0	gc_ms_delta=0.0
+summary	launcher_prepare_ms	count	5
+summary	launcher_prepare_ms	first	37.713678
+summary	launcher_prepare_ms	min	16.140696
+summary	launcher_prepare_ms	median	16.183997
+summary	launcher_prepare_ms	p95	37.713678
+summary	launcher_prepare_ms	max	37.713678
+summary	launcher_prepare_ms	p95_to_median	2.330307
+summary	launcher_repeated_ms	count	4
+summary	launcher_repeated_ms	first	20.757720
+summary	launcher_repeated_ms	min	16.140696
+summary	launcher_repeated_ms	median	16.175162
+summary	launcher_repeated_ms	p95	20.757720
+summary	launcher_repeated_ms	max	20.757720
+summary	launcher_repeated_ms	p95_to_median	1.283308
+state	after	protocol	sk-emacs-performance-state-v1
+state	after	pid	498
+state	after	version	30.2
+state	after	init_seconds	8.742822
+state	after	started_utc	2026-07-15T21:47:30Z
+state	after	uptime_seconds	15630.601971
+state	after	gc_count	185
+state	after	gc_elapsed_seconds	7.886122
+state	after	gc_cons_threshold	800000
+state	after	gc_cons_percentage	0.100000
+state	after	rss_kib	346756
+state	after	vsize_kib	1434624
+state	after	buffer_count	21
+state	after	frame_count	5
+state	after	visible_frame_count	5
+state	after	process_count	3
+state	after	pending_launch_intents	0
+state	after	messages_bytes	1156
+state	after	exwm_loaded	true
+state	after	exwm_connected	true
+state	after	exwm_wm_mode	true
+state	after	server_running	true
+state	after	source_root	/home/skydive420dz/Projects/guix-dotfiles/emacs/
+state	after	user_init_file	/home/skydive420dz/Projects/guix-dotfiles/emacs/init.el
+state	after	sk_exwm_file	/home/skydive420dz/Projects/guix-dotfiles/emacs/lisp/sk-exwm.el
+state	after	running_executable	/gnu/store/jbqsprk039wqdb53ljqw9rhm9wg27f5v-emacs-30.2/bin/emacs
+state	after	home_profile	/gnu/store/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile
+state	after	native_profile_key	bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile
+state	after	message_advice	true
+state	after	counsel_loaded	true
+state	after	counsel_cache_fingerprint	190f12a3c76464bbdc6e497851b4e81a9ad75a270bdf7624159d5f793ad8de3b
+proc	after	status_VmPeak_kib	1434624
+proc	after	status_VmSize_kib	1434624
+proc	after	status_VmHWM_kib	347300
+proc	after	status_VmRSS_kib	347300
+proc	after	status_VmSwap_kib	0
+proc	after	status_Threads	11
+proc	after	smaps_Rss_kib	347300
+proc	after	smaps_Pss_kib	319113
+proc	after	smaps_Private_Clean_kib	98296
+proc	after	smaps_Private_Dirty_kib	200984
+proc	after	smaps_Swap_kib	0
+invariant	repository_and_upstream_stable	PASS
+invariant	boot_and_profiles_stable	PASS
+invariant	live_source_and_server_provenance	PASS
+invariant	protected_live_state_stable	PASS
+invariant	launcher_samples_uncontaminated	PASS
+invariant	gc_policy_stable	PASS
+invariant	cumulative_counters_monotonic	PASS
+invariant	ambient_counsel_cache_stable	PASS

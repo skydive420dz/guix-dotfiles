@@ -69,11 +69,11 @@ Those are implementation facts.  Their performance impact remains a
   malformed values, client-process exclusion, cache restoration, forbidden UI
   and process calls, protected-state drift, and deliberate launcher side
   effects.
-- [ ] Publish the implementation checkpoint and rerun from a clean synchronized
-  checkout with no attached terminal client.
-- [ ] Store the exact baseline output and SHA-256 as the separate reviewed
+- [X] Publish the implementation checkpoint and rerun from a clean synchronized
+  checkout with no other client process at the protocol guard boundaries.
+- [X] Store the exact baseline output and SHA-256 as the separate reviewed
   =docs/audits/data/2026-07-15-p2.1-emacs-exwm-baseline.tsv= evidence commit.
-- [ ] Run existing editor, desktop, and strict source gates outside the timing
+- [X] Run existing editor, desktop, and strict source gates outside the timing
   window.
 - [ ] Review the distribution with the user before choosing a target or P2.2
   experiment.
@@ -234,35 +234,37 @@ P2.1 records boot ID, kernel, and clocksource only as run identity.  It adds no
 
 ** Source and fixture gate
 
-- [ ] =tests/emacs-performance-snapshot-check= passes.
-- [ ] =scripts/shell-check --strict= passes with the new fixture integrated.
-- [ ] Emacs source/batch/live checks pass.
-- [ ] Focused negative controls fail for the intended causal reason.
-- [ ] Repository state is unchanged by every fixture and live run.
+- [X] =tests/emacs-performance-snapshot-check= passes.
+- [X] =scripts/shell-check --strict= passes with the new fixture integrated.
+- [X] Emacs source/batch/live checks pass.
+- [X] Focused negative controls fail for the intended causal reason.
+- [X] Repository state is unchanged by every fixture and live run.
 
 ** Live measurement gate
 
-- [ ] Implementation checkpoint is published and the checkout is clean and
+- [X] Implementation checkpoint is published and the checkout is clean and
   synchronized.
-- [ ] No other =emacsclient= or =.emacsclient-real= process exists at any guard
-  boundary; terminal clients are closed and the user remains idle throughout.
-- [ ] The default 21/5 sample run exits zero within its bounded timeouts.
-- [ ] Metadata says =run_mode= is =live= and identifies the exact commit, Home
+- [X] No other =emacsclient= or =.emacsclient-real= process exists at any guard
+  boundary.  The user yielded the timing window; continuous idleness remains an
+  operator condition rather than a machine-verifiable invariant.
+- [X] The default 21/5 sample run exits zero within its bounded timeouts.
+- [X] Metadata says =run_mode= is =live= and identifies the exact commit, Home
   client/server, Python runtime, monotonic RPC clock, and initial Counsel-cache
   state.
-- [ ] Every invariant row is =PASS=.
-- [ ] Exact raw output is first retained outside the checkout with protocol,
+- [X] Every invariant row is =PASS=.
+- [X] Exact raw output is first retained outside the checkout with protocol,
   commit, boot ID, profiles, PID, uptime, load, and timestamp; its SHA-256 is
   reviewed before a separate evidence commit.
-- [ ] Existing =scripts/emacs-check= and =scripts/desktop-session-check= pass
+- [X] Existing =scripts/emacs-check= and =scripts/desktop-session-check= pass
   after the timing window.
 
 ** Decision gate
 
-- [ ] Raw distributions, first/median/p95/maximum, launcher GC deltas, and
+- [X] Raw distributions, first/median/p95/maximum, launcher GC deltas, and
   before/after probe effects are reviewed rather than only the best value.
-- [ ] High jitter or a decision resting on the small-sample tail leads to another
-  same-protocol sample, not an immediate tweak.
+- [X] Preserve the first valid run.  RPC warm-up drift requires a later labeled
+  replication before an RPC-based decision, not an immediate cosmetic rerun or
+  tweak.
 - [ ] At most one dominant measured hypothesis is promoted to P2.2.
 - [ ] If no cost is dominant or user-visible, P2.1 closes with no tuning
   justified.
@@ -318,7 +320,7 @@ checks, not targets or comparison data.
 
 ** Implementation checkpoint
 
-- Commit: pending.
+- Commit: =39c4d7216b8c658dcc94887de05277100aa190db=.
 - Files:
   - =scripts/emacs-performance-snapshot=;
   - =scripts/emacs-performance-state.el=;
@@ -328,5 +330,56 @@ checks, not targets or comparison data.
   - =scripts/shell-check=;
   - this record, README, Phase 0 routing, and the agenda roadmap.
 - Activation boundary: none.
-- Live baseline artifact: pending the published clean checkpoint and idle
-  client-free session.
+
+** Accepted protocol v1 baseline
+
+- Artifact:
+  [[file:data/2026-07-15-p2.1-emacs-exwm-baseline.tsv][=docs/audits/data/2026-07-15-p2.1-emacs-exwm-baseline.tsv=]].
+- SHA-256:
+  =d5b75d92b27f021d2f3f85984333374ec0263fb3e7c808e8e03a61a6c4b540ef=.
+- External stderr: zero bytes.
+- Size/schema: 7,286 bytes; 169 rows; 21 RPC samples; five launcher samples;
+  eight invariants, all =PASS=.
+- Capture: =2026-07-16T02:08:01Z= (=2026-07-15 22:08:01 EDT=), first valid
+  run with no replacement or cosmetic rerun.
+- Source: implementation and upstream
+  =39c4d7216b8c658dcc94887de05277100aa190db= at =0/0=.
+- Host: GuixPC, Linux 7.0.14, HPET, boot ID
+  =6a94d3ec-1c03-40cd-a678-d8a372bf7df2=.
+- Profiles: booted/current/profile System
+  =/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system=; Home
+  =/gnu/store/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile=; Pull
+  =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile=.
+
+| Family | Count | First ms | Minimum ms | Median ms | Nearest-rank p95 ms | Maximum ms | p95/median |
+|--------+-------+----------+------------+-----------+---------------------+------------+------------|
+| RPC | 21 | 7.476065 | 3.827534 | 4.936970 | 7.492338 | 7.577614 | 1.517598 |
+| Launcher preparation | 5 | 37.713678 | 16.140696 | 16.183997 | 37.713678 | 37.713678 | 2.330307 |
+| Launcher repeats only | 4 | 20.757720 | 16.140696 | 16.175162 | 20.757720 | 20.757720 | 1.283308 |
+
+Every launcher sample found 18 desktop files, 17 candidates, and 10 supported
+candidates.  All reported zero GC count/time delta.  The first natural-state
+sample began with Counsel already populated with 18 cached files.  Samples three
+through five settled tightly between 16.140696 and 16.183997 ms; the first and
+second values reflect a visible preparation warm-up sequence, not proof of a
+cold cache.
+
+The Emacs 30.2 process was PID 498 and about 15,630 seconds old.  Its historical
+initialization value was 8.742822 seconds.  Across the 0.259210-second state
+boundary interval, the only state-field change was uptime.  GC remained at 185
+collections and 7.886122 seconds; buffers 21, frames 5/5 visible, processes 3,
+pending intents 0, =*Messages*= 1,156 bytes, GC policy, and Counsel fingerprint
+were stable.  =/proc= rows were identical: RSS 347,300 KiB, PSS 319,113 KiB,
+private clean/dirty 98,296/200,984 KiB, 11 threads, and zero swap.
+
+These are =CONFIRMED= protocol-v1 observations, not tuning targets.  The
+initialization value is historical state for one running EXWM process, not a
+restart distribution or first-frame/first-input timestamp.  RPC measures only
+host-local client process/socket/server dispatch for =eval t=; its early-to-late
+warm-up drift should be replicated later before an RPC decision, although every
+sample remained below 8 ms.  Launcher measurements replay preparation only,
+with five-sample p95 equal to the maximum.  Zero GC during these probes does not
+prove ordinary use has no GC cost, and current memory does not establish a leak
+trend.  Client absence is proven only at the three guard boundaries; continuous
+idleness remains an operator condition.  No P2.2 hypothesis or numeric target
+is selected from this capture.
