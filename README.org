@@ -8,15 +8,17 @@ The numbered stabilization pass is complete through Slice 19.  The later dated
 polishing roadmap has accepted Phase 1's SSH/terminal contract, Phase 2's first
 measurement-only Emacs/EXWM baseline, P2.2's one-shot startup attribution,
 P2.K1a's read-only boot-edge attribution, and P2.S1a's passive
-system/build/storage baseline.  P2.S1a sampled no CPU, memory, I/O, capacity,
-or thermal pressure and recorded about 35 GiB root/store and 139 GiB Home free.
-It also confirmed that periodic SSD TRIM has no declared owner.  SMART data was
-not captured, but the
-existing UDisks service exposes an ATA SMART interface that must be validated
-before adding smartmontools or another daemon.  Guix's fixed one-local-job,
-up-to-four-build-core policy, HPET cost, sustained thermals, and real
-boot-to-ready time remain unmeasured.
-No tuning or maintenance action follows from that point sample.  Keep this
+system/build/storage baseline, followed by P2.M1's storage-maintenance contract
+design.  P2.S1a sampled favorable pressure, idle-temperature, and capacity
+indicators and confirmed that periodic SSD TRIM has no declared owner; its
+maintenance policy remains unselected.  P2.M1 then validated the existing
+UDisks ATA SMART path with one disclosed lazy-activation probe.  The sanitized
+cache snapshot contained favorable selected indicators, not a full diagnostic
+or future-health guarantee.  P2.M1a's no-new-package Scheme reader is
+recommended next but awaits review.  The effects of Guix permitting one local
+build job and reporting/allowing up to four cores to it, HPET cost, sustained
+thermals, and real boot-to-ready time remain unmeasured.  No tuning or
+maintenance policy follows automatically from these point samples.  Keep this
 section aligned with accepted machine state so the repo records intent, not
 only implementation commits.
 
@@ -35,22 +37,39 @@ P0-F02/P0-F03 boundaries, and successor gates.
 memory, storage, Guix-build, generation, and timing observations; its qualified
 configuration and unverified-observability findings; and the boundary between
 observation, benchmarking, tuning, and destructive maintenance.
+[[file:docs/audits/2026-07-16-p2.m1-storage-maintenance-contract.org][The P2.M1 storage-maintenance contract]] corrects the SMART ownership boundary,
+records the disclosed UDisks lazy-activation probe, defines the contract for an
+identifier-rejecting Scheme reader, and separates visibility, TRIM policy,
+actual FITRIM, deep diagnostics, alerting, and cleanup.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
 
 ** Active follow-on
 
-No performance or maintenance follow-on is currently promoted.  P2.3 remains
-=BACKLOG= because there is no material Emacs-startup complaint.  P2.S1b retains
-controlled system/build measurement, and P2.S1c retains at most one later
-reversible experiment; neither has a selected workload, target, or change.
-Generation deletion and store collection remain separate Phase 5 work behind
-the restore-tested-backup gate.  No IRQ, clocksource, kernel, firmware, TRIM,
-SMART, governor, swap, scheduler, or Guix-build-policy change is authorized by
-the completed passive reviews.
+P2.M1a is recommended next but not yet implementation-authorized: a
+repository-owned Scheme reader over the existing UDisks D-Bus API, with
+fixture-only source gates, a strict field allowlist, and identifier rejection.
+It adds no package, daemon, privilege, generation, or device-changing method.
+P2.M1b/P2.M1c keep TRIM policy, dry-run, declaration/build, activation, and
+actual FITRIM separate;
+P2.M1d alerting/deep diagnostics is parked.  P2.3, P2.S1b, and P2.S1c also
+remain =BACKLOG=.  Generation deletion and store collection remain Phase 5
+work behind the restore-tested-backup gate.
 
 ** Completed
+
+- [X] P2.M1: storage-maintenance contract design
+  Inherited UDisks 2.10.1 already exposes ATA SMART data, so adding
+  =smartmontools= is not the first move.  One exploratory =udisksctl status=
+  call lazily activated the declared root daemon and populated its cache; that
+  boundary deviation and the rejected identity-bearing raw output are recorded.
+  Allowlisted cached indicators were favorable at the sampled timestamp, but
+  they are not a future-health guarantee.  The design specifies a Scheme
+  reader and splits periodic TRIM policy, dry-run, declarative activation,
+  actual FITRIM, and optional alerting into later gates.  No package,
+  generation, service declaration, device setting, self-test, trim, or reboot
+  changed.
 
 - [X] P2.S1a: passive system/build/storage baseline
   The synchronized System 87 host was observed without privilege, load,

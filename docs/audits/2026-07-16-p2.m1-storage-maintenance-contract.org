@@ -1,0 +1,415 @@
+#+title: GuixPC P2.M1 Storage Maintenance Contract
+#+date: 2026-07-16
+#+status: design complete
+
+* Outcome
+
+P2.M1 separates SSD visibility, periodic maintenance, deep diagnostics, and
+alerting into independently reviewable slices.  It does not treat maintenance
+as a performance benchmark and does not combine it with generation pruning or
+store garbage collection.
+
+The design makes these decisions:
+
+1. Validate and reuse the already-declared UDisks ATA SMART interface before
+   adding =smartmontools= or another root daemon.
+2. Make the first durable surface a repository-owned Scheme reader with an
+   allowlisted, identifier-free human/JSON contract.
+3. Keep UDisks D-Bus activation visible: a normal read may lazily start
+   =udisksd= and perform read-only SMART metadata I/O; a cached-only mode must
+   fail closed instead.
+4. Treat periodic TRIM as an unselected policy.  Choose targets, a normally-on
+   schedule, missed-event behavior, and a dry-run boundary before adding the
+   Guix service.
+5. Keep actual FITRIM, SMART self-tests, SMART enable/disable, a custom
+   =smartd= daemon, alert delivery, package additions, generation cleanup, and
+   =guix gc= outside this design slice.
+
+P2.M1a is the recommended next slice: implement and fixture-test the Scheme
+UDisks reader.  It awaits user review; P2.M1b through P2.M1d remain
+unpromoted.
+
+Related records:
+
+- [[file:2026-07-16-p2.s1a-system-performance-baseline.org][P2.S1a passive system/build/storage baseline]];
+- [[file:2026-07-15-phase-0-baseline.org][Phase 0 baseline and maintenance gates]];
+- [[file:~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org][editable agenda roadmap]].
+
+* Correction and evidence boundary
+
+Commit =0330205= corrects the P2.S1a storage claims:
+
+- absence of a periodic =fstrim= owner is a confirmed configuration with the
+  maintenance policy still unselected, not an automatically accepted gap;
+- =smartctl=/=smartd= absence does not prove SMART visibility is absent because
+  inherited UDisks already exposes an ATA SMART interface;
+- the passive resource sample is not a whole-machine health claim;
+- =--max-jobs=1 --cores=4= permits one local build job and reports/allows up to
+  four cores to that job without hard CPU enforcement; its effects are
+  unmeasured, not proof of deterministic or globally conservative behavior;
+- the 44 generation rows are unprotected older same-target link candidates,
+  not 44 closures or a reclaimable-byte estimate.
+
+** Disclosed runtime-boundary deviation
+
+The intended P2.M1 design review was source-only.  During delegated research,
+an exploratory =udisksctl status= call used the well-known system D-Bus name.
+That normally lazy-activated the already-declared root =udisksd= process at
+=2026-07-16 16:23:34 EDT=.  Its initial housekeeping populated ATA SMART cache
+at =16:23:35=.
+
+This was a read-only device metadata operation, but it was a runtime change and
+exceeded the announced design-only boundary.  It is retained rather than hidden:
+
+- no System/Home declaration, package, generation, service definition, disk
+  setting, SMART setting, self-test, mount, trim, reconfigure, generation
+  activation, or reboot changed;
+- the already-declared on-demand daemon became active and remained running;
+- the first housekeeping read may wake a sleeping disk; this SSD was active;
+- later housekeeping uses a no-wakeup path and treats a sleeping/busy device as
+  a skipped refresh rather than a drive failure;
+- raw =udisksctl status= output contained a drive serial and is rejected
+  evidence.  No identity-bearing value is retained in this document.
+
+The one-second daemon-start/cache-update sequence strongly supports normal
+D-Bus lazy activation plus initial housekeeping, but no direct pre-query =ps=
+row was captured.  It is therefore an inference, not a complete pre/post pair.
+
+* Existing declarative SMART path
+
+** Guix ownership
+
+=guix/systems/guixpc.scm:78-100= inherits pinned =%desktop-services=.  Pinned
+Guix includes =(service udisks-service-type)= at
+=gnu/services/desktop.scm:2818-2821=.  The service definition at
+=gnu/services/desktop.scm:1202-1238= extends:
+
+- system D-Bus service activation;
+- Polkit policy;
+- udev rules;
+- System activation state; and
+- the System profile containing =udisksctl= and related artifacts.
+
+The live System provides UDisks 2.10.1 and links =udisksd= against
+=libatasmart= 0.19.  The D-Bus activation file runs the daemon as root.  This is
+not a continuously started root Shepherd service; the first client of the
+well-known D-Bus name can start it.
+
+Pinned Guix also packages =smartmontools= 7.5, but neither GuixPC nor pinned
+Guix currently supplies a =smartd-service-type=.  That package is not required
+for the first visibility surface.
+
+** Stable API surface
+
+The installed =org.freedesktop.UDisks2.Drive.Ata= interface provides:
+
+- =SmartSupported=, =SmartEnabled=, =SmartUpdated=, and =SmartFailing=;
+- =SmartTemperature= and =SmartPowerOnSeconds=;
+- current/past failing-attribute counts and bad-sector count;
+- self-test status and percent remaining; and
+- cached =SmartGetAttributes= tuples.
+
+UDisks initial housekeeping performs a SMART metadata read when SMART is
+supported and enabled.  The provider then schedules housekeeping every ten
+minutes.  Later reads use the no-wakeup path; the cache can therefore become
+stale when a disk sleeps or is busy.  Stale data must not be rewritten as a
+health failure.
+
+=SmartGetAttributes= returns already-cached attributes.  It does not request a
+new device refresh.  =SmartUpdate=, =SmartSetEnabled=,
+=SmartSelftestStart=/=Abort=, power-management calls, and security erase are
+separate methods and are prohibited by P2.M1a.
+
+* Sanitized point-in-time SMART evidence
+
+The allowlisted cached values at =2026-07-16 16:24:30 EDT= were:
+
+| Property | Observed value | Exact qualification |
+|----------+----------------+---------------------|
+| SMART supported | true | ATA SMART capability is exposed through UDisks |
+| SMART enabled | true | observed setting; P2.M1 did not enable it |
+| SMART updated | =2026-07-16 16:23:35 EDT= | cache was 55 seconds old at the retained sanitized read |
+| Drive failing bit | false | drive-reported overall bit not set; not a general health guarantee |
+| Current failing attributes | 0 | cached UDisks count |
+| Attributes failed in the past | 0 | cached UDisks count |
+| Bad sectors | 0 | UDisks defines this as pending plus reallocated sectors |
+| Temperature | 29.00 C | 302.15 K from the D-Bus property |
+| Power-on time | 37,039 hours | device counter; not a warranty, age, or remaining-life estimate |
+| Self-test status | =success= | UDisks defines this as success *or never run*; no completed test is claimed |
+| Self-test remaining | 0 percent | no reported in-progress remainder |
+
+Cached =SmartGetAttributes= returned 14 tuples.  Evidence-safe selected rows:
+
+| Attribute | Pretty value | Interpretation boundary |
+|-----------+--------------+-------------------------|
+| reallocated-sector-count | 0 sectors | selected error indicator only |
+| used-reserved-blocks-total | 0 | vendor count |
+| program-fail-count-total | 0 | vendor count |
+| erase-fail-count-total | 0 | vendor count |
+| runtime-bad-block-total | 0 | vendor count |
+| reported-uncorrect | 0 sectors | selected error indicator only |
+| hardware-ecc-recovered | 0 | vendor count |
+| udma-crc-error-count | 0 | interface error count |
+| power-cycle-count | 2,286 | device counter; not a failure count |
+| wear-leveling-count | raw 131; normalized 92 | vendor-specific; not a percentage or remaining-life estimate |
+
+=good-block-rate= and =total-lbas-written= were present but are deliberately
+not interpreted: one reports an unknown pretty unit and the latter uses a unit
+not documented in the tagged UDisks interface's known unit list.
+
+These values are favorable selected indicators at one timestamp.  They are not
+a guarantee of future health, a complete ATA error log, a complete self-test
+log, a wear percentage, or proof that the drive has been periodically trimmed.
+
+* Privacy contract
+
+** Rejected surfaces
+
+Do not use or retain:
+
+- =udisksctl status=, =info=, or =dump=;
+- Drive =GetAll=, an object-manager dump, =busctl tree=, or broad introspection
+  output from a serial-bearing drive path;
+- a hard-coded Drive object path in source, captured argv logs, shell history,
+  fixtures, documentation, or error messages;
+- tracing such as =set -x= while resolving the Drive object; or
+- raw model, serial, WWN, by-id path, filesystem UUID/PARTUUID, or host identity.
+
+The fixed block object =/org/freedesktop/UDisks2/block_devices/sda= can be used
+to resolve its Drive object privately.  The returned Drive path contains a
+serial.  The selected =busctl= transport necessarily passes that object path as
+one positional argument to each direct child invocation.  This is a transient
+local-process-observation boundary: the path can be visible through process
+inspection while the short-lived child exists.  The implementation must invoke
+=busctl= directly without a shell and must never place the path in shell
+history, tracing, durable argv capture, a fixture, a log, rendered output, raw
+stderr, a diagnostic, or an exception.  P2.M1a protects retained and
+user-visible evidence; it does not claim secrecy from root or same-user process
+inspection during a call.  A future native Guile D-Bus transport could remove
+this argv exposure, but is not required by the no-new-package slice.
+
+** Allowlisted output
+
+P2.M1a may expose only:
+
+- the eleven named =Drive.Ata= properties in the retained sanitized summary table;
+- selected cached attributes by stable attribute name;
+- cache timestamp and calculated age;
+- daemon activation policy (=allow= or =cached-only=); and
+- schema/protocol version plus favorable/unknown/failing-indicator classification.
+
+The implementation must fail on missing/extra property count, unexpected
+D-Bus type, =SmartUpdated= zero, malformed JSON, an unknown selected attribute
+unit, or any identifier-shaped forbidden key/value reaching the renderer.
+
+* P2.M1a Scheme reader contract
+
+** Command and implementation
+
+Add a repository-owned Guile command, provisionally
+=scripts/guix-disk-health=, that:
+
+1. uses existing =busctl --system --json=short= as D-Bus transport;
+2. parses JSON with the already-available Guile =(json)= module;
+3. resolves the block-to-Drive relationship privately;
+4. invokes =busctl= directly, without a shell, and requests individual
+   allowlisted properties in fixed order;
+5. optionally calls cached =SmartGetAttributes=;
+6. converts Kelvin and seconds with exact labeled units;
+7. prints a stable human view by default and an allowlisted JSON object on
+   =--json=; and
+8. never accepts a generic D-Bus method, property, object, or device argument.
+
+The runner must discard or sanitize raw child stderr before constructing an
+error because =busctl= may echo its object-path argument.  Only stable
+identifier-free error codes and messages may reach either renderer.
+
+The CLI should support:
+
+- default =--allow-activate=: normal D-Bus activation is allowed and disclosed
+  as read-only metadata I/O, not a zero-I/O query;
+- =--cached-only=: pass =--auto-start=no= to =busctl= and fail with an
+  =unavailable= state when UDisks is not already active;
+- =--summary=: omit detailed attributes; and
+- =--json=: emit only the versioned allowlisted schema.
+
+The implementation must not call =udisksctl= because its manual states that
+the CLI is not a stable scripting interface.  It must not use =jq=, add a
+package, require sudo, broaden =disk= group membership, add a setuid program, or
+persist raw D-Bus output.
+
+** Fixtures and gates
+
+P2.M1a must include fixture-driven tests that never contact the live system bus:
+
+- healthy selected-property and attribute fixture;
+- =SmartUpdated= zero/unavailable fixture;
+- stale-cache fixture that remains =unknown/stale= rather than =failed=;
+- drive-failing and nonzero-counter fixtures;
+- malformed count/type/JSON fixtures;
+- ambiguous =success-or-never= self-test rendering;
+- unknown-unit omission/failure behavior;
+- forbidden identifier key/value fixture; and
+- fake runner proof that only property =Get= and cached
+  =SmartGetAttributes= are reachable.
+
+Validation remains split:
+
+1. source/Guile syntax and fixture tests;
+2. privacy/static command allowlist;
+3. checkpoint and push;
+4. one runtime =--cached-only= read while the daemon is already active;
+5. a later ordinary-boot =--allow-activate= test that records pre/post daemon
+   state without retaining raw output; and
+6. no System/Home build, activation, sudo, device setting, self-test, or reboot
+   merely to accept the script.
+
+* Periodic TRIM design
+
+** Pinned Guix service semantics
+
+Pinned =gnu/services/linux.scm:397-464= provides =fstrim-service-type=.  Its
+defaults serialize exactly to:
+
+#+begin_src text
+fstrim --listed-in /etc/fstab:/proc/self/mountinfo \
+       --verbose --quiet-unsupported
+#+end_src
+
+The default schedule is =0 0 * * 0=, Sunday midnight.  The root Shepherd timer:
+
+- requires =user-processes=;
+- runs as root because no user/group override is supplied to PID 1's Shepherd;
+- waits for the child, preventing overlap;
+- exposes a stateful =trigger= action;
+- has no timeout, retry, persistent last-run state, durable service-specific
+  log, or alert; and
+- retains only bounded timer status/history in Shepherd memory/global logging.
+
+Shepherd intentionally skips an overslept/missed calendar event and waits for
+the next future match.  “Sunday-midnight trim opportunity” is accurate;
+“guaranteed once every seven days” is not.  The schedule must use a time the
+user normally leaves GuixPC awake.
+
+Current =/etc/fstab= is nonempty, so =/proc/self/mountinfo= is only a fallback.
+The listed candidates are =/=, =/home=, and the EFI mount.  The first design
+should add =--types ext4= so unsupported EFI behavior is not silently treated
+as accepted coverage.  =--quiet-unsupported= can suppress unsupported-ioctl
+errors and clean their exit status; timer success alone cannot prove every
+intended target was trimmed.
+
+Recommended future declaration after schedule review:
+
+#+begin_src scheme
+(service fstrim-service-type
+         (fstrim-configuration
+          (schedule "USER-SELECTED-NORMALLY-ON-WEEKLY-TIME")
+          (listed-in '("/etc/fstab" "/proc/self/mountinfo"))
+          (verbose? #t)
+          (quiet-unsupported? #t)
+          (extra-arguments '("--types" "ext4"))))
+#+end_src
+
+The explicit fields pin intent against default drift.
+
+** Dry-run and activation gates
+
+P2.M1b may request one privileged dry-run:
+
+#+begin_src sh
+/run/setuid-programs/sudo \
+  /run/current-system/profile/sbin/fstrim \
+  --dry-run --verbose --types ext4 \
+  --listed-in /etc/fstab:/proc/self/mountinfo
+#+end_src
+
+=--dry-run= skips the FITRIM ioctl.  It checks parsing and target selection but
+does not prove permission, filesystem FITRIM support, actual discard, schedule
+delivery, or future success.
+
+P2.M1c may then add and build the explicit service.  Reconfigure normally loads
+and starts the new timer without reboot; starting the timer waits for the next
+matching occurrence and does not perform catch-up for a missed event.  A later
+schedule/flag change does not restart an already-running changed service under
+this pinned Guix revision; it needs an explicit privileged system-Shepherd
+restart or reboot.
+
+Bare =herd= over SSH targets Home Shepherd on this machine.  System timer
+verification must use the privileged root Shepherd boundary.  A real
+=herd trigger fstrim= invokes FITRIM and is a separately authorized hand test.
+Rollback removes future scheduling but cannot undo completed discard requests.
+
+* Slice sequence
+
+** COMPLETE P2.S1a-c1 -- claim correction
+
+- Repository commit: =0330205=.
+- Corrected SMART ownership, TRIM policy language, process-side-effect wording,
+  build-core semantics, generation-link semantics, capacity claims, and
+  privacy-safe command examples.
+- No System/Home build, activation, device command, cleanup, or reboot.
+
+** RECOMMENDED P2.M1a -- Scheme UDisks SMART reader
+
+- Add the allowlisted Scheme reader and fixtures described above.
+- No package, root service, sudo, System/Home generation, device setting,
+  self-test, alerting, or reboot.
+- Runtime acceptance starts cached-only; ordinary on-demand activation is a
+  distinct later hand-test gate.
+
+** BACKLOG P2.M1b -- TRIM policy and dry-run
+
+- User selects a normally-on weekly schedule.
+- Confirm only ext4 targets =/= and =/home=.
+- One explicitly approved privileged dry-run; no FITRIM.
+- Stop on unexpected target, authentication problem, parse error, or missing
+  expected target.
+
+** BACKLOG P2.M1c -- Declarative periodic TRIM
+
+- Add the explicit =fstrim-service-type= configuration.
+- Source validation and System build precede checkpoint/push.
+- Activation, privileged root-timer inspection, real FITRIM trigger, and reboot
+  persistence are separate gates.
+
+** PARKED P2.M1d -- Durable SMART alerting or deep diagnostics
+
+- First decide whether the UDisks reader plus later user-space alert consumer
+  is sufficient.
+- =smartmontools= may be considered for evidence-triggered deep diagnostics,
+  using a one-shot no-serial capture rather than =smartd= by default.
+- A custom =smartd= service is not selected: pinned Guix has no service type;
+  =smartd= attempts to enable SMART at startup, logs identifiers, and requires
+  separate state, privacy, notification, and privilege design.
+
+* Explicit non-goals
+
+P2.M1 design does not authorize:
+
+- =SmartUpdate=, =SmartSetEnabled=, SMART self-test start/abort, offline data
+  collection, autosave, standby/wakeup, secure erase, or generic D-Bus calls;
+- =smartctl=, =smartd=, adding =smartmontools=, membership in =disk=, a setuid
+  helper, or broad sudo policy;
+- FITRIM, continuous mount discard, scheduler/read-ahead/write-cache changes,
+  or treating discard as a performance benchmark;
+- a System/Home build, reconfigure, activation, service restart, or reboot;
+- generation deletion, reclaim estimation, store collection, automatic GC, or
+  changes to the backup/retention gates; or
+- retention of raw serial, WWN, model, object path, by-id path, UUID/PARTUUID,
+  MAC address, or unfiltered command output.
+
+* Design closeout
+
+- [X] Existing UDisks ownership and stable ATA SMART API were mapped.
+- [X] The lazy-activation boundary deviation and rejected raw evidence were
+  disclosed.
+- [X] Selected cached values were retained without device identifiers and with
+  strict interpretation limits.
+- [X] A Scheme reader contract, privacy allowlist, and fixture gates were
+  defined without adding dependencies.
+- [X] Pinned Guix/Shepherd TRIM command, privilege, timer, missed-event, logging,
+  dry-run, activation, and rollback semantics were mapped.
+- [X] SMART visibility, periodic TRIM, actual FITRIM, deep diagnostics,
+  alerting, and cleanup remain separate slices.
+- [X] P2.M1a alone is recommended next and awaits review; no device or System
+  change is authorized.

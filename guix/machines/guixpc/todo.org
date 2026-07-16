@@ -450,6 +450,36 @@ CLOSED: [2026-07-16 Thu]
   build-policy, generation, garbage-collection, activation, runtime, or reboot
   change.  P2.S1b/P2.S1c remain unpromoted.
 
+* DONE P2.M1 storage-maintenance contract design
+CLOSED: [2026-07-16 Thu]
+
+- Evidence: [[file:../../../docs/audits/2026-07-16-p2.m1-storage-maintenance-contract.org][2026-07-16 P2.M1 contract]].
+- [X] Correct P2.S1a: periodic TRIM ownership is absent but policy was
+  unselected; inherited UDisks already exposes an ATA SMART path.
+- [X] Disclose the exploratory UDisks D-Bus lazy activation and initial
+  read-only SMART metadata housekeeping.  Retain no raw serial/WWN output and
+  claim no setting, self-test, generation, or declaration change.
+- [X] Record allowlisted cached SMART properties and selected attributes with
+  strict interpretation limits.
+- [X] Define a no-new-package Scheme reader over =busctl --json=short= and
+  Guile =(json)=, including cached-only mode, fixture gates, forbidden methods,
+  and identifier rejection from retained/rendered output.  Acknowledge the
+  unavoidable transient Drive-path argv boundary of the =busctl= transport.
+- [X] Map Guix/Shepherd periodic-TRIM command, root privilege, schedule,
+  missed-event, logging, dry-run, activation, and one-way FITRIM boundaries.
+- [X] Keep visibility, TRIM policy/dry-run, declarative timer activation, actual
+  FITRIM, deep diagnostics/alerting, and backup-gated cleanup separate.
+
+* TODO P2.M1a Scheme UDisks SMART reader
+
+- Recommended next; awaiting review.
+- Implement the allowlisted Scheme reader and fixture-only source gates from the
+  P2.M1 contract.
+- Add no package, root service, sudo rule, setuid helper, System/Home generation,
+  device setting, SMART refresh/self-test, alert, trim, or reboot.
+- Checkpoint and push before any runtime smoke test.  Test cached-only first;
+  ordinary D-Bus activation remains a separate disclosed hand-test gate.
+
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:
 :created: 2026-07-03
