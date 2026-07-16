@@ -214,6 +214,45 @@ Live provenance includes the repository commit, boot ID, kernel, exact Home
 profile/client/server, native-cache identity, Emacs version/PID/start time,
 timer identity, activation token, GC policy, and observer event count.
 
+** Rejected activation attempts and source correction
+
+Two 2026-07-16 activation attempts are retained as process evidence, but
+neither is a P2.2 startup trace and neither authorizes collector output.
+
+1. At =2026-07-16T11:37:48Z= the session runner was invoked from an SSH
+   pseudo-terminal.  Guix's generated =startx= rejected fd 0 as
+   =/dev/pts/0= because it could not determine a physical VT, and returned
+   status 1 before X or Emacs startup.  The original tty1 EXWM session stayed
+   alive.  The preserved failure log is
+   =/tmp/p2.2-ssh-pts-start-failure.log= with SHA-256
+   =b9e6485e3ab9296be11ddd5ca290cbc0d872c7fdada3423b3eb0e5b0d9c3058f=.
+2. A controlled remote handoff then exported the exact token temporarily as a
+   Fish universal variable, ended the old EXWM process cleanly, and recycled
+   only the idle tty1 Fish shell.  Respawned mingetty autologin followed the
+   canonical local tty1 -> Fish -> session runner -> =startx= path.  The new
+   Emacs inherited =p2.2-v1=, but =early-init.el= failed before installing the
+   observer.  The universal variable was erased immediately; the collector
+   was not run.
+
+The second attempt exposed a confirmed source-path bug.  The managed live
+=~/.emacs.d/early-init.el= is a symlink into this repository, while the
+observer was located relative to =user-emacs-directory=.  That expanded to
+the nonexistent =~/.emacs.d/lisp/sk-startup-trace.el= and set
+=init-file-had-error=.  The correction resolves =load-file-name= through
+=file-truename= and locates =lisp/= beside the repository's true
+=early-init.el= source.  A new isolated fixture reproduces the live symlink
+entrypoint with no =~/.emacs.d/lisp/= fallback; it must load both the observer
+and the remainder of native-cache setup.
+
+The SSH attempt also demonstrated a separate launcher-hygiene issue: calling
+=scripts/exwm-session= while an EXWM session is already active rotates the
+bounded log pair before =startx= rejects the new caller.  The live writer
+continued safely on the renamed inode and its pre-trace log was preserved as
+=/tmp/p2.2-pretrace-live-session.log= with SHA-256
+=ce5703576f321f8c49935d624caa0bc00bcbbe0c692c4c52256a2250936099cc=.
+Adding a direct-run VT/session preflight belongs to a later launcher-hygiene
+slice; it is not startup timing evidence and is not folded into P2.2.
+
 * Truth boundaries
 
 - One fresh trace is an =OBSERVED= natural-state sample, not a distribution,

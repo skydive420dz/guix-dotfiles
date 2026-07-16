@@ -9,11 +9,20 @@
 ;; hook/advice.  An attributed session retains its trace in memory for a later
 ;; read-only client extraction.
 (when (equal (getenv "SK_EMACS_STARTUP_TRACE") "p2.2-v1")
-  (let ((observer-started (current-time))
-        (gc-count-start gcs-done)
-        (gc-elapsed-start gc-elapsed))
+  (let* ((observer-started (current-time))
+         (gc-count-start gcs-done)
+         (gc-elapsed-start gc-elapsed)
+         ;; The live entrypoint is a ~/.emacs.d symlink into this repository.
+         ;; Resolve that link before locating the adjacent lisp directory;
+         ;; user-emacs-directory deliberately remains ~/.emacs.d here.
+         (early-init-source
+          (file-truename
+           (or load-file-name buffer-file-name
+               (locate-user-emacs-file "early-init.el"))))
+         (early-init-source-directory
+          (file-name-directory early-init-source)))
     (load (expand-file-name "lisp/sk-startup-trace.el"
-                            user-emacs-directory)
+                            early-init-source-directory)
           nil t)
     (sk/startup-trace-bootstrap observer-started
                                 gc-count-start gc-elapsed-start)))

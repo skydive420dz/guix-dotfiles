@@ -257,6 +257,7 @@ def main() -> int:
         wrong_emacsclient = tmp / "wrong/bin/emacsclient"
         wrong_source = tmp / "wrong-source"
         emacs_test_home = tmp / "emacs-test-home"
+        entrypoint_test_home = tmp / "entrypoint-test-home"
         boot_id_file = tmp / "boot-id"
 
         write(repo / "marker", "fixture\n")
@@ -302,6 +303,36 @@ def main() -> int:
             fail(
                 "real Emacs startup-state payload fixture failed: "
                 f"{state_result.stderr or state_result.stdout}"
+            )
+
+        (entrypoint_test_home / ".emacs.d").mkdir(parents=True)
+        (entrypoint_test_home / ".emacs.d/early-init.el").symlink_to(
+            ROOT / "emacs/early-init.el"
+        )
+        entrypoint_check = (
+            ROOT / "tests/emacs/startup-attribution-entrypoint-check.el"
+        )
+        entrypoint_environment = os.environ.copy()
+        entrypoint_environment.update(
+            {
+                "HOME": str(entrypoint_test_home),
+                "SK_EMACS_STARTUP_TRACE": "p2.2-v1",
+                "SK_EMACS_STARTUP_ATTRIBUTION_SOURCE_ROOT": str(ROOT),
+            }
+        )
+        entrypoint_result = command(
+            [emacs, "--batch", "-Q", "-l", str(entrypoint_check)],
+            env=entrypoint_environment,
+            check=False,
+        )
+        if (
+            entrypoint_result.returncode != 0
+            or "startup-attribution-entrypoint-check: PASS"
+            not in entrypoint_result.stdout
+        ):
+            fail(
+                "real Emacs symlinked-entrypoint fixture failed: "
+                f"{entrypoint_result.stderr or entrypoint_result.stdout}"
             )
 
         environment = os.environ.copy()
