@@ -25,14 +25,15 @@ The design makes these decisions:
    =smartd= daemon, alert delivery, package additions, generation cleanup, and
    =guix gc= outside this design slice.
 
-P2.M1a now has an implemented and fixture-verified source checkpoint.  Its
-push and live runtime acceptance remain pending; P2.M1b through P2.M1d remain
-unpromoted.
+P2.M1a now has an implemented, fixture-verified, and pushed source checkpoint.
+Its separately authorized cached-only runtime gate passed; explicit completion
+acceptance remains pending.  P2.M1b through P2.M1d remain unpromoted.
 
 Related records:
 
 - [[file:2026-07-16-p2.s1a-system-performance-baseline.org][P2.S1a passive system/build/storage baseline]];
 - [[file:2026-07-16-p2.m1a-scheme-disk-health-source-checkpoint.org][P2.M1a Scheme disk-health reader source checkpoint]];
+- [[file:2026-07-16-p2.m1a-cached-only-runtime-acceptance.org][P2.M1a cached-only runtime acceptance]];
 - [[file:2026-07-15-phase-0-baseline.org][Phase 0 baseline and maintenance gates]];
 - [[file:~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org][editable agenda roadmap]].
 
@@ -297,6 +298,20 @@ query, package, build, activation, privilege, trim, cleanup, or reboot is part
 of this checkpoint.  The source/runtime evidence boundary is owned by
 [[file:2026-07-16-p2.m1a-scheme-disk-health-source-checkpoint.org][the P2.M1a source-checkpoint record]].
 
+** Cached-only runtime status
+
+Checkpoint =77569382b26a0c2bdc33bc046226a99a2cfd4d0a= was pushed and
+verified equal to =origin/main=.  With exactly one =udisksd= process already
+running, one authorized =--json --summary --cached-only= invocation exited
+zero.  It returned a fresh, =favorable= selected snapshot; the same numeric
+daemon PID was observed before and after, with no PID change observed.  No PID
+or private object path is retained.
+
+This is a bounded cached-reader result, not a whole-drive diagnosis.  The
+ordinary allow-activate path was not run and remains a separate optional hand
+test.  Exact sanitized output and interpretation are recorded in
+[[file:2026-07-16-p2.m1a-cached-only-runtime-acceptance.org][the P2.M1a cached-only runtime record]].
+
 * Periodic TRIM design
 
 ** Pinned Guix service semantics
@@ -386,11 +401,12 @@ Rollback removes future scheduling but cannot undo completed discard requests.
 
 - The allowlisted Scheme reader and offline fixtures are implemented and pass
   their source gates.
+- The source checkpoint is pushed and its cached-only live gate passes; user
+  acceptance of slice completion remains pending.
 - No package, root service, sudo, System/Home generation, device setting,
   self-test, alerting, or reboot.
-- Checkpoint push verification remains separate.  Runtime acceptance then
-  starts cached-only; ordinary on-demand activation is a distinct later
-  hand-test gate.
+- Ordinary on-demand activation remains an unselected, distinct hand-test
+  gate.
 
 ** BACKLOG P2.M1b -- TRIM policy and dry-run
 
@@ -449,7 +465,7 @@ P2.M1 design does not authorize:
 - [X] P2.M1a reader source, offline fixtures, privacy gates, and source-gate
   registration are implemented without a device or System change.
 - [X] P2.M1a source checkpoint is committed.
-- [ ] P2.M1a checkpoint push and upstream equality are verified.
-- [ ] A cached-only live read is separately authorized, run, and documented.
+- [X] P2.M1a checkpoint push and upstream equality are verified.
+- [X] A cached-only live read is separately authorized, run, and documented.
 - [ ] Ordinary activation behavior is tested separately if selected.
 - [ ] P2.M1a completion is accepted.

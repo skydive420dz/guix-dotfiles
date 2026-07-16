@@ -1,0 +1,136 @@
+#+title: P2.M1a cached-only runtime acceptance
+#+date: 2026-07-16
+#+author: Rafael Oliveira
+#+startup: overview
+#+status: runtime gate passed; completion acceptance pending
+
+* Outcome
+
+The separately authorized P2.M1a cached-only runtime gate passed against the
+pushed source checkpoint:
+
+- checkpoint =77569382b26a0c2bdc33bc046226a99a2cfd4d0a= matched
+  =origin/main= with ahead/behind =0/0= and a clean checkout;
+- exactly one =udisksd= process was already active before the reader ran;
+- one =--json --summary --cached-only= observation exited zero;
+- the returned cache was fresh and classified =favorable=; and
+- the same numeric daemon PID was observed before and after, with no PID
+  change observed.
+
+No PID, private Drive object path, raw D-Bus payload, model, serial, WWN,
+UUID/PARTUUID, by-id path, or MAC address is retained in this record.
+
+This result satisfies the selected cached-only runtime gate.  It is not a
+whole-drive diagnosis, benchmark, or future-health guarantee.  Explicit
+P2.M1a completion acceptance remains pending.
+
+* Authorization and command
+
+The user explicitly authorized the one live gate after the pushed checkpoint
+was verified.  The preflight stopped unless exactly one =udisksd= process was
+already running.  The accepted command was:
+
+#+begin_src sh
+scripts/guix-disk-health --json --summary --cached-only
+#+end_src
+
+No ordinary =--allow-activate= invocation was run.  The cached-only policy
+passes =--auto-start=no= on all thirteen fixed =busctl call= operations.
+=--summary= omits selected-attribute rendering but deliberately retains the
+same cached attributes and classification boundary as the full view.
+
+* Sanitized observation
+
+Observation time: =2026-07-16T18:21:37-04:00=.
+Cache update time: =2026-07-16T18:13:35-04:00=.
+
+#+begin_src text
+{
+  "schema": "sk-guix-disk-health/v1",
+  "status": "observed",
+  "classification": "favorable",
+  "activation_policy": "cached-only",
+  "view": "summary",
+  "cache": {
+    "updated_epoch": 1784240015,
+    "age_seconds": 482,
+    "state": "fresh",
+    "stale_after_seconds": 1200
+  },
+  "smart": {
+    "supported": true,
+    "enabled": true,
+    "drive_failing": false,
+    "temperature_c": 29.0,
+    "power_on_seconds": 133347600,
+    "power_on_hours": 37041,
+    "current_failing_attributes": 0,
+    "attributes_failed_in_past": 0,
+    "bad_sectors": 0,
+    "self_test_status": "success-or-never",
+    "self_test_percent_remaining": 0
+  }
+}
+#+end_src
+
+* Interpretation boundary
+
+=favorable= means the fresh cached snapshot contained none of the reader's
+selected failing indicators and no selected unknown that would force the
+classification to =unknown=.  It does not mean:
+
+- every possible ATA SMART attribute was inspected;
+- a SMART self-test was run or passed;
+- the drive is guaranteed healthy now or in the future;
+- wear or remaining lifetime was established; or
+- performance, filesystem integrity, discard behavior, or backup health was
+  measured.
+
+The =success-or-never= self-test label is intentionally ambiguous: UDisks does
+not prove from that cached value alone that a self-test ever ran.
+
+* Activation and side-effect evidence
+
+The daemon preflight and postflight compared its numeric PID without retaining
+that value.  No PID change was observed.  This is consistent with the same
+already-running process remaining active; the samples alone cannot exclude an
+intervening restart followed by PID reuse.  The reader's cached-only argument
+contract prohibited D-Bus auto-start, and the cached =SmartGetAttributes=
+method did not request a SMART refresh.
+
+The gate performed no:
+
+- reader-invoked service-management or ordinary D-Bus activation operation;
+- SMART refresh, enable/disable, self-test, power-management, or erase method;
+- package addition, System/Home build, reconfigure, generation, or activation;
+- sudo, setuid, group, or privilege change;
+- FITRIM, mount, filesystem, garbage collection, or cleanup action; or
+- reboot.
+
+The private Drive path was still transiently present in child argv as already
+documented by the source checkpoint.  It was neither rendered nor retained.
+
+* Remaining decision
+
+The selected cached-only runtime boundary is met.  Before changing P2.M1a from
+=TODO=/=NEXT= to complete, obtain explicit user acceptance.
+
+The ordinary =--allow-activate= behavior remains unselected.  If it is ever
+chosen, treat it as a separate hand test with pre/post daemon-state evidence;
+it is not required retroactively by this cached-only result.
+
+P2.M1b/P2.M1c TRIM policy, dry-run, declaration, build, activation, and actual
+FITRIM remain separate.  P2.M1d diagnostics and alerting remain parked.
+
+* Acceptance checklist
+
+- [X] Source checkpoint pushed and upstream equality verified.
+- [X] Exactly one =udisksd= process was already active.
+- [X] One authorized cached-only summary ran and exited zero.
+- [X] Sanitized schema-v1 output was retained without a hardware identifier.
+- [X] Cache state was fresh and classification was interpreted narrowly.
+- [X] The same numeric daemon PID was observed before and after; no PID change
+  was observed.
+- [X] No mutable UDisks method, privilege, build, activation, trim, or reboot
+  occurred.
+- [ ] User accepts P2.M1a completion.

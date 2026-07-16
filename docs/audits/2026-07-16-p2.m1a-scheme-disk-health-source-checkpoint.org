@@ -2,7 +2,7 @@
 #+date: 2026-07-16
 #+author: Rafael Oliveira
 #+startup: overview
-#+status: committed; push pending
+#+status: source checkpoint accepted; runtime evidence separate
 
 * Status and truth boundary
 
@@ -12,8 +12,9 @@ implementation, synthetic fixtures, and source gates.  It does not claim that
 the new command queried the live system bus, read the live UDisks cache,
 activated =udisksd=, or classified the installed drive.
 
-The source checkpoint is committed and must be pushed before any separately
-authorized live acceptance.  P2.M1a remains open after that push.
+This source checkpoint was committed and pushed before any live acceptance.
+Its later runtime evidence is kept in a separate record so the source-only
+truth boundary below remains intact.
 
 * Scope delivered
 
@@ -175,15 +176,16 @@ hash and upstream equality belong in the next acceptance update after push.
   trim, garbage collection, cleanup, or reboot occurred.
 - No claim is made about daemon state or live drive health.
 
-* Remaining P2.M1a gates
+* Subsequent evidence and remaining gates
 
-1. Push this committed source/fixture checkpoint; verify upstream equality.
-2. After the push, separately authorize one live =--cached-only= read while
-   =udisksd= is already active.  Retain only sanitized output and confirm that
-   cached-only did not request service activation.
-3. Keep an ordinary-boot =--allow-activate= check separate.  Capture pre/post
+The checkpoint was pushed and verified equal to upstream.  The later
+authorized cached-only gate passed and is owned by
+[[file:2026-07-16-p2.m1a-cached-only-runtime-acceptance.org][the separate runtime-acceptance record]].  Those later facts do not change the
+source-only evidence boundary recorded above.
+
+1. Keep an ordinary-boot =--allow-activate= check separate if selected.  Capture pre/post
    daemon state without retaining a raw Drive path or identity-bearing output.
-4. Close P2.M1a only after its selected runtime acceptance boundary is met.
+2. Close P2.M1a only after explicit completion acceptance.
 
 P2.M1b/P2.M1c TRIM policy, dry-run, declaration, build, activation, and actual
 FITRIM remain separate.  P2.M1d alerting/deeper diagnostics remain parked.
@@ -205,7 +207,7 @@ needs reversal.
 - [X] 185 offline checks pass without system-bus access.
 - [X] Compile, source, privacy, aggregate strict, and Org gates pass.
 - [X] Source checkpoint committed.
-- [ ] Checkpoint pushed and upstream equality verified.
-- [ ] Live cached-only acceptance separately authorized and documented.
+- [X] Checkpoint pushed and upstream equality verified.
+- [X] Live cached-only acceptance separately authorized and documented.
 - [ ] Ordinary activation behavior tested separately if selected.
 - [ ] P2.M1a completion accepted.

@@ -15,8 +15,11 @@ maintenance policy remains unselected.  P2.M1 then validated the existing
 UDisks ATA SMART path with one disclosed lazy-activation probe.  The sanitized
 cache snapshot contained favorable selected indicators, not a full diagnostic
 or future-health guarantee.  P2.M1a's no-new-package Scheme reader is now
-implemented and fixture-verified at a source checkpoint; the reader has not
-queried the live system bus and runtime acceptance remains pending.  The
+implemented and fixture-verified at a source checkpoint.  After that commit
+was pushed and verified, one cached-only live read passed with a fresh,
+=favorable= selected snapshot; the same numeric =udisksd= PID was observed
+before and after, with no PID change observed.
+P2.M1a completion still awaits explicit review.  The
 effects of Guix permitting one local build job and reporting/allowing up to
 four cores to it, HPET cost, sustained
 thermals, and real boot-to-ready time remain unmeasured.  No tuning or
@@ -46,19 +49,24 @@ actual FITRIM, deep diagnostics, alerting, and cleanup.
 [[file:docs/audits/2026-07-16-p2.m1a-scheme-disk-health-source-checkpoint.org][The P2.M1a source checkpoint]] owns the reader implementation, fixed command
 plan, offline protocol/lifecycle fixtures, privacy boundary, and source-gate
 evidence.  It contains no live drive-health or daemon-activation evidence.
+[[file:docs/audits/2026-07-16-p2.m1a-cached-only-runtime-acceptance.org][The P2.M1a cached-only runtime record]] owns the pushed-checkpoint equality,
+single live cached observation, sanitized result, no-PID-change evidence, and
+remaining acceptance boundary.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
 
 ** Active follow-on
 
-P2.M1a is implemented and fixture-verified at the source checkpoint.  Its
-fixed Guile reader, human and versioned JSON views, direct bounded child
-transport, identifier guard, and 185-check offline gate have not yet been
-exercised against the live system bus.  Push this committed checkpoint before
-one separately authorized =--cached-only= read; keep ordinary D-Bus activation
-as a later hand-test boundary.  P2.M1a remains open and adds no package,
-daemon, privilege, generation, or device-changing method.
+P2.M1a's source checkpoint is pushed and its separately authorized
+=--cached-only= runtime gate passed.  The fresh summary classified the selected
+snapshot as =favorable=; this is not a full diagnosis or future-health claim.
+The same numeric =udisksd= PID was observed before and after the read, with no
+PID change observed.
+Review and explicitly accept P2.M1a completion next.  Ordinary D-Bus
+activation remains unselected and is not silently folded into this result.
+The slice adds no package, daemon, privilege, generation, or device-changing
+method.
 P2.M1b/P2.M1c keep TRIM policy, dry-run, declaration/build, activation, and
 actual FITRIM separate;
 P2.M1d alerting/deep diagnostics is parked.  P2.3, P2.S1b, and P2.S1c also

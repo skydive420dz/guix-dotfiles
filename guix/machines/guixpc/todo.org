@@ -473,8 +473,9 @@ CLOSED: [2026-07-16 Thu]
 * TODO P2.M1a Scheme UDisks SMART reader
 
 - Evidence: [[file:../../../docs/audits/2026-07-16-p2.m1a-scheme-disk-health-source-checkpoint.org][2026-07-16 P2.M1a source checkpoint]].
-- Source implementation is present and offline fixtures pass; runtime
-  acceptance remains pending.
+- Runtime evidence: [[file:../../../docs/audits/2026-07-16-p2.m1a-cached-only-runtime-acceptance.org][2026-07-16 P2.M1a cached-only acceptance]].
+- Source implementation and offline fixtures pass.  The pushed checkpoint and
+  one cached-only live read also pass; explicit completion acceptance remains.
 - [X] Implement the fixed Scheme reader and launcher with human, JSON, summary,
   cached-only, and allow-activate presentation/policy modes.
 - [X] Pass the 185-check fake-runner protocol, classification, lifecycle,
@@ -482,8 +483,8 @@ CLOSED: [2026-07-16 Thu]
 - [X] Pass warning-clean compilation, focused ShellCheck, forbidden-operation,
   hard-coded-private-path, and privacy source gates.
 - [X] Commit the source checkpoint.
-- [ ] Push the checkpoint and verify upstream equality.
-- [ ] Authorize and run one cached-only live read; document only sanitized
+- [X] Push the checkpoint and verify upstream equality.
+- [X] Authorize and run one cached-only live read; document only sanitized
   output and confirm that it did not request service activation.
 - [ ] Test ordinary activation behavior separately if selected.
 - [ ] Accept P2.M1a completion.
