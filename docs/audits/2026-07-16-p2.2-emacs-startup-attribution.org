@@ -214,10 +214,10 @@ Live provenance includes the repository commit, boot ID, kernel, exact Home
 profile/client/server, native-cache identity, Emacs version/PID/start time,
 timer identity, activation token, GC policy, and observer event count.
 
-** Rejected activation attempts and source correction
+** Rejected activation/extraction attempts and source corrections
 
-Two 2026-07-16 activation attempts are retained as process evidence, but
-neither is a P2.2 startup trace and neither authorizes collector output.
+Three 2026-07-16 attempts are retained as process evidence, but none
+authorizes P2.2 collector output.
 
 1. At =2026-07-16T11:37:48Z= the session runner was invoked from an SSH
    pseudo-terminal.  Guix's generated =startx= rejected fd 0 as
@@ -233,6 +233,16 @@ neither is a P2.2 startup trace and neither authorizes collector output.
    Emacs inherited =p2.2-v1=, but =early-init.el= failed before installing the
    observer.  The universal variable was erased immediately; the collector
    was not run.
+3. After publishing source-path correction =e2ed5b5=, a fresh tty1 Emacs
+   sealed all 42 expected events with no init error.  At
+   =2026-07-16T12:01:25Z= the collector was invoked exactly once, returned
+   status 1, emitted a zero-byte TSV, and wrote 99 bytes of stderr:
+   =startup events are not chronologically sorted at
+   mark:exwm-config-enter=.  The empty TSV SHA-256 is
+   =e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855=;
+   the stderr SHA-256 is
+   =e7c7188e26377490d4cab5ff5031dbccdc56eed3fad60e6d9eb8628a6d2e29f2=.
+   The collector was not rerun against that process.
 
 The second attempt exposed a confirmed source-path bug.  The managed live
 =~/.emacs.d/early-init.el= is a symlink into this repository, while the
@@ -243,6 +253,19 @@ the nonexistent =~/.emacs.d/lisp/sk-startup-trace.el= and set
 =early-init.el= source.  A new isolated fixture reproduces the live symlink
 entrypoint with no =~/.emacs.d/lisp/= fallback; it must load both the observer
 and the remainder of native-cache setup.
+
+The third attempt exposed a collector-only numeric bug, not an event-order
+defect.  The chronological guard used a =1e-9= relative tolerance on absolute
+Unix timestamps near =1.784e9= seconds.  It therefore treated timestamps up to
+roughly 1.78 seconds apart as equal.  The outer EXWM load and its inner
+=exwm-config-enter= mark began less than one millisecond apart; after being
+misclassified as simultaneous, their intentionally nested end times appeared
+reversed.  Absolute clock readings now use only the collector's one-microsecond
+timer precision, while elapsed durations retain their separate numeric
+tolerance.  An epoch-scale nested-span fixture reproduces the live timestamp
+magnitude.  Because this correction changes the collector after process
+startup, the sealed process is rejected rather than attributed to a later
+repository commit; a new process is required after publishing the correction.
 
 The SSH attempt also demonstrated a separate launcher-hygiene issue: calling
 =scripts/exwm-session= while an EXWM session is already active rotates the

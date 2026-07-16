@@ -197,6 +197,16 @@ state = {
     "observer_hooks": "false",
     "events": events,
 }
+if os.environ.get("SK_FAKE_EPOCH_TIMESTAMPS") == "1":
+    # Absolute Unix timestamps are approximately 1.8e9 seconds in 2026.
+    # A relative tolerance would turn nanosecond-scale comparison policy into
+    # a roughly two-second window and misclassify nested chronological spans.
+    epoch_offset = 1_784_202_000.0
+    state["before_init_seconds"] += epoch_offset
+    state["after_init_seconds"] += epoch_offset
+    for event in state["events"]:
+        event["start_seconds"] += epoch_offset
+        event["end_seconds"] += epoch_offset
 drift_file = os.environ.get("SK_FAKE_STATE_DRIFT_FILE")
 if drift_file:
     drift_path = Path(drift_file)
@@ -399,6 +409,19 @@ def main() -> int:
             fail(
                 f"attribution emitted {len(rank_rows)} personal rankings instead of 23"
             )
+
+        epoch = command(
+            [str(COLLECTOR)],
+            env=environment | {"SK_FAKE_EPOCH_TIMESTAMPS": "1"},
+            check=False,
+        )
+        if epoch.returncode != 0:
+            fail(
+                "epoch-scale nested attribution failed: "
+                f"{epoch.stderr or epoch.stdout}"
+            )
+        if epoch.stderr:
+            fail(f"epoch-scale attribution wrote stderr: {epoch.stderr!r}")
 
         wrong_client = environment | {
             "SK_EMACS_STARTUP_ATTRIBUTION_EMACSCLIENT": str(wrong_emacsclient)
