@@ -5,17 +5,29 @@ Source of truth for the guixpc experiment machine.
 * Current progress
 
 The numbered stabilization pass is complete through Slice 19.  The later dated
-polishing roadmap has accepted Phase 1's SSH/terminal contract; Phase 2 remains
-backlog pending user review.  Keep this section aligned with accepted machine
-state so the repo records intent, not only implementation commits.
+polishing roadmap has accepted Phase 1's SSH/terminal contract and promoted
+Phase 2's first measurement-only Emacs/EXWM baseline slice.  Keep this section
+aligned with accepted machine state so the repo records intent, not only
+implementation commits.
 
-The current machine-wide baseline and canonical slice status live in
+The canonical record for the completed numbered roadmap is
 [[file:docs/audits/2026-07-12-full-configuration-audit.org][the 2026-07-12 full configuration audit]].  It records verified state,
 confirmed defects, qualified risks, strengths, Lisp coverage, and acceptance
-gates.  [[file:docs/audits/2026-07-15-phase-0-baseline.org][The 2026-07-15 Phase 0 baseline and P1.1 record]] owns the follow-on
-polishing roadmap and current boot-comparison evidence.  [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the
-low-noise machine queue for separate deferred work.  There is no successor
-numbered stabilization slice; new work is promoted through the dated roadmap.
+gates.  [[file:docs/audits/2026-07-15-phase-0-baseline.org][The 2026-07-15 Phase 0 baseline and P1.1 record]] owns current follow-on
+machine state and boot-comparison evidence.
+[[file:docs/audits/2026-07-15-p2.1-emacs-exwm-measurement.org][The P2.1 Emacs/EXWM measurement record]] owns the active versioned protocol,
+truth boundaries, and acceptance gates.  [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise
+machine queue for separate deferred work.  There is no successor numbered
+stabilization slice; new work is promoted through the dated roadmap.
+
+** Active follow-on
+
+- [ ] P2.1: establish a reproducible Emacs/EXWM responsiveness baseline.  The
+  implementation checkpoint adds a stdout-only TSV sampler for live state,
+  host-local RPC latency, PSS/RSS, cumulative GC state, and preparation-only
+  launcher timing.  It performs no tuning, GUI launch, cache reset, reload,
+  activation, or reboot.  Numeric targets remain deliberately unset until the
+  clean-checkpoint baseline distribution is reviewed.
 
 ** Completed
 
@@ -505,6 +517,40 @@ SK_EMACS_CHECK_BREAK_LIVE=1 scripts/emacs-check
 SK_EMACS_CHECK_BREAK_BATCH=1 scripts/emacs-check
 SK_EMACS_CHECK_BREAK_WARNING=1 scripts/emacs-check
 #+end_src
+
+P2.1 adds a separate observational performance snapshot.  It requires Linux
+=/proc= and clocksource sysfs, Python 3.10 or newer, Git with an upstream, a clean
+synchronized checkout, converged booted/current/profile System links, and the
+exact active-Home =emacsclient= and EXWM server.  Close every other
+=emacsclient= or =.emacsclient-real= process and remain idle during the normally
+short, per-call-bounded timing window:
+
+#+begin_src sh
+cd ~/Projects/guix-dotfiles
+scripts/emacs-performance-snapshot
+#+end_src
+
+The command emits versioned TSV to stdout.  It records live/fixture mode,
+runtime and source provenance, current-process initialization/start/uptime, GC
+and memory state, 21 monotonic host-local server-RPC samples, and five
+preparation-only launcher samples with raw values and descriptive distribution
+statistics.  The launcher probe replays discovery/filtering and stops before
+Ivy, application execution, or window placement.  The sampler refuses dirty or
+unsynchronized source, client/profile mismatch, another client process, or
+protected state drift.  It does not force garbage collection, persistently
+clear or warm the Counsel cache, tune Emacs, reload the config, activate a
+profile, or reboot.  Its evaluations still allocate and may advance cumulative
+GC/memory observations or warm the kernel filesystem cache.  See
+[[file:docs/audits/2026-07-15-p2.1-emacs-exwm-measurement.org][the P2.1 protocol and truth boundaries]] before interpreting its numbers.
+
+Publish the implementation checkpoint before collecting evidence.  From the
+then-clean =0/0= checkout, redirect stdout to
+=/tmp/guixpc-p2.1-emacs-exwm-v1.tsv= and stderr to the adjacent =.stderr= file.
+Require exit zero and empty stderr; review =run_mode= =live= metadata, sample
+counts, invariants, and SHA-256.  Only then add the unchanged TSV in a separate
+evidence commit and record its digest/interpretation in the P2.1 Evidence
+section.  Redirecting directly into the checkout correctly fails the clean-tree
+preflight.
 
 The unmanaged Breadcrumb ELPA tree found by the audit was not used by this
 configuration.  It is quarantined outside =package-user-dir= at

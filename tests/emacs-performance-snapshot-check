@@ -1,0 +1,359 @@
+#!/usr/bin/env python3
+"""Black-box and focused unit checks for the P2.1 sampler."""
+
+from __future__ import annotations
+
+import importlib.util
+from importlib.machinery import SourceFileLoader
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+from typing import NoReturn
+
+
+# Import the extensionless sampler without leaving a repository-local pyc.
+sys.dont_write_bytecode = True
+
+
+ROOT = Path(__file__).resolve().parent.parent
+SNAPSHOT = ROOT / "scripts/emacs-performance-snapshot"
+PAYLOAD_CHECK = ROOT / "tests/emacs/performance-payload-check.el"
+
+
+def fail(message: str) -> NoReturn:
+    print(f"emacs-performance-snapshot-check: {message}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def command(argv: list[str], *, cwd: Path | None = None, env=None, check=True):
+    result = subprocess.run(
+        argv,
+        cwd=cwd,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if check and result.returncode != 0:
+        fail(
+            f"command failed ({result.returncode}): {' '.join(argv)}: "
+            f"{result.stderr or result.stdout}"
+        )
+    return result
+
+
+def write(path: Path, content: str, *, executable: bool = False) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    if executable:
+        path.chmod(0o755)
+
+
+def load_snapshot_module():
+    loader = SourceFileLoader("sk_emacs_performance_snapshot", str(SNAPSHOT))
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    if spec is None:
+        fail("cannot build sampler import specification")
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
+def initialize_git(repo: Path, remote: Path) -> None:
+    command(["git", "init", "--bare", str(remote)])
+    command(["git", "init", str(repo)])
+    command(["git", "-C", str(repo), "config", "user.name", "Fixture"])
+    command(["git", "-C", str(repo), "config", "user.email", "fixture@example.invalid"])
+    command(["git", "-C", str(repo), "add", "."])
+    command(["git", "-C", str(repo), "commit", "-m", "fixture"])
+    command(["git", "-C", str(repo), "branch", "-M", "main"])
+    command(["git", "-C", str(repo), "remote", "add", "origin", str(remote)])
+    command(["git", "-C", str(repo), "push", "-u", "origin", "main"])
+
+
+FAKE_EMACSCLIENT = r'''#!/usr/bin/env python3
+import json
+import os
+from pathlib import Path
+import sys
+
+expression = sys.argv[-1]
+if expression == "t":
+    print("malformed" if os.environ.get("SK_FAKE_RPC_BAD") == "1" else "t")
+    raise SystemExit(0)
+
+repo = Path(os.environ["SK_FAKE_REPO"]).resolve()
+home = Path(os.environ["SK_FAKE_HOME_PROFILE"]).resolve()
+
+if "sk-emacs-performance-state-v1" in expression:
+    process_count = 2
+    drift_file = os.environ.get("SK_FAKE_STATE_DRIFT_FILE")
+    if drift_file:
+        drift_path = Path(drift_file)
+        if drift_path.exists():
+            process_count = 3
+        else:
+            drift_path.write_text("seen\n", encoding="utf-8")
+    state = {
+        "protocol": "sk-emacs-performance-state-v1",
+        "pid": 4242,
+        "version": "30.2",
+        "init_seconds": 8.5,
+        "started_utc": "2026-07-15T19:00:00Z",
+        "uptime_seconds": 3600.0,
+        "gc_count": 100,
+        "gc_elapsed_seconds": 5.0,
+        "gc_cons_threshold": 800000,
+        "gc_cons_percentage": 0.1,
+        "rss_kib": 340000,
+        "vsize_kib": 1400000,
+        "buffer_count": 20,
+        "frame_count": 5,
+        "visible_frame_count": 5,
+        "process_count": process_count,
+        "pending_launch_intents": 0,
+        "messages_bytes": 10000,
+        "exwm_loaded": "true",
+        "exwm_connected": "true",
+        "exwm_wm_mode": "true",
+        "server_running": "true",
+        "source_root": str((repo / "emacs").resolve()),
+        "user_init_file": str((repo / "emacs/init.el").resolve()),
+        "sk_exwm_file": str((repo / "emacs/lisp/sk-exwm.el").resolve()),
+        "running_executable": str((home / "bin/emacs").resolve()),
+        "home_profile": str(home),
+        "native_profile_key": home.name,
+        "message_advice": "true",
+        "counsel_loaded": "true",
+        "counsel_cache_fingerprint": "f" * 64,
+    }
+    print(json.dumps(json.dumps(state, separators=(",", ":"))))
+    raise SystemExit(0)
+
+if "sk-emacs-performance-launcher-v1" in expression:
+    bad_delta = 1 if os.environ.get("SK_FAKE_LAUNCHER_DELTA") == "1" else 0
+    elapsed = [10.0, 20.0, 30.0, 40.0, 100.0]
+    samples = []
+    for index, value in enumerate(elapsed, start=1):
+        samples.append({
+            "index": index,
+            "elapsed_ms": value,
+            "desktop_files": 18,
+            "all_candidates": 17,
+            "supported_candidates": 10,
+            "gc_count_delta": 0,
+            "gc_elapsed_ms": 0.0,
+            "buffer_delta": bad_delta if index == 1 else 0,
+            "frame_delta": 0,
+            "process_delta": 0,
+            "intent_delta": 0,
+            "gc_cons_threshold_before": 800000,
+            "gc_cons_threshold_after": 800000,
+            "gc_cons_percentage_before": 0.1,
+            "gc_cons_percentage_after": 0.1,
+        })
+    payload = {
+        "protocol": "sk-emacs-performance-launcher-v1",
+        "timer": "emacs-current-time",
+        "cache_mode": "already-loaded-natural-cache",
+        "initial_cache_populated": "true",
+        "initial_cached_files_count": 1,
+        "samples": samples,
+    }
+    print(json.dumps(json.dumps(payload, separators=(",", ":"))))
+    raise SystemExit(0)
+
+raise SystemExit(65)
+'''
+
+
+def main() -> int:
+    module = load_snapshot_module()
+    summary = module.summarize([1.0, 2.0, 3.0, 4.0, 100.0])
+    if summary != {
+        "count": 5,
+        "first": 1.0,
+        "min": 1.0,
+        "median": 3.0,
+        "p95": 100.0,
+        "max": 100.0,
+        "p95_to_median": 100.0 / 3.0,
+    }:
+        fail(f"nearest-rank summary is incorrect: {summary}")
+    even = module.summarize([20.0, 30.0, 40.0, 100.0])
+    if even["median"] != 35.0 or even["p95"] != 100.0:
+        fail(f"even/repeated summary is incorrect: {even}")
+
+    with tempfile.TemporaryDirectory(prefix="sk-emacs-performance-check.") as raw:
+        tmp = Path(raw)
+        repo = tmp / "repo"
+        remote = tmp / "remote.git"
+        proc_root = tmp / "proc"
+        profiles = tmp / "profiles"
+        store = tmp / "store"
+        fake_emacsclient = store / "home/bin/emacsclient"
+        wrong_emacsclient = tmp / "bin/emacsclient"
+        emacs_test_home = tmp / "emacs-test-home"
+
+        write(repo / "marker", "fixture\n")
+        write(repo / "emacs/init.el", "; fixture\n")
+        write(repo / "emacs/lisp/sk-exwm.el", "; fixture\n")
+        initialize_git(repo, remote)
+
+        for target in ("system", "home", "pull"):
+            (store / target).mkdir(parents=True)
+        write(store / "home/bin/emacs", "fixture\n", executable=True)
+        profiles.mkdir()
+        (profiles / "booted-system").symlink_to(store / "system")
+        (profiles / "current-system").symlink_to(store / "system")
+        (profiles / "system-profile").symlink_to(store / "system")
+        (profiles / "home").symlink_to(store / "home")
+        (profiles / "pull").symlink_to(store / "pull")
+
+        write(proc_root / "sys/kernel/random/boot_id", "fixture-boot-id\n")
+        write(proc_root / "loadavg", "0.00 0.01 0.00 1/100 4242\n")
+        write(proc_root / "uptime", "3600.00 7200.00\n")
+        write(proc_root / "4242/cmdline", "emacs\0-fs\0")
+        write(
+            proc_root / "4242/status",
+            "\n".join(
+                (
+                    "VmPeak: 1500000 kB",
+                    "VmSize: 1400000 kB",
+                    "VmHWM: 350000 kB",
+                    "VmRSS: 340000 kB",
+                    "VmSwap: 0 kB",
+                    "Threads: 5",
+                    "",
+                )
+            ),
+        )
+        write(
+            proc_root / "4242/smaps_rollup",
+            "\n".join(
+                (
+                    "Rss: 340000 kB",
+                    "Pss: 310000 kB",
+                    "Private_Clean: 10000 kB",
+                    "Private_Dirty: 190000 kB",
+                    "Swap: 0 kB",
+                    "",
+                )
+            ),
+        )
+        write(tmp / "clocksource", "hpet\n")
+        write(fake_emacsclient, FAKE_EMACSCLIENT, executable=True)
+        write(wrong_emacsclient, FAKE_EMACSCLIENT, executable=True)
+
+        (emacs_test_home / ".guix-home").mkdir(parents=True)
+        (emacs_test_home / ".guix-home/profile").symlink_to(store / "home")
+        emacs = shutil.which("emacs")
+        if not emacs:
+            fail("Emacs is required for the payload fixture")
+        payload_env = os.environ.copy()
+        payload_env["HOME"] = str(emacs_test_home)
+        payload_env["SK_EMACS_PERFORMANCE_SOURCE_ROOT"] = str(ROOT)
+        result = command(
+            [emacs, "--batch", "-Q", "-l", str(PAYLOAD_CHECK)],
+            env=payload_env,
+            check=False,
+        )
+        if result.returncode != 0 or "emacs-performance-payload-check: PASS" not in result.stdout:
+            fail(f"real Emacs payload fixture failed: {result.stderr or result.stdout}")
+
+        environment = os.environ.copy()
+        environment.update(
+            {
+                "SK_EMACS_PERFORMANCE_FIXTURE": "1",
+                "SK_EMACS_PERFORMANCE_REPO": str(repo),
+                "SK_EMACS_PERFORMANCE_RPC_SAMPLES": "5",
+                "SK_EMACS_PERFORMANCE_LAUNCHER_SAMPLES": "5",
+                "SK_EMACS_PERFORMANCE_EMACSCLIENT": str(fake_emacsclient),
+                "SK_EMACS_PERFORMANCE_PROC_ROOT": str(proc_root),
+                "SK_EMACS_PERFORMANCE_CLOCKSOURCE_FILE": str(tmp / "clocksource"),
+                "SK_EMACS_PERFORMANCE_BOOTED_SYSTEM_LINK": str(profiles / "booted-system"),
+                "SK_EMACS_PERFORMANCE_CURRENT_SYSTEM_LINK": str(profiles / "current-system"),
+                "SK_EMACS_PERFORMANCE_SYSTEM_PROFILE_LINK": str(profiles / "system-profile"),
+                "SK_EMACS_PERFORMANCE_HOME_LINK": str(profiles / "home"),
+                "SK_EMACS_PERFORMANCE_PULL_LINK": str(profiles / "pull"),
+                "SK_FAKE_REPO": str(repo),
+                "SK_FAKE_HOME_PROFILE": str(store / "home"),
+            }
+        )
+
+        good = command([str(SNAPSHOT)], env=environment, check=False)
+        if good.returncode != 0:
+            fail(f"deterministic snapshot failed: {good.stderr or good.stdout}")
+        required = (
+            "meta\tprotocol\tsk-emacs-performance-v1",
+            "meta\trun_mode\tfixture",
+            "summary\tlauncher_prepare_ms\tmedian\t30.000000",
+            "summary\tlauncher_repeated_ms\tmedian\t35.000000",
+            "invariant\tambient_counsel_cache_stable\tPASS",
+        )
+        for marker in required:
+            if marker not in good.stdout:
+                fail(f"snapshot output omitted {marker!r}")
+        resolution_rows = [
+            line
+            for line in good.stdout.splitlines()
+            if line.startswith("meta\trpc_clock_resolution_seconds\t")
+        ]
+        if len(resolution_rows) != 1 or float(resolution_rows[0].split("\t")[2]) <= 0:
+            fail("snapshot rounded the positive performance-clock resolution away")
+
+        wrong_client_env = environment | {
+            "SK_EMACS_PERFORMANCE_EMACSCLIENT": str(wrong_emacsclient)
+        }
+        wrong_client = command([str(SNAPSHOT)], env=wrong_client_env, check=False)
+        if (
+            wrong_client.returncode == 0
+            or "does not belong to the active Home profile" not in wrong_client.stderr
+        ):
+            fail("non-Home emacsclient was not rejected causally")
+
+        count_env = environment | {"SK_EMACS_PERFORMANCE_RPC_SAMPLES": "invalid"}
+        bad_count = command([str(SNAPSHOT)], env=count_env, check=False)
+        if bad_count.returncode == 0 or "must be an integer" not in bad_count.stderr:
+            fail("malformed fixture sample count was not rejected causally")
+
+        malformed_env = environment | {"SK_FAKE_RPC_BAD": "1"}
+        malformed = command([str(SNAPSHOT)], env=malformed_env, check=False)
+        if malformed.returncode == 0 or "returned malformed output" not in malformed.stderr:
+            fail("malformed RPC output was not rejected causally")
+
+        launcher_env = environment | {"SK_FAKE_LAUNCHER_DELTA": "1"}
+        contaminated = command([str(SNAPSHOT)], env=launcher_env, check=False)
+        if contaminated.returncode == 0 or "was contaminated" not in contaminated.stderr:
+            fail("launcher contamination was not rejected causally")
+
+        drift_env = environment | {
+            "SK_FAKE_STATE_DRIFT_FILE": str(tmp / "state-drift")
+        }
+        drift = command([str(SNAPSHOT)], env=drift_env, check=False)
+        if drift.returncode == 0 or "protected live Emacs state changed" not in drift.stderr:
+            fail("persistent protected-state drift was not rejected")
+
+        write(
+            proc_root / "9999/cmdline",
+            "/gnu/store/fixture/bin/.emacsclient-real\0-t\0",
+        )
+        attached = command([str(SNAPSHOT)], env=environment, check=False)
+        if attached.returncode == 0 or "attached emacsclient" not in attached.stderr:
+            fail("Guix .emacsclient-real attachment was not rejected")
+        shutil.rmtree(proc_root / "9999")
+
+        write(repo / "marker", "dirty\n")
+        dirty = command([str(SNAPSHOT)], env=environment, check=False)
+        if dirty.returncode == 0 or "repository is dirty" not in dirty.stderr:
+            fail("dirty repository was not rejected")
+
+    print("emacs-performance-snapshot-check: PASS")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

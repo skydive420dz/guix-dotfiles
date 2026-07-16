@@ -65,6 +65,7 @@ shellcheck \
 "$repo/tests/exwm-session-check"
 "$repo/tests/desktop-audio-output-check"
 "$repo/tests/desktop-policy-check"
+"$repo/tests/emacs-performance-snapshot-check"
 "$repo/tests/emacs-fennel-check"
 "$repo/tests/guix-bootstrap-check"
 "$repo/tests/guix-build-gate-check"

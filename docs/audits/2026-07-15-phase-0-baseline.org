@@ -9,6 +9,10 @@ polishing roadmap.  It updates the dated observations in
 [[file:2026-07-12-full-configuration-audit.org][the full configuration audit]] without reopening that completed remediation
 roadmap.
 
+The promoted measurement follow-on is
+[[file:2026-07-15-p2.1-emacs-exwm-measurement.org][P2.1's versioned Emacs/EXWM baseline protocol]].  It preserves the observations
+below as dated evidence rather than silently replacing them with a new method.
+
 The unprivileged sample was taken on =guixpc= at =192.168.1.221= between
 approximately =2026-07-15 00:19= and =00:25 EDT=.  The privileged read-only
 follow-up ran at =06:35 EDT=.  Repository files, Guix channels, profiles,
@@ -111,11 +115,15 @@ After about 1 hour 49 minutes, the live graphical Emacs 30.2/EXWM process had:
 - no =*Warnings*= buffer.
 
 These figures make EXWM/Emacs initialization and GC pauses useful Phase 2
-measurement targets.  One idle sample is not evidence that either value should
+measurement candidates.  One idle sample is not evidence that either value should
 be tuned yet.  Launcher latency was not measured because invoking the GUI would
 have introduced a user-visible side effect; the current launcher is the
 in-process Counsel/Ivy =sk/exwm-launch-app= path and had no pending launch
 intents.
+
+P2.1 subsequently defines a preparation-only launcher probe that does not open
+Ivy or launch an application.  It is intentionally narrower than full launcher
+latency and does not retroactively turn this Phase 0 sample into a baseline.
 
 ** Desktop and user-service acceptance
 
@@ -156,16 +164,17 @@ warning-free.  The privileged evidence added this follow-up register:
 |----+----------+----------------+---------|
 | P0-F01 | Early =init[1]= Guile segmentation fault; the same Shepherd PID 1 then loaded its configuration and remained healthy for more than eight hours | current-boot unknown; medium | track recurrence across cold boots before changing Guile, Shepherd, or kernel |
 | P0-F02 | IRQ 7 reached 100,000 unhandled =pinctrl_amd= interrupts and the kernel disabled it; the live counter remains 100,000 | current-boot actionable; medium-high | dedicated kernel/firmware investigation; identify affected GPIO consumers and compare a retained kernel generation; never add =irqpoll= blindly |
-| P0-F03 | TSC skewed by 871,760 ns over a 479,983,210 ns watchdog interval and was rejected; live clocksource is =hpet= | current-boot performance/firmware concern; medium | preserve correctness fallback, then compare latency and recurrence during Phase 2 before any kernel argument |
+| P0-F03 | TSC skewed by 871,760 ns over a 479,983,210 ns watchdog interval and was rejected; live clocksource is =hpet= | current-boot performance/firmware concern; medium | preserve correctness fallback, then compare latency and recurrence in P2.K1 before any kernel argument |
 | P0-F04 | =regulatory.db= firmware load failed | current configuration gap; low-medium | verify the active regulatory domain and package ownership before changing wireless policy |
 | P0-F05 | WPA supplicant reports =send_event_marker= unsupported about every 30--35 minutes while Wi-Fi and SSH remain connected | recurring log noise; low | correlate with an actual reconnect/scan/roam failure before intervention |
 | P0-F06 | TPM CRB ACPI region/probe failed and no TPM device is available | firmware/feature unavailable; low unless TPM is required | revisit only if measured boot, sealing, or another TPM use enters scope |
 | P0-F07 | BlueZ/WirePlumber D-Bus rejections are historical or boot-edge entries; current Bluetooth autoconnect, sink selection, and audio pass | historical/boot noise; low | do not change D-Bus policy without a current audio/profile symptom |
 | P0-F08 | ACPI FADT/DSM, SPI metadata, USB power-management, Bluetooth LE capability, and one udev credential warning | firmware/capability noise; low absent symptoms | retain as comparison evidence for later boots |
 
-These findings do not block the narrow terminfo correction.  P0-F01 through
-P0-F04 join the Phase 2 measurement/log track and must be reviewed before any
-performance or kernel tuning.
+These findings do not block the narrow terminfo correction or P2.1's
+application-level measurement.  P0-F01 through P0-F05 are routed to the
+separate P2.K1 boot/kernel/firmware track and must be reviewed before any boot or
+kernel tuning.
 
 The P1.1 cold-reboot comparison at =2026-07-15 17:47 EDT= confirmed that
 P0-F01, P0-F02, and P0-F03 recur.  The boot again logged an early =init[1]=
@@ -174,8 +183,8 @@ unhandled interrupts, and rejected unstable TSC before selecting HPET.  The
 new TSC sample skewed by 876,317 ns over 475,133,152 ns, and the live
 clocksource is =hpet=.  P0-F04 through P0-F08 were not evaluated by this narrow
 comparison probe.  These are confirmed pre-existing boot findings, not new
-Kitty/terminfo regressions; they remain routed to dedicated Phase 2 and
-kernel/firmware investigation without adding =irqpoll=, =tsc=unstable=, or
+Kitty/terminfo regressions; they remain routed to P2.K1 without adding =irqpoll=,
+=tsc=unstable=, or
 another workaround in P1.1.
 
 * SSH and terminal contract
@@ -222,7 +231,7 @@ to the System recovery package list:
 | Noninteractive SSH | emits only requested output | preserve and regression-test |
 | Kitty terminfo | separate output is not installed | install the output; never falsify =TERM= |
 | User desktop services/audio | complete checker passes | preserve |
-| Emacs/EXWM performance | 8.664 s init; 580 GCs/46.039 s in 1h49m | retain as Phase 2 baseline; choose targets later |
+| Emacs/EXWM performance | 8.664 s init; 580 GCs/46.039 s in 1h49m | retain as a dated feasibility observation; P2.1 owns the comparison baseline |
 | Generations/store | many duplicate candidates; 52% root use | inventory only; cleanup waits for backup policy |
 | System Shepherd/root logs | all registered services/timers started; no filtered secure/debug/Guix-daemon finding; boot warnings are registered above | Phase 0 boundary complete; route P0-F01 through P0-F08 without hiding them |
 
@@ -337,8 +346,8 @@ Emacs server are healthy.  Manually redefining =TERM= hides the ownership bug.
   converge on System 87.
 - Residual risks: P0-F01 through P0-F03 recur as recorded above; P0-F04 through
   P0-F08 remain registered.  None is caused or masked by the terminfo change.
-- Next action: review Phase 2's measurement scope and targets with the user
-  before promoting any performance or kernel experiment.
+- Next action: publish and run P2.1's accepted measurement protocol; P2.K1
+  remains backlog and numeric targets remain unset.
 
 * Phase 0 acceptance
 
@@ -355,9 +364,9 @@ Emacs server are healthy.  Manually redefining =TERM= hides the ownership bug.
 - [X] Numeric performance targets remain deliberately deferred to Phase 2 user
   review; Phase 0 introduced no tuning assumption.
 
-Provisional high-value interactions for later measurement are EXWM/Emacs
-startup and SSH terminal/=emacsclient= use.  The user can replace either choice
-before Phase 2 begins.
+Provisional high-value interactions for later experiments are EXWM/Emacs
+startup and ordinary interaction.  P2.1 now measures the accepted narrow
+baseline; the user can replace the first P2.2 hypothesis after reviewing it.
 
 * Commands used
 

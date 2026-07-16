@@ -1,0 +1,758 @@
+#!/usr/bin/env python3
+"""Emit a guarded, read-only Emacs/EXWM performance snapshot as TSV."""
+
+from __future__ import annotations
+
+import ast
+import json
+import math
+import os
+from pathlib import Path
+import shutil
+import statistics
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+from typing import Any, Iterable, NoReturn
+
+
+PROTOCOL = "sk-emacs-performance-v1"
+STATE_PROTOCOL = "sk-emacs-performance-state-v1"
+LAUNCHER_PROTOCOL = "sk-emacs-performance-launcher-v1"
+RPC_SAMPLES = 21
+LAUNCHER_SAMPLES = 5
+
+
+class SnapshotError(RuntimeError):
+    """A causal preflight, measurement, or invariant failure."""
+
+
+def fail(message: str) -> NoReturn:
+    raise SnapshotError(message)
+
+
+def run(
+    argv: list[str],
+    *,
+    timeout: float = 10.0,
+    cwd: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            argv,
+            cwd=cwd,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        fail(f"command failed to execute: {argv[0]}: {error}")
+
+
+def checked_output(
+    argv: list[str],
+    *,
+    timeout: float = 10.0,
+    cwd: Path | None = None,
+) -> str:
+    result = run(argv, timeout=timeout, cwd=cwd)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        fail(
+            f"command exited {result.returncode}: {' '.join(argv)}"
+            + (f": {detail}" if detail else "")
+        )
+    return result.stdout.strip()
+
+
+def fixture_value(name: str, default: str, fixture: bool) -> str:
+    if name not in os.environ:
+        return default
+    if not fixture:
+        fail(f"{name} is fixture-only")
+    return os.environ[name]
+
+
+def sample_count(name: str, default: int, fixture: bool) -> int:
+    raw = fixture_value(name, str(default), fixture)
+    try:
+        return int(raw)
+    except ValueError:
+        fail(f"{name} must be an integer, got {raw!r}")
+
+
+def resolve_existing(path: str, label: str) -> Path:
+    try:
+        return Path(path).expanduser().resolve(strict=True)
+    except OSError as error:
+        fail(f"cannot resolve {label} at {path}: {error}")
+
+
+def git_output(repo: Path, *args: str) -> str:
+    return checked_output(["git", "-C", str(repo), *args])
+
+
+def repository_identity(repo: Path) -> dict[str, str]:
+    head = git_output(repo, "rev-parse", "HEAD")
+    status = checked_output(
+        [
+            "git",
+            "-C",
+            str(repo),
+            "status",
+            "--porcelain=v1",
+            "--untracked-files=all",
+        ]
+    )
+    if status:
+        fail("repository is dirty; checkpoint or restore it before measuring")
+    upstream = git_output(repo, "rev-parse", "@{upstream}")
+    counts = git_output(repo, "rev-list", "--left-right", "--count", "HEAD...@{upstream}")
+    if counts.split() != ["0", "0"]:
+        fail(f"repository is not synchronized with its upstream: {counts}")
+    if head != upstream:
+        fail(f"HEAD and upstream disagree despite zero counts: {head} != {upstream}")
+    return {"head": head, "upstream": upstream, "ahead_behind": "0/0"}
+
+
+def profile_identity(paths: dict[str, str]) -> dict[str, str]:
+    identity = {
+        label: str(resolve_existing(path, label)) for label, path in paths.items()
+    }
+    system_targets = {
+        identity["booted_system"],
+        identity["current_system"],
+        identity["system_profile"],
+    }
+    if len(system_targets) != 1:
+        fail(
+            "booted/current/profile System mismatch: "
+            + ", ".join(sorted(system_targets))
+        )
+    return identity
+
+
+def read_first(path: Path, label: str) -> str:
+    try:
+        return path.read_text(encoding="utf-8").splitlines()[0]
+    except (OSError, IndexError) as error:
+        fail(f"cannot read {label} at {path}: {error}")
+
+
+def attached_emacsclients(proc_root: Path) -> list[tuple[int, list[str]]]:
+    matches: list[tuple[int, list[str]]] = []
+    try:
+        entries = list(proc_root.iterdir())
+    except OSError as error:
+        fail(f"cannot inspect process tree at {proc_root}: {error}")
+    for entry in entries:
+        if not entry.name.isdigit():
+            continue
+        try:
+            raw = (entry / "cmdline").read_bytes()
+        except OSError:
+            continue
+        arguments = [
+            item.decode("utf-8", errors="replace")
+            for item in raw.split(b"\0")
+            if item
+        ]
+        names = {Path(argument).name for argument in arguments}
+        if names.intersection({"emacsclient", ".emacsclient-real"}):
+            matches.append((int(entry.name), arguments))
+    return sorted(matches)
+
+
+def ensure_no_attached_clients(proc_root: Path, boundary: str) -> None:
+    clients = attached_emacsclients(proc_root)
+    if clients:
+        summary = "; ".join(
+            f"{pid}:{' '.join(arguments)}" for pid, arguments in clients
+        )
+        fail(f"attached emacsclient present at {boundary}: {summary}")
+
+
+def read_emacs_json(emacsclient: Path, payload: Path, timeout: float) -> dict[str, Any]:
+    try:
+        expression = payload.read_text(encoding="utf-8")
+    except OSError as error:
+        fail(f"cannot read Emacs payload {payload}: {error}")
+    result = run(
+        [
+            str(emacsclient),
+            "--socket-name=server",
+            "--alternate-editor=false",
+            "--eval",
+            expression,
+        ],
+        timeout=timeout,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        fail(f"Emacs payload {payload.name} failed: {detail or result.returncode}")
+    if result.stderr.strip():
+        fail(f"Emacs payload {payload.name} wrote stderr: {result.stderr.strip()}")
+    printed = result.stdout.strip()
+    try:
+        encoded = ast.literal_eval(printed)
+        if not isinstance(encoded, str):
+            raise ValueError("Emacs result is not a string")
+        decoded = json.loads(encoded)
+    except (SyntaxError, ValueError, json.JSONDecodeError) as error:
+        fail(f"Emacs payload {payload.name} returned malformed JSON: {error}: {printed}")
+    if not isinstance(decoded, dict):
+        fail(f"Emacs payload {payload.name} did not return an object")
+    return decoded
+
+
+def canonical(path: Any, label: str) -> Path:
+    if not isinstance(path, str) or not path:
+        fail(f"live Emacs {label} is not a path: {path!r}")
+    return resolve_existing(path, f"live Emacs {label}")
+
+
+def validate_state(
+    state: dict[str, Any], repo: Path, profiles: dict[str, str]
+) -> None:
+    if state.get("protocol") != STATE_PROTOCOL:
+        fail(f"invalid live-state protocol: {state.get('protocol')!r}")
+    for key in (
+        "pid",
+        "gc_count",
+        "gc_cons_threshold",
+        "rss_kib",
+        "vsize_kib",
+        "buffer_count",
+        "frame_count",
+        "visible_frame_count",
+        "process_count",
+        "messages_bytes",
+    ):
+        if (
+            isinstance(state.get(key), bool)
+            or not isinstance(state.get(key), int)
+            or state[key] < 0
+        ):
+            fail(f"live Emacs field {key} is invalid: {state.get(key)!r}")
+    if state["pid"] == 0 or state["gc_cons_threshold"] == 0:
+        fail("live Emacs PID and GC threshold must be positive")
+    for key in (
+        "init_seconds",
+        "uptime_seconds",
+        "gc_elapsed_seconds",
+        "gc_cons_percentage",
+    ):
+        value = state.get(key)
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(float(value))
+            or value < 0
+        ):
+            fail(f"live Emacs field {key} is invalid: {state.get(key)!r}")
+    for key in ("version", "started_utc", "counsel_cache_fingerprint"):
+        if not isinstance(state.get(key), str) or not state[key]:
+            fail(f"live Emacs field {key} is invalid: {state.get(key)!r}")
+    if len(state["counsel_cache_fingerprint"]) != 64 or any(
+        character not in "0123456789abcdef"
+        for character in state["counsel_cache_fingerprint"]
+    ):
+        fail("live Counsel cache fingerprint is not SHA-256")
+    for key in (
+        "exwm_loaded",
+        "exwm_connected",
+        "exwm_wm_mode",
+        "server_running",
+        "message_advice",
+        "counsel_loaded",
+    ):
+        if state.get(key) != "true":
+            fail(f"live Emacs identity field {key} is not true: {state.get(key)!r}")
+    if state.get("pending_launch_intents") != 0:
+        fail(
+            "live Emacs has pending launch intents: "
+            f"{state.get('pending_launch_intents')!r}"
+        )
+
+    expected_source = (repo / "emacs").resolve(strict=True)
+    expected_init = (repo / "emacs/init.el").resolve(strict=True)
+    expected_exwm = (repo / "emacs/lisp/sk-exwm.el").resolve(strict=True)
+    expected_home = Path(profiles["home_profile"])
+    expected_emacs = (expected_home / "bin/emacs").resolve(strict=True)
+
+    if canonical(state.get("source_root"), "source root") != expected_source:
+        fail("live Emacs source root does not match the measured checkout")
+    if canonical(state.get("user_init_file"), "user init") != expected_init:
+        fail("live Emacs init file does not match the measured checkout")
+    if canonical(state.get("sk_exwm_file"), "sk-exwm source") != expected_exwm:
+        fail("live sk-exwm source does not match the measured checkout")
+    if canonical(state.get("running_executable"), "executable") != expected_emacs:
+        fail("live Emacs executable does not match the Home profile")
+    if canonical(state.get("home_profile"), "Home profile") != expected_home:
+        fail("live Emacs Home profile does not match the measured profile")
+    if state.get("native_profile_key") != expected_home.name:
+        fail("live native-comp profile key does not match the Home profile")
+
+
+def parse_proc_key_values(path: Path, selected: set[str]) -> dict[str, int]:
+    values: dict[str, int] = {}
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as error:
+        fail(f"cannot read process metrics {path}: {error}")
+    for line in lines:
+        key, separator, remainder = line.partition(":")
+        if not separator or key not in selected:
+            continue
+        fields = remainder.split()
+        if not fields:
+            fail(f"process metric {key} has no value in {path}")
+        try:
+            values[key] = int(fields[0])
+        except ValueError:
+            fail(f"process metric {key} is not an integer in {path}: {fields[0]}")
+    missing = selected.difference(values)
+    if missing:
+        fail(f"process metrics absent from {path}: {', '.join(sorted(missing))}")
+    return values
+
+
+def proc_snapshot(proc_root: Path, pid: int) -> dict[str, int]:
+    status = parse_proc_key_values(
+        proc_root / str(pid) / "status",
+        {"VmPeak", "VmSize", "VmHWM", "VmRSS", "VmSwap", "Threads"},
+    )
+    smaps = parse_proc_key_values(
+        proc_root / str(pid) / "smaps_rollup",
+        {"Rss", "Pss", "Private_Clean", "Private_Dirty", "Swap"},
+    )
+    result = {f"status_{key}_kib": value for key, value in status.items()}
+    result["status_Threads"] = result.pop("status_Threads_kib")
+    result.update({f"smaps_{key}_kib": value for key, value in smaps.items()})
+    return result
+
+
+def summarize(values: Iterable[float]) -> dict[str, float | int]:
+    raw = list(values)
+    if not raw:
+        fail("cannot summarize an empty sample")
+    ordered = sorted(raw)
+    p95_index = max(0, math.ceil(0.95 * len(ordered)) - 1)
+    median = float(statistics.median(ordered))
+    result: dict[str, float | int] = {
+        "count": len(raw),
+        "first": raw[0],
+        "min": ordered[0],
+        "median": median,
+        "p95": ordered[p95_index],
+        "max": ordered[-1],
+    }
+    result["p95_to_median"] = ordered[p95_index] / median if median else 0.0
+    return result
+
+
+def measure_rpc(emacsclient: Path, count: int) -> list[float]:
+    samples: list[float] = []
+    for index in range(1, count + 1):
+        started = time.perf_counter_ns()
+        result = run(
+            [
+                str(emacsclient),
+                "--socket-name=server",
+                "--alternate-editor=false",
+                "--eval",
+                "t",
+            ],
+            timeout=5.0,
+        )
+        elapsed_ms = (time.perf_counter_ns() - started) / 1_000_000
+        if result.returncode != 0:
+            fail(f"RPC sample {index} exited {result.returncode}: {result.stderr.strip()}")
+        if result.stderr.strip():
+            fail(f"RPC sample {index} wrote stderr: {result.stderr.strip()}")
+        if result.stdout.strip() != "t":
+            fail(
+                f"RPC sample {index} returned malformed output: "
+                f"{result.stdout.strip()!r}"
+            )
+        samples.append(elapsed_ms)
+    return samples
+
+
+def number(sample: dict[str, Any], key: str, *, integer: bool = False) -> float | int:
+    value = sample.get(key)
+    expected = int if integer else (int, float)
+    if isinstance(value, bool) or not isinstance(value, expected):
+        fail(f"launcher field {key} is invalid: {value!r}")
+    if not integer and not math.isfinite(float(value)):
+        fail(f"launcher field {key} is not finite: {value!r}")
+    return value
+
+
+def validate_launcher(data: dict[str, Any], expected_count: int) -> list[dict[str, Any]]:
+    if data.get("protocol") != LAUNCHER_PROTOCOL:
+        fail(f"invalid launcher protocol: {data.get('protocol')!r}")
+    if data.get("timer") != "emacs-current-time":
+        fail(f"invalid launcher timer identity: {data.get('timer')!r}")
+    if data.get("cache_mode") != "already-loaded-natural-cache":
+        fail(f"invalid launcher cache mode: {data.get('cache_mode')!r}")
+    if data.get("initial_cache_populated") not in ("true", "false"):
+        fail(
+            "invalid launcher initial-cache identity: "
+            f"{data.get('initial_cache_populated')!r}"
+        )
+    initial_cached_files = data.get("initial_cached_files_count")
+    if (
+        isinstance(initial_cached_files, bool)
+        or not isinstance(initial_cached_files, int)
+        or initial_cached_files < 0
+    ):
+        fail(f"invalid initial cached-file count: {initial_cached_files!r}")
+    samples = data.get("samples")
+    if not isinstance(samples, list) or len(samples) != expected_count:
+        fail(
+            f"launcher returned {len(samples) if isinstance(samples, list) else 'invalid'} "
+            f"samples; expected {expected_count}"
+        )
+    expected_inventory: tuple[int, int, int] | None = None
+    for expected_index, sample in enumerate(samples, start=1):
+        if not isinstance(sample, dict):
+            fail(f"launcher sample {expected_index} is not an object")
+        if number(sample, "index", integer=True) != expected_index:
+            fail(f"launcher sample index mismatch at {expected_index}")
+        elapsed = number(sample, "elapsed_ms")
+        if elapsed < 0:
+            fail(f"launcher sample {expected_index} has negative elapsed time")
+        for key in ("desktop_files", "all_candidates", "supported_candidates"):
+            if number(sample, key, integer=True) <= 0:
+                fail(f"launcher sample {expected_index} has empty {key}")
+        inventory = (
+            int(sample["desktop_files"]),
+            int(sample["all_candidates"]),
+            int(sample["supported_candidates"]),
+        )
+        if expected_inventory is None:
+            expected_inventory = inventory
+        elif inventory != expected_inventory:
+            fail(
+                f"launcher sample {expected_index} inventory changed: "
+                f"{inventory!r} != {expected_inventory!r}"
+            )
+        for key in (
+            "buffer_delta",
+            "frame_delta",
+            "process_delta",
+            "intent_delta",
+        ):
+            if number(sample, key, integer=True) != 0:
+                fail(
+                    f"launcher sample {expected_index} was contaminated: "
+                    f"{key}={sample[key]}"
+                )
+        if number(sample, "gc_count_delta", integer=True) < 0:
+            fail(f"launcher sample {expected_index} has negative GC count delta")
+        if number(sample, "gc_elapsed_ms") < 0:
+            fail(f"launcher sample {expected_index} has negative GC time delta")
+        threshold_before = number(sample, "gc_cons_threshold_before", integer=True)
+        threshold_after = number(sample, "gc_cons_threshold_after", integer=True)
+        percentage_before = number(sample, "gc_cons_percentage_before")
+        percentage_after = number(sample, "gc_cons_percentage_after")
+        if threshold_before <= 0:
+            fail(f"launcher sample {expected_index} has invalid GC threshold")
+        if percentage_before < 0:
+            fail(f"launcher sample {expected_index} has invalid GC percentage")
+        if threshold_before != threshold_after:
+            fail(f"launcher sample {expected_index} changed GC threshold")
+        if percentage_before != percentage_after:
+            fail(f"launcher sample {expected_index} changed GC percentage")
+    return samples
+
+
+def protected_state(state: dict[str, Any]) -> dict[str, Any]:
+    keys = (
+        "pid",
+        "version",
+        "init_seconds",
+        "started_utc",
+        "gc_cons_threshold",
+        "gc_cons_percentage",
+        "buffer_count",
+        "frame_count",
+        "visible_frame_count",
+        "process_count",
+        "pending_launch_intents",
+        "messages_bytes",
+        "exwm_loaded",
+        "exwm_connected",
+        "exwm_wm_mode",
+        "server_running",
+        "source_root",
+        "user_init_file",
+        "sk_exwm_file",
+        "running_executable",
+        "home_profile",
+        "native_profile_key",
+        "message_advice",
+        "counsel_loaded",
+        "counsel_cache_fingerprint",
+    )
+    return {key: state.get(key) for key in keys}
+
+
+def tsv_value(value: Any) -> str:
+    if isinstance(value, float):
+        rendered = f"{value:.6f}"
+    elif isinstance(value, bool):
+        rendered = "true" if value else "false"
+    else:
+        rendered = str(value)
+    if any(character in rendered for character in "\t\r\n"):
+        fail(f"TSV value contains a control separator: {rendered!r}")
+    return rendered
+
+
+def emit(lines: list[str], family: str, *values: Any) -> None:
+    lines.append("\t".join([family, *(tsv_value(value) for value in values)]))
+
+
+def emit_mapping(lines: list[str], family: str, phase: str, values: dict[str, Any]) -> None:
+    for key, value in values.items():
+        emit(lines, family, phase, key, value)
+
+
+def main() -> int:
+    if len(sys.argv) != 1:
+        print("usage: emacs-performance-snapshot", file=sys.stderr)
+        return 2
+
+    fixture = os.environ.get("SK_EMACS_PERFORMANCE_FIXTURE") == "1"
+    script = Path(__file__).resolve(strict=True)
+    source_root = script.parent.parent
+    repo = resolve_existing(
+        fixture_value("SK_EMACS_PERFORMANCE_REPO", str(source_root), fixture),
+        "repository",
+    )
+    rpc_count = sample_count("SK_EMACS_PERFORMANCE_RPC_SAMPLES", RPC_SAMPLES, fixture)
+    launcher_count = sample_count(
+        "SK_EMACS_PERFORMANCE_LAUNCHER_SAMPLES", LAUNCHER_SAMPLES, fixture
+    )
+    if rpc_count < 3 or launcher_count != LAUNCHER_SAMPLES:
+        fail("fixture sample counts must use at least 3 RPCs and exactly 5 launchers")
+
+    emacsclient_default = shutil.which("emacsclient") or ""
+    emacsclient_path = fixture_value(
+        "SK_EMACS_PERFORMANCE_EMACSCLIENT", emacsclient_default, fixture
+    )
+    if not emacsclient_path:
+        fail("emacsclient is not available on PATH")
+    emacsclient = resolve_existing(emacsclient_path, "emacsclient")
+    if not os.access(emacsclient, os.X_OK):
+        fail(f"emacsclient is not executable: {emacsclient}")
+
+    proc_root = resolve_existing(
+        fixture_value("SK_EMACS_PERFORMANCE_PROC_ROOT", "/proc", fixture),
+        "proc root",
+    )
+    clocksource_file = resolve_existing(
+        fixture_value(
+            "SK_EMACS_PERFORMANCE_CLOCKSOURCE_FILE",
+            "/sys/devices/system/clocksource/clocksource0/current_clocksource",
+            fixture,
+        ),
+        "clocksource",
+    )
+    profile_paths = {
+        "booted_system": fixture_value(
+            "SK_EMACS_PERFORMANCE_BOOTED_SYSTEM_LINK", "/run/booted-system", fixture
+        ),
+        "current_system": fixture_value(
+            "SK_EMACS_PERFORMANCE_CURRENT_SYSTEM_LINK", "/run/current-system", fixture
+        ),
+        "system_profile": fixture_value(
+            "SK_EMACS_PERFORMANCE_SYSTEM_PROFILE_LINK",
+            "/var/guix/profiles/system",
+            fixture,
+        ),
+        "home_profile": fixture_value(
+            "SK_EMACS_PERFORMANCE_HOME_LINK", str(Path.home() / ".guix-home/profile"), fixture
+        ),
+        "pull_profile": fixture_value(
+            "SK_EMACS_PERFORMANCE_PULL_LINK",
+            str(Path.home() / ".config/guix/current"),
+            fixture,
+        ),
+    }
+
+    state_payload = source_root / "scripts/emacs-performance-state.el"
+    launcher_payload = source_root / "scripts/emacs-performance-launcher.el"
+    for payload in (state_payload, launcher_payload):
+        if not payload.is_file():
+            fail(f"missing Emacs payload: {payload}")
+
+    repo_before = repository_identity(repo)
+    profiles_before = profile_identity(profile_paths)
+    expected_emacsclient = resolve_existing(
+        str(Path(profiles_before["home_profile"]) / "bin/emacsclient"),
+        "Home emacsclient",
+    )
+    if emacsclient != expected_emacsclient:
+        fail(
+            "selected emacsclient does not belong to the active Home profile: "
+            f"{emacsclient} != {expected_emacsclient}"
+        )
+    boot_id_file = proc_root / "sys/kernel/random/boot_id"
+    boot_id = read_first(boot_id_file, "boot ID")
+    clocksource = read_first(clocksource_file, "clocksource")
+    load_average = read_first(proc_root / "loadavg", "load average")
+    host_uptime = read_first(proc_root / "uptime", "host uptime").split()[0]
+    ensure_no_attached_clients(proc_root, "preflight")
+
+    state_before = read_emacs_json(emacsclient, state_payload, 5.0)
+    validate_state(state_before, repo, profiles_before)
+    pid = state_before["pid"]
+    proc_before = proc_snapshot(proc_root, pid)
+
+    rpc_values = measure_rpc(emacsclient, rpc_count)
+    ensure_no_attached_clients(proc_root, "before launcher sampling")
+
+    launcher_data = read_emacs_json(emacsclient, launcher_payload, 10.0)
+    launcher_samples = validate_launcher(launcher_data, launcher_count)
+
+    state_after = read_emacs_json(emacsclient, state_payload, 5.0)
+    validate_state(state_after, repo, profiles_before)
+    proc_after = proc_snapshot(proc_root, pid)
+    ensure_no_attached_clients(proc_root, "postflight")
+
+    repo_after = repository_identity(repo)
+    profiles_after = profile_identity(profile_paths)
+    boot_id_after = read_first(boot_id_file, "boot ID after measurement")
+    clocksource_after = read_first(clocksource_file, "clocksource after measurement")
+    if repo_after != repo_before:
+        fail("repository identity changed during measurement")
+    if profiles_after != profiles_before:
+        fail("profile identity changed during measurement")
+    if boot_id_after != boot_id:
+        fail("boot ID changed during measurement")
+    if clocksource_after != clocksource:
+        fail("clocksource changed during measurement")
+    if protected_state(state_after) != protected_state(state_before):
+        changed = sorted(
+            key
+            for key in protected_state(state_before)
+            if protected_state(state_before)[key] != protected_state(state_after)[key]
+        )
+        fail(
+            "protected live Emacs state changed or the run was contaminated: "
+            + ", ".join(changed)
+        )
+    for key in ("uptime_seconds", "gc_count", "gc_elapsed_seconds"):
+        if state_after[key] < state_before[key]:
+            fail(f"live Emacs cumulative field moved backward: {key}")
+    for key in ("status_VmPeak_kib", "status_VmHWM_kib"):
+        if proc_after[key] < proc_before[key]:
+            fail(f"process high-water field moved backward: {key}")
+
+    lines: list[str] = []
+    emit(lines, "meta", "protocol", PROTOCOL)
+    emit(lines, "meta", "run_mode", "fixture" if fixture else "live")
+    emit(
+        lines,
+        "meta",
+        "captured_at_utc",
+        datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+    emit(lines, "meta", "hostname", os.uname().nodename)
+    emit(lines, "meta", "kernel", os.uname().release)
+    emit(lines, "meta", "boot_id", boot_id)
+    emit(lines, "meta", "clocksource", clocksource)
+    emit(lines, "meta", "host_uptime_seconds", host_uptime)
+    emit(lines, "meta", "load_average", load_average)
+    emit(lines, "meta", "repo_head", repo_before["head"])
+    emit(lines, "meta", "repo_upstream", repo_before["upstream"])
+    emit(lines, "meta", "repo_ahead_behind", repo_before["ahead_behind"])
+    for key, value in profiles_before.items():
+        emit(lines, "meta", key, value)
+    emit(lines, "meta", "emacsclient", emacsclient)
+    emit(lines, "meta", "python_executable", Path(sys.executable).resolve())
+    emit(lines, "meta", "python_version", sys.version.split()[0])
+    perf_clock = time.get_clock_info("perf_counter")
+    emit(lines, "meta", "rpc_timer", "python-perf-counter-ns")
+    emit(lines, "meta", "rpc_clock_monotonic", perf_clock.monotonic)
+    emit(lines, "meta", "rpc_clock_adjustable", perf_clock.adjustable)
+    emit(
+        lines,
+        "meta",
+        "rpc_clock_resolution_seconds",
+        format(perf_clock.resolution, ".12g"),
+    )
+    emit(lines, "meta", "rpc_sample_count", rpc_count)
+    emit(lines, "meta", "launcher_timer", launcher_data["timer"])
+    emit(lines, "meta", "launcher_cache_mode", launcher_data["cache_mode"])
+    emit(
+        lines,
+        "meta",
+        "launcher_initial_cache_populated",
+        launcher_data["initial_cache_populated"],
+    )
+    emit(
+        lines,
+        "meta",
+        "launcher_initial_cached_files_count",
+        launcher_data["initial_cached_files_count"],
+    )
+    emit(lines, "meta", "launcher_sample_count", launcher_count)
+    emit_mapping(lines, "state", "before", state_before)
+    emit_mapping(lines, "proc", "before", proc_before)
+
+    for index, elapsed_ms in enumerate(rpc_values, start=1):
+        emit(lines, "sample", "rpc_ms", index, elapsed_ms)
+    for key, value in summarize(rpc_values).items():
+        emit(lines, "summary", "rpc_ms", key, value)
+
+    launcher_values: list[float] = []
+    for sample in launcher_samples:
+        elapsed_ms = float(sample["elapsed_ms"])
+        launcher_values.append(elapsed_ms)
+        emit(
+            lines,
+            "sample",
+            "launcher_prepare_ms",
+            sample["index"],
+            elapsed_ms,
+            f"desktop_files={sample['desktop_files']}",
+            f"all_candidates={sample['all_candidates']}",
+            f"supported_candidates={sample['supported_candidates']}",
+            f"gc_count_delta={sample['gc_count_delta']}",
+            f"gc_ms_delta={sample['gc_elapsed_ms']}",
+        )
+    for key, value in summarize(launcher_values).items():
+        emit(lines, "summary", "launcher_prepare_ms", key, value)
+    for key, value in summarize(launcher_values[1:]).items():
+        emit(lines, "summary", "launcher_repeated_ms", key, value)
+
+    emit_mapping(lines, "state", "after", state_after)
+    emit_mapping(lines, "proc", "after", proc_after)
+    for invariant in (
+        "repository_and_upstream_stable",
+        "boot_and_profiles_stable",
+        "live_source_and_server_provenance",
+        "protected_live_state_stable",
+        "launcher_samples_uncontaminated",
+        "gc_policy_stable",
+        "cumulative_counters_monotonic",
+        "ambient_counsel_cache_stable",
+    ):
+        emit(lines, "invariant", invariant, "PASS")
+
+    print("\n".join(lines))
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except SnapshotError as error:
+        print(f"emacs-performance-snapshot: {error}", file=sys.stderr)
+        raise SystemExit(1)

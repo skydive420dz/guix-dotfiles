@@ -1,0 +1,332 @@
+#+title: GuixPC P2.1 Emacs and EXWM Measurement Baseline
+#+date: 2026-07-15
+#+status: active
+
+* Purpose and boundary
+
+P2.1 establishes a reproducible responsiveness baseline for the existing
+Emacs/EXWM session before any performance setting changes.  It owns
+measurement only.  A result can justify a later hypothesis; it cannot by
+itself authorize tuning.
+
+Related records:
+
+- [[file:2026-07-15-phase-0-baseline.org][Phase 0 baseline and accepted P1.1 terminal contract]];
+- [[file:2026-07-12-full-configuration-audit.org][completed numbered-slice audit]];
+- [[file:~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org][editable agenda roadmap and user decisions]].
+
+* Status language
+
+- =CONFIRMED= means source or live behavior directly proves the statement.
+- =OBSERVED= is a dated sample from an uncontrolled ordinary-use session.
+- =HYPOTHESIS= requires a same-protocol before/after experiment.
+- =UNMEASURED= means the current system has no defensible event marker.
+
+Millisecond values are never configuration limits unless the user later accepts
+them as targets.
+
+* Why a dedicated protocol is needed
+
+Phase 0 captured useful spot observations, but its exact Emacs expression was
+not retained as a reusable tool.  The repository had no stable performance
+schema, raw-sample distribution, fixture, or comparison boundary.
+
+The source audit confirms several possible costs without proving user-visible
+harm:
+
+- every Emacs module is required eagerly;
+- =message= is advised globally to timestamp new =*Messages*= lines;
+- =sk/exwm-launch-app= recursively discovers desktop files, then Counsel scans
+  them again before checking its parse cache;
+- each supported-candidate check reads a desktop file repeatedly for individual
+  keys.
+
+Those are implementation facts.  Their performance impact remains a
+=HYPOTHESIS= until measured.
+
+* P2.1 accepted scope
+
+- [X] Define a versioned, machine-readable, stdout-only protocol.
+- [X] Capture repository, boot, kernel, clocksource, System, Home, Pull, and
+  live-Emacs identity before timing.
+- [X] Record current-process initialization duration, start time, uptime,
+  cumulative GC state, GC policy, RSS/VSize, PSS/private memory, buffers, frames,
+  processes, EXWM/server health, pending launch intents, and Counsel cache
+  identity.
+- [X] Time 21 host-local =emacsclient --eval t= round trips and preserve every
+  raw sample plus first/minimum/median/p95/maximum.
+- [X] Time five preparation-only replays of the current pre-Ivy launcher
+  sequence and preserve raw samples, inventory counts, GC deltas, and
+  distribution.
+- [X] Dynamically isolate Counsel cache variables and suppress measurement-only
+  messages so the live Counsel fingerprint and =*Messages*= byte count remain
+  unchanged.
+- [X] Compare before/after repository, profile, boot, Emacs identity,
+  buffer/frame/process/message-byte/intent counts, GC policy, and Counsel-cache
+  fingerprint.  Retain cumulative GC and memory values as observations rather
+  than protected equality.
+- [X] Add real-payload and black-box fixtures for statistics, provenance,
+  malformed values, client-process exclusion, cache restoration, forbidden UI
+  and process calls, protected-state drift, and deliberate launcher side
+  effects.
+- [ ] Publish the implementation checkpoint and rerun from a clean synchronized
+  checkout with no attached terminal client.
+- [ ] Store the exact baseline output and SHA-256 as the separate reviewed
+  =docs/audits/data/2026-07-15-p2.1-emacs-exwm-baseline.tsv= evidence commit.
+- [ ] Run existing editor, desktop, and strict source gates outside the timing
+  window.
+- [ ] Review the distribution with the user before choosing a target or P2.2
+  experiment.
+
+* Protocol v1
+
+The canonical command is:
+
+#+begin_src sh
+cd ~/Projects/guix-dotfiles
+scripts/emacs-performance-snapshot
+#+end_src
+
+The command emits TSV only to stdout and sorts samples in memory; it creates no
+report or temporary file.  It intentionally changes no persistent
+configuration, profile, UI, application-process, launch-intent, or ambient
+Counsel-cache state.  Its evaluations necessarily allocate, may advance
+cumulative GC or memory high-water observations, and may warm the kernel's
+filesystem cache.  Those probe effects are not tuning and remain visible in the
+before/after evidence.
+
+Protocol v1 requires Linux =/proc= with readable process =status= and
+=smaps_rollup=, the clocksource sysfs file, Python 3.10 or newer, Git with a
+configured upstream, the exact active-Home =emacsclient= on =PATH=, and a live Home Emacs
+server that owns EXWM and has Counsel already loaded.  Booted System, current
+System, and the System profile must resolve to the same store item.  The
+repository must be clean, at its upstream commit, and zero ahead/behind.
+
+Default sample counts are fixed in protocol v1:
+
+| Family | Count | Boundary |
+|--------+-------+----------|
+| server RPC | 21 | exact Home =emacsclient= timed on GuixPC, not around SSH |
+| launcher preparation | 5 | desktop discovery, Counsel list/cache check, and supported-entry validation only |
+
+Each distribution reports the first natural-state sample, minimum, median,
+nearest-rank p95, maximum, and p95/median ratio.  The first launcher sample is
+also separated from the four repeated samples.  No fastest-sample-only claim is
+accepted.  With five launcher samples nearest-rank p95 is the maximum; with 21
+RPC samples it is the second-largest.  These are descriptive summaries, not a
+tail-latency estimate or service objective.
+
+The TSV row families are:
+
+| Family | Shape | Meaning |
+|--------+-------+---------|
+| =meta= | =meta KEY VALUE= | protocol, live/fixture mode, runtime, host, commit, profile, timer, cache, and sample identity |
+| =state= | =state PHASE KEY VALUE= | live Emacs values before or after timing |
+| =proc= | =proc PHASE KEY VALUE= | =/proc= memory and thread values before or after timing |
+| =sample= | variable columns | every raw RPC or launcher sample and launcher inventory/GC annotations |
+| =summary= | =summary FAMILY STAT VALUE= | count, first, minimum, median, nearest-rank p95, maximum, and p95/median |
+| =invariant= | =invariant NAME PASS= | checks completed before any stdout is emitted |
+
+Fields are tab-separated and values may not contain tabs or newlines.  A change
+to row meaning, timing boundary, cache semantics, protected state, or required
+fields requires a protocol version bump and fixture update.
+
+RPC timing uses Python's host-local monotonic =perf_counter_ns= around client
+process startup, socket exchange, and evaluation; the output records Python and
+clock identity.  Launcher timing uses Emacs =current-time= around each replayed
+pre-Ivy preparation sequence and rejects negative or non-finite results.  The
+first launcher sample uses a dynamic copy of the ambient natural Counsel state;
+the next four share the locally evolved copy.  Initial cache presence and
+cached-file count are recorded, while ambient state is restored on return.
+
+The sampler fails closed when:
+
+- the repository is dirty, lacks an upstream, or is not synchronized at =0/0=;
+- booted, current, and profile System targets differ;
+- the live server is not the EXWM process;
+- the selected client is not the exact active-Home =emacsclient=;
+- any other process has an argument whose basename is =emacsclient= or
+  =.emacsclient-real= at preflight, pre-launcher, or postflight;
+- any timed RPC fails or returns anything other than =t=;
+- launcher preparation changes a buffer, frame, process, launch intent, or GC
+  setting;
+- repository, boot ID, clocksource, profiles, Emacs identity, buffer/frame/
+  process/message-byte/intent counts, GC policy, or Counsel fingerprint changes
+  during the run.
+
+* Truth boundaries
+
+** Startup
+
+=emacs-init-time= is one historical value for the current process.  It can be
+recorded once per fresh EXWM process/session, but it cannot be repeated without
+restarting the window manager.  The current configuration stores no precise
+first-frame, EXWM-ready, or first-usable-input timestamp, so those metrics are
+=UNMEASURED=.  P2.1 does not substitute a process timestamp or stopwatch and
+call it exact.
+
+** Server RPC
+
+Host-local =emacsclient= timing measures process startup, local socket
+transport, server dispatch, and a trivial evaluation.  It is not SSH latency,
+keyboard-to-frame latency, or proof that an ordinary editing command is fast.
+The process-tree guard is intentionally broader than socket attachment: no other
+=emacsclient= or Guix =.emacsclient-real= process may exist at its three
+boundaries.  It cannot prove which socket a process used or detect all user
+input, so closing terminal clients and remaining idle are operator conditions.
+
+** Launcher
+
+The launcher probe replays the current preparation sequence—desktop discovery,
+Counsel list/cache checking, and supported-entry filtering—but never calls
+=ivy-read=, =sk/exwm-launch-app=, a launch action, or =start-process=.  It
+measures discovery and validation only.  It does not measure key-to-visible Ivy
+rendering, user choice, application startup, X client management, or window
+placement.  The first natural-state sample is not called a cold-cache result;
+Linux filesystem cache state is uncontrolled and the live Counsel cache is
+preserved.  Any semantic change to the real launcher path requires reviewing
+this replay and its fixture; a changed timing boundary or output contract also
+requires a protocol bump.
+
+** GC and memory
+
+=gcs-done= and =gc-elapsed= are cumulative workload observations.  Every
+Emacs evaluation allocates and may legitimately advance them, so the sampler
+records before/after values and per-launcher deltas.  It never invokes
+=garbage-collect=, =benchmark-run=, the profiler, ELP, or a cache reset.
+
+RSS includes shared mapped native-code and package files.  PSS and private
+memory from =/proc/PID/smaps_rollup= are recorded beside it; comparisons must
+use the same protocol and a clearly labeled workload/uptime.
+
+* Explicit non-goals
+
+- Changing =gc-cons-threshold=, =gc-cons-percentage=, native compilation, or
+  startup loading.
+- Removing or narrowing message advice.
+- Adding a launcher cache or refactoring the launcher.
+- Opening Ivy, launching an application, creating a frame, or registering a
+  launch intent.
+- Reloading configuration, restarting EXWM, activating Home/System, rebooting,
+  deleting generations, or collecting garbage.
+- Measuring Guix build concurrency, thermals, storage, or an ordinary-use
+  macro in this slice.
+- Diagnosing the boot-time Guile/PID1, IRQ 7, or TSC/HPET findings.
+- Setting performance targets from Phase 0's one idle observation or from the
+  implementation feasibility probes.
+
+* Separate boot/kernel track
+
+P2.K1 remains =BACKLOG= and does not block this application-level measurement.
+It owns:
+
+- P0-F01 early Guile/PID1 segmentation-fault recurrence;
+- P0-F02 =pinctrl_amd= IRQ 7 storm and disable;
+- P0-F03 unstable TSC and HPET fallback;
+- P0-F04 wireless regulatory database ownership;
+- P0-F05 WPA marker warnings;
+- controlled retained-kernel/firmware comparisons and privileged boot logs.
+
+P2.1 records boot ID, kernel, and clocksource only as run identity.  It adds no
+=irqpoll=, clocksource override, module blacklist, or firmware workaround.
+
+* Acceptance gates
+
+** Source and fixture gate
+
+- [ ] =tests/emacs-performance-snapshot-check= passes.
+- [ ] =scripts/shell-check --strict= passes with the new fixture integrated.
+- [ ] Emacs source/batch/live checks pass.
+- [ ] Focused negative controls fail for the intended causal reason.
+- [ ] Repository state is unchanged by every fixture and live run.
+
+** Live measurement gate
+
+- [ ] Implementation checkpoint is published and the checkout is clean and
+  synchronized.
+- [ ] No other =emacsclient= or =.emacsclient-real= process exists at any guard
+  boundary; terminal clients are closed and the user remains idle throughout.
+- [ ] The default 21/5 sample run exits zero within its bounded timeouts.
+- [ ] Metadata says =run_mode= is =live= and identifies the exact commit, Home
+  client/server, Python runtime, monotonic RPC clock, and initial Counsel-cache
+  state.
+- [ ] Every invariant row is =PASS=.
+- [ ] Exact raw output is first retained outside the checkout with protocol,
+  commit, boot ID, profiles, PID, uptime, load, and timestamp; its SHA-256 is
+  reviewed before a separate evidence commit.
+- [ ] Existing =scripts/emacs-check= and =scripts/desktop-session-check= pass
+  after the timing window.
+
+** Decision gate
+
+- [ ] Raw distributions, first/median/p95/maximum, launcher GC deltas, and
+  before/after probe effects are reviewed rather than only the best value.
+- [ ] High jitter or a decision resting on the small-sample tail leads to another
+  same-protocol sample, not an immediate tweak.
+- [ ] At most one dominant measured hypothesis is promoted to P2.2.
+- [ ] If no cost is dominant or user-visible, P2.1 closes with no tuning
+  justified.
+
+* Stop and rollback
+
+Stop if measurement requires a configuration reload, EXWM restart, GUI launch,
+cache clearing, privileged probe, or profile change.  Route that work to a new
+authorized slice.
+
+The implementation adds only source tooling, fixtures, validation registration,
+and documentation.  Revert the implementation checkpoint to remove the tooling.
+The immutable baseline evidence may remain as history or its later evidence
+commit may be reverted separately.  No Home, System, reboot, or generation
+rollback exists because P2.1 activates none of them.
+
+* Two-checkpoint capture workflow
+
+Do not redirect the first run into the repository: shell redirection creates the
+file before the sampler's clean-tree preflight and must make it fail.  After the
+implementation commit is pushed and the checkout is clean at =0/0=, capture to a
+private external path:
+
+#+begin_src sh
+set -eu
+cd ~/Projects/guix-dotfiles
+umask 077
+scripts/emacs-performance-snapshot \
+  > /tmp/guixpc-p2.1-emacs-exwm-v1.tsv \
+  2> /tmp/guixpc-p2.1-emacs-exwm-v1.stderr
+test ! -s /tmp/guixpc-p2.1-emacs-exwm-v1.stderr
+sha256sum /tmp/guixpc-p2.1-emacs-exwm-v1.tsv
+#+end_src
+
+Require exit zero, empty stderr, =run_mode= =live=, 21 RPC rows, five launcher
+rows, and every invariant =PASS=.  Run editor/desktop/source gates outside the
+timing window.  Only after review should the unchanged external file be copied
+to =docs/audits/data/2026-07-15-p2.1-emacs-exwm-baseline.tsv= and committed as
+the second checkpoint.  Persist its digest and interpretation in this record's
+Evidence section; the TSV cannot contain its own digest.
+
+* Evidence
+
+** Feasibility observations, not an accepted baseline
+
+On 2026-07-15 the existing process proved that the intended signals are
+available: Emacs 30.2 reported about 8.743 seconds of initialization, a
+host-local command-path spot check was a few milliseconds, and one preparation-
+only launcher call was about 38 ms for 18 desktop files and 10 accepted
+candidates.  The session had an attached real terminal client and uncontrolled
+ordinary-use history, so these values are explicitly =OBSERVED= feasibility
+checks, not targets or comparison data.
+
+** Implementation checkpoint
+
+- Commit: pending.
+- Files:
+  - =scripts/emacs-performance-snapshot=;
+  - =scripts/emacs-performance-state.el=;
+  - =scripts/emacs-performance-launcher.el=;
+  - =tests/emacs-performance-snapshot-check=;
+  - =tests/emacs/performance-payload-check.el=;
+  - =scripts/shell-check=;
+  - this record, README, Phase 0 routing, and the agenda roadmap.
+- Activation boundary: none.
+- Live baseline artifact: pending the published clean checkpoint and idle
+  client-free session.
