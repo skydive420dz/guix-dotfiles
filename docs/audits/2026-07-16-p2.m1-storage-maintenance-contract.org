@@ -26,8 +26,9 @@ The design makes these decisions:
    =guix gc= outside this design slice.
 
 P2.M1a now has an implemented, fixture-verified, and pushed source checkpoint.
-Its separately authorized cached-only runtime gate passed; explicit completion
-acceptance remains pending.  P2.M1b through P2.M1d remain unpromoted.
+Its separately authorized cached-only runtime gate passed, and Rafael
+explicitly accepted completion at that boundary.  Ordinary UDisks D-Bus
+activation remains unselected.  P2.M1b through P2.M1d remain unpromoted.
 
 Related records:
 
@@ -267,10 +268,11 @@ Validation remains split:
 2. privacy/static command allowlist;
 3. checkpoint and push;
 4. one runtime =--cached-only= read while the daemon is already active;
-5. a later ordinary-boot =--allow-activate= test that records pre/post daemon
-   state without retaining raw output; and
-6. no System/Home build, activation, sudo, device setting, self-test, or reboot
-   merely to accept the script.
+5. an optional later ordinary-boot =--allow-activate= test, if separately
+   selected, that records pre/post daemon state without retaining raw output;
+   and
+6. no System/Home build or generation activation, sudo, device setting,
+   self-test, or reboot merely to accept the script.
 
 ** Source checkpoint status
 
@@ -311,6 +313,8 @@ This is a bounded cached-reader result, not a whole-drive diagnosis.  The
 ordinary allow-activate path was not run and remains a separate optional hand
 test.  Exact sanitized output and interpretation are recorded in
 [[file:2026-07-16-p2.m1a-cached-only-runtime-acceptance.org][the P2.M1a cached-only runtime record]].
+After that runtime record was pushed and verified, Rafael explicitly accepted
+P2.M1a completion at the cached-only boundary.
 
 * Periodic TRIM design
 
@@ -395,18 +399,20 @@ Rollback removes future scheduling but cannot undo completed discard requests.
 - Corrected SMART ownership, TRIM policy language, process-side-effect wording,
   build-core semantics, generation-link semantics, capacity claims, and
   privacy-safe command examples.
-- No System/Home build, activation, device command, cleanup, or reboot.
+- No System/Home build or generation activation, device command, cleanup, or
+  reboot.
 
-** IN-PROGRESS P2.M1a -- Scheme UDisks SMART reader
+** COMPLETE P2.M1a -- Scheme UDisks SMART reader
+CLOSED: [2026-07-16 Thu]
 
 - The allowlisted Scheme reader and offline fixtures are implemented and pass
   their source gates.
-- The source checkpoint is pushed and its cached-only live gate passes; user
-  acceptance of slice completion remains pending.
-- No package, root service, sudo, System/Home generation, device setting,
-  self-test, alerting, or reboot.
-- Ordinary on-demand activation remains an unselected, distinct hand-test
-  gate.
+- The source checkpoint is pushed, its cached-only live gate passes, and the
+  user explicitly accepted completion at that selected boundary.
+- No package, root-service declaration, sudo, System/Home generation, device
+  setting, self-test, alerting, or reboot.
+- Ordinary on-demand UDisks D-Bus activation remains an unselected, optional
+  hand test and was not required by the accepted scope.
 
 ** BACKLOG P2.M1b -- TRIM policy and dry-run
 
@@ -467,5 +473,6 @@ P2.M1 design does not authorize:
 - [X] P2.M1a source checkpoint is committed.
 - [X] P2.M1a checkpoint push and upstream equality are verified.
 - [X] A cached-only live read is separately authorized, run, and documented.
-- [ ] Ordinary activation behavior is tested separately if selected.
-- [ ] P2.M1a completion is accepted.
+- [X] Ordinary UDisks D-Bus activation remains unselected and was not required
+  by the accepted P2.M1a scope.
+- [X] P2.M1a completion is accepted.

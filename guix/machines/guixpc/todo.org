@@ -470,12 +470,14 @@ CLOSED: [2026-07-16 Thu]
 - [X] Keep visibility, TRIM policy/dry-run, declarative timer activation, actual
   FITRIM, deep diagnostics/alerting, and backup-gated cleanup separate.
 
-* TODO P2.M1a Scheme UDisks SMART reader
+* DONE P2.M1a Scheme UDisks SMART reader
+CLOSED: [2026-07-16 Thu]
 
 - Evidence: [[file:../../../docs/audits/2026-07-16-p2.m1a-scheme-disk-health-source-checkpoint.org][2026-07-16 P2.M1a source checkpoint]].
 - Runtime evidence: [[file:../../../docs/audits/2026-07-16-p2.m1a-cached-only-runtime-acceptance.org][2026-07-16 P2.M1a cached-only acceptance]].
 - Source implementation and offline fixtures pass.  The pushed checkpoint and
-  one cached-only live read also pass; explicit completion acceptance remains.
+  one cached-only live read also pass; Rafael explicitly accepted completion
+  at that selected boundary.
 - [X] Implement the fixed Scheme reader and launcher with human, JSON, summary,
   cached-only, and allow-activate presentation/policy modes.
 - [X] Pass the 185-check fake-runner protocol, classification, lifecycle,
@@ -485,12 +487,13 @@ CLOSED: [2026-07-16 Thu]
 - [X] Commit the source checkpoint.
 - [X] Push the checkpoint and verify upstream equality.
 - [X] Authorize and run one cached-only live read; document only sanitized
-  output and confirm that it did not request service activation.
-- [ ] Test ordinary activation behavior separately if selected.
-- [ ] Accept P2.M1a completion.
-- Add no package, root service, sudo rule, setuid helper, System/Home generation,
-  device setting, SMART refresh/self-test, alert, trim, or reboot merely to
-  accept this source checkpoint.
+  output and confirm that it did not request UDisks D-Bus auto-start.
+- [X] Ordinary UDisks D-Bus activation remains unselected and was not required
+  by the accepted P2.M1a scope.
+- [X] Accept P2.M1a completion.
+- Add no package, root-service declaration, sudo rule, setuid helper,
+  System/Home generation, device setting, SMART refresh/self-test, alert,
+  trim, or reboot merely to close this slice.
 
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:

@@ -2,15 +2,15 @@
 #+date: 2026-07-16
 #+author: Rafael Oliveira
 #+startup: overview
-#+status: source checkpoint accepted; runtime evidence separate
+#+status: source checkpoint accepted; P2.M1a closure recorded separately
 
 * Status and truth boundary
 
-P2.M1a is *implemented and fixture-verified at the source checkpoint*.  It is
-not runtime-verified and is not complete.  This record owns only repository
-implementation, synthetic fixtures, and source gates.  It does not claim that
-the new command queried the live system bus, read the live UDisks cache,
-activated =udisksd=, or classified the installed drive.
+P2.M1a is *implemented and fixture-verified at the source checkpoint*.  This
+record owns only repository implementation, synthetic fixtures, and source
+gates; it is not runtime evidence and did not by itself complete P2.M1a.  It
+does not claim that the new command queried the live system bus, read the live
+UDisks cache, activated =udisksd=, or classified the installed drive.
 
 This source checkpoint was committed and pushed before any live acceptance.
 Its later runtime evidence is kept in a separate record so the source-only
@@ -162,8 +162,9 @@ serial, WWN, UUID, PARTUUID, by-id path, MAC address, or host identity.
 | =scripts/shell-check --strict= | PASS | aggregate offline source/fixture gate |
 | batch Org lint | PASS | documentation only |
 
-The commit containing this record is intentionally not self-referenced.  Its
-hash and upstream equality belong in the next acceptance update after push.
+The commit containing this record is intentionally not self-referenced.  At
+this source checkpoint, its hash and upstream equality were deferred to the
+subsequent acceptance update after push.
 
 * Explicitly not performed
 
@@ -172,27 +173,29 @@ hash and upstream equality belong in the next acceptance update after push.
 - No system/session D-Bus, UDisks, SMART, block-device, filesystem, or mount
   query was made merely to accept this source checkpoint.
 - No SMART setting, refresh, self-test, standby/wakeup, or erase method ran.
-- No package, System/Home build, reconfigure, activation, generation, sudo,
+- No package, System/Home build, reconfigure, generation activation, sudo,
   trim, garbage collection, cleanup, or reboot occurred.
 - No claim is made about daemon state or live drive health.
 
-* Subsequent evidence and remaining gates
+* Subsequent evidence and closure
 
 The checkpoint was pushed and verified equal to upstream.  The later
 authorized cached-only gate passed and is owned by
 [[file:2026-07-16-p2.m1a-cached-only-runtime-acceptance.org][the separate runtime-acceptance record]].  Those later facts do not change the
 source-only evidence boundary recorded above.
 
-1. Keep an ordinary-boot =--allow-activate= check separate if selected.  Capture pre/post
-   daemon state without retaining a raw Drive path or identity-bearing output.
-2. Close P2.M1a only after explicit completion acceptance.
+After that runtime record was pushed and verified, Rafael explicitly accepted
+P2.M1a completion at the cached-only boundary.  Ordinary-boot
+=--allow-activate= behavior remains unselected and was not required by the
+accepted scope.  If selected later, capture pre/post daemon state without
+retaining a raw Drive path or identity-bearing output.
 
 P2.M1b/P2.M1c TRIM policy, dry-run, declaration, build, activation, and actual
 FITRIM remain separate.  P2.M1d alerting/deeper diagnostics remain parked.
 
 * Rollback
 
-Before runtime acceptance, rollback is source-only: revert the launcher,
+At this source checkpoint, rollback was source-only: revert the launcher,
 Scheme implementation, fixture, focused test, strict-gate registration, and
 matching documentation.  No service, device, generation, or runtime state
 needs reversal.
@@ -209,5 +212,6 @@ needs reversal.
 - [X] Source checkpoint committed.
 - [X] Checkpoint pushed and upstream equality verified.
 - [X] Live cached-only acceptance separately authorized and documented.
-- [ ] Ordinary activation behavior tested separately if selected.
-- [ ] P2.M1a completion accepted.
+- [X] Ordinary UDisks D-Bus activation remains unselected and was not required
+  by the accepted P2.M1a scope.
+- [X] P2.M1a completion accepted.

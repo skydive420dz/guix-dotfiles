@@ -2,7 +2,7 @@
 #+date: 2026-07-16
 #+author: Rafael Oliveira
 #+startup: overview
-#+status: runtime gate passed; completion acceptance pending
+#+status: runtime gate passed; P2.M1a completion accepted
 
 * Outcome
 
@@ -22,7 +22,8 @@ UUID/PARTUUID, by-id path, or MAC address is retained in this record.
 
 This result satisfies the selected cached-only runtime gate.  It is not a
 whole-drive diagnosis, benchmark, or future-health guarantee.  Explicit
-P2.M1a completion acceptance remains pending.
+P2.M1a completion was subsequently accepted after this runtime record was
+pushed and verified.
 
 * Authorization and command
 
@@ -100,7 +101,8 @@ method did not request a SMART refresh.
 
 The gate performed no:
 
-- reader-invoked service-management or ordinary D-Bus activation operation;
+- reader-invoked service-management or ordinary UDisks D-Bus auto-start
+  operation;
 - SMART refresh, enable/disable, self-test, power-management, or erase method;
 - package addition, System/Home build, reconfigure, generation, or activation;
 - sudo, setuid, group, or privilege change;
@@ -110,14 +112,15 @@ The gate performed no:
 The private Drive path was still transiently present in child argv as already
 documented by the source checkpoint.  It was neither rendered nor retained.
 
-* Remaining decision
+* Completion decision
 
-The selected cached-only runtime boundary is met.  Before changing P2.M1a from
-=TODO=/=NEXT= to complete, obtain explicit user acceptance.
+On 2026-07-16, after the runtime-evidence commit was pushed and verified equal
+to =origin/main=, Rafael explicitly accepted P2.M1a completion at the selected
+cached-only boundary.
 
 The ordinary =--allow-activate= behavior remains unselected.  If it is ever
 chosen, treat it as a separate hand test with pre/post daemon-state evidence;
-it is not required retroactively by this cached-only result.
+it was not required by this accepted cached-only scope.
 
 P2.M1b/P2.M1c TRIM policy, dry-run, declaration, build, activation, and actual
 FITRIM remain separate.  P2.M1d diagnostics and alerting remain parked.
@@ -131,6 +134,8 @@ FITRIM remain separate.  P2.M1d diagnostics and alerting remain parked.
 - [X] Cache state was fresh and classification was interpreted narrowly.
 - [X] The same numeric daemon PID was observed before and after; no PID change
   was observed.
-- [X] No mutable UDisks method, privilege, build, activation, trim, or reboot
-  occurred.
-- [ ] User accepts P2.M1a completion.
+- [X] No mutable UDisks method, privilege, System/Home build, reconfigure,
+  generation activation, trim, or reboot occurred.
+- [X] Ordinary UDisks D-Bus activation remains unselected and was not required
+  by the accepted P2.M1a scope.
+- [X] User accepts P2.M1a completion.
