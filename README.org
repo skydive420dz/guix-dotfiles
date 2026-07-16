@@ -4,16 +4,18 @@ Source of truth for the guixpc experiment machine.
 
 * Current progress
 
-The numbered stabilization pass is complete through Slice 19.  Keep this
-section aligned with accepted machine state so the repo records intent, not
-only implementation commits.
+The numbered stabilization pass is complete through Slice 19.  The later dated
+polishing roadmap has accepted Phase 1's SSH/terminal contract; Phase 2 remains
+backlog pending user review.  Keep this section aligned with accepted machine
+state so the repo records intent, not only implementation commits.
 
 The current machine-wide baseline and canonical slice status live in
 [[file:docs/audits/2026-07-12-full-configuration-audit.org][the 2026-07-12 full configuration audit]].  It records verified state,
 confirmed defects, qualified risks, strengths, Lisp coverage, and acceptance
-gates.  [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred
-work.  There is no successor stabilization slice; the audit remains active only
-for its explicitly privileged system-Shepherd/root-owned-log follow-up.
+gates.  [[file:docs/audits/2026-07-15-phase-0-baseline.org][The 2026-07-15 Phase 0 baseline and P1.1 record]] owns the follow-on
+polishing roadmap and current boot-comparison evidence.  [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the
+low-noise machine queue for separate deferred work.  There is no successor
+numbered stabilization slice; new work is promoted through the dated roadmap.
 
 ** Completed
 
@@ -133,6 +135,15 @@ for its explicitly privileged system-Shepherd/root-owned-log follow-up.
   =bluez_output.04_52_C7_86_93_08.1= as the default sink, and passed finite
   low-volume playback.  Home 42 and Pull 5 remain current.  All Slice 19
   findings are closed; no Slice 20 is planned.
+- [X] Accept follow-on Phase 1 P1.1.  Published checkpoint =6c408af= installs
+  Kitty's separate =terminfo= output beside its default output.  System
+  generation 87 is current and booted at
+  =/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system=.  Truthful
+  =TERM=xterm-kitty= works locally and through interactive SSH without an
+  override, generic =xterm-256color= remains healthy, noninteractive SSH is
+  byte-clean, Fastfetch appears once, and a real Kitty =emacsclient -t= pair
+  leaves the EXWM server alive.  Desktop/audio, strict source, retention, and
+  rollback gates pass.  System 86 is the immediate rollback.
 - [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
 - [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
   the GRUB prompt before making more bootloader changes.
@@ -293,10 +304,10 @@ immutable profile and excludes the legacy user cache from lookup.  Fresh Emacs
 loads Org 9.8.7 without a version warning; the 36 MiB legacy cache is retained
 only at =~/.emacs.d/eln-cache.quarantine-20260713-slice19/=.
 The reduced System consumes the 13 recovery specifications recorded in
-=guix/package-ownership.scm= plus =kitty-latest=.  System generation 86 is
-current and booted at
-=/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system=; accepted System
-generation 85 remains its immediate rollback.
+=guix/package-ownership.scm= plus =kitty-latest='s default and =terminfo=
+outputs.  System generation 87 is current and booted at
+=/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system=; accepted System 86 is
+its immediate rollback and System 85 remains an older accepted fallback.
 The System floor is not a second configured desktop: normal EXWM still requires
 the accepted base Home D-Bus services and Home editor profile.  Its independent
 guarantee is the tty shell, Kitty, and =emacs -Q= for repair.
@@ -1643,10 +1654,10 @@ read-only tool currently proves retention of the booted closure; an apply
 implementation must additionally identify and protect the exact booted
 generation-number link before deleting anything.
 
-The final Slice 19 inventory counts are System/Home/Pull =85/42/5=.  Exact pins
-promote current/booted System 86 and retain System 85 as its immediate fallback;
-System 84 remains an older accepted fallback.  Home 42 remains promoted, Home
-41 remains the preferred pre-native-cache fallback, and Home 40 remains the
+The P1.1 retained-link counts are System/Home/Pull =86/42/5=.  Exact pins
+promote current/booted System 87, retain System 86 as its immediate fallback,
+and keep System 85 as an older accepted fallback.  Home 42 remains promoted,
+Home 41 remains the preferred pre-native-cache fallback, and Home 40 remains the
 last-known-good Racket fallback.  Pull 5 and older pins remain protected.
 Acceptance left no checker residue and performed no generation deletion or
 garbage collection.
@@ -1770,6 +1781,12 @@ To roll back the final desktop policy and Bluetooth boot-order corrections,
 restore source checkpoint =abb0518399daf3047862f96099cf6f9fa048f73b=, use
 protected Pull 5 to switch exactly to System generation 85, and reboot.  Home
 42 and Pull 5 need no change.
+
+To roll back accepted P1.1, revert source checkpoint
+=6c408af2d43631ae07119f25ac90f2ee07793a73= first, then use protected Pull 5
+to switch exactly to retained System generation 86 and reboot.  Home 42 and
+Pull 5 need no change.  Do not replace the truthful terminal type with a global
+=TERM= override.
 
 * Generated or local state
 

@@ -1,6 +1,7 @@
 # kind	generation	canonical-store-target	role	reason
-system	86	/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system	promotion-rollback	Accepted Slice 19 Bluetooth auto-enable and final desktop baseline
-system	85	/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system	preferred-rollback	Immediate pre-Bluetooth reduced System fallback
+system	87	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	promotion-rollback	Accepted Phase 1 P1.1 Kitty terminfo and SSH terminal contract
+system	86	/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system	preferred-rollback	Immediate pre-P1.1 accepted Slice 19 desktop baseline
+system	85	/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system	last-known-good	Pre-Bluetooth reduced System fallback
 system	84	/gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system	last-known-good	Accepted authenticated Slice 12 System fallback
 system	83	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	last-known-good	Accepted Slice 11 System fallback
 system	81	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system	last-known-good	Distinct accepted elogind 255.24 System before Slice 10

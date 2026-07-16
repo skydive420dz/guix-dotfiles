@@ -1,6 +1,6 @@
 #+title: GuixPC Full Configuration Audit and Slice Roadmap
 #+date: 2026-07-12
-#+status: active
+#+status: complete
 
 * Purpose
 
@@ -22,6 +22,8 @@ Related records:
 
 - project overview: [[file:../../README.org][README]];
 - machine queue: [[file:../../guix/machines/guixpc/todo.org][guixpc TODO]];
+- follow-on polishing baseline and accepted P1.1:
+  [[file:2026-07-15-phase-0-baseline.org][2026-07-15 Phase 0/P1.1 record]];
 - historical package handoff: [[file:../handoffs/2026-07-12-sk-guix-kitty.org][sk-guix Kitty handoff]].
 
 * Status language
@@ -153,7 +155,7 @@ REPL-, backend-, service-, or workflow-level acceptance tests.
 #+begin_src text
 Source organization:       strong
 Declared/deployed config:  aligned at the authenticated three-channel lock
-Live runtime convergence:  strong; fresh System 86 and Home 42 runtime passes,
+Live runtime convergence:  strong; fresh System 87 and Home 42 runtime passes,
                            including six Lisp project/test workflows and direct SSH
 Display/resource health:   good
 Validation safety:         strong; isolated editor and activation gates
@@ -162,6 +164,7 @@ Slice 17 Racket workflow:   accepted after published checkpoint, Home 40 activat
 Slice 18 Fennel workflow:   accepted after published checkpoints, Home 41 activation, reboot, and fresh live gates
 Slice 19 native cache:      accepted after published checkpoint, Home 42 activation, quarantine, reboot, and fresh Org 9.8.7 gates
 Slice 19 final polish:      accepted after published checkpoints, System 86 activation, cold reboots, and fresh desktop, trust, and audio gates
+Phase 1 terminal contract:  accepted from 6c408af, System 87, truthful xterm-kitty SSH, and real emacsclient pairing
 Lisp ecosystem breadth:    early; six families are accepted, while most families remain absent
 Reproducibility:            strong; clean-clone authentication and build gates pass
 Operational reliability:   restored; bounded SSH cleanup passes
@@ -203,18 +206,19 @@ Bose BlueZ sink and finite playback passed.  This completes Slice 19.
 | ID   | Pri | Evidence | Finding | Target slice |
 |------+-----+----------+---------+--------------|
 | O-01 | P0  | CLOSED   | Elogind 255.24 removes command and PTY SSH sessions immediately; no closing session remained through 30 seconds. | 7 |
-| O-02 | P1  | CLOSED   | Reduced System generation 86 is current/booted while Home generation 42 supplies the accepted application, editor, and forced-SSH tools used by the repository-owned project/test workflows. | 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 |
+| O-02 | P1  | CLOSED   | Reduced System generation 87 is current/booted while Home generation 42 supplies the accepted application, editor, and forced-SSH tools used by the repository-owned project/test workflows. | 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, P1.1 |
 | O-03 | P1  | CLOSED   | The accepted D-Bus, PipeWire, WirePlumber, and PipeWire-Pulse declarations persist unchanged in current Home generation 42. | 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 |
 | O-04 | P1  | CLOSED   | Fresh Emacs 30.2 resolves the accepted core Lisp, Clojure, runtime-detached Racket, runtime-free Fennel, and Org 9.8.7 libraries from Home 42; its observational probe and 58/58 isolated ERT checks see the accepted project keys, fixtures, backend policies, cold-open boundaries, profile-scoped native cache, and serialized Picom policy. | 7, 8, 14, 15, 16, 17, 18, 19 |
 | O-05 | P1  | CLOSED   | EXWM, launched applications, PipeWire, WirePlumber, and PipeWire-Pulse share the one canonical Guix Home D-Bus; no =dbus-launch= remains. | 10 |
 | O-06 | P2  | CLOSED   | RTKit is active through system D-Bus/Polkit; PipeWire obtains an RR data-loop with a bounded 200000-microsecond realtime limit. | 10 |
 | O-07 | P2  | CLOSED   | The stale Kitty process is gone and the current launcher is Kitty 0.47.4. | 7 |
 | O-08 | P2  | CLOSED   | Fish, Bash, Eshell, and bare SSH automation route =gsr=/=ghr= through one current-Guix wrapper and explicit setuid sudo path. | 9 |
-| O-09 | P2  | POLICY   | The read-only retention gate protects current/booted System 86, Home 42, and Pull 5 plus their immediate and older recovery tiers; System 85 is the immediate system fallback, Home 41 the preferred pre-correction fallback, and Home 40 the last-known-good Racket fallback.  It reports duplicate-link candidates but implements no deletion or garbage collection. | 12, 13, 14, 15, 16, 17, 18, 19 |
+| O-09 | P2  | POLICY   | The read-only retention gate protects current/booted System 87, Home 42, and Pull 5 plus their immediate and older recovery tiers; System 86 is the immediate system fallback and System 85 remains an older accepted fallback.  Home 41 is the preferred pre-correction fallback and Home 40 the last-known-good Racket fallback.  It reports duplicate-link candidates but implements no deletion or garbage collection. | 12, 13, 14, 15, 16, 17, 18, 19, P1.1 |
 | O-10 | P3  | CLOSED   | X screen blanking and DPMS are explicitly declared and active at 600 seconds; elogind does not suspend the workstation. | 10 |
 | O-11 | P3  | POLICY   | Elogind intentionally retains the startx/PAM login as active local =tty1= with =Type=tty=; fresh-session =IdleHint=no= and EXWM child X11 metadata are correct. | 10 |
 | O-12 | P3  | CLOSED   | Blueman 2.4.6 persists its mutable GUI state through GLib's per-user keyfile backend at =~/.config/glib-2.0/settings/keyfile=, owned by the user with mode 0600.  The historical dconf failures predate the accepted activations, no current failure recurs, and no Home dconf service is required. | 19 |
 | O-13 | P3  | CLOSED   | Ordinary audio acceptance permits =auto_null= only when the Bose is disconnected and no used physical endpoint exists, skips playback only in that absence state, and fails closed on query errors.  Strict mode requires the connected Bose as the default =bluez_output.*= sink and finite playback.  System 86 cold acceptance auto-powered the controller; powering on only the Bose automatically selected =bluez_output.04_52_C7_86_93_08.1= and passed finite playback. | 19 |
+| O-14 | P1  | CLOSED   | System 87 installs Kitty's default and =terminfo= outputs.  Truthful =TERM=xterm-kitty= works through interactive SSH without an override, generic =xterm-256color= remains healthy, noninteractive SSH is byte-clean, Fastfetch appears once, and a real Kitty =emacsclient -t= pair leaves the EXWM server alive. | P1.1 |
 
 ** Configuration correctness and validation findings
 
@@ -255,7 +259,7 @@ reported as a confirmed bug without a focused test.
 | R-01 | P1  | CLOSED   | =guix/channels.scm= pins exact Guix, Nonguix, and authenticated sk-guix commits; the isolated time-machine provenance gate matches all three. | 12 |
 | R-02 | P1  | CLOSED   | =sk-guix= publishes a signed introduction, authorized signer, orphan public keyring, and signed target that pass isolated clean-clone Guix authentication. | 12 |
 | R-03 | P2  | POLICY   | Live repo symlinks make edits immediate but Home rollback does not restore application-file contents. | 13 |
-| R-04 | P2  | VERIFIED | System 86 carries only the recovery floor; Home 42 owns normal tools and supplies them to graphical, login, and direct forced-SSH project/test environments. | 13, 14, 15, 16, 17, 18, 19 |
+| R-04 | P2  | VERIFIED | System 87 carries only the recovery floor plus Kitty's required =terminfo= output; Home 42 owns normal tools and supplies them to graphical, login, and direct forced-SSH project/test environments. | 13, 14, 15, 16, 17, 18, 19, P1.1 |
 | R-05 | P2  | CLOSED   | Core, JVM Clojure, Racket, and Fennel manifests build and enter independently; the installed-base configuration bootstrap passes fixtures and isolated GuixPC acceptance. | 12, 13, 17, 18 |
 | R-06 | P2  | CLOSED   | =scripts/guix-entrypoints= checks or bootstraps every declaration link and refuses blockers/missing sources transactionally. | 9, 13 |
 
@@ -2710,6 +2714,30 @@ Rollback path: restore source checkpoint abb0518399daf3047862f96099cf6f9fa048f73
 This closes O-12, O-13, X-05, and X-06 and completes Slice 19.  The numbered
 stabilization roadmap has no successor slice.
 
+*** Follow-on Phase 1 terminal contract accepted (2026-07-15)
+
+The separate dated polishing roadmap accepted P1.1 from published checkpoint
+=6c408af2d43631ae07119f25ac90f2ee07793a73=.  System generation 87 is current
+and booted at =/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system=; Home 42
+and Pull 5 remain unchanged.  The System profile realizes both
+=kitty-latest:out= and =kitty-latest:terminfo=.
+
+Plain =infocmp= and =tput= report 256 colors for truthful =xterm-kitty= and the
+generic =xterm-256color= control.  Fish and Bash pass.  Noninteractive
+=ssh -T ... true= exits zero with zero bytes, the marker command emits exactly
+=NONINTERACTIVE_OK=, and interactive Kitty preserves =TERM=xterm-kitty= with
+one Fastfetch greeting.  A real =ssh -t ... emacsclient -t= pair succeeds;
+closing only that terminal client leaves the five-frame EXWM Emacs server
+healthy.  Desktop/session/audio acceptance, retention verification, and the
+read-only rollback drill pass after the cold boot.
+
+The comparison boot was non-clean but did not introduce a P1.1 regression:
+the early Guile =init[1]= segfault, disabled 100,000-count =pinctrl_amd= IRQ 7,
+and unstable-TSC-to-HPET fallback all recurred.  They remain routed through
+P0-F01, P0-F02, and P0-F03 in the follow-on record.  Exact P1.1 rollback first
+reverts source checkpoint =6c408af= and then switches with protected Pull 5 to
+retained System generation 86; Home 42 and Pull 5 need no change.
+
 * Deferred work
 
 The existing custom-kernel inventory and plan remain separate from this roadmap.
@@ -2733,6 +2761,7 @@ This audit can be marked complete when:
 - README and machine TODO point to the final accepted state;
 - a privileged follow-up confirms system Shepherd and root-owned log health.
 
-All roadmap slices are complete.  This audit remains =active= because the final
-privileged system-Shepherd and root-owned-log health check is still unavailable;
-Slice 19 completion is not evidence for that explicitly excluded boundary.
+All numbered roadmap slices are complete.  The 2026-07-15 privileged follow-up
+verified System Shepherd and root-owned-log health, registered every non-clean
+boot finding, and closed this audit's final boundary.  Follow-on polishing state
+now lives in the linked Phase 0/P1.1 record.

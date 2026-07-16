@@ -167,6 +167,17 @@ These findings do not block the narrow terminfo correction.  P0-F01 through
 P0-F04 join the Phase 2 measurement/log track and must be reviewed before any
 performance or kernel tuning.
 
+The P1.1 cold-reboot comparison at =2026-07-15 17:47 EDT= confirmed that
+P0-F01, P0-F02, and P0-F03 recur.  The boot again logged an early =init[1]=
+Guile segmentation fault, disabled =pinctrl_amd= IRQ 7 after exactly 100,000
+unhandled interrupts, and rejected unstable TSC before selecting HPET.  The
+new TSC sample skewed by 876,317 ns over 475,133,152 ns, and the live
+clocksource is =hpet=.  P0-F04 through P0-F08 were not evaluated by this narrow
+comparison probe.  These are confirmed pre-existing boot findings, not new
+Kitty/terminfo regressions; they remain routed to dedicated Phase 2 and
+kernel/firmware investigation without adding =irqpoll=, =tsc=unstable=, or
+another workaround in P1.1.
+
 * SSH and terminal contract
 
 ** Observed matrix
@@ -234,7 +245,8 @@ Shepherd enumeration and current-boot kernel/root-log inspection completed.
 The service layer is converged, while P0-F01 through P0-F08 preserve every
 non-clean finding and its follow-up boundary.
 
-* READY Slice P1.1 -- Install the Kitty terminfo output
+* DONE Slice P1.1 -- Install the Kitty terminfo output
+CLOSED: [2026-07-15 Wed]
 :PROPERTIES:
 :WORKSTREAM: Phase 1 -- SSH and terminal contract
 :DEPENDS_ON: Phase 0 accepted 2026-07-15
@@ -251,10 +263,10 @@ Emacs server are healthy.  Manually redefining =TERM= hides the ownership bug.
 - [X] Add the separate =terminfo= output beside =kitty-latest= in the GuixPC
   System recovery package list.
 - [X] Add a regression probe for both =xterm-kitty= and =xterm-256color=.
-- [ ] Prove noninteractive SSH remains byte-clean.
-- [ ] Preserve one Fastfetch greeting in interactive local and SSH Fish.
-- [ ] Prove the Emacs server RPC and a paired real =emacsclient -t= session.
-- [ ] Build, checkpoint, activate, and cold-accept the System generation.
+- [X] Prove noninteractive SSH remains byte-clean.
+- [X] Preserve one Fastfetch greeting in interactive local and SSH Fish.
+- [X] Prove the Emacs server RPC and a paired real =emacsclient -t= session.
+- [X] Build, checkpoint, activate, and cold-accept the System generation.
 
 ** Explicit non-goals
 
@@ -277,14 +289,14 @@ Emacs server are healthy.  Manually redefining =TERM= hides the ownership bug.
 - [X] Guile/Scheme source checks and focused negative controls pass.
 - [X] The pinned Guix System build succeeds without activation.
 - [X] Candidate closure contains both Kitty =out= and =terminfo= outputs.
-- [ ] =infocmp xterm-kitty= and =infocmp xterm-256color= succeed from the normal
+- [X] =infocmp xterm-kitty= and =infocmp xterm-256color= succeed from the normal
   profile search path without an environment workaround.
-- [ ] =ssh -T guixpc true= exits zero with zero output.
-- [ ] Interactive SSH shows Fastfetch once and preserves =TERM=xterm-kitty=.
-- [ ] =ssh -t guixpc emacsclient -t= works in a real Kitty terminal without a
+- [X] =ssh -T guixpc true= exits zero with zero output.
+- [X] Interactive SSH shows Fastfetch once and preserves =TERM=xterm-kitty=.
+- [X] =ssh -t guixpc emacsclient -t= works in a real Kitty terminal without a
   =TERM= override; the pair test closes the client normally.
-- [ ] Existing desktop/session, shell, retention, and rollback gates pass.
-- [ ] A cold reboot leaves the promoted System generation current and booted.
+- [X] Existing desktop/session, shell, retention, and rollback gates pass.
+- [X] A cold reboot leaves the promoted System generation current and booted.
 
 ** Rollback and stop conditions
 
@@ -298,24 +310,35 @@ Emacs server are healthy.  Manually redefining =TERM= hides the ownership bug.
 
 ** User decisions still required
 
-- Other SSH terminal clients beyond Kitty and generic =xterm-256color=: TBD,
-  not blocking the initial regression matrix.
+- No additional SSH client is required for P1.1.  Kitty and generic
+  =xterm-256color= are the accepted initial regression matrix; add another
+  client only when it enters actual use.
 
 ** Completion evidence
 
-- Commit: pending
-- System/Home/Pull generation: baseline =86 / 42 / 5=; non-activated candidate
-  =/gnu/store/lfm4xrqhc1jxa87q084cp0bb5yx9f0yl-system=
+- Implementation commit:
+  =6c408af2d43631ae07119f25ac90f2ee07793a73=.
+- System/Home/Pull generation: accepted =87 / 42 / 5=.  System 87 is current
+  and booted at =/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system=;
+  System 86 is the exact immediate rollback.  The earlier non-activated build
+  candidate was =/gnu/store/lfm4xrqhc1jxa87q084cp0bb5yx9f0yl-system=.
 - Commands/results: =scripts/shell-check --strict= and
   =scripts/guix-build-gate --plan= pass; the non-activating System build passes;
   its profile records both =kitty-latest:out= and =kitty-latest:terminfo=;
   candidate-local =infocmp -A= parses =xterm-kitty= and =xterm-256color=.
-- Pre-activation SSH controls: =ssh -T ... true= exits zero with zero bytes;
-  the marker command emits exactly =NONINTERACTIVE_OK=.
-- Residual risks: preserve Phase 0 follow-ups P0-F01 through P0-F08; none is
-  caused or masked by the terminfo output change
-- Next action: checkpoint and push the P1.1 implementation, then run =gsr=;
-  cold reboot and paired Kitty/=emacsclient -t= acceptance remain separate.
+- Cold acceptance: plain =infocmp= and =tput= report 256 colors for both
+  terminals; Fish and Bash pass; =ssh -T ... true= emits zero bytes and the
+  marker command emits exactly =NONINTERACTIVE_OK=; interactive Kitty preserves
+  =TERM=xterm-kitty= with one Fastfetch greeting; the real =emacsclient -t=
+  pair succeeds and closing it leaves the five-frame EXWM server healthy.
+- Broader gates: =scripts/desktop-session-check= passes with the Bose as the
+  physical default sink and finite playback; retention verification and the
+  read-only rollback drill pass; profile, current, and booted System links all
+  converge on System 87.
+- Residual risks: P0-F01 through P0-F03 recur as recorded above; P0-F04 through
+  P0-F08 remain registered.  None is caused or masked by the terminfo change.
+- Next action: review Phase 2's measurement scope and targets with the user
+  before promoting any performance or kernel experiment.
 
 * Phase 0 acceptance
 
