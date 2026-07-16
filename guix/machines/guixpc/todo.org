@@ -433,17 +433,19 @@ CLOSED: [2026-07-16 Thu]
   swap, filesystem and SSD capabilities, Guix daemon/build ownership, current
   store/profile pressure, and process timing on the synchronized System 87
   host.
-- [X] Confirm a healthy point-in-time baseline: negligible pressure, cool idle
-  sensors, no swap use, and ample root, store, home, and inode headroom.
-- [X] Record periodic TRIM as an unowned maintenance gap and SMART as an
-  observability gap.  Neither is evidence that the SSD is currently failing or
-  slow.
+- [X] Confirm that the point sample showed negligible pressure, cool idle
+  sensors, no swap use, about 35 GiB root/store free, about 139 GiB Home free,
+  and low inode use; do not promote that to a whole-machine health claim.
+- [X] Record that periodic TRIM has no declarative owner and its maintenance
+  policy is unselected.  Record SMART data as uncaptured rather than absent:
+  inherited UDisks already exposes an ATA SMART interface that was not queried.
+  Neither finding is evidence that the SSD is currently failing or slow.
 - [X] Keep =--max-jobs=1 --cores=4=, HPET cost, sustained thermals, and true
   boot-to-ready time as measurement hypotheses or unknowns, not tuning
   findings.
-- [X] Preserve the 44 duplicate profile-link candidates as Phase 5 inventory
-  only.  Backup/restore evidence remains a hard gate before generation cleanup
-  or store collection.
+- [X] Preserve the 44 unprotected older same-target generation-link candidates
+  as Phase 5 inventory only.  Backup/restore evidence remains a hard gate before
+  generation cleanup or store collection.
 - [X] Make no declaration, package, mount, service, governor, scheduler, swap,
   build-policy, generation, garbage-collection, activation, runtime, or reboot
   change.  P2.S1b/P2.S1c remain unpromoted.
