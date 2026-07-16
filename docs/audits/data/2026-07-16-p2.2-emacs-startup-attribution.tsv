@@ -1,0 +1,139 @@
+meta	protocol	sk-emacs-startup-attribution-v1
+meta	run_mode	live
+meta	captured_at_utc	2026-07-16T12:11:42Z
+meta	hostname	guixpc
+meta	kernel	7.0.14
+meta	boot_id	6a94d3ec-1c03-40cd-a678-d8a372bf7df2
+meta	repo_head	ba087f51c3ee4fd53e8885335ee21df615c36daf
+meta	repo_upstream	ba087f51c3ee4fd53e8885335ee21df615c36daf
+meta	repo_ahead_behind	0/0
+meta	booted_system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+meta	current_system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+meta	system_profile	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+meta	home_profile	/gnu/store/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile
+meta	pull_profile	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+meta	emacsclient	/gnu/store/jbqsprk039wqdb53ljqw9rhm9wg27f5v-emacs-30.2/bin/emacsclient
+state	trace_activation	p2.2-v1
+state	timer	emacs-current-time-realtime
+state	trace_complete	true
+state	event_count	42
+state	expected_init_features	['use-package', 'sk-core', 'sk-ui', 'sk-windows', 'sk-dired', 'sk-terminal', 'sk-dashboard', 'sk-completion', 'sk-evil', 'sk-project', 'sk-lsp', 'sk-lisp', 'sk-clojure', 'sk-racket', 'sk-fennel', 'sk-lua', 'sk-python', 'sk-shell', 'sk-json', 'sk-c', 'sk-format', 'sk-keys', 'sk-org', 'sk-notes']
+state	pid	6631
+state	version	30.2
+state	started_utc	2026-07-16T12:09:47Z
+state	before_init_seconds	1784203787.661102
+state	after_init_seconds	1784203795.580959
+state	init_seconds	7.919856
+state	source_root	/home/skydive420dz/Projects/guix-dotfiles/emacs/
+state	user_init_file	/home/skydive420dz/Projects/guix-dotfiles/emacs/init.el
+state	sk_exwm_file	/home/skydive420dz/Projects/guix-dotfiles/emacs/lisp/sk-exwm.el
+state	running_executable	/gnu/store/jbqsprk039wqdb53ljqw9rhm9wg27f5v-emacs-30.2/bin/emacs
+state	home_profile	/gnu/store/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile
+state	native_profile_key	bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile
+state	gc_cons_threshold	800000
+state	gc_cons_percentage	0.100000
+state	exwm_loaded	true
+state	exwm_connected	true
+state	exwm_wm_mode	true
+state	server_running	true
+state	observer_require_advice	false
+state	observer_dashboard_advice	false
+state	observer_exwm_mode_advice	false
+state	observer_hooks	false
+event	1	1	mark	early-init-enter	1784203787.668923	1784203787.668923	0.000000	ok	not-applicable	0	0.000000
+event	2	2	call	observer-bootstrap	1784203787.668923	1784203787.921254	0.252332	ok	not-applicable	9	0.087655
+event	3	3	mark	early-init-exit	1784203787.921623	1784203787.921623	0.000000	ok	not-applicable	0	0.000000
+event	4	4	mark	init-enter	1784203788.630627	1784203788.630627	0.000000	ok	not-applicable	0	0.000000
+event	5	5	require	use-package	1784203788.630670	1784203788.670214	0.039544	ok	false	1	0.013238
+event	6	6	require	sk-core	1784203788.670422	1784203789.273851	0.603429	ok	false	18	0.260336
+event	7	7	require	sk-ui	1784203789.273897	1784203789.768865	0.494968	ok	false	16	0.284221
+event	8	8	require	sk-windows	1784203789.768913	1784203789.817537	0.048624	ok	false	1	0.020681
+event	9	9	require	sk-dired	1784203789.817590	1784203789.869490	0.051900	ok	false	1	0.020876
+event	10	10	require	sk-terminal	1784203789.869544	1784203790.156664	0.287120	ok	false	6	0.130561
+event	11	11	require	sk-dashboard	1784203790.156722	1784203790.166672	0.009950	ok	false	0	0.000000
+event	12	12	require	sk-completion	1784203790.166742	1784203790.359888	0.193146	ok	false	4	0.094305
+event	13	13	require	sk-evil	1784203790.359957	1784203790.901503	0.541546	ok	false	10	0.266669
+event	14	14	require	sk-project	1784203790.901576	1784203792.134953	1.233377	ok	false	17	0.600589
+event	15	15	require	sk-lsp	1784203792.135036	1784203792.210601	0.075565	ok	false	1	0.041258
+event	16	16	require	sk-lisp	1784203792.210687	1784203792.978710	0.768023	ok	false	7	0.313155
+event	17	17	require	sk-clojure	1784203792.978800	1784203793.081643	0.102843	ok	false	1	0.048062
+event	18	18	require	sk-racket	1784203793.081749	1784203794.398564	1.316815	ok	false	7	0.359848
+event	19	19	require	sk-fennel	1784203794.398665	1784203794.434518	0.035852	ok	false	0	0.000000
+event	20	20	require	sk-lua	1784203794.434614	1784203794.438253	0.003639	ok	false	0	0.000000
+event	21	21	require	sk-python	1784203794.438368	1784203794.438867	0.000500	ok	false	0	0.000000
+event	22	22	require	sk-shell	1784203794.438967	1784203794.439455	0.000488	ok	false	0	0.000000
+event	23	23	require	sk-json	1784203794.439560	1784203794.443255	0.003695	ok	false	0	0.000000
+event	24	24	require	sk-c	1784203794.443368	1784203794.443840	0.000472	ok	false	0	0.000000
+event	25	25	require	sk-format	1784203794.443957	1784203794.444502	0.000546	ok	false	0	0.000000
+event	26	26	require	sk-keys	1784203794.499004	1784203794.518821	0.019816	ok	false	0	0.000000
+event	27	27	require	sk-org	1784203794.518965	1784203794.521123	0.002158	ok	false	0	0.000000
+event	28	28	require	sk-notes	1784203794.521263	1784203795.556618	1.035355	ok	false	6	0.356721
+event	29	29	mark	init-exit	1784203795.556796	1784203795.556796	0.000000	ok	not-applicable	0	0.000000
+event	30	30	mark	after-init-hook-tail	1784203795.673038	1784203795.673038	0.000000	ok	not-applicable	0	0.000000
+event	31	31	mark	exwm-loader-enter	1784203795.679307	1784203795.679307	0.000000	ok	not-applicable	0	0.000000
+event	32	37	call	load:~/.emacs.d/exwm.el	1784203795.679553	1784203796.336456	0.656903	ok	not-applicable	3	0.201955
+event	33	32	mark	exwm-config-enter	1784203795.680690	1784203795.680690	0.000000	ok	not-applicable	0	0.000000
+event	34	33	require	sk-exwm	1784203795.680977	1784203796.296686	0.615709	ok	false	3	0.201955
+event	35	35	call	sk/exwm-start	1784203796.296906	1784203796.335593	0.038688	ok	not-applicable	0	0.000000
+event	36	34	call	exwm-wm-mode	1784203796.319685	1784203796.335398	0.015712	ok	not-applicable	0	0.000000
+event	37	36	mark	exwm-config-exit	1784203796.335786	1784203796.335786	0.000000	ok	not-applicable	0	0.000000
+event	38	38	mark	exwm-loader-exit	1784203796.336649	1784203796.336649	0.000000	ok	not-applicable	0	0.000000
+event	39	39	call	sk/dashboard-buffer	1784203796.337868	1784203796.362208	0.024341	ok	not-applicable	0	0.000000
+event	40	40	mark	emacs-startup-hook-tail	1784203796.373582	1784203796.373582	0.000000	ok	not-applicable	0	0.000000
+event	41	41	mark	window-setup-hook-tail	1784203796.373806	1784203796.373806	0.000000	ok	not-applicable	0	0.000000
+event	42	42	mark	trace-complete	1784203796.373995	1784203796.373995	0.000000	ok	not-applicable	0	0.000000
+phase	emacs-before-early-init	1784203787.661102	1784203787.668923	0.007820
+phase	early-init	1784203787.668923	1784203787.921623	0.252701
+phase	emacs-core-before-init	1784203787.921623	1784203788.630627	0.709003
+phase	init-file	1784203788.630627	1784203795.556796	6.926169
+phase	emacs-core-after-init	1784203795.556796	1784203795.580959	0.024163
+phase	after-init-hooks	1784203795.580959	1784203795.673038	0.092080
+phase	command-line-before-exwm-loader	1784203795.673038	1784203795.679307	0.006269
+phase	exwm-loader-before-config	1784203795.679307	1784203795.680690	0.001382
+phase	exwm-config	1784203795.680690	1784203796.335786	0.655097
+phase	exwm-loader-after-config	1784203796.335786	1784203796.336649	0.000862
+phase	command-line-after-exwm-loader	1784203796.336649	1784203796.373582	0.036933
+phase	startup-to-window-setup	1784203796.373582	1784203796.373806	0.000224
+phase	trace-finalization	1784203796.373806	1784203796.373995	0.000190
+summary	init_file_seconds	6.926169
+summary	init_use_package_seconds	0.039544
+summary	init_direct_requires_seconds	6.869371
+summary	init_file_residual_seconds	0.056798
+summary	init_personal_window_seconds	6.886196
+summary	init_personal_requires_seconds	6.829827
+summary	init_module_residual_seconds	0.056369
+rank	init_personal_require	1	sk-racket	1.316815	19.122537	false	7	0.359848
+rank	init_personal_require	2	sk-project	1.233377	17.910854	false	17	0.600589
+rank	init_personal_require	3	sk-notes	1.035355	15.035221	false	6	0.356721
+rank	init_personal_require	4	sk-lisp	0.768023	11.153085	false	7	0.313155
+rank	init_personal_require	5	sk-core	0.603429	8.762875	false	18	0.260336
+rank	init_personal_require	6	sk-evil	0.541546	7.864230	false	10	0.266669
+rank	init_personal_require	7	sk-ui	0.494968	7.187828	false	16	0.284221
+rank	init_personal_require	8	sk-terminal	0.287120	4.169506	false	6	0.130561
+rank	init_personal_require	9	sk-completion	0.193146	2.804826	false	4	0.094305
+rank	init_personal_require	10	sk-clojure	0.102843	1.493471	false	1	0.048062
+rank	init_personal_require	11	sk-lsp	0.075565	1.097336	false	1	0.041258
+rank	init_personal_require	12	sk-dired	0.051900	0.753684	false	1	0.020876
+rank	init_personal_require	13	sk-windows	0.048624	0.706106	false	1	0.020681
+rank	init_personal_require	14	sk-fennel	0.035852	0.520642	false	0	0.000000
+rank	init_personal_require	15	sk-keys	0.019816	0.287771	false	0	0.000000
+rank	init_personal_require	16	sk-dashboard	0.009950	0.144495	false	0	0.000000
+rank	init_personal_require	17	sk-json	0.003695	0.053656	false	0	0.000000
+rank	init_personal_require	18	sk-lua	0.003639	0.052850	false	0	0.000000
+rank	init_personal_require	19	sk-org	0.002158	0.031334	false	0	0.000000
+rank	init_personal_require	20	sk-format	0.000546	0.007922	false	0	0.000000
+rank	init_personal_require	21	sk-python	0.000500	0.007255	false	0	0.000000
+rank	init_personal_require	22	sk-shell	0.000488	0.007083	false	0	0.000000
+rank	init_personal_require	23	sk-c	0.000472	0.006849	false	0	0.000000
+invariant	repository_and_upstream_stable	PASS
+invariant	system_and_profiles_stable	PASS
+invariant	boot_identity_stable	PASS
+invariant	live_source_and_server_provenance	PASS
+invariant	trace_activation_and_completeness	PASS
+invariant	protected_trace_state_stable	PASS
+invariant	event_schema_and_order	PASS
+invariant	phase_partition_nonoverlapping	PASS
+invariant	direct_init_requires_complete	PASS
+invariant	init_module_residual_nonnegative	PASS
+invariant	exwm_bridge_attributed	PASS
+invariant	collector_stdout_only	PASS

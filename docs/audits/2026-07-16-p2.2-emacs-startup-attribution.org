@@ -1,13 +1,13 @@
 #+title: GuixPC P2.2 Emacs Startup Attribution
 #+date: 2026-07-16
-#+status: implementation
+#+status: accepted evidence
 
 * Outcome and boundary
 
-P2.2 explains one fresh Emacs/EXWM startup before any performance policy is
-changed.  It owns attribution only: a versioned, opt-in observer records named
-synchronous boundaries in memory, and a guarded client extracts the completed
-trace to stdout after the desktop is running.
+P2.2 records one fresh Emacs/EXWM startup before any performance policy is
+changed.  It owns attribution only: a versioned, opt-in observer recorded named
+synchronous boundaries in memory, and a guarded client extracted the completed
+trace to stdout after the desktop was running.
 
 No GC setting, eager/deferred decision, package, module order, cache, native
 compilation policy, message advice, launcher path, EXWM behavior, Home profile,
@@ -214,10 +214,12 @@ Live provenance includes the repository commit, boot ID, kernel, exact Home
 profile/client/server, native-cache identity, Emacs version/PID/start time,
 timer identity, activation token, GC policy, and observer event count.
 
-** Rejected activation/extraction attempts and source corrections
+** Activation/extraction attempts and source corrections
 
-Three 2026-07-16 attempts are retained as process evidence, but none
-authorizes P2.2 collector output.
+Initial implementation checkpoint =a2a6283= added the dormant observer,
+collector, and fixtures.  The first three 2026-07-16 attempts are retained as
+rejected process evidence; none authorizes P2.2 attribution.  A fourth fresh
+process from the twice-corrected, published source produced accepted trace R1.
 
 1. At =2026-07-16T11:37:48Z= the session runner was invoked from an SSH
    pseudo-terminal.  Guix's generated =startx= rejected fd 0 as
@@ -243,8 +245,15 @@ authorizes P2.2 collector output.
    the stderr SHA-256 is
    =e7c7188e26377490d4cab5ff5031dbccdc56eed3fad60e6d9eb8628a6d2e29f2=.
    The collector was not rerun against that process.
+4. After publishing numeric correction =ba087f5=, a new canonical tty1 session
+   started Emacs PID 6631 at =2026-07-16T12:09:47Z=.  It sealed all 42 events,
+   reported no init error, and removed all observer advice and hooks.  The
+   collector was invoked once at =2026-07-16T12:11:42Z= against the clean,
+   synchronized =ba087f5= checkout.  It returned status 0, emitted the accepted
+   139-line TSV to stdout, and emitted zero bytes to stderr.
 
-The second attempt exposed a confirmed source-path bug.  The managed live
+The second attempt exposed a confirmed source-path bug, corrected by
+=e2ed5b5=.  The managed live
 =~/.emacs.d/early-init.el= is a symlink into this repository, while the
 observer was located relative to =user-emacs-directory=.  That expanded to
 the nonexistent =~/.emacs.d/lisp/sk-startup-trace.el= and set
@@ -254,8 +263,9 @@ the nonexistent =~/.emacs.d/lisp/sk-startup-trace.el= and set
 entrypoint with no =~/.emacs.d/lisp/= fallback; it must load both the observer
 and the remainder of native-cache setup.
 
-The third attempt exposed a collector-only numeric bug, not an event-order
-defect.  The chronological guard used a =1e-9= relative tolerance on absolute
+The third attempt exposed a collector-only numeric bug, corrected by
+=ba087f5=, not an event-order defect.  The chronological guard used a =1e-9=
+relative tolerance on absolute
 Unix timestamps near =1.784e9= seconds.  It therefore treated timestamps up to
 roughly 1.78 seconds apart as equal.  The outer EXWM load and its inner
 =exwm-config-enter= mark began less than one millisecond apart; after being
@@ -275,6 +285,141 @@ continued safely on the renamed inode and its pre-trace log was preserved as
 =ce5703576f321f8c49935d624caa0bc00bcbbe0c692c4c52256a2250936099cc=.
 Adding a direct-run VT/session preflight belongs to a later launcher-hygiene
 slice; it is not startup timing evidence and is not folded into P2.2.
+
+* Accepted trace R1
+
+** Artifact and provenance
+
+The accepted raw and derived record is
+[[file:data/2026-07-16-p2.2-emacs-startup-attribution.tsv][=data/2026-07-16-p2.2-emacs-startup-attribution.tsv=]].  The externally
+preserved source artifact and the tracked copy are byte-identical:
+
+#+begin_src text
+SHA-256: 02d78dce100f5eb5abd27a86ac94750e88ee1d40ea9b3c8fa434e8e106fa50e4
+Lines:   139
+Bytes:   9823
+stderr:  0 bytes
+stderr SHA-256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+#+end_src
+
+The collector itself validated twelve invariants, all =PASS=: repository and
+upstream stability; system and profile stability; boot identity; live source
+and server provenance; activation and completeness; protected trace state;
+event schema and order; non-overlapping phase partition; complete direct init
+requirements; nonnegative module residual; attributed EXWM bridge; and
+stdout-only collection.
+
+Live provenance retained by the artifact is:
+
+| Field | Accepted value |
+|-------+----------------|
+| capture UTC | =2026-07-16T12:11:42Z= |
+| host / kernel | =guixpc= / =7.0.14= |
+| boot ID | =6a94d3ec-1c03-40cd-a678-d8a372bf7df2= |
+| repository HEAD / upstream | =ba087f51c3ee4fd53e8885335ee21df615c36daf= / same |
+| ahead / behind | =0/0= |
+| booted / current System | =/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system= / same |
+| Home profile | =/gnu/store/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile= |
+| Pull profile | =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile= |
+| Emacs | =30.2=, PID =6631=, started =2026-07-16T12:09:47Z= |
+| running executable | =/gnu/store/jbqsprk039wqdb53ljqw9rhm9wg27f5v-emacs-30.2/bin/emacs= |
+| activation / timer | =p2.2-v1= / =emacs-current-time-realtime= |
+| observer state | complete, 42 events, all temporary advice/hooks removed |
+| GC policy | threshold =800000=; percentage =0.100000= |
+
+The exact live source root was
+=/home/skydive420dz/Projects/guix-dotfiles/emacs/=.  EXWM was loaded,
+connected, and in =exwm-wm-mode=; the server was running.  The trace remained
+sealed in PID 6631 after extraction.  These facts establish the provenance of
+R1; they do not establish cold/warm cache state or perceived readiness.
+
+** Non-overlapping phase map
+
+The accepted chronological phase partition, in seconds, is:
+
+| Phase | Observed seconds |
+|-------+-----------------:|
+| Emacs before early init | 0.007820 |
+| early init | 0.252701 |
+| Emacs core before init file | 0.709003 |
+| init file | 6.926169 |
+| Emacs core after init file | 0.024163 |
+| after-init hooks | 0.092080 |
+| command line before EXWM loader | 0.006269 |
+| EXWM loader before config | 0.001382 |
+| EXWM config | 0.655097 |
+| EXWM loader after config | 0.000862 |
+| command line after EXWM loader | 0.036933 |
+| startup hook to window-setup hook | 0.000224 |
+| trace finalization | 0.000190 |
+
+=emacs-init-time= observed =7.919856= seconds from =before-init-time= to
+=after-init-time=.  The complete recorded partition from =before-init-time= to
+the trace-complete mark observed =8.712893= seconds.  The latter marker is not
+a first-visible, first-client, or first-usable-input measurement.
+
+Within the init file, the =use-package= boundary observed =0.039544= seconds;
+all 24 direct require boundaries summed to =6.869371= seconds; and the explicit
+init-file residual was =0.056798= seconds.  The 23-personal-module window was
+=6.886196= seconds, its inclusive direct-require boundaries summed to
+=6.829827= seconds, and its residual was =0.056369= seconds.
+
+Inside the later bridge, the =sk-exwm= inclusive require boundary observed
+=0.615709= seconds.  =sk/exwm-start= observed =0.038688= seconds and contains
+the nested =exwm-wm-mode= boundary of =0.015712= seconds.  Dashboard
+construction observed =0.024341= seconds after the EXWM loader.  Nested spans
+must not be added to the non-overlapping =0.655097=-second EXWM-config phase.
+
+** Direct personal-require boundaries
+
+The secondary ranking below is exact for R1.  “Percent” uses the
+=6.886196=-second direct-personal-module window.  Every value is inclusive and
+may contain nested dependency, GC, I/O, advice, and scheduler work.
+
+| Rank | Inclusive boundary | Observed seconds | Percent |
+|------+--------------------+-----------------:|--------:|
+| 1 | =sk-racket= | 1.316815 | 19.122537 |
+| 2 | =sk-project= | 1.233377 | 17.910854 |
+| 3 | =sk-notes= | 1.035355 | 15.035221 |
+| 4 | =sk-lisp= | 0.768023 | 11.153085 |
+| 5 | =sk-core= | 0.603429 | 8.762875 |
+| 6 | =sk-evil= | 0.541546 | 7.864230 |
+| 7 | =sk-ui= | 0.494968 | 7.187828 |
+| 8 | =sk-terminal= | 0.287120 | 4.169506 |
+| 9 | =sk-completion= | 0.193146 | 2.804826 |
+| 10 | =sk-clojure= | 0.102843 | 1.493471 |
+| 11 | =sk-lsp= | 0.075565 | 1.097336 |
+| 12 | =sk-dired= | 0.051900 | 0.753684 |
+| 13 | =sk-windows= | 0.048624 | 0.706106 |
+| 14 | =sk-fennel= | 0.035852 | 0.520642 |
+| 15 | =sk-keys= | 0.019816 | 0.287771 |
+| 16 | =sk-dashboard= | 0.009950 | 0.144495 |
+| 17 | =sk-json= | 0.003695 | 0.053656 |
+| 18 | =sk-lua= | 0.003639 | 0.052850 |
+| 19 | =sk-org= | 0.002158 | 0.031334 |
+| 20 | =sk-format= | 0.000546 | 0.007922 |
+| 21 | =sk-python= | 0.000500 | 0.007255 |
+| 22 | =sk-shell= | 0.000488 | 0.007083 |
+| 23 | =sk-c= | 0.000472 | 0.006849 |
+
+Thus =sk-racket= is the largest observed inclusive personal-require boundary
+in R1.  R1 alone does not show that Racket configuration caused a user-felt
+delay, that the ordering will repeat, or that changing it would save time.
+
+** Post-extraction gates
+
+- =scripts/emacs-check=: =PASS=.  The live check passed with Org 9.8.7 and the
+  profile-keyed native cache; all 59 ERT tests, batch checks, Geiser/Guile,
+  SLY/SBCL, and backend checks passed, and the repository remained unchanged.
+- =scripts/desktop-session-check=: =PASS=.  The canonical D-Bus and EXWM
+  checks passed along with PipeWire, RTKit, and Picom.  The Bose Bluetooth sink
+  was the physical default, and the finite low-volume stream check passed.
+- =scripts/shell-check --strict=: =PASS=.  This includes
+  =emacs-startup-attribution-check= and the strict Guile fixtures.
+- Final repository state was empty/clean at
+  =ba087f51c3ee4fd53e8885335ee21df615c36daf= with upstream at the same commit
+  and =0/0= ahead/behind.  Live PID 6631 still held a sealed 42-event trace;
+  every observer cleanup probe remained nil.
 
 * Truth boundaries
 
@@ -305,15 +450,17 @@ slice; it is not startup timing evidence and is not folded into P2.2.
 - [X] Add a read-only, stdout-only guarded collector and versioned TSV schema.
 - [X] Add deterministic clock, order, error-propagation, cleanup, payload, phase
   algebra, residual, malformed/incomplete, and provenance fixtures.
-- [ ] Pass reader, byte-compile, Checkdoc, ERT, strict shell, candidate Emacs,
+- [X] Pass reader, byte-compile, Checkdoc, ERT, strict shell, candidate Emacs,
   and desktop source gates.
-- [ ] Publish the implementation checkpoint before activation.
-- [ ] Pair with Rafael for exactly one fresh attributed EXWM process.
-- [ ] Preserve the first valid output externally with empty stderr and a
-  reviewed SHA-256, then add it in a separate evidence commit.
-- [ ] Run live editor/desktop/source gates after extraction.
-- [ ] Review whether the observed startup is materially felt; select no tuning
-  target in P2.2.
+- [X] Publish implementation =a2a6283= and both bounded corrections =e2ed5b5=
+  and =ba087f5= before accepting a trace from their source.
+- [X] Pair with Rafael for one accepted fresh attributed EXWM process after
+  retaining all three rejected attempts.
+- [X] Preserve the first valid output externally with empty stderr and reviewed
+  SHA-256, then stage its byte-identical copy for the evidence commit.
+- [X] Run live editor/desktop/source gates after extraction.
+- [ ] Review with Rafael whether the observed startup is materially felt.
+  P2.3 remains unselected; P2.2 selects no tuning target from R1 alone.
 
 * Non-goals and stop conditions
 
@@ -358,24 +505,36 @@ later normal restart; no Home/System generation rollback is involved.
 
 * Decision rule and successor
 
-P2.2 closes with an attribution map only.  Good evidence wording is:
+P2.2's evidence portion closes with an attribution map only.  Good evidence
+wording for the accepted observation is:
 
 #+begin_quote
-In trace R, the inclusive =sk-org= require boundary observed N ms (P percent of
-the direct-personal-module window), including synchronous dependency and GC
-work; causality and repeatability are untested.
+In trace R1, the inclusive =sk-racket= require boundary observed 1.316815
+seconds (19.122537 percent of the direct-personal-module window), including
+synchronous dependency and GC work; causality and repeatability are untested.
 #+end_quote
 
-Do not write “=sk-org= caused N ms”, “=sk-org= is slow”, or “removing it will
-save N ms”.
+Do not write “=sk-racket= caused 1.316815 seconds”, “=sk-racket= is slow”, or
+“changing it will save 1.316815 seconds”.
 
-P2.3 remains =BACKLOG=: replicate the same protocol, pair at most one boundary
-with a user-felt delay, and test one reversible hypothesis.  Diffuse attribution
-or no material user complaint closes startup tuning with no configuration
-change.
+P2.3 remains =BACKLOG= and unselected pending Rafael's user-felt review.  If it
+is promoted, replicate the same protocol, pair at most one boundary with a
+user-felt delay, and test one reversible hypothesis.  Diffuse attribution or
+no material user complaint closes startup tuning with no configuration change.
 
 * Evidence
 
-Implementation checkpoint, activation process, artifact digest, live trace,
-and interpretation remain pending.  No attributed restart has occurred in
-this implementation phase.
+Accepted implementation and correction chain:
+
+#+begin_src text
+a2a6283  emacs: add one-shot startup attribution
+e2ed5b5  emacs: fix traced early-init source path
+ba087f5  performance: fix epoch-scale trace validation
+#+end_src
+
+Trace R1 was collected from published =ba087f5= on 2026-07-16.  Its tracked
+artifact, digest, provenance, exact phase partition, inclusive-boundary map,
+collector invariants, rejected attempts, and post-extraction gates are recorded
+above.  No configuration tuning, Home/System activation, or reboot was part of
+P2.2.  The remaining decision is a human review of whether startup delay is
+materially felt; until then P2.3 is not selected.

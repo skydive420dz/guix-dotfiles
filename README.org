@@ -5,11 +5,11 @@ Source of truth for the guixpc experiment machine.
 * Current progress
 
 The numbered stabilization pass is complete through Slice 19.  The later dated
-polishing roadmap has accepted Phase 1's SSH/terminal contract and Phase 2's
-first measurement-only Emacs/EXWM baseline.  Its active follow-on attributes
-one fresh startup before any tuning decision.  Keep this section aligned with
-accepted machine state so the repo records intent, not only implementation
-commits.
+polishing roadmap has accepted Phase 1's SSH/terminal contract, Phase 2's first
+measurement-only Emacs/EXWM baseline, and P2.2's one-shot startup-attribution
+evidence.  Its active follow-on is a user-felt review before any tuning decision
+or P2.3 hypothesis is selected.  Keep this section aligned with accepted machine
+state so the repo records intent, not only implementation commits.
 
 The canonical record for the completed numbered roadmap is
 [[file:docs/audits/2026-07-12-full-configuration-audit.org][the 2026-07-12 full configuration audit]].  It records verified state,
@@ -18,23 +18,29 @@ gates.  [[file:docs/audits/2026-07-15-phase-0-baseline.org][The 2026-07-15 Phase
 machine state and boot-comparison evidence.
 [[file:docs/audits/2026-07-15-p2.1-emacs-exwm-measurement.org][The P2.1 Emacs/EXWM measurement record]] owns the versioned protocol, truth
 boundaries, and accepted baseline.  [[file:docs/audits/2026-07-16-p2.2-emacs-startup-attribution.org][The P2.2 startup-attribution record]] owns
-the opt-in observer, source path, and interpretation rules.
+the opt-in observer, rejected attempts and corrections, accepted trace, and
+non-causal interpretation rules.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
 
 ** Active follow-on
 
-- [ ] P2.2: attribute one fresh Emacs/EXWM startup without tuning.  Source
-  proves that P2.1's 8.742822-second value ends before after-init hooks,
-  =~/.exwm=, EXWM activation, and dashboard construction.  The dormant
-  observer records the 24 direct init requirements, the later EXWM/dashboard
-  bridge, GC co-occurrence, and explicit residual time only when
-  =SK_EMACS_STARTUP_TRACE=p2.2-v1=.  Implementation and fixtures must be
-  published before Rafael pairs on the fresh-session boundary; no restart is
-  implied by the source checkpoint.
+- [ ] Review P2.2 trace R1 with Rafael for a materially felt startup delay.
+  P2.3 remains =BACKLOG= and unselected: one natural-state trace does not
+  establish repeatability, causality, removability, or an expected saving.
 
 ** Completed
+
+- [X] P2.2: one-shot Emacs/EXWM startup attribution
+  The accepted protocol-v1 artifact is a clean 139-line, 9,823-byte capture
+  from published source =ba087f5= with all twelve collector invariants and all
+  post-extraction gates passing.  It observed a 7.919856-second Emacs init
+  boundary, a 6.926169-second init-file phase, and a 0.655097-second EXWM-config
+  phase.  The largest observed inclusive personal-require boundaries were
+  =sk-racket= at 1.316815 seconds, =sk-project= at 1.233377 seconds, and
+  =sk-notes= at 1.035355 seconds.  These are associations in one trace, not
+  causal findings or selected tuning targets.
 
 - [X] P2.1: reproducible Emacs/EXWM responsiveness baseline
   The first valid protocol-v1 artifact is preserved with all eight invariants
