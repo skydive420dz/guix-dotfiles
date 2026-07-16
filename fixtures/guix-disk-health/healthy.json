@@ -1,0 +1,131 @@
+{
+  "fixture_version": 1,
+  "now_epoch": 2000000060,
+  "drive": {
+    "type": "v",
+    "data": [
+      {
+        "type": "o",
+        "data": "/org/freedesktop/UDisks2/drives/FIXTURE_ONLY"
+      }
+    ]
+  },
+  "properties": {
+    "SmartSupported": {
+      "type": "v",
+      "data": [
+        {
+          "type": "b",
+          "data": true
+        }
+      ]
+    },
+    "SmartEnabled": {
+      "type": "v",
+      "data": [
+        {
+          "type": "b",
+          "data": true
+        }
+      ]
+    },
+    "SmartUpdated": {
+      "type": "v",
+      "data": [
+        {
+          "type": "t",
+          "data": 2000000000
+        }
+      ]
+    },
+    "SmartFailing": {
+      "type": "v",
+      "data": [
+        {
+          "type": "b",
+          "data": false
+        }
+      ]
+    },
+    "SmartPowerOnSeconds": {
+      "type": "v",
+      "data": [
+        {
+          "type": "t",
+          "data": 36000
+        }
+      ]
+    },
+    "SmartTemperature": {
+      "type": "v",
+      "data": [
+        {
+          "type": "d",
+          "data": 300.15
+        }
+      ]
+    },
+    "SmartNumAttributesFailing": {
+      "type": "v",
+      "data": [
+        {
+          "type": "i",
+          "data": 0
+        }
+      ]
+    },
+    "SmartNumAttributesFailedInThePast": {
+      "type": "v",
+      "data": [
+        {
+          "type": "i",
+          "data": 0
+        }
+      ]
+    },
+    "SmartNumBadSectors": {
+      "type": "v",
+      "data": [
+        {
+          "type": "x",
+          "data": 0
+        }
+      ]
+    },
+    "SmartSelftestStatus": {
+      "type": "v",
+      "data": [
+        {
+          "type": "s",
+          "data": "success"
+        }
+      ]
+    },
+    "SmartSelftestPercentRemaining": {
+      "type": "v",
+      "data": [
+        {
+          "type": "i",
+          "data": 0
+        }
+      ]
+    }
+  },
+  "attributes": {
+    "type": "a(ysqiiixia{sv})",
+    "data": [
+      [
+        [5, "reallocated-sector-count", 0, 100, 100, 10, 0, 3, {}],
+        [179, "used-reserved-blocks-total", 0, 100, 100, 10, 0, 1, {}],
+        [181, "program-fail-count-total", 0, 100, 100, 10, 0, 1, {}],
+        [182, "erase-fail-count-total", 0, 100, 100, 10, 0, 1, {}],
+        [183, "runtime-bad-block-total", 0, 100, 100, 10, 0, 1, {}],
+        [187, "reported-uncorrect", 0, 100, 100, 10, 0, 3, {}],
+        [195, "hardware-ecc-recovered", 0, 100, 100, 10, 12, 1, {}],
+        [199, "udma-crc-error-count", 0, 100, 100, 10, 0, 1, {}],
+        [12, "power-cycle-count", 0, 100, 100, 10, 42, 1, {}],
+        [177, "wear-leveling-count", 0, 92, 92, 10, 7, 1, {}]
+      ]
+    ]
+  }
+}

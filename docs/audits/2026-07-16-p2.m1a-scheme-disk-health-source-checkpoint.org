@@ -1,0 +1,211 @@
+#+title: P2.M1a Scheme disk-health reader source checkpoint
+#+date: 2026-07-16
+#+author: Rafael Oliveira
+#+startup: overview
+#+status: committed; push pending
+
+* Status and truth boundary
+
+P2.M1a is *implemented and fixture-verified at the source checkpoint*.  It is
+not runtime-verified and is not complete.  This record owns only repository
+implementation, synthetic fixtures, and source gates.  It does not claim that
+the new command queried the live system bus, read the live UDisks cache,
+activated =udisksd=, or classified the installed drive.
+
+The source checkpoint is committed and must be pushed before any separately
+authorized live acceptance.  P2.M1a remains open after that push.
+
+* Scope delivered
+
+The checkpoint adds:
+
+- executable launcher =scripts/guix-disk-health=;
+- Guile implementation =scripts/guix-disk-health.scm=;
+- synthetic response bundle =fixtures/guix-disk-health/healthy.json=;
+- focused launcher, compiler, protocol, child-lifecycle, classification, and
+  privacy gate =tests/guix-disk-health-check=; and
+- registration in =scripts/shell-check --strict=.
+
+The command reuses the existing UDisks service, system-profile =busctl= and
+=guile=, and the already-available Guile =(json)= module.  It adds no package,
+System/Home service, privilege rule, setuid helper, group membership, daemon,
+timer, generation, or mutable state.
+
+* Fixed read surface
+
+The CLI accepts only =--json=, =--summary=, =--allow-activate=,
+=--cached-only=, and =--help=.  It accepts no device, object path, D-Bus
+service, interface, property, method, or executable argument.
+
+Every observation uses this source-fixed sequence:
+
+1. one =org.freedesktop.DBus.Properties.Get= call resolves the Drive object
+   privately from the fixed block object;
+2. eleven =Properties.Get= calls read the reviewed =Drive.Ata= properties; and
+3. one =SmartGetAttributes= call reads its cached tuple array with an empty
+   options dictionary.
+
+=--summary= retains all thirteen cached reads so its classification is
+identical to the full view; it only omits selected-attribute rendering.
+=--cached-only= applies =--auto-start=no= to every child.  Ordinary mode
+applies =--auto-start=yes= explicitly.  Both prohibit interactive D-Bus
+authorization and bound the request to five seconds.
+
+The production source contains no SMART refresh, SMART enable/disable, SMART
+self-test, power-management, erase, generic property, generic method,
+object-manager, introspection, broad-dump, shell-command, or user-supplied
+device path.
+
+* Process and failure boundary
+
+Guile launches the fixed =/run/current-system/profile/bin/busctl= executable
+directly with an argument vector.  It never constructs a shell command.
+Children receive =/dev/null= for stdin and stderr; stdout is captured in
+memory only.  Property responses are bounded to 4 KiB and the cached attribute
+response to 128 KiB.  A seven-second monotonic parent deadline surrounds the
+child, including the period after pipe EOF, and every exceptional exit path
+kills and reaps an unreaped child.
+
+The short-lived private Drive-path argument remains observable to a
+sufficiently privileged concurrent process.  The implementation therefore
+does not claim to hide that transient argv boundary.  It does prevent the path
+and raw child output from entering shell history, terminal output, retained
+logs, renderer records, or exception messages.
+
+Child exit, exec failure, signal, timeout, oversize output, invalid UTF-8,
+malformed JSON, wrong signatures/types/arities, and privacy rejection map to
+fixed identifier-free statuses.  A normal child failure under
+=--cached-only= means only that no usable cached source was obtained; it does
+not assert why the source was unavailable.
+
+The command constructs a complete sanitized result before performing its only
+output write.  An output-port failure is not retried as a second render.
+
+* Interpretation and output contract
+
+The default renderer is human-readable.  =--json= emits schema
+=sk-guix-disk-health/v1=.  Output is closed to reviewed SMART values, ten
+selected cached attributes, explicit units, cache age/state, activation
+policy, view, protocol version, and one classification:
+
+- =favorable=: no selected failing indicator is present in a fresh,
+  interpretable snapshot;
+- =unknown=: cache age/state or one selected value prevents that conclusion;
+  or
+- =failing-indicator=: at least one reviewed current or historical indicator
+  is nonzero/failing.
+
+These are point-in-time reader classifications, not whole-drive diagnoses.
+All valid observations exit zero regardless of classification so future
+alerting policy remains a separate slice.  UDisks self-test =success= is
+rendered =success-or-never= and never claims that a test ran.
+
+The ten selected attribute names and units are mandatory and intentionally
+GuixPC-specific.  Their absence or unit drift is a protocol failure, not an
+unknown generic-drive result.  Reusing the command for another drive therefore
+requires a new fixture and explicit attribute-contract review.
+
+Operational exits are:
+
+| Code | Meaning |
+|------+---------|
+| 0 | valid observation rendered |
+| 64 | CLI usage error |
+| 65 | protocol, output-bound, UTF-8, or privacy failure |
+| 69 | no usable cached source, including =SmartUpdated= zero |
+| 70 | internal invariant failure |
+| 74 | exec, signal, timeout, or transport failure |
+
+The cache becomes =stale/unknown= after 1,200 seconds.  A future timestamp is
+=future/unknown=.  Zero/negative sentinels retain their documented unknown
+meaning instead of being rewritten as success or failure.
+
+* Offline evidence
+
+The focused gate passes 185 checks.  Its UDisks protocol cases use a fully
+synthetic fixture and injected fake runner; they cannot invoke a subprocess.
+They prove:
+
+- exact thirteen-call order, argument vector, output bounds, and both
+  activation policies;
+- only =Properties.Get= and cached =SmartGetAttributes= are reachable;
+- human, JSON, full, summary, cached-only, allow-activate, help, and usage
+  contracts;
+- fresh, exact stale-boundary, stale, future, unknown, favorable, and
+  failing-indicator classifications;
+- unavailable cache and fixed runner-kind/error mappings;
+- malformed JSON/trailing document, missing/extra/duplicate keys, signatures,
+  scalar types, array/tuple arity, ranges, selected units, duplicates,
+  omissions, and future expansion rejection; and
+- no private Drive path, MAC-shaped value, UUID-shaped value, or identifier
+  key reaches either renderer.
+
+Separate transport probes execute the known Guile test executable only.  They
+verify clean success, nonzero exit with both output streams discarded,
+pre-EOF timeout, post-EOF timeout, oversize output, invalid UTF-8, signal
+termination, and missing-executable handling.  They cannot resolve or execute
+=busctl=.
+
+All retained fixture values are synthetic.  They contain no real model,
+serial, WWN, UUID, PARTUUID, by-id path, MAC address, or host identity.
+
+* Source gates
+
+| Gate | Result | Evidence boundary |
+|------+--------+-------------------|
+| =git diff --check= | PASS | whitespace/source only |
+| POSIX syntax and focused ShellCheck | PASS | launchers and shell gate only |
+| =guild compile -W3= | PASS | temporary output; no command execution |
+| focused disk-health gate | PASS, 185 checks | synthetic runner plus Guile lifecycle probes |
+| forbidden-operation/private-path gate | PASS | production source only |
+| =scripts/shell-check --strict= | PASS | aggregate offline source/fixture gate |
+| batch Org lint | PASS | documentation only |
+
+The commit containing this record is intentionally not self-referenced.  Its
+hash and upstream equality belong in the next acceptance update after push.
+
+* Explicitly not performed
+
+- No live =guix-disk-health= observation ran.
+- No live =--cached-only= or =--allow-activate= acceptance ran.
+- No system/session D-Bus, UDisks, SMART, block-device, filesystem, or mount
+  query was made merely to accept this source checkpoint.
+- No SMART setting, refresh, self-test, standby/wakeup, or erase method ran.
+- No package, System/Home build, reconfigure, activation, generation, sudo,
+  trim, garbage collection, cleanup, or reboot occurred.
+- No claim is made about daemon state or live drive health.
+
+* Remaining P2.M1a gates
+
+1. Push this committed source/fixture checkpoint; verify upstream equality.
+2. After the push, separately authorize one live =--cached-only= read while
+   =udisksd= is already active.  Retain only sanitized output and confirm that
+   cached-only did not request service activation.
+3. Keep an ordinary-boot =--allow-activate= check separate.  Capture pre/post
+   daemon state without retaining a raw Drive path or identity-bearing output.
+4. Close P2.M1a only after its selected runtime acceptance boundary is met.
+
+P2.M1b/P2.M1c TRIM policy, dry-run, declaration, build, activation, and actual
+FITRIM remain separate.  P2.M1d alerting/deeper diagnostics remain parked.
+
+* Rollback
+
+Before runtime acceptance, rollback is source-only: revert the launcher,
+Scheme implementation, fixture, focused test, strict-gate registration, and
+matching documentation.  No service, device, generation, or runtime state
+needs reversal.
+
+* Acceptance checklist
+
+- [X] Fixed Scheme reader and launcher implemented.
+- [X] Human and versioned JSON renderers implemented.
+- [X] Cached-only and allow-activate policy are explicit on every call.
+- [X] Bounded direct execution, monotonic timeout, child cleanup, stderr
+  discard, one-write rendering, and privacy guard are implemented.
+- [X] 185 offline checks pass without system-bus access.
+- [X] Compile, source, privacy, aggregate strict, and Org gates pass.
+- [X] Source checkpoint committed.
+- [ ] Checkpoint pushed and upstream equality verified.
+- [ ] Live cached-only acceptance separately authorized and documented.
+- [ ] Ordinary activation behavior tested separately if selected.
+- [ ] P2.M1a completion accepted.

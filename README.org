@@ -14,9 +14,11 @@ indicators and confirmed that periodic SSD TRIM has no declared owner; its
 maintenance policy remains unselected.  P2.M1 then validated the existing
 UDisks ATA SMART path with one disclosed lazy-activation probe.  The sanitized
 cache snapshot contained favorable selected indicators, not a full diagnostic
-or future-health guarantee.  P2.M1a's no-new-package Scheme reader is
-recommended next but awaits review.  The effects of Guix permitting one local
-build job and reporting/allowing up to four cores to it, HPET cost, sustained
+or future-health guarantee.  P2.M1a's no-new-package Scheme reader is now
+implemented and fixture-verified at a source checkpoint; the reader has not
+queried the live system bus and runtime acceptance remains pending.  The
+effects of Guix permitting one local build job and reporting/allowing up to
+four cores to it, HPET cost, sustained
 thermals, and real boot-to-ready time remain unmeasured.  No tuning or
 maintenance policy follows automatically from these point samples.  Keep this
 section aligned with accepted machine state so the repo records intent, not
@@ -41,16 +43,22 @@ observation, benchmarking, tuning, and destructive maintenance.
 records the disclosed UDisks lazy-activation probe, defines the contract for an
 identifier-rejecting Scheme reader, and separates visibility, TRIM policy,
 actual FITRIM, deep diagnostics, alerting, and cleanup.
+[[file:docs/audits/2026-07-16-p2.m1a-scheme-disk-health-source-checkpoint.org][The P2.M1a source checkpoint]] owns the reader implementation, fixed command
+plan, offline protocol/lifecycle fixtures, privacy boundary, and source-gate
+evidence.  It contains no live drive-health or daemon-activation evidence.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
 
 ** Active follow-on
 
-P2.M1a is recommended next but not yet implementation-authorized: a
-repository-owned Scheme reader over the existing UDisks D-Bus API, with
-fixture-only source gates, a strict field allowlist, and identifier rejection.
-It adds no package, daemon, privilege, generation, or device-changing method.
+P2.M1a is implemented and fixture-verified at the source checkpoint.  Its
+fixed Guile reader, human and versioned JSON views, direct bounded child
+transport, identifier guard, and 185-check offline gate have not yet been
+exercised against the live system bus.  Push this committed checkpoint before
+one separately authorized =--cached-only= read; keep ordinary D-Bus activation
+as a later hand-test boundary.  P2.M1a remains open and adds no package,
+daemon, privilege, generation, or device-changing method.
 P2.M1b/P2.M1c keep TRIM policy, dry-run, declaration/build, activation, and
 actual FITRIM separate;
 P2.M1d alerting/deep diagnostics is parked.  P2.3, P2.S1b, and P2.S1c also

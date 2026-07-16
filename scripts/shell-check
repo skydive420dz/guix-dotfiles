@@ -37,6 +37,7 @@ shellcheck \
     "$repo/scripts/guix-build-gate" \
     "$repo/scripts/guix-entrypoints" \
     "$repo/scripts/guix-generation-retention" \
+    "$repo/scripts/guix-disk-health" \
     "$repo/scripts/guix-lisp-shell" \
     "$repo/scripts/clojure-project" \
     "$repo/scripts/clojure-project-check" \
@@ -55,6 +56,7 @@ shellcheck \
     "$repo/tests/guix-build-gate-check" \
     "$repo/tests/guix-entrypoints-check" \
     "$repo/tests/guix-generation-retention-check" \
+    "$repo/tests/guix-disk-health-check" \
     "$repo/tests/guix-lisp-shell-check" \
     "$repo/tests/clojure-project-check" \
     "$repo/tests/lisp-project-check" \
@@ -72,6 +74,17 @@ shellcheck \
 "$repo/tests/guix-build-gate-check"
 "$repo/tests/guix-entrypoints-check"
 "$repo/tests/guix-generation-retention-check"
+if command -v guile >/dev/null 2>&1 && \
+    command -v guild >/dev/null 2>&1; then
+    "$repo/tests/guix-disk-health-check"
+else
+    if [ "$strict" -eq 1 ]; then
+        printf '%s\n' \
+            'shell-check: strict mode requires guile and guild for disk-health fixtures' >&2
+        exit 127
+    fi
+    printf '%s\n' 'SKIP: disk-health fixtures (guile or guild unavailable)'
+fi
 if command -v guile >/dev/null 2>&1; then
     "$repo/tests/guix-home-links-check"
 else

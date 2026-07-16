@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
+guile=/run/current-system/profile/bin/guile
+
+if [ ! -x "$guile" ]; then
+    printf '%s\n' 'guix-disk-health: Guile is unavailable' >&2
+    exit 127
+fi
+
+exec "$guile" --no-auto-compile \
+    -L "$script_dir" \
+    -e '(@ (guix-disk-health) main)' \
+    -s "$script_dir/guix-disk-health.scm" \
+    "$@"

@@ -25,13 +25,14 @@ The design makes these decisions:
    =smartd= daemon, alert delivery, package additions, generation cleanup, and
    =guix gc= outside this design slice.
 
-P2.M1a is the recommended next slice: implement and fixture-test the Scheme
-UDisks reader.  It awaits user review; P2.M1b through P2.M1d remain
+P2.M1a now has an implemented and fixture-verified source checkpoint.  Its
+push and live runtime acceptance remain pending; P2.M1b through P2.M1d remain
 unpromoted.
 
 Related records:
 
 - [[file:2026-07-16-p2.s1a-system-performance-baseline.org][P2.S1a passive system/build/storage baseline]];
+- [[file:2026-07-16-p2.m1a-scheme-disk-health-source-checkpoint.org][P2.M1a Scheme disk-health reader source checkpoint]];
 - [[file:2026-07-15-phase-0-baseline.org][Phase 0 baseline and maintenance gates]];
 - [[file:~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org][editable agenda roadmap]].
 
@@ -214,7 +215,7 @@ Add a repository-owned Guile command, provisionally
 3. resolves the block-to-Drive relationship privately;
 4. invokes =busctl= directly, without a shell, and requests individual
    allowlisted properties in fixed order;
-5. optionally calls cached =SmartGetAttributes=;
+5. calls cached =SmartGetAttributes= with an empty options dictionary;
 6. converts Kelvin and seconds with exact labeled units;
 7. prints a stable human view by default and an allowlisted JSON object on
    =--json=; and
@@ -230,7 +231,8 @@ The CLI should support:
   as read-only metadata I/O, not a zero-I/O query;
 - =--cached-only=: pass =--auto-start=no= to =busctl= and fail with an
   =unavailable= state when UDisks is not already active;
-- =--summary=: omit detailed attributes; and
+- =--summary=: omit detailed attribute rendering while retaining the same
+  cached-attribute collection and classification boundary; and
 - =--json=: emit only the versioned allowlisted schema.
 
 The implementation must not call =udisksctl= because its manual states that
@@ -253,6 +255,11 @@ P2.M1a must include fixture-driven tests that never contact the live system bus:
 - fake runner proof that only property =Get= and cached
   =SmartGetAttributes= are reachable.
 
+The protocol cases use only an injected fake runner.  Separate lifecycle
+probes spawn Guile itself to verify success, nonzero-exit output discard,
+timeout before and after pipe EOF, output bounds, invalid UTF-8, signals, and
+exec failure.  Neither path can resolve or execute =busctl=.
+
 Validation remains split:
 
 1. source/Guile syntax and fixture tests;
@@ -263,6 +270,32 @@ Validation remains split:
    state without retaining raw output; and
 6. no System/Home build, activation, sudo, device setting, self-test, or reboot
    merely to accept the script.
+
+** Source checkpoint status
+
+The P2.M1a source checkpoint adds the fixed launcher and Scheme module, one
+synthetic response bundle, a 185-check focused gate, and strict-source gate
+registration.  The production command performs only:
+
+1. one fixed =Properties.Get= for the block object's Drive property;
+2. eleven fixed =Properties.Get= calls for reviewed =Drive.Ata= properties;
+3. one cached =SmartGetAttributes= call; and
+4. complete protocol validation, classification, rendering, and a final
+   identifier guard before its only output write.
+
+Every child uses the fixed =busctl= executable and argument vector, a
+five-second transport timeout plus a seven-second monotonic parent deadline,
+bounded in-memory stdout, =/dev/null= stdin/stderr, and no shell.  A transient
+private Drive path remains observable in child argv to a sufficiently
+privileged concurrent process; the checkpoint does not claim to remove that
+transport boundary.
+
+Source, warning-clean compile, focused ShellCheck, exact-command,
+classification, child-lifecycle, malformed-payload, privacy, and Org gates
+pass.  No live reader invocation, system-bus query, UDisks activation, device
+query, package, build, activation, privilege, trim, cleanup, or reboot is part
+of this checkpoint.  The source/runtime evidence boundary is owned by
+[[file:2026-07-16-p2.m1a-scheme-disk-health-source-checkpoint.org][the P2.M1a source-checkpoint record]].
 
 * Periodic TRIM design
 
@@ -349,13 +382,15 @@ Rollback removes future scheduling but cannot undo completed discard requests.
   privacy-safe command examples.
 - No System/Home build, activation, device command, cleanup, or reboot.
 
-** RECOMMENDED P2.M1a -- Scheme UDisks SMART reader
+** IN-PROGRESS P2.M1a -- Scheme UDisks SMART reader
 
-- Add the allowlisted Scheme reader and fixtures described above.
+- The allowlisted Scheme reader and offline fixtures are implemented and pass
+  their source gates.
 - No package, root service, sudo, System/Home generation, device setting,
   self-test, alerting, or reboot.
-- Runtime acceptance starts cached-only; ordinary on-demand activation is a
-  distinct later hand-test gate.
+- Checkpoint push verification remains separate.  Runtime acceptance then
+  starts cached-only; ordinary on-demand activation is a distinct later
+  hand-test gate.
 
 ** BACKLOG P2.M1b -- TRIM policy and dry-run
 
@@ -411,5 +446,10 @@ P2.M1 design does not authorize:
   dry-run, activation, and rollback semantics were mapped.
 - [X] SMART visibility, periodic TRIM, actual FITRIM, deep diagnostics,
   alerting, and cleanup remain separate slices.
-- [X] P2.M1a alone is recommended next and awaits review; no device or System
-  change is authorized.
+- [X] P2.M1a reader source, offline fixtures, privacy gates, and source-gate
+  registration are implemented without a device or System change.
+- [X] P2.M1a source checkpoint is committed.
+- [ ] P2.M1a checkpoint push and upstream equality are verified.
+- [ ] A cached-only live read is separately authorized, run, and documented.
+- [ ] Ordinary activation behavior is tested separately if selected.
+- [ ] P2.M1a completion is accepted.

@@ -472,13 +472,24 @@ CLOSED: [2026-07-16 Thu]
 
 * TODO P2.M1a Scheme UDisks SMART reader
 
-- Recommended next; awaiting review.
-- Implement the allowlisted Scheme reader and fixture-only source gates from the
-  P2.M1 contract.
+- Evidence: [[file:../../../docs/audits/2026-07-16-p2.m1a-scheme-disk-health-source-checkpoint.org][2026-07-16 P2.M1a source checkpoint]].
+- Source implementation is present and offline fixtures pass; runtime
+  acceptance remains pending.
+- [X] Implement the fixed Scheme reader and launcher with human, JSON, summary,
+  cached-only, and allow-activate presentation/policy modes.
+- [X] Pass the 185-check fake-runner protocol, classification, lifecycle,
+  failure, privacy, and exact-command fixture gate without system-bus access.
+- [X] Pass warning-clean compilation, focused ShellCheck, forbidden-operation,
+  hard-coded-private-path, and privacy source gates.
+- [X] Commit the source checkpoint.
+- [ ] Push the checkpoint and verify upstream equality.
+- [ ] Authorize and run one cached-only live read; document only sanitized
+  output and confirm that it did not request service activation.
+- [ ] Test ordinary activation behavior separately if selected.
+- [ ] Accept P2.M1a completion.
 - Add no package, root service, sudo rule, setuid helper, System/Home generation,
-  device setting, SMART refresh/self-test, alert, trim, or reboot.
-- Checkpoint and push before any runtime smoke test.  Test cached-only first;
-  ordinary D-Bus activation remains a separate disclosed hand-test gate.
+  device setting, SMART refresh/self-test, alert, trim, or reboot merely to
+  accept this source checkpoint.
 
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:

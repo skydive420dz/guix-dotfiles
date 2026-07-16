@@ -1,0 +1,109 @@
+#!/bin/sh
+
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P) || exit 1
+guile=${GUILE:-guile}
+guild=${GUILD:-guild}
+fixture=$repo/fixtures/guix-disk-health/healthy.json
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/guix-disk-health-check.XXXXXX") || exit 1
+log=$tmp/check.log
+help_log=$tmp/help.log
+help_error=$tmp/help.err
+
+cleanup() {
+    rm -rf "$tmp"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+if ! guile_path=$(command -v "$guile"); then
+    printf 'guix-disk-health-check: Guile executable not found: %s\n' \
+        "$guile" >&2
+    exit 2
+fi
+
+if [ ! -x "$guile_path" ]; then
+    printf 'guix-disk-health-check: Guile path is not executable\n' >&2
+    exit 2
+fi
+
+if ! guild_path=$(command -v "$guild"); then
+    printf 'guix-disk-health-check: Guild executable not found: %s\n' \
+        "$guild" >&2
+    exit 2
+fi
+
+if [ ! -x "$guild_path" ]; then
+    printf 'guix-disk-health-check: Guild path is not executable\n' >&2
+    exit 2
+fi
+
+if [ ! -r "$fixture" ]; then
+    printf 'guix-disk-health-check: fixture is not readable: %s\n' \
+        "$fixture" >&2
+    exit 2
+fi
+
+if grep -En \
+    'udisksctl|get-property|GetAll|SmartUpdate([^d]|$)|SmartSetEnabled|SmartSelftest(Start|Abort)|Pm(Standby|Wakeup)|SecurityErase|ObjectManager|Introspect' \
+    "$repo/scripts/guix-disk-health" \
+    "$repo/scripts/guix-disk-health.scm" >"$log"; then
+    cat "$log" >&2
+    printf '%s\n' 'guix-disk-health-check: forbidden production operation found' >&2
+    exit 1
+fi
+
+if grep -En \
+    'open-(input|output)-pipe|system\*|/bin/sh|sh -c' \
+    "$repo/scripts/guix-disk-health.scm" >"$log"; then
+    cat "$log" >&2
+    printf '%s\n' 'guix-disk-health-check: shell execution path found' >&2
+    exit 1
+fi
+
+if grep -Fn '/org/freedesktop/UDisks2/drives/' \
+    "$repo/scripts/guix-disk-health" \
+    "$repo/scripts/guix-disk-health.scm" >"$log"; then
+    cat "$log" >&2
+    printf '%s\n' 'guix-disk-health-check: hard-coded private Drive path found' >&2
+    exit 1
+fi
+
+# Protocol cases inject their runner; lifecycle cases spawn Guile itself.
+# The suite never executes busctl or contacts D-Bus, UDisks, or a device.
+if ! GUILE_AUTO_COMPILE=0 \
+    "$guild_path" compile -W3 \
+    -L "$repo/scripts" \
+    -o "$tmp/guix-disk-health.go" \
+    "$repo/scripts/guix-disk-health.scm" >"$log" 2>&1; then
+    cat "$log" >&2
+    exit 1
+fi
+
+if ! "$repo/scripts/guix-disk-health" --help \
+    >"$help_log" 2>"$help_error"; then
+    cat "$help_log" >&2
+    cat "$help_error" >&2
+    exit 1
+fi
+
+if [ -s "$help_error" ] || ! grep -Fq 'usage: guix-disk-health' "$help_log"; then
+    printf '%s\n' 'guix-disk-health-check: launcher help contract failed' >&2
+    exit 1
+fi
+
+if GUILE_AUTO_COMPILE=0 \
+    GUIX_DISK_HEALTH_TEST_GUILE=$guile_path \
+    "$guile" --no-auto-compile \
+    -L "$repo/scripts" \
+    -s "$repo/tests/guix-disk-health-check.scm" \
+    "$fixture" >"$log" 2>&1; then
+    printf '%s\n' 'guix-disk-health-check: PASS'
+else
+    status=$?
+    cat "$log" >&2
+    exit "$status"
+fi
