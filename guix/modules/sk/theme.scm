@@ -15,7 +15,7 @@
             sk:render-all))
 
 (define %sk-theme-error-key 'sk-theme-invalid)
-(define %sk-theme-schema-version 1)
+(define %sk-theme-schema-version 2)
 (define %sk-theme-targets '(emacs kitty fish gtk3 gtk4 x-session))
 
 (define %top-level-keys
@@ -36,6 +36,9 @@
   '(palette-authority
     theme
     palette-source
+    modus-version
+    theme-source-sha256
+    core-source-sha256
     guix-revision
     emacs-version
     mapping-version))
@@ -64,6 +67,44 @@
   '(black red green yellow blue magenta cyan white
     bright-black bright-red bright-green bright-yellow
     bright-blue bright-magenta bright-cyan bright-white))
+
+(define %accepted-production-roles
+  '((canvas . "#0d0e1c")
+    (surface . "#1d2235")
+    (surface-raised . "#4a4f69")
+    (text . "#ffffff")
+    (text-muted . "#c6daff")
+    (text-disabled . "#989898")
+    (accent . "#2fafff")
+    (on-accent . "#0d0e1c")
+    (selection . "#555a66")
+    (on-selection . "#ffffff")
+    (focus . "#79a8ff")
+    (success . "#6ae4b9")
+    (warning . "#fec43f")
+    (error . "#ff5f59")
+    (border . "#61647a")
+    (shadow . "#000000")
+    (cursor . "#ff66ff")
+    (on-cursor . "#0d0e1c")))
+
+(define %accepted-production-ansi
+  '((black . "#000000")
+    (red . "#ff5f59")
+    (green . "#44bc44")
+    (yellow . "#d0bc00")
+    (blue . "#2fafff")
+    (magenta . "#feacd0")
+    (cyan . "#00d3d0")
+    (white . "#a6a6a6")
+    (bright-black . "#595959")
+    (bright-red . "#ff6b55")
+    (bright-green . "#00c06f")
+    (bright-yellow . "#fec43f")
+    (bright-blue . "#79a8ff")
+    (bright-magenta . "#b6a0ff")
+    (bright-cyan . "#6ae4b9")
+    (bright-white . "#ffffff")))
 
 (define %typography-keys
   '(fixed-family ui-family ui-size-pt fallback-families))
@@ -166,11 +207,11 @@
     (on-cursor cursor ui-component-min)))
 
 (define %ansi-on-canvas-keys
-  ;; ANSI black is intentionally the dark endpoint and is not asserted as
-  ;; readable against the dark default canvas.  The remaining 15 terminal
-  ;; foregrounds must clear the component floor against that canvas.
+  ;; ANSI black and bright-black are the exact Modus dark/dim endpoints, not
+  ;; semantic UI text or component roles.  The remaining 14 terminal
+  ;; foregrounds must clear the component floor against the default canvas.
   '(red green yellow blue magenta cyan white
-    bright-black bright-red bright-green bright-yellow
+    bright-red bright-green bright-yellow
     bright-blue bright-magenta bright-cyan bright-white))
 
 (define %fish-variable-map
@@ -532,9 +573,14 @@
            (syntax ,%fish-syntax-keys)
            (pager ,%fish-pager-keys))))
 
-      ;; ANSI black is the dark endpoint; every other ANSI foreground is
-      ;; required to remain distinguishable from the configured canvas.
-      (when (object-ready? ansi %ansi-keys)
+      ;; The exact Modus black/bright-black endpoints are intentionally
+      ;; excluded above; every other ANSI foreground must remain
+      ;; distinguishable from the configured canvas.
+      (when (and
+             (object-ready? ansi %ansi-keys)
+             (every canonical-color?
+                    (map (lambda (key) (object-ref ansi key))
+                         %ansi-keys)))
         (for-each
          (lambda (key)
            (let ((ratio
@@ -555,6 +601,8 @@
          add-error
          kind
          provenance
+         roles
+         ansi
          typography
          desktop
          calibrations
@@ -569,25 +617,63 @@
       (expect '(provenance palette-source)
               (object-ref provenance 'palette-source)
               "synthetic fixture only")
+      (expect '(provenance modus-version)
+              (object-ref provenance 'modus-version)
+              "fixture-0")
+      (expect '(provenance theme-source-sha256)
+              (object-ref provenance 'theme-source-sha256)
+              "0000000000000000000000000000000000000000000000000000000000000000")
+      (expect '(provenance core-source-sha256)
+              (object-ref provenance 'core-source-sha256)
+              "0000000000000000000000000000000000000000000000000000000000000000")
       (expect '(provenance guix-revision)
               (object-ref provenance 'guix-revision)
               "0000000000000000000000000000000000000000")
       (expect '(provenance emacs-version)
               (object-ref provenance 'emacs-version)
-              "fixture-0")))
+              "fixture-0")
+      (expect '(provenance mapping-version)
+              (object-ref provenance 'mapping-version)
+              1)))
    ((eq? kind 'production)
     (when (object-ready? provenance %provenance-keys)
       (expect '(provenance palette-source)
               (object-ref provenance 'palette-source)
               "GNU Emacs 30.2 etc/themes/modus-vivendi-tinted-theme.el")
+      (expect '(provenance modus-version)
+              (object-ref provenance 'modus-version)
+              "4.4.0")
+      (expect '(provenance theme-source-sha256)
+              (object-ref provenance 'theme-source-sha256)
+              "4ecca25fc420989fc8520a3717135a60c068f9bc1e575f4a42e1fe5826f0e3dd")
+      (expect '(provenance core-source-sha256)
+              (object-ref provenance 'core-source-sha256)
+              "26dc9f44271008ce27c63a97b21835b0ebe1a374660f0ac96b5f931ece23b97a")
       (expect '(provenance emacs-version)
               (object-ref provenance 'emacs-version)
               "30.2")
-      (when (equal? (object-ref provenance 'guix-revision)
-                    "0000000000000000000000000000000000000000")
-        (add-error 'invalid-production-identity
-                   '(provenance guix-revision)
-                   "production revision cannot be the fixture placeholder")))
+      (expect '(provenance guix-revision)
+              (object-ref provenance 'guix-revision)
+              "a8391f2d7451c2463ba253ffa9872fa6f27485d7")
+      (expect '(provenance mapping-version)
+              (object-ref provenance 'mapping-version)
+              1))
+    (when (object-ready? roles %role-keys)
+      (for-each
+       (match-lambda
+         ((key . expected)
+          (expect (list 'roles key)
+                  (object-ref roles key)
+                  expected)))
+       %accepted-production-roles))
+    (when (object-ready? ansi %ansi-keys)
+      (for-each
+       (match-lambda
+         ((key . expected)
+          (expect (list 'ansi key)
+                  (object-ref ansi key)
+                  expected)))
+       %accepted-production-ansi))
     (when (object-ready? typography %typography-keys)
       (expect '(typography fixed-family)
               (object-ref typography 'fixed-family)
@@ -595,6 +681,14 @@
       (expect '(typography ui-family)
               (object-ref typography 'ui-family)
               "JetBrainsMono Nerd Font")
+      (let ((ui-size (object-ref typography 'ui-size-pt)))
+        (unless (and (number? ui-size)
+                     (exact? ui-size)
+                     (= ui-size 11))
+          (add-error
+           'invalid-production-identity
+           '(typography ui-size-pt)
+           "expected accepted exact value 11")))
       (expect '(typography fallback-families)
               (object-ref typography 'fallback-families)
               '("Symbols Nerd Font Mono"
@@ -691,7 +785,8 @@
                 (targets (object-ref theme 'targets)))
             (unless (equal? schema-version %sk-theme-schema-version)
               (add-error 'unsupported-schema '(schema-version)
-                         "schema version must equal 1"))
+                         (format #f "schema version must equal ~a"
+                                 %sk-theme-schema-version)))
             (unless (memq kind '(fixture production))
               (add-error 'unknown-enum '(kind)
                          "kind must be fixture or production"))
@@ -712,6 +807,21 @@
                        (object-ref provenance 'palette-source))
                 (add-error 'invalid-string '(provenance palette-source)
                            "palette source is unsafe"))
+              (unless (safe-name? (object-ref provenance 'modus-version))
+                (add-error 'invalid-name '(provenance modus-version)
+                           "Modus version is unsafe"))
+              (unless (lower-hex-string?
+                       (object-ref provenance 'theme-source-sha256) 64)
+                (add-error
+                 'invalid-hash
+                 '(provenance theme-source-sha256)
+                 "theme source SHA-256 must be 64 lowercase hex digits"))
+              (unless (lower-hex-string?
+                       (object-ref provenance 'core-source-sha256) 64)
+                (add-error
+                 'invalid-hash
+                 '(provenance core-source-sha256)
+                 "core source SHA-256 must be 64 lowercase hex digits"))
               (unless (lower-hex-string?
                        (object-ref provenance 'guix-revision) 40)
                 (add-error 'invalid-revision '(provenance guix-revision)
@@ -955,20 +1065,12 @@
              add-error
              kind
              provenance
+             roles
+             ansi
              typography
              desktop
              calibrations
-             assets)
-
-            ;; P3.2 deliberately remains fixture-only until the GTK/UI point
-            ;; size is explicitly accepted.  This makes it impossible for a
-            ;; plausible-looking production datum to cross that decision
-            ;; boundary merely by satisfying the structural schema.
-            (when (eq? kind 'production)
-              (add-error
-               'production-not-ready
-               '(typography ui-size-pt)
-               "production GTK/UI point size has not been accepted"))))
+             assets)))
         (reverse errors))))
 
 (define (raise-if-invalid theme)
@@ -1101,7 +1203,7 @@
             (cursor . ,(role theme 'cursor))
             (err . ,(role theme 'error))
             (warning . ,(role theme 'warning))
-            (info . ,(role theme 'accent))
+            (info . ,(role theme 'success))
             (bg-term-black . ,(ansi theme 'black))
             (fg-term-black . ,(ansi theme 'black))
             (bg-term-red . ,(ansi theme 'red))

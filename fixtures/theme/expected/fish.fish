@@ -1,5 +1,5 @@
 # SYNTHETIC FIXTURE - DO NOT INSTALL
-# schema=1 palette=synthetic fixture only
+# schema=2 palette=synthetic fixture only
 # Generated Fish syntax, pager, and prompt color adapter.
 set -g -- fish_color_normal 'ffffff'
 set -g -- fish_color_command '00ff87'

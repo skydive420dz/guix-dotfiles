@@ -517,23 +517,25 @@ CLOSED: [2026-07-16 Thu]
   includes, so later work must render one complete immutable =kitty.conf=.
 - [X] Review and accept the contract with Rafael.
 - [X] Push checkpoint =8933827= and verify clean upstream equality at =0/0=.
-- Keep fixture-only P3.2 implementation, P3.3 Home wiring/build, and P3.4
-  activation/live visual acceptance separate.  Production tokens/outputs and
-  P3.3 remain blocked until the palette authority, GTK base, icon, cursor,
-  scaling, contrast, Fish, and test-surface choices are accepted; do not guess
-  them.
+- At P3.1 closure, keep fixture-only P3.2 implementation, P3.3 Home
+  wiring/build, and P3.4 activation/live visual acceptance separate.
+  Production tokens/outputs were blocked until the palette authority, GTK
+  base, icon, cursor, scaling, contrast, Fish, test surface, and UI size were
+  accepted; the P3.2 addendum records their later acceptance.
 - Add no visual source value, package, build, generation, activation, session
   reload/restart, GUI launch, or reboot merely to close P3.1.
 
-* ACTIVE P3.2 offline semantic-token schema, renderers, and fixtures
+* ACTIVE P3.2 offline semantic-token schema, renderers, fixtures, and production datum
 :PROPERTIES:
 :created: 2026-07-16
 :END:
 
-- Evidence: [[file:../../../docs/audits/2026-07-16-p3.2-offline-theme-schema.org][2026-07-16 P3.2 offline semantic-theme schema and fixture gate]].
+- Evidence: [[file:../../../docs/audits/2026-07-16-p3.2-offline-theme-schema.org][2026-07-16 P3.2 offline semantic-theme schema, fixture, and production gate]].
 - Accepted production inputs: frozen Emacs 30.2 =modus-vivendi-tinted= subset;
   JetBrainsMono Nerd Font families; GTK 3 =Adwaita-dark= / GTK 4 =Adwaita=;
   =Papirus-Dark=; =Bibata-Modern-Ice= at 32 px; logical 96 DPI and scale 1;
+  11 pt UI text (including Emacs variable-pitch, while default/fixed remains
+  12 pt);
   7:1 / 4.5:1 / 3:1 contrast floors; first-migration Fish ownership;
   =gtk4-widget-factory=; and the current wallpaper/fit policy.
 - [X] Implement the pure =(sk theme)= schema/validator and all six renderers
@@ -544,14 +546,24 @@ CLOSED: [2026-07-16 Thu]
 - [X] Pass 191 Scheme checks and pinned native Fish 4.7.1, Emacs 30.2, and
   Kitty 0.47.4 source parsers; pass the complete strict repository source gate,
   direct ShellCheck/diff checks, and changed-file Org lint.
-- [ ] Accept the remaining GTK/UI point size; 11 pt at logical 96 DPI is the
-  current recommendation.  Preserve Emacs 12 pt and Kitty 14 pt separately.
-- [ ] Add production =theme/tokens.scm= only after every required production
-  value is accepted; the validator currently rejects =kind=production=.
-- [ ] Publish the fixture-only source checkpoint and verify clean upstream
-  equality before changing the production gate.
-- [ ] Preserve separate source, candidate build, checkpoint, Home activation,
-  live application, real-display, and rollback gates for P3.3/P3.4.
+- [X] Accept GTK/UI text at 11 pt and logical 96 DPI.  Use 11 pt for Emacs
+  variable-pitch while preserving Emacs default/fixed at 12 pt and Kitty at
+  14 pt.
+- [X] Publish fixture-only source checkpoint =3627f0b= and verify clean
+  upstream equality at ahead/behind =0/0= before changing the production gate.
+- [X] Add schema version 2 and inert production =theme/tokens.scm= with exact
+  Modus Themes 4.4.0 provenance, source hashes, role/ANSI identity freeze, and
+  explicit project-derived aliases.  Exempt only exact terminal =black= and
+  =bright-black= dark/dim endpoints from the 3:1 ANSI-on-canvas floor; keep the
+  other 14 ANSI slots and semantic pairs enforced.
+- [X] Pass the extended production/golden/native-parser source gate: 281
+  Scheme checks, pinned native parsers, complete strict repository gate,
+  changed-file/agenda Org lint, and clean diff check.
+- [ ] Commit the second P3.2 source-only checkpoint, push it, and verify clean
+  upstream equality.
+- [X] Preserve separate source, candidate Home evaluation/build, checkpoint,
+  Home activation, live application, real-display, and rollback gates for
+  P3.3/P3.4.  P3.2 performs no Home build or runtime mutation.
 
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:

@@ -41,11 +41,12 @@ closure.
 The first post-contract choices are also explicit: use JetBrainsMono Nerd Font
 globally and keep the current wallpaper.  These are P3.2/P3.3 visual-migration
 inputs rather than retroactive P3.1 implementation.  The remaining production
-choices stay open for a reviewed P3.2 decision gate.
+choices were left open at P3.1 closure for a reviewed P3.2 decision gate; the
+post-contract addendum below records their later acceptance.
 
 Related records:
 
-- [[file:2026-07-16-p3.2-offline-theme-schema.org][P3.2 offline semantic-theme schema and fixture gate]];
+- [[file:2026-07-16-p3.2-offline-theme-schema.org][P3.2 offline semantic-theme schema, fixture, and production gate]];
 - [[file:2026-07-15-phase-0-baseline.org][Phase 0 baseline and activation taxonomy]];
 - [[file:2026-07-12-full-configuration-audit.org][completed numbered configuration audit]];
 - [[file:~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org][editable GuixPC cohesion roadmap]];
@@ -501,6 +502,9 @@ outputs were blocked on unresolved policy choices.  If those decisions were
 accepted before P3.2 began, production data could join the same checkpoint;
 otherwise P3.2 would remain fixture-only and P3.3 could not start.  GTK had no
 declared policy that a renderer could honestly preserve as a production no-op.
+Those decisions are now accepted.  P3.2 first published a fixture-only
+checkpoint and is adding the production datum in a second source-only
+checkpoint; this does not retroactively add implementation to P3.1.
 
 For Kitty, combine a reviewed static nonvisual/security base with token-derived
 values to render one complete file.  Do not weaken the existing
@@ -594,7 +598,8 @@ silently choosing WCAG numbers for desktop chrome.
 
 - Preserve the observed live Emacs / declared Kitty =#0d0e1c= baseline and
   D-06's accepted visual-result intent through the first ownership migration;
-  exact palette-role mapping remains a P3.2 production decision.
+  the exact palette-role mapping is frozen by the later P3.2 production
+  decision.
 - D-05 is now complete: migrate every declared font role to the appropriate
   JetBrainsMono Nerd Font family while retaining explicit symbol/emoji
   fallbacks.  This is an accepted visual change, not a no-op normalization.
@@ -612,11 +617,11 @@ silently choosing WCAG numbers for desktop chrome.
 P3.1 rollback is documentation-only: revert its checkpoint.  It has no runtime
 generation to roll back.
 
-P3.2 rollback removes unused offline source/fixtures; it must not own live
-files.  P3.3/P3.4 must record the exact previous Home generation and source
-checkpoint before activation.  Because current Kitty ownership is a direct
-repository link, rollback must restore both source ownership and the prior Home
-generation when relevant; switching only one side is incomplete.
+P3.2 rollback removes unused offline source, tokens, and fixtures; it must not
+own live files.  P3.3/P3.4 must record the exact previous Home generation and
+source checkpoint before activation.  Because current Kitty ownership is a
+direct repository link, rollback must restore both source ownership and the
+prior Home generation when relevant; switching only one side is incomplete.
 
 ** Stop conditions
 
@@ -662,10 +667,28 @@ GTK 3 =Adwaita-dark= / GTK 4 =Adwaita= base, =Papirus-Dark= icons,
 =gtk4-widget-factory= acceptance surface.  The already accepted global
 JetBrainsMono Nerd Font families and retained wallpaper remain in force.
 
-The sole unresolved production value is the GTK/UI point size.  The P3.2
-implementation therefore remains fixture-only and rejects production data
-until that value is explicit; 11 pt is the current recommendation.  See the
-[[file:2026-07-16-p3.2-offline-theme-schema.org][P3.2 implementation record]].
+Rafael subsequently accepted the final production value: 11 pt for GTK/UI text
+at logical 96 DPI.  In Emacs this sets =variable-pitch= to 11 pt while the
+accepted =default= and =fixed-pitch= calibration remains 12 pt; Kitty remains
+14 pt.
+
+The frozen palette is the reviewed Modus Themes 4.4.0
+=modus-vivendi-tinted= subset from Emacs 30.2.  Schema version 2 records both
+source hashes: =modus-vivendi-tinted-theme.el=
+=4ecca25fc420989fc8520a3717135a60c068f9bc1e575f4a42e1fe5826f0e3dd=
+and =modus-themes.el=
+=26dc9f44271008ce27c63a97b21835b0ebe1a374660f0ac96b5f931ece23b97a=.
+It also exact-pins every production semantic role and ANSI slot.  The
+project-derived aliases are explicit: =on-accent= and =on-cursor= reuse
+=bg-main=, =focus= uses Modus =blue-warmer=, and =shadow= uses terminal
+black; the =success= role follows Modus =info= / =cyan-cooler=.
+
+Only the exact terminal =black= and =bright-black= dark/dim endpoints are
+excluded from the 3:1 ANSI-on-canvas floor.  They are not semantic UI
+foreground/component roles; the other 14 ANSI endpoints and all semantic
+contrast pairs remain checked.  Exact identity validation prevents either
+exception from drifting silently.  See the
+[[file:2026-07-16-p3.2-offline-theme-schema.org][P3.2 implementation record]] for the source-only checkpoint boundary.
 
 * Slice sequence
 
@@ -684,14 +707,15 @@ until that value is explicit; 11 pt is the current recommendation.  See the
 No source implementation, build, activation, process restart, GUI launch, or
 reboot belongs to P3.1.
 
-** P3.2 — Offline schema, renderer, and fixtures
+** P3.2 — Offline schema, renderers, fixtures, and production datum
 
 Implement the pure schema/validator and renderers in
 =guix/modules/sk/theme.scm= with deterministic synthetic target fixtures,
 negative controls, and aggregate source gates.  Do not wire live targets,
 build/activate Home, or change the running desktop.  Add production
 =theme/tokens.scm= only if all required production choices have first been
-accepted; otherwise keep P3.2 fixture-only and leave P3.3 blocked.
+accepted; that condition is now satisfied, so the second P3.2 checkpoint may
+add the production datum and offline outputs while remaining source-only.
 
 ** P3.3 — Guix Home wiring and atomic ownership migration
 
@@ -704,8 +728,9 @@ before activation.  No source/build result is runtime acceptance.
 Activate only the reviewed Home/session boundary, inspect actual owners and
 applications, perform the real-display hand test, prove adjacent invariants,
 and record rollback/retention.  Treat the accepted JetBrains font migration
-and retained wallpaper as explicit visual-change inputs; exclude any still
-unaccepted icon, cursor, or scaling choice until it passes its decision gate.
+and retained wallpaper as explicit visual-change inputs.  The icon, cursor,
+and scaling choices that were still open at P3.1 closure are now accepted by
+the P3.2 addendum but still require P3.3 build and P3.4 live-display evidence.
 
 * P3.1 completion evidence
 
@@ -717,6 +742,7 @@ unaccepted icon, cursor, or scaling choice until it passes its decision gate.
   activation, GUI launch, session restart, or reboot changed for closure.
 - Accepted first production inputs: JetBrainsMono Nerd Font globally; keep the
   current wallpaper.
-- P3.2 is the correct next slice, beginning with the remaining visual-decision
-  gate and offline schema/renderer fixtures.  Production output and P3.3 wiring
-  remain blocked until every required production choice is accepted.
+- Post-contract P3.2 state: every production choice, including 11 pt UI text,
+  is now accepted.  Fixture checkpoint =3627f0b= is published with upstream
+  equality; the schema-v2 production source checkpoint is pending publication.
+  P3.3 Home wiring/build and P3.4 activation/live acceptance remain separate.

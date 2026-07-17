@@ -1,13 +1,13 @@
-#+title: GuixPC P3.2 Offline Semantic-Theme Schema and Fixture Gate
+#+title: GuixPC P3.2 Offline Semantic-Theme Schema, Fixture, and Production Gate
 #+date: 2026-07-16
-#+status: implemented and validated; source checkpoint awaiting publication
+#+status: schema-v2 production source candidate; second checkpoint awaiting publication
 
 * Outcome
 
 P3.2 implements the offline half of the visual-token contract without changing
-the running desktop.  One inert Scheme datum is read by a pure Scheme module,
+the running desktop.  Inert Scheme data are read by a pure Scheme module,
 validated against an exact schema, and rendered deterministically into six
-synthetic target fixtures:
+target formats:
 
 1. an Emacs adapter;
 2. one complete Kitty configuration;
@@ -16,15 +16,22 @@ synthetic target fixtures:
 5. GTK 4 settings; and
 6. same-shell X-session/compositor/wallpaper data.
 
-The fixture is deliberately synthetic and every rendered file begins with a
-=SYNTHETIC FIXTURE - DO NOT INSTALL= warning.  There is no production
-=theme/tokens.scm=, Guix Home wiring, package change, build, generation,
-activation, process restart, GUI launch, or reboot in this checkpoint.
+The synthetic fixture remains deliberately unmistakable: every fixture output
+begins with =SYNTHETIC FIXTURE - DO NOT INSTALL=.  Fixture-only checkpoint
+=3627f0b9c98e01279e8aafa42ef81128686f3ade= is pushed, clean, and equal to
+=origin/main= at ahead/behind =0/0=.
 
-Production rendering is not merely absent by convention.  The validator
-rejects =kind=production= with =production-not-ready= until the remaining
-GTK/UI point-size choice is explicitly accepted.  P3.3 therefore cannot
-accidentally consume a plausible-looking fixture as production policy.
+Rafael then accepted the final production choice, 11 pt UI text.  The pending
+second source-only checkpoint evolves the contract to schema version 2, adds
+=theme/tokens.scm=, pins exact Modus source provenance, freezes every
+production semantic role and ANSI slot, and adds deterministic production
+goldens and negative controls.  Production rendering is allowed only for the
+exact accepted identity; changing a provenance field, role, ANSI value, or
+accepted policy value is a validation error.
+
+Neither source checkpoint wires a generated file into Guix Home.  No package
+change, Home candidate build, generation, activation, process restart, GUI
+launch, or reboot is evidence of P3.2.
 
 * Decision state
 
@@ -43,26 +50,96 @@ Rafael accepted the proposed post-P3.1 visual bundle by authorizing P3.2:
 | Fish first migration | own prompt, syntax, autosuggestion, search, and pager colors |
 | GTK 4 acceptance app | =gtk4-widget-factory= |
 | Wallpaper | retain =assets/wallpapers/waifu-cyberpunk.png= with =zoom= fit |
-| Existing target calibration | Emacs 120 tenths-point; Kitty 14.0 pt and 0.0 background opacity; Picom Emacs opacity 85 percent |
+| UI font size | 11 pt at logical 96 DPI |
+| Existing target calibration | Emacs default/fixed 120 tenths-point (12 pt), variable-pitch 110 tenths-point (11 pt); Kitty 14.0 pt and 0.0 background opacity; Picom Emacs opacity 85 percent |
 
-One required value remains open: the GTK/UI font size.  The recommended value
-is 11 pt at logical 96 DPI.  This does not alter the already accepted Emacs
-12 pt or Kitty 14 pt calibrations.  The fixture uses deliberately unrelated
-synthetic typography and does not settle that production decision.
+The 11 pt decision is intentionally role-specific.  It supplies GTK UI text
+and Emacs =variable-pitch=; Emacs =default= and =fixed-pitch= remain at the
+accepted 12 pt calibration, and Kitty remains 14 pt.
 
 * Source architecture
 
 ** Canonical data and reader
 
-=fixtures/theme/valid/tokens.scm= contains one quoted association list.  The
-reader in =guix/modules/sk/theme.scm= accepts exactly one inert quoted datum and
-EOF.  It never =primitive-load=s or evaluates token contents.
+=fixtures/theme/valid/tokens.scm= and =theme/tokens.scm= each contain one
+quoted association list.  The first is synthetic test data; the second is the
+accepted production datum.  The reader in =guix/modules/sk/theme.scm= accepts
+exactly one inert quoted datum and EOF.  It never =primitive-load=s or
+evaluates token contents.
 
-The exact top-level schema covers provenance, semantic roles, ANSI colors,
-typography, desktop policy, per-target calibrations, repository-relative
-assets, contrast policy, structured Fish mappings, and the exact ordered target
-set.  Missing, unknown, recursively duplicated, shared, and cyclic data are
-rejected.
+Schema version 2 covers provenance, semantic roles, ANSI colors, typography,
+desktop policy, per-target calibrations, repository-relative assets, contrast
+policy, structured Fish mappings, and the exact ordered target set.  Missing,
+unknown, recursively duplicated, shared, and cyclic data are rejected.
+
+The production provenance is exact:
+
+| Field | Frozen value |
+|-------+--------------|
+| Palette authority | =frozen-modus-subset= |
+| Theme | =modus-vivendi-tinted= |
+| Modus Themes version | =4.4.0= |
+| Emacs version | =30.2= |
+| Guix revision | =a8391f2d7451c2463ba253ffa9872fa6f27485d7= |
+| Mapping version | =1= |
+| =modus-vivendi-tinted-theme.el= SHA-256 | =4ecca25fc420989fc8520a3717135a60c068f9bc1e575f4a42e1fe5826f0e3dd= |
+| =modus-themes.el= SHA-256 | =26dc9f44271008ce27c63a97b21835b0ebe1a374660f0ac96b5f931ece23b97a= |
+
+The hashes identify the source bytes from which the reviewed subset was
+derived.  They are not claims that the rendered adapters reproduce the entire
+Modus theme.
+
+** Frozen production colors
+
+The exact semantic-role mapping is:
+
+| Role | Value | Source/meaning |
+|------+-------+----------------|
+| =canvas= | =#0d0e1c= | Modus =bg-main= |
+| =surface= | =#1d2235= | Modus =bg-dim= |
+| =surface-raised= | =#4a4f69= | Modus =bg-active= |
+| =text= | =#ffffff= | Modus =fg-main= |
+| =text-muted= | =#c6daff= | Modus =fg-alt= |
+| =text-disabled= | =#989898= | Modus =fg-dim= |
+| =accent= | =#2fafff= | Modus =blue= |
+| =on-accent= | =#0d0e1c= | project alias of =bg-main= |
+| =selection= | =#555a66= | Modus =bg-region= |
+| =on-selection= | =#ffffff= | Modus =fg-region= |
+| =focus= | =#79a8ff= | project alias of Modus =blue-warmer= |
+| =success= | =#6ae4b9= | Modus =info= / =cyan-cooler= |
+| =warning= | =#fec43f= | Modus =warning= / =yellow-warmer= |
+| =error= | =#ff5f59= | Modus =err= / =red= |
+| =border= | =#61647a= | reviewed Modus subset |
+| =shadow= | =#000000= | project alias of terminal black |
+| =cursor= | =#ff66ff= | Modus =cursor= / =magenta-intense= |
+| =on-cursor= | =#0d0e1c= | project alias of =bg-main= |
+
+The exact terminal palette is:
+
+| ANSI slot | Normal | Bright slot | Bright |
+|-----------+--------+-------------+--------|
+| black | =#000000= | bright-black | =#595959= |
+| red | =#ff5f59= | bright-red | =#ff6b55= |
+| green | =#44bc44= | bright-green | =#00c06f= |
+| yellow | =#d0bc00= | bright-yellow | =#fec43f= |
+| blue | =#2fafff= | bright-blue | =#79a8ff= |
+| magenta | =#feacd0= | bright-magenta | =#b6a0ff= |
+| cyan | =#00d3d0= | bright-cyan | =#6ae4b9= |
+| white | =#a6a6a6= | bright-white | =#ffffff= |
+
+The validator exact-pins both tables for =kind=production=.  This is stronger
+than merely checking format and contrast: a contrast-passing substitution is
+still rejected until the reviewed mapping changes deliberately.
+
+** Reviewed terminal contrast exception
+
+Semantic UI roles retain the accepted 7:1, 4.5:1, and 3:1 obligations.  Fourteen
+of the sixteen ANSI foregrounds must also clear 3:1 against the production
+canvas.  The exact Modus terminal =black= and =bright-black= endpoints are the
+only exceptions: their ratios against =#0d0e1c= are approximately 1.096696
+and 2.733641 respectively.  They are terminal dark/dim endpoints, not semantic
+UI text or component roles.  Their exact values remain frozen, so the exception
+cannot silently expand to another ANSI slot or semantic pair.
 
 ** Pure module boundary
 
@@ -77,8 +154,9 @@ surface returns validation records, contrast ratios, or deterministic strings:
 - =sk:render-all=.
 
 Asset existence is the one explicit read-only filesystem boundary.  Callers
-must supply an asset root to =sk:theme-asset-errors=.  Direct production
-rendering remains prohibited while the production gate is closed.
+must supply an asset root to =sk:theme-asset-errors=.  Production rendering is
+permitted only after schema, accepted-identity, contrast, and asset validation;
+rendering still performs no filesystem write or live-state lookup.
 
 ** Target boundaries
 
@@ -99,7 +177,7 @@ rendering remains prohibited while the production gate is closed.
 
 * Validation evidence
 
-The focused gate currently passes:
+The published fixture checkpoint passes:
 
 #+begin_example
 theme-check: PASS (191 checks)
@@ -107,12 +185,12 @@ theme-check: native parsers PASS
 shell-check: PASS
 #+end_example
 
-The 191 Scheme checks cover:
+Its 191 Scheme checks cover:
 
 - safe inert reading and exact recursive schema validation;
 - canonical lowercase colors, conservative ASCII identities/paths, exact
   numeric units, ranges, and rational/complex/inexact-integer rejection;
-- accepted production identities plus the closed production gate;
+- accepted identity shapes plus the then-closed production gate;
 - WCAG math, reviewed semantic pairs, actual Fish mappings, terminal ANSI
   foregrounds, and transparent-target hand-test policy;
 - explicit-root asset existence, regular-file, containment, and symlink
@@ -138,26 +216,47 @@ GTK fixture validation is intentionally structural and version-aware; it is
 not represented as a live GTK property test.  Candidate-profile lookup and
 real-display =gtk4-widget-factory= acceptance belong to P3.3/P3.4.
 
-The complete =scripts/shell-check --strict= repository suite also passed, as
-did direct ShellCheck, =git diff --check=, and =org-lint= over every changed
-repository Org file plus the editable agenda.  This remains source validation,
-not a Guix Home candidate build.
+The fixture checkpoint's complete =scripts/shell-check --strict= repository
+suite also passed, as did direct ShellCheck, =git diff --check=, and =org-lint=
+over every changed repository Org file plus the editable agenda.
+
+The second checkpoint extends the same source boundary with production
+validation, exact role/ANSI/provenance negative controls, deterministic
+production goldens, production Fish/Emacs/Kitty parser checks, and schema-v2
+fixture regeneration.  Its focused and aggregate gates pass:
+
+#+begin_example
+theme-check: PASS (281 checks)
+theme-check: native parsers PASS
+shell-check: PASS
+#+end_example
+
+The changed repository Org files and the editable agenda also pass
+=org-lint=, and =git diff --check= is clean.  These results remain source
+validation, not a Guix Home candidate build.
 
 * Truth boundary and next gate
 
-This checkpoint proves source behavior only.  It does not prove that any
+Both P3.2 checkpoints prove source behavior only.  They do not prove that any
 generated bytes are installed, built by Guix Home, active, consumed by a live
 application, or visually accepted.
 
-Before production tokens or P3.3:
+Current checkpoint state:
 
-1. Rafael explicitly accepts a GTK/UI point size; 11 pt is recommended.
-2. Add the real =theme/tokens.scm= with the reviewed frozen Modus bytes and the
-   accepted size.
-3. Validate candidate-profile package identities and output-aware Guix package
-   entries, including =gtk:bin= for =gtk4-widget-factory=.
-4. Keep source validation, Home build, checkpoint/push, activation, live
-   inspection, and real-display acceptance as separate gates.
+1. fixture-only checkpoint =3627f0b= is pushed and equal to upstream;
+2. 11 pt UI text is accepted;
+3. schema version 2 and the frozen production datum are the pending second
+   source-only checkpoint;
+4. that checkpoint has passed its complete source gate and must be committed
+   and pushed before P3.3 begins; and
+5. P3.3 must separately validate candidate-profile identities and output-aware
+   Guix package entries, including =gtk:bin= for
+   =gtk4-widget-factory=, then evaluate/build immutable Home wiring before any
+   activation.
+
+P3.4 retains activation, live ownership inspection, and real-display
+acceptance.  Source validation, Home evaluation/build, checkpoint/push,
+activation, live inspection, and visual acceptance remain separate gates.
 
 Rollback before wiring is one source revert.  No Home or System generation and
 no running process need rollback because P3.2 owns none.

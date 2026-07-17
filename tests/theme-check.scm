@@ -15,12 +15,18 @@
 (define %temporary (canonicalize-path (list-ref arguments 2)))
 (define %fixture-path
   (string-append %repo "/fixtures/theme/valid/tokens.scm"))
+(define %production-path
+  (string-append %repo "/theme/tokens.scm"))
 (define %asset-root
   (string-append %repo "/fixtures/theme/root"))
 (define %expected-root
   (string-append %repo "/fixtures/theme/expected"))
+(define %production-expected-root
+  (string-append %repo "/fixtures/theme/expected-production"))
 (define %rendered-root
   (string-append %temporary "/rendered"))
+(define %production-rendered-root
+  (string-append %temporary "/rendered-production"))
 
 (define %checks 0)
 (define %failures 0)
@@ -57,6 +63,7 @@
   (call-with-input-file path sk:read-theme))
 
 (define %theme (load-theme %fixture-path))
+(define %production-theme (load-theme %production-path))
 
 (define (error-code error)
   (assq-ref error 'code))
@@ -137,11 +144,20 @@
   (count (lambda (line) (string-prefix? prefix line))
          (string-split text #\newline)))
 
+(define (theme-role theme key)
+  (assq-ref (assq-ref theme 'roles) key))
+
 (define (fixture-role key)
-  (assq-ref (assq-ref %theme 'roles) key))
+  (theme-role %theme key))
+
+(define (production-role key)
+  (theme-role %production-theme key))
 
 (define (fixture-role-without-hash key)
   (substring (fixture-role key) 1))
+
+(define (production-role-without-hash key)
+  (substring (production-role key) 1))
 
 (define (gtk-settings-entries text)
   ;; This is an intentionally small structural parser for the generated
@@ -184,11 +200,102 @@
     (gtk4 . "gtk4.ini")
     (x-session . "x-session.sh")))
 
+(define %expected-production-provenance
+  '((palette-authority . frozen-modus-subset)
+    (theme . modus-vivendi-tinted)
+    (palette-source
+     . "GNU Emacs 30.2 etc/themes/modus-vivendi-tinted-theme.el")
+    (modus-version . "4.4.0")
+    (theme-source-sha256
+     . "4ecca25fc420989fc8520a3717135a60c068f9bc1e575f4a42e1fe5826f0e3dd")
+    (core-source-sha256
+     . "26dc9f44271008ce27c63a97b21835b0ebe1a374660f0ac96b5f931ece23b97a")
+    (guix-revision . "a8391f2d7451c2463ba253ffa9872fa6f27485d7")
+    (emacs-version . "30.2")
+    (mapping-version . 1)))
+
+(define %expected-production-roles
+  '((canvas . "#0d0e1c")
+    (surface . "#1d2235")
+    (surface-raised . "#4a4f69")
+    (text . "#ffffff")
+    (text-muted . "#c6daff")
+    (text-disabled . "#989898")
+    (accent . "#2fafff")
+    (on-accent . "#0d0e1c")
+    (selection . "#555a66")
+    (on-selection . "#ffffff")
+    (focus . "#79a8ff")
+    (success . "#6ae4b9")
+    (warning . "#fec43f")
+    (error . "#ff5f59")
+    (border . "#61647a")
+    (shadow . "#000000")
+    (cursor . "#ff66ff")
+    (on-cursor . "#0d0e1c")))
+
+(define %expected-production-ansi
+  '((black . "#000000")
+    (red . "#ff5f59")
+    (green . "#44bc44")
+    (yellow . "#d0bc00")
+    (blue . "#2fafff")
+    (magenta . "#feacd0")
+    (cyan . "#00d3d0")
+    (white . "#a6a6a6")
+    (bright-black . "#595959")
+    (bright-red . "#ff6b55")
+    (bright-green . "#00c06f")
+    (bright-yellow . "#fec43f")
+    (bright-blue . "#79a8ff")
+    (bright-magenta . "#b6a0ff")
+    (bright-cyan . "#6ae4b9")
+    (bright-white . "#ffffff")))
+
+(define %expected-production-typography
+  '((fixed-family . "JetBrainsMono Nerd Font Mono")
+    (ui-family . "JetBrainsMono Nerd Font")
+    (ui-size-pt . 11)
+    (fallback-families
+     "Symbols Nerd Font Mono"
+     "Noto Color Emoji"
+     "Font Awesome"
+     "Material Icons")))
+
+(define %expected-production-desktop
+  '((color-scheme . dark)
+    (gtk3-theme . "Adwaita-dark")
+    (gtk4-theme . "Adwaita")
+    (icon-theme . "Papirus-Dark")
+    (cursor-theme . "Bibata-Modern-Ice")
+    (cursor-size-px . 32)
+    (logical-dpi . 96)
+    (integer-scale . 1)
+    (scale-ownership . inherit-verified)
+    (gtk4-test-application . "gtk4-widget-factory")))
+
+(define %expected-production-calibrations
+  '((emacs-face-height-tenths-pt . 120)
+    (kitty-font-size-pt . 14.0)
+    (picom-emacs-opacity-percent . 85)
+    (kitty-background-opacity-ratio . 0.0)
+    (kitty-cursor-trail-role . focus)))
+
+(define %expected-production-assets
+  '((wallpaper
+     (path . "assets/wallpapers/waifu-cyberpunk.png")
+     (fit . zoom))))
+
 (define %outputs (sk:render-all %theme))
 (define %permuted-outputs (sk:render-all (permute-objects %theme)))
+(define %production-outputs (sk:render-all %production-theme))
+(define %permuted-production-outputs
+  (sk:render-all (permute-objects %production-theme)))
 
 (check (null? (sk:theme-validation-errors %theme))
        "synthetic fixture failed validation")
+(check-equal (assq-ref %theme 'schema-version) 2
+             "synthetic fixture is not schema v2")
 (check (null? (sk:theme-asset-errors %theme %asset-root))
        "synthetic fixture asset failed explicit-root validation")
 (check-equal (map car %outputs) %sk-theme-targets
@@ -465,6 +572,219 @@
                         "gtk-application-prefer-dark-theme=true"))
        "GTK 3 does not emit its accepted dark-theme preference")
 
+;; Production data is frozen, validated, and rendered offline.  These checks
+;; do not imply Home wiring, a Guix build, activation, or live consumption.
+(check (null? (sk:theme-validation-errors %production-theme))
+       "production theme failed validation")
+(check-equal (assq-ref %production-theme 'schema-version) 2
+             "production theme is not schema v2")
+(check (null? (sk:theme-asset-errors %production-theme %repo))
+       "production theme asset failed explicit-repository validation")
+(check-equal (assq-ref %production-theme 'kind) 'production
+             "canonical production theme has the wrong kind")
+(check-equal (assq-ref %production-theme 'provenance)
+             %expected-production-provenance
+             "production provenance drifted")
+(check-equal (assq-ref %production-theme 'roles)
+             %expected-production-roles
+             "frozen production semantic roles drifted")
+(check-equal (assq-ref %production-theme 'ansi)
+             %expected-production-ansi
+             "frozen production ANSI palette drifted")
+(check-equal (assq-ref %production-theme 'typography)
+             %expected-production-typography
+             "accepted production typography drifted")
+(check-equal (assq-ref %production-theme 'desktop)
+             %expected-production-desktop
+             "accepted production desktop policy drifted")
+(check-equal (assq-ref %production-theme 'calibrations)
+             %expected-production-calibrations
+             "accepted production calibrations drifted")
+(check-equal (assq-ref %production-theme 'assets)
+             %expected-production-assets
+             "accepted production asset policy drifted")
+(check-equal (map car %production-outputs) %sk-theme-targets
+             "production rendered target order drifted")
+(check-equal %production-outputs %permuted-production-outputs
+             "key-permuted production theme changed rendered bytes")
+(check-equal %production-outputs (sk:render-all %production-theme)
+             "second production render changed bytes")
+
+;; Modus ANSI black and bright-black are exact terminal endpoints, not
+;; semantic UI text/component roles.  Keep this reviewed exception explicit.
+(check (< (sk:theme-contrast-ratio
+           (assq-ref (assq-ref %production-theme 'ansi) 'bright-black)
+           (production-role 'canvas))
+          3)
+       "production bright-black no longer exercises its reviewed exception")
+
+(mkdir-if-missing %production-rendered-root)
+(for-each
+ (lambda (entry)
+   (let* ((target (car entry))
+          (text (cdr entry))
+          (filename (assq-ref %expected-paths target))
+          (expected
+           (read-file
+            (string-append %production-expected-root "/" filename)))
+          (rendered-path
+           (string-append %production-rendered-root "/" filename)))
+     (check-equal
+      text expected
+      (format #f "production ~a output differs from golden" target))
+     (check (exactly-one-trailing-newline? text)
+            (format #f
+                    "production ~a output lacks one canonical final newline"
+                    target))
+     (check
+      (string-prefix?
+       (if (eq? target 'emacs)
+           ";;; sk-theme-generated.el --- Generated theme adapter -*- lexical-binding: t; -*-"
+           "# Generated by (sk theme); do not edit.")
+       text)
+      (format #f "production ~a output has the wrong header" target))
+     (write-file rendered-path text)))
+ %production-outputs)
+
+(let ((combined
+       (string-concatenate (map cdr %production-outputs))))
+  (for-each
+   (lambda (forbidden)
+     (check (not (string-contains combined forbidden))
+            (string-append
+             "production output contains forbidden text: "
+             forbidden)))
+   '("SYNTHETIC FIXTURE"
+     "/home/"
+     "/gnu/store/"
+     "$HOME"
+     "GTK_THEME"
+     "GDK_SCALE"
+     "GDK_DPI_SCALE"
+     "QT_QPA"
+     "qt5"
+     "qt6")))
+
+(for-each
+ (lambda (projection)
+   (let ((target (list-ref projection 0))
+         (line (list-ref projection 1))
+         (label (list-ref projection 2)))
+     (check (= 1
+               (line-count
+                (assq-ref %production-outputs target)
+                line))
+            label)))
+ `((emacs
+    "    (bg-main \"#0d0e1c\")"
+    "production Emacs canvas drifted")
+   (emacs
+    "    (info \"#6ae4b9\")"
+    "production Emacs info/success mapping drifted")
+   (emacs
+    "(set-face-attribute 'default nil :family \"JetBrainsMono Nerd Font Mono\" :height 120)"
+    "production Emacs fixed face drifted")
+   (emacs
+    "(set-face-attribute 'variable-pitch nil :family \"JetBrainsMono Nerd Font\" :height 110)"
+    "production Emacs UI face drifted")
+   (kitty
+    "background #0d0e1c"
+    "production Kitty canvas drifted")
+   (kitty
+    "font_family JetBrainsMono Nerd Font Mono"
+    "production Kitty font family drifted")
+   (kitty
+    "font_size 14.0"
+    "production Kitty font size drifted")
+   (kitty
+    "background_opacity 0.0"
+    "production Kitty opacity drifted")
+   (fish
+    ,(format #f "set -g -- fish_color_command '~a'"
+             (production-role-without-hash 'success))
+    "production Fish command role drifted")
+   (fish
+    ,(format #f "set -g -- fish_color_autosuggestion '~a'"
+             (production-role-without-hash 'text-disabled))
+    "production Fish autosuggestion role drifted")
+   (gtk3
+    "gtk-theme-name=Adwaita-dark"
+    "production GTK 3 base drifted")
+   (gtk3
+    "gtk-font-name=JetBrainsMono Nerd Font 11"
+    "production GTK 3 font drifted")
+   (gtk4
+    "gtk-theme-name=Adwaita"
+    "production GTK 4 base drifted")
+   (gtk4
+    "gtk-interface-color-scheme=dark"
+    "production GTK 4 color scheme drifted")
+   (gtk4
+    "gtk-icon-theme-name=Papirus-Dark"
+    "production icon theme drifted")
+   (gtk4
+    "gtk-cursor-theme-name=Bibata-Modern-Ice"
+    "production cursor theme drifted")
+   (x-session
+    "SK_THEME_WALLPAPER='assets/wallpapers/waifu-cyberpunk.png'"
+    "production wallpaper path drifted")
+   (x-session
+    "SK_THEME_PICOM_EMACS_OPACITY_PERCENT='85'"
+    "production Picom opacity drifted")
+   (x-session
+    "XCURSOR_SIZE='32'"
+    "production cursor size drifted")))
+
+(let ((kitty (assq-ref %production-outputs 'kitty)))
+  (check (= 1 (line-count kitty "allow_remote_control no"))
+         "production Kitty remote-control denial is not unique")
+  (check (= 1 (line-prefix-count kitty "allow_remote_control "))
+         "production Kitty emits multiple remote-control directives")
+  (for-each
+   (lambda (forbidden)
+     (check (not (string-contains kitty forbidden))
+            (string-append
+             "production Kitty output contains forbidden surface: "
+             forbidden)))
+   '("\nallow_remote_control yes"
+     "\nlisten_on "
+     "\nremote_control_password "
+     "\ninclude "
+     "\nglobinclude "
+     "\nenvinclude "
+     "\ngeninclude ")))
+
+(for-each
+ (lambda (case)
+   (let* ((target (car case))
+          (expected-keys (cdr case))
+          (text (assq-ref %production-outputs target))
+          (entries (gtk-settings-entries text)))
+     (check entries
+            (format #f
+                    "production ~a is not a valid generated GKeyFile subset"
+                    target))
+     (when entries
+       (check-equal
+        (map car entries)
+        expected-keys
+        (format #f "production ~a setting key/order set drifted"
+                target)))))
+ `((gtk3
+    . ("gtk-theme-name"
+       "gtk-icon-theme-name"
+       "gtk-font-name"
+       "gtk-cursor-theme-name"
+       "gtk-cursor-theme-size"
+       "gtk-application-prefer-dark-theme"))
+   (gtk4
+    . ("gtk-theme-name"
+       "gtk-icon-theme-name"
+       "gtk-font-name"
+       "gtk-cursor-theme-name"
+       "gtk-cursor-theme-size"
+       "gtk-interface-color-scheme"))))
+
 ;; Reader safety: one quoted datum and EOF are mandatory.
 (check (equal? (sk:read-theme (open-input-string "'((sample . 1))"))
                '((sample . 1)))
@@ -483,13 +803,121 @@
        "missing top-level key passed")
 (check (has-code? (append %theme '((surprise . #t))) 'unknown-key)
        "unknown top-level key passed")
+(check (has-code? (alist-replace %theme 'schema-version 1)
+                  'unsupported-schema)
+       "schema v1 passed the schema v2 validator")
 (let ((masquerade (alist-replace %theme 'kind 'production)))
   (check (has-code? masquerade 'invalid-production-identity)
          "synthetic fixture identities passed as production")
-  (check (has-code? masquerade 'production-not-ready)
-         "production bypassed the unresolved GTK/UI size gate")
   (check (throws-theme-error? (lambda () (sk:render-all masquerade)))
-         "production rendered while its decision gate is closed"))
+         "invalid production masquerade rendered"))
+(check
+ (has-code?
+  (mutate-group
+   %theme 'provenance
+   (lambda (provenance)
+     (alist-replace provenance 'mapping-version 2)))
+  'invalid-production-identity)
+ "unreviewed synthetic fixture identity passed")
+
+;; Production identities are an exact, reviewed contract.  Generic range and
+;; contrast validation must not permit a plausible but unaccepted value.
+(check
+ (has-code?
+  (mutate-group
+   %production-theme 'typography
+   (lambda (typography)
+     (alist-replace typography 'ui-size-pt 12)))
+  'invalid-production-identity)
+ "unaccepted production UI point size 12 passed")
+(check
+ (has-code?
+  (mutate-group
+   %production-theme 'typography
+   (lambda (typography)
+     (alist-replace typography 'ui-size-pt 11.0)))
+  'invalid-production-identity)
+ "inexact production UI point size 11.0 passed")
+(check
+ (has-code?
+  (mutate-group
+   %production-theme 'provenance
+   (lambda (provenance)
+     (alist-replace provenance 'modus-version "4.4.1")))
+  'invalid-production-identity)
+ "unreviewed production Modus version passed")
+(check
+ (has-code?
+  (mutate-group
+   %production-theme 'provenance
+   (lambda (provenance)
+     (alist-replace
+      provenance
+      'theme-source-sha256
+      "26dc9f44271008ce27c63a97b21835b0ebe1a374660f0ac96b5f931ece23b97a")))
+ 'invalid-production-identity)
+ "wrong but well-formed production theme source hash passed")
+(check
+ (has-code?
+  (mutate-group
+   %production-theme 'provenance
+   (lambda (provenance)
+     (alist-replace
+      provenance
+      'core-source-sha256
+      "4ecca25fc420989fc8520a3717135a60c068f9bc1e575f4a42e1fe5826f0e3dd")))
+  'invalid-production-identity)
+ "wrong but well-formed production core source hash passed")
+(check
+ (has-code?
+  (mutate-group
+   %production-theme 'provenance
+   (lambda (provenance)
+     (alist-replace provenance 'theme-source-sha256 "ABCDEF")))
+  'invalid-hash)
+ "malformed production theme source hash passed")
+(check
+ (has-code?
+  (mutate-group
+   %production-theme 'provenance
+   (lambda (provenance)
+     (alist-replace
+      provenance
+      'core-source-sha256
+      "26DC9F44271008CE27C63A97B21835B0EBE1A374660F0AC96B5F931ECE23B97A")))
+  'invalid-hash)
+ "uppercase production core source hash passed")
+(check
+ (has-code?
+  (mutate-group
+   %production-theme 'provenance
+   (lambda (provenance)
+     (alist-replace
+      provenance
+      'guix-revision
+      "b8391f2d7451c2463ba253ffa9872fa6f27485d7")))
+  'invalid-production-identity)
+ "unreviewed production Guix revision passed")
+(let* ((mutated
+        (mutate-group
+         %production-theme 'roles
+         (lambda (roles)
+           (alist-replace roles 'focus "#00bcff"))))
+       (codes (validation-codes mutated)))
+  (check (memq 'invalid-production-identity codes)
+         "contrast-passing production role mutation passed")
+  (check (not (memq 'contrast-below-floor codes))
+         "production role pinning test does not clear contrast"))
+(let* ((mutated
+        (mutate-group
+         %production-theme 'ansi
+         (lambda (ansi)
+           (alist-replace ansi 'bright-red "#ff8787"))))
+       (codes (validation-codes mutated)))
+  (check (memq 'invalid-production-identity codes)
+         "contrast-passing production ANSI mutation passed")
+  (check (not (memq 'contrast-below-floor codes))
+         "production ANSI pinning test does not clear contrast"))
 (check
  (has-code?
   (mutate-group
@@ -513,6 +941,14 @@
    (lambda (ansi) (alist-delete ansi 'bright-white)))
   'missing-key)
  "incomplete ANSI palette passed")
+(check
+ (has-code?
+  (mutate-group
+   %theme 'ansi
+   (lambda (ansi)
+     (alist-replace ansi 'red "#ABCDEF")))
+  'invalid-color)
+ "malformed complete ANSI palette threw or passed")
 
 ;; Numeric units and opacity types/ranges remain distinct.
 (check

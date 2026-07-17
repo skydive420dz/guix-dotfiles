@@ -14,18 +14,21 @@ parked P2.M1d remain available but are not active.
 Phase 3 is now the promoted workstream.  P3.1's read-only source/live ownership
 baseline and semantic-token architecture are accepted complete from published
 checkpoint =8933827=.  Emacs, Kitty, Fish, Xinit, Picom, and wallpaper have
-traceable owners; GTK 3/4, icons, and the cursor do not yet have a declared
-GuixPC policy.  The live Emacs background matched Kitty's declared
-=#0d0e1c= canvas, but no running Kitty parser was sampled; their full palettes
-and different opacity mechanisms are not one contract.
+traceable live owners.  At that baseline GTK 3/4, icons, and the cursor had no
+declared GuixPC policy; P3.2 now records their accepted offline production
+policy, but still supplies no live owner.  The live Emacs background matched
+Kitty's declared =#0d0e1c= canvas, but no running Kitty parser was sampled;
+their full palettes and different opacity mechanisms are not one contract.
 
 Rafael accepted the recommended Phase 3 visual bundle, including the global
-JetBrainsMono Nerd Font roles and retained wallpaper.  P3.2 has implemented
-the fixture-only Scheme schema/validator, all six deterministic renderers, and
-their source gates.  The GTK/UI point size is the sole open production value,
-so the module rejects production data and P3.3 remains blocked.  The later
-migration must render a complete Kitty config rather than a forbidden include
-and must keep Qt out of scope.
+JetBrainsMono Nerd Font roles, retained wallpaper, and 11 pt UI size.  P3.2's
+published fixture checkpoint =3627f0b= has clean upstream equality.  The
+second, still-unpublished source checkpoint evolves the contract to schema
+version 2, adds the inert production token datum, freezes the exact reviewed
+Modus 4.4.0 role/ANSI mapping and source provenance, and extends offline
+validation/rendering without wiring any live target.  The later migration must
+render a complete Kitty config rather than a forbidden include and must keep
+Qt out of scope.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -65,9 +68,10 @@ boundaries, corrected no-Kitty-include architecture, data/rendering contract,
 and P3.2-P3.4 migration gates.  It contains no visual implementation or live
 desktop change.
 [[file:docs/audits/2026-07-16-p3.2-offline-theme-schema.org][The P3.2 offline semantic-theme record]] owns the inert schema, pure renderers,
-synthetic goldens, validation evidence, accepted decision bundle, and closed
-production gate.  It contains no Home wiring, build, activation, or live
-desktop evidence.
+synthetic and production source data, deterministic goldens, validation
+evidence, accepted decision bundle, and exact production-identity gate.  It
+contains no Home wiring, candidate Home build, activation, or live desktop
+evidence.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -81,14 +85,24 @@ acceptance contract.  Closure added no package, theme, font, cursor, icon,
 wallpaper change, build, Home/System generation, process, activation, EXWM
 session, GUI launch, or reboot.
 
-P3.2 is =ACTIVE=.  Its fixture-only Scheme schema/validator, six deterministic
-renderers, synthetic goldens, negative controls, and aggregate source gate are
-implemented and pass 191 checks plus pinned Fish, Emacs, and Kitty parsers.
-The palette authority, GTK/icon/cursor/scaling/contrast/Fish/test-surface
-bundle is accepted.  The sole remaining production value is the GTK/UI point
-size; 11 pt at logical 96 DPI is recommended.  The validator rejects
-=kind=production= until that decision is explicit, and no production token,
-Home wiring, build, activation, or runtime change exists.
+P3.2 is =ACTIVE=.  Its fixture-only checkpoint
+=3627f0b9c98e01279e8aafa42ef81128686f3ade= is published with clean
+upstream equality; that checkpoint passed 191 Scheme checks plus pinned Fish,
+Emacs, and Kitty parsers.  Rafael has now accepted the last production value:
+11 pt UI text at logical 96 DPI.  The pending second source-only checkpoint
+adds schema version 2, the exact production datum, source hashes, exact
+role/ANSI enforcement, production goldens, and corresponding negative/native
+parser gates.  Its focused gate passes 281 checks plus native parsers, and the
+complete strict repository source gate passes.  Emacs variable-pitch becomes
+11 pt while default and fixed-pitch remain at their accepted 12 pt calibration.
+
+The production validator deliberately exempts only exact Modus terminal
+=black= and =bright-black= endpoints from the 3:1 ANSI-on-canvas check; they
+are terminal dark/dim endpoints, not semantic UI text or component roles.  The
+other 14 ANSI slots and all reviewed semantic contrast pairs remain enforced,
+and exact production identity checks prevent the exception from becoming an
+unbounded escape hatch.  No production output is wired, no Guix Home candidate
+has been built, and no activation or runtime change exists.
 P3.3 owns immutable Home wiring and the atomic Kitty ownership migration; P3.4
 owns activation and real-display acceptance.  Source, build, activation, live,
 and visual acceptance remain different gates.
@@ -99,10 +113,11 @@ the restore-tested-backup gate.
 
 ** Ready
 
-- [ ] P3.2: publish the validated fixture-only source checkpoint, then select
-  the GTK/UI point size before production tokens.  The offline Scheme module,
-  all six synthetic outputs, and 191-check/native-parser gate are implemented;
-  no Home wiring, activation, or runtime change belongs to this slice.
+- [ ] P3.2: publish the validated second source-only checkpoint containing
+  schema version 2 and the accepted production token datum.  The fixture
+  checkpoint =3627f0b= is already pushed and equal to upstream; 11 pt is
+  accepted.  No Home wiring, candidate build, activation, or runtime change
+  belongs to this slice.
 
 ** Completed
 

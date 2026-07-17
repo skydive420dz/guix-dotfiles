@@ -95,10 +95,13 @@ emacs_version=$(LC_ALL=C emacs --version | sed -n '1p')
 }
 
 rendered=$tmp/test/rendered
+production_rendered=$tmp/test/rendered-production
 mkdir "$tmp/home" "$tmp/cache" "$tmp/config"
 
-fish -n "$rendered/fish.fish"
-sh -n "$rendered/x-session.sh"
+for output_root in "$rendered" "$production_rendered"; do
+    fish -n "$output_root/fish.fish"
+    sh -n "$output_root/x-session.sh"
+done
 
 HOME=$tmp/home \
 XDG_CACHE_HOME=$tmp/cache \
@@ -119,6 +122,37 @@ XDG_CACHE_HOME=$tmp/cache \
 XDG_CONFIG_HOME=$tmp/config \
 DISPLAY='' \
 DBUS_SESSION_BUS_ADDRESS='' \
+emacs -Q --batch \
+    -l "$production_rendered/emacs.el" \
+    --eval \
+    '(unless (and (memq (quote modus-vivendi-tinted) custom-enabled-themes)
+                  (equal (face-attribute (quote default) :family nil t)
+                         "JetBrainsMono Nerd Font Mono")
+                  (= (face-attribute (quote default) :height nil t) 120)
+                  (equal (face-attribute (quote fixed-pitch) :family nil t)
+                         "JetBrainsMono Nerd Font Mono")
+                  (= (face-attribute (quote fixed-pitch) :height nil t) 120)
+                  (equal (face-attribute (quote variable-pitch) :family nil t)
+                         "JetBrainsMono Nerd Font")
+                  (= (face-attribute (quote variable-pitch) :height nil t) 110)
+                  (equal (cadr (assq (quote bg-main)
+                                     modus-vivendi-tinted-palette-overrides))
+                         "#0d0e1c")
+                  (equal (cadr (assq (quote info)
+                                     modus-vivendi-tinted-palette-overrides))
+                         "#6ae4b9")
+                  (not (featurep (quote sk-exwm))))
+       (error "generated production Emacs adapter assertion failed"))'
+
+for kitty_config in \
+    "$rendered/kitty.conf" \
+    "$production_rendered/kitty.conf"
+do
+HOME=$tmp/home \
+XDG_CACHE_HOME=$tmp/cache \
+XDG_CONFIG_HOME=$tmp/config \
+DISPLAY='' \
+DBUS_SESSION_BUS_ADDRESS='' \
 kitty +runpy \
     'import sys
 from kitty.config import parse_config
@@ -128,6 +162,7 @@ with open(sys.argv[1], encoding="utf-8") as stream:
         stream, accumulate_bad_lines=bad, allow_geninclude=False)
 if bad or not parsed:
     raise SystemExit("generated Kitty configuration failed parser checks")' \
-    "$rendered/kitty.conf"
+    "$kitty_config"
+done
 
 printf '%s\n' 'theme-check: native parsers PASS'
