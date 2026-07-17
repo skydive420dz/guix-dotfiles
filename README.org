@@ -105,17 +105,18 @@ other 14 ANSI slots and all reviewed semantic contrast pairs remain enforced,
 and exact production identity checks prevent the exception from becoming an
 unbounded escape hatch.
 
-P3.3 is the current checkpoint boundary.  The isolated Scheme derivation,
+P3.3 is complete at its source/build boundary.  The isolated Scheme derivation,
 immutable Home mappings, explicit font/icon/cursor and =gtk:bin= outputs, and
 generation-level Kitty ownership migration are implemented.  Candidate
 =/gnu/store/b668045vxgnx7mnsi99pf4nsdd4md9hc-home= is built and passes exact
 adapter, parser, package, font, icon, cursor, and activation-order checks.
-Implementation checkpoint
-=530eb250e2e876f20b3c553be39533e5548cfb6d= is committed locally but not yet
-published.  Active Home generation 42 and every previous live owner remain
-unchanged.  P3.4 owns activation, live-owner inspection, consumer restarts,
-and real-display acceptance.  Source, build, activation, live, and visual
-acceptance remain different gates.
+Implementation checkpoint =530eb250e2e876f20b3c553be39533e5548cfb6d=
+and evidence checkpoint =00bf260d614ce4e5e4d023a7fba09826da48ae80=
+are published; fetched =HEAD= and =origin/main= equal =00bf260= at
+ahead/behind =0/0=.  Active Home generation 42 and every previous live owner
+remain unchanged.  P3.4 owns activation, live-owner inspection, consumer
+restarts, and real-display acceptance.  Source, build, activation, live, and
+visual acceptance remain different gates.
 
 P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
 parked.  Generation deletion and store collection remain Phase 5 work behind
@@ -123,17 +124,18 @@ the restore-tested-backup gate.
 
 ** Ready
 
-- [ ] P3.3: publish validated implementation checkpoint =530eb25= plus its
-  evidence update and verify clean upstream equality.  Do not run =ghr=,
-  restart a consumer, launch a GUI, or treat the realized candidate as active
-  while closing this gate.
-
-- [ ] P3.4: only from the published P3.3 checkpoint, record generation 42 and
-  its legacy Kitty source, run the read-only transition preflight, activate
-  Home, inspect every owner, and hand-test Kitty, Fish, Emacs, GTK 3/4, fonts,
-  icons, cursor, Picom, wallpaper, transparency, and the real display.
+- [ ] P3.4: after publishing this status-only closure checkpoint and
+  rechecking clean upstream equality, record generation 42 and its legacy
+  Kitty source, run the read-only transition preflight, activate Home, inspect
+  every owner, and hand-test Kitty, Fish, Emacs, GTK 3/4, fonts, icons, cursor,
+  Picom, wallpaper, transparency, and the real display.
 
 ** Completed
+
+- [X] P3.3: immutable Guix Home theme wiring and candidate build
+  Published implementation =530eb25= and evidence =00bf260= are fetched,
+  clean, and equal to upstream.  The complete pinned build and consumer gates
+  pass without Home activation or live visual claims.
 
 - [X] P3.2: offline semantic-token schema, production datum, and renderers
   Published fixture checkpoint =3627f0b= and production checkpoint =b74a98d=

@@ -568,9 +568,11 @@ CLOSED: [2026-07-17 Fri]
   Home activation, live application, real-display, and rollback gates for
   P3.3/P3.4.  P3.2 performs no Home build or runtime mutation.
 
-* ACTIVE P3.3 immutable Guix Home theme wiring and candidate build
+* DONE P3.3 immutable Guix Home theme wiring and candidate build
+CLOSED: [2026-07-17 Fri]
 :PROPERTIES:
 :created: 2026-07-17
+:completed: 2026-07-17
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-17-p3.3-immutable-theme-home-wiring.org][2026-07-17 P3.3 immutable Home wiring and candidate build]].
@@ -592,15 +594,16 @@ CLOSED: [2026-07-17 Fri]
 - [X] Commit implementation checkpoint
   =530eb250e2e876f20b3c553be39533e5548cfb6d= after the complete source/build
   gates pass.
-- [ ] Publish the implementation and evidence checkpoints, fetch them, and
-  prove clean upstream equality before activation.
+- [X] Publish implementation =530eb25= and evidence =00bf260=, fetch them,
+  and prove clean =HEAD=/=origin/main= equality at ahead/behind =0/0= before
+  activation.
 - [X] Perform no Home activation, consumer restart, GUI launch, EXWM/session
   restart, or reboot in P3.3.
 
 * TODO P3.4 activation and real-display visual acceptance
 :PROPERTIES:
 :created: 2026-07-17
-:blocked_by: P3.3 published and equal to upstream
+:blocked_by: P3.3 status-only closure checkpoint published and equal to upstream
 :END:
 
 - [ ] Capture the exact P3.3 source checkpoint, clean upstream equality,

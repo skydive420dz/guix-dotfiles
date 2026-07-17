@@ -1,6 +1,6 @@
 #+title: P3.3 immutable Guix Home theme wiring and candidate build
 #+date: 2026-07-17
-#+status: candidate built and validated; source checkpoint publication pending; not activated
+#+status: complete and published at source/build boundary; not activated
 
 * Outcome
 
@@ -23,9 +23,10 @@ real-display check occurred.
 
 Implementation checkpoint
 =530eb250e2e876f20b3c553be39533e5548cfb6d= was created on the actual clean
-checkout after all gates passed.  It was one commit ahead of =origin/main= at
-ahead/behind =0/1= immediately after creation; publication and fetched
-upstream equality remain the final P3.3 gate.
+checkout after all gates passed.  It and evidence checkpoint
+=00bf260d614ce4e5e4d023a7fba09826da48ae80= are published.  A subsequent
+fetch verified clean =HEAD= and =origin/main= equality at =00bf260= with
+ahead/behind =0/0=.
 
 * Predecessor and unchanged live boundary
 
@@ -217,8 +218,8 @@ generation, service, process, GUI, or application state.
 * Durable planning state
 
 =README.org=, the P3.2 source record, and the machine TODO now identify P3.2
-as published, P3.3 as built but not active, and P3.4 as the separate sequential
-activation/acceptance gate.
+and P3.3 as complete at their respective source boundaries, P3.3 as not
+active, and P3.4 as the separate sequential activation/acceptance gate.
 
 The editable agenda at
 =~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org=
@@ -226,15 +227,20 @@ was copied only after its live hash still matched the reviewed input
 =d15caa4d04f9a987a84de6e78c2f5a2e1e51a5e113da00bfa3d59424b12c6c7d=.
 The synchronized result is
 =a6236e73db15c36a171b0bf8e9e6057769b51c09fd408c741a683ed3dc684c12=.
-All four repository records and the agenda pass =org-lint=.
+The publication-closure edit was then based only on that exact live hash; its
+result is
+=bfc9fd97f5a40fd407a9bf27fe87c6c5c44177c8fd9107300512e727fa9965c3=.
+All closure repository records and the agenda pass =org-lint=.
 
 * Rollback and P3.4 handoff
 
 P3.3 rollback before activation is a source revert only.  The realized
 candidate may be garbage-collected without affecting generation 42.
 
-P3.4 must begin only after the P3.3 source checkpoint is pushed and upstream
-equality is verified.  Its gates are deliberately sequential:
+The P3.3 source prerequisite is satisfied by published =530eb25= and
+=00bf260=, fetched equality, and a clean =0/0= checkout.  After this
+status-only closure record is published, P3.4's gates remain deliberately
+sequential:
 
 1. record the exact source checkpoint, clean ahead/behind evidence, previous
    Home generation 42/result, retained =kitty/kitty.conf=, and rollback plan;
