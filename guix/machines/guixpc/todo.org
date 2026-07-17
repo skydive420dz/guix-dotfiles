@@ -495,9 +495,11 @@ CLOSED: [2026-07-16 Thu]
   System/Home generation, device setting, SMART refresh/self-test, alert,
   trim, or reboot merely to close this slice.
 
-* TODO P3.1 visual ownership baseline and semantic-token contract
+* DONE P3.1 visual ownership baseline and semantic-token contract
+CLOSED: [2026-07-16 Thu]
 :PROPERTIES:
 :created: 2026-07-16
+:completed: 2026-07-16
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-16-p3.1-visual-ownership-and-token-contract.org][2026-07-16 P3.1 visual ownership and token contract]].
@@ -513,14 +515,32 @@ CLOSED: [2026-07-16 Thu]
   stages, rollback, and stop conditions; do not imply those files exist yet.
 - [X] Correct the earlier architecture: repository policy forbids Kitty
   includes, so later work must render one complete immutable =kitty.conf=.
-- [ ] Review and accept the contract with Rafael.
-- [ ] Push the documentation checkpoint and verify upstream equality.
+- [X] Review and accept the contract with Rafael.
+- [X] Push checkpoint =8933827= and verify clean upstream equality at =0/0=.
 - Keep fixture-only P3.2 implementation, P3.3 Home wiring/build, and P3.4
   activation/live visual acceptance separate.  Production tokens/outputs and
-  P3.3 remain blocked until the required font, GTK base, icon, cursor, scaling,
-  and related choices are accepted; do not guess them.
+  P3.3 remain blocked until the palette authority, GTK base, icon, cursor,
+  scaling, contrast, Fish, and test-surface choices are accepted; do not guess
+  them.
 - Add no visual source value, package, build, generation, activation, session
   reload/restart, GUI launch, or reboot merely to close P3.1.
+
+* TODO P3.2 offline semantic-token schema, renderers, and fixtures
+:PROPERTIES:
+:created: 2026-07-16
+:END:
+
+- Accepted production inputs: use JetBrainsMono Nerd Font globally and keep the
+  current wallpaper/fit policy.
+- [ ] Accept the remaining palette authority, GTK base, icon, cursor,
+  DPI/scale, contrast, Fish, and GTK 4 test-surface choices before creating
+  production tokens.
+- [ ] Implement pure schema/renderer code and synthetic fixtures without Home
+  wiring, activation, GUI launch, or runtime mutation.
+- [ ] Add production =theme/tokens.scm= only after every required production
+  value is accepted.
+- [ ] Preserve separate source, candidate build, checkpoint, Home activation,
+  live application, real-display, and rollback gates for P3.3/P3.4.
 
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:

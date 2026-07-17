@@ -1,6 +1,6 @@
 #+title: GuixPC P3.1 Visual Ownership Baseline and Semantic-Token Contract
 #+date: 2026-07-16
-#+status: design checkpoint; review pending
+#+status: accepted complete
 
 * Outcome
 
@@ -16,13 +16,15 @@ The audit finds a useful partial baseline rather than a broken desktop:
 - The live Emacs default background matched Kitty's declared canvas literal,
   but no running Kitty parser was sampled; the rest of their palettes and
   their different transparency mechanisms are not under one contract.
-- GTK 3/4, proportional UI fonts, icons, and cursors have no declared GuixPC
-  visual policy.  Their current behavior is toolkit/profile fallback behavior.
+- GTK 3/4, icons, and cursors have no declared GuixPC visual policy.  Their
+  current behavior is toolkit/profile fallback behavior.  JetBrainsMono Nerd
+  Font is accepted for a later migration but is not yet active.
 - Qt has no selected application or current configuration and remains outside
   the target set.
-- The first implementation must preserve the accepted visual result and the
-  current Iosevka fixed-width role.  Font, icon, cursor, and wallpaper changes
-  require later explicit choices and real-display acceptance.
+- The later ownership migration must preserve the accepted color/transparency
+  result, deliberately migrate font roles to JetBrainsMono Nerd Font, and keep
+  the current wallpaper.  Every still-open visual choice requires explicit
+  acceptance, and all visual changes require real-display acceptance.
 
 The proposed implementation uses a data-only Scheme token source, a pure
 validator/renderer module, deterministic complete target files, and a later
@@ -30,8 +32,16 @@ atomic ownership migration through Guix Home.  In particular, Kitty must not
 use an include: the repository's security policy rejects every Kitty include
 form.  A later renderer must produce the complete immutable =kitty.conf=.
 
-P3.1 is documentation and design only.  User review and publication remain
-separate gates before P3.2 can implement the offline token/renderer layer.
+P3.1 is documentation and design only.  Checkpoint
+=893382750e8d8896ffde9e947c9e699f18c999ef= was published with clean
+upstream equality, and Rafael explicitly accepted the contract after reviewing
+its overview.  No visual implementation or runtime action was required for
+closure.
+
+The first post-contract choices are also explicit: use JetBrainsMono Nerd Font
+globally and keep the current wallpaper.  These are P3.2/P3.3 visual-migration
+inputs rather than retroactive P3.1 implementation.  The remaining production
+choices stay open for a reviewed P3.2 decision gate.
 
 Related records:
 
@@ -63,8 +73,8 @@ Related records:
   generation activation, EXWM reload/restart, GUI launch, or reboot;
 - changing or restarting Emacs, Kitty, Fish, Picom, Xwallpaper, GTK, or X11;
 - taking a screenshot or claiming current root-window pixels were sampled;
-- selecting a contrast floor or the unresolved font/icon/cursor/wallpaper
-  choices; and
+- selecting production visual values inside P3.1; accepted post-contract
+  choices are recorded only as closure evidence and later-slice inputs; and
 - producing a Qt adapter, Qt environment variable, or Qt package.
 
 ** Evidence vocabulary
@@ -446,8 +456,8 @@ records:
 
 The captured current values are live Emacs height 120, Kitty's declared 14
 points, the active Picom rule's 85 percent, and Kitty's declared 0.0 ratio.
-They are proposed preservation inputs pending P3.1 review.  Sharing an untyped
-=opacity= key is prohibited.
+They are accepted P3.1 preservation inputs; exact rendered ownership remains a
+P3.2/P3.3 gate.  Sharing an untyped =opacity= key is prohibited.
 
 ** Assets
 
@@ -580,16 +590,19 @@ silently choosing WCAG numbers for desktop chrome.
 
 * Migration invariants, rollback, and stop conditions
 
-** Proposed initial invariants
+** Accepted migration invariants
 
 - Preserve the observed live Emacs / declared Kitty =#0d0e1c= baseline and
   D-06's accepted visual-result intent through the first ownership migration;
-  the exact token/calibration contract remains pending P3.1 review.
-- Preserve Iosevka as the fixed-width family until D-05 is completed.
+  exact palette-role mapping remains a P3.2 production decision.
+- D-05 is now complete: migrate every declared font role to the appropriate
+  JetBrainsMono Nerd Font family while retaining explicit symbol/emoji
+  fallbacks.  This is an accepted visual change, not a no-op normalization.
 - Preserve =modus-vivendi-tinted= as the initial Emacs base identity unless a
   separately reviewed palette freeze/replacement is selected.
 - Preserve Kitty remote-control and include restrictions.
 - Keep one automatic Picom/wallpaper owner.
+- Keep the current wallpaper and fit policy through the first migration.
 - Add no Qt surface.
 - Treat a generated candidate, active Home, live process, and accepted visual
   result as different facts.
@@ -611,7 +624,8 @@ Stop before implementation or activation if:
 
 - the renderer requires a Kitty include or weakens its security checks;
 - more than one owner would write the same live target;
-- unresolved font/icon/cursor/wallpaper choices are guessed;
+- unresolved palette/GTK/icon/cursor/scaling/contrast/Fish/test-surface choices
+  are guessed;
 - a build is represented as live activation;
 - GTK support requires broad unreviewed CSS or a Qt dependency;
 - deterministic rendering or raw-literal drift checks cannot distinguish
@@ -624,13 +638,13 @@ Stop before implementation or activation if:
 
 | Decision | Current boundary |
 |----------+------------------|
-| Fixed/proportional font roles | preserve Iosevka initially; later choose MSI-like JetBrainsMono/Inter split, JetBrains globally, or another reviewed pair |
+| Fixed/proportional font roles | ACCEPTED: JetBrainsMono Nerd Font globally; use the exact Mono family for fixed surfaces and the normal Nerd Font family for UI roles |
 | Icon theme | no selection |
 | Cursor theme and size | no selection |
 | GTK base identity | stable dark base proposed; exact installed/package choice not selected |
-| DPI and scaling | no explicit GuixPC policy or effective per-toolkit measurement; preserve current result first |
+| DPI and scaling | read-only P3.2 research observed X/Emacs at logical 96 DPI and an identity RandR transform (physical panel about 110 DPI); GTK 3/4 effective scale remains unmeasured, so 96 DPI/scale 1 is proposed subject to GTK verification |
 | Contrast floor | no numeric floor selected |
-| Wallpaper | keep/replace/upscale not selected |
+| Wallpaper | ACCEPTED: keep the current tracked wallpaper and current fit policy |
 | GTK 4 smoke-test app | no explicit application selected |
 | Fish syntax/pager palette | decide whether first migration owns it or deliberately preserves defaults |
 | Freeze exact Modus palette vs retain theme identity | initial recommendation is retain identity and detect observed drift; decision not accepted |
@@ -650,8 +664,8 @@ stable.
 - [X] Correct the Kitty-include architecture conflict.
 - [X] Define schema, target set, validators, wiring stages, rollback, and stop
   conditions.
-- [ ] Review and accept the contract.
-- [ ] Publish the documentation checkpoint and verify upstream equality.
+- [X] Review and accept the contract.
+- [X] Publish the documentation checkpoint and verify upstream equality.
 
 No source implementation, build, activation, process restart, GUI launch, or
 reboot belongs to P3.1.
@@ -675,13 +689,20 @@ before activation.  No source/build result is runtime acceptance.
 
 Activate only the reviewed Home/session boundary, inspect actual owners and
 applications, perform the real-display hand test, prove adjacent invariants,
-and record rollback/retention.  Keep font/icon/cursor/wallpaper redesign as
-separate decisions if the baseline-preserving migration can close first.
+and record rollback/retention.  Treat the accepted JetBrains font migration
+and retained wallpaper as explicit visual-change inputs; exclude any still
+unaccepted icon, cursor, or scaling choice until it passes its decision gate.
 
-* P3.1 completion boundary
+* P3.1 completion evidence
 
-The documentation checkpoint may be committed without claiming the contract is
-accepted or published.  P3.1 closes only after Rafael reviews it, the commit is
-pushed and upstream equality is verified, and the roadmap records acceptance.
-P3.2 is the recommended next implementation slice; it is not authorized merely
-by this draft.
+- Published checkpoint:
+  =893382750e8d8896ffde9e947c9e699f18c999ef=.
+- Upstream equality: =HEAD == origin/main= with ahead/behind =0/0= after fetch.
+- Rafael explicitly accepted P3.1 after reviewing the contract overview.
+- No package, source implementation, build, Home/System generation, process,
+  activation, GUI launch, session restart, or reboot changed for closure.
+- Accepted first production inputs: JetBrainsMono Nerd Font globally; keep the
+  current wallpaper.
+- P3.2 is the correct next slice, beginning with the remaining visual-decision
+  gate and offline schema/renderer fixtures.  Production output and P3.3 wiring
+  remain blocked until every required production choice is accepted.
