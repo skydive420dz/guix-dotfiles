@@ -1,0 +1,242 @@
+#+title: P3.4 theme activation, GTK schema stop, and correction
+#+date: 2026-07-17
+#+status: active; correction built, publication/reactivation pending
+
+* Outcome so far
+
+P3.4 activated the published P3.3 theme candidate as Home generation 43,
+verified its generated owners, and tested fresh consumers without restarting
+the X/EXWM session.  Exact Fish and Emacs assertions passed; fresh Kitty and
+the GTK 3 Blueman manager remained alive for five seconds.
+=gtk4-widget-factory= aborted because its private ColorChooser GSettings schema
+was not exposed through the Home profile.
+
+That failure stopped the sequence before any session restart, reboot, or
+real-display acceptance claim.  It also found a specific false positive in the
+P3.3 package gate: owning =gtk:bin= proves the factory binary exists, but does
+not expose the GTK =out= output's schemas to the profile.
+
+The correction explicitly selects both =gtk:out= and =gtk:bin=.  An isolated
+Home candidate whose profile has 94 top-level records now builds and passes
+strengthened output, provenance, schema, cache, adapter, parser, font, icon,
+cursor, and activation-order gates:
+
+#+begin_example
+/gnu/store/yr959z61ml5wzvxc2ad3vm93nmrm7kd9-home
+#+end_example
+
+This corrected result is build evidence only.  At this checkpoint it has not
+been published, activated, or GUI-tested.
+
+* Published activation boundary
+
+Before activation, the actual checkout was clean and upstream-equal at:
+
+#+begin_example
+eeedb461d79145c939ad3729e2ff2d4271d8ed1a
+ahead/behind 0/0
+#+end_example
+
+The retained rollback state was Home generation 42:
+
+#+begin_example
+/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home
+#+end_example
+
+The complete 14-live-plus-one-retired repository-link preflight passed.  Home
+reconfiguration then succeeded and selected generation 43:
+
+#+begin_example
+/gnu/store/1slsnsfv8avdqzi3fsf0xhigyv6vfmal-home
+#+end_example
+
+Guix backed up the retiring Kitty repository link as a regular file:
+
+#+begin_example
+~/1784329267-guix-home-legacy-configs-backup/.config/kitty/kitty.conf
+#+end_example
+
+The backup's SHA256 equals the retained legacy source:
+
+#+begin_example
+83486e043b9e5655435a240189bb54aa7bba265e79ff2eb02db5e8b92184f600
+#+end_example
+
+The generated production Kitty config has SHA256:
+
+#+begin_example
+68694b9c9f29c1191d36c67cbb4a2a9e334fc43729a1fa02c1fb3dfff330fb9c
+#+end_example
+
+Generation 43 installed store-backed generated Emacs, Kitty, Fish, GTK 3,
+GTK 4, X-session, token, and wallpaper owners.  The post-activation
+14-live-plus-one-retired preflight and the complete immutable Home checker
+passed.  Existing Emacs, Picom, and Kitty process IDs did not change during
+activation.
+
+* Fresh-consumer evidence
+
+The fresh non-session tests produced:
+
+| Consumer | Result |
+|----------+--------|
+| Fish | exact generated prompt/syntax/pager assertions pass |
+| Emacs | fresh batch process loads the generated adapter and passes theme/font assertions |
+| Kitty | fresh five-second process remains alive |
+| Blueman / GTK 3 | fresh five-second process remains alive and reads existing BlueZ/Pulse state |
+| GTK 4 widget factory | aborts with status 133 before visual acceptance |
+
+Kitty reported missing systemd and desktop-notification/portal services, but
+remained alive.  Those are non-blocking existing environment gaps, not the GTK
+schema failure and not evidence of visual acceptance.
+
+Before launching the factory, a live GTK 4 settings query reported:
+
+| Setting | Observed value |
+|---------+----------------|
+| theme | =Adwaita= |
+| icons | =Papirus-Dark= |
+| UI font | =JetBrainsMono Nerd Font 11= |
+| cursor | =Bibata-Modern-Ice=, size 32 |
+| Xft DPI | 98304, logical 96 DPI |
+| interface color scheme | =DARK= |
+| legacy prefer-dark boolean | false, expected with the GTK 4 interface scheme |
+
+This proves the settings policy reached GTK 4.  It does not compensate for the
+separate missing private schema or prove acceptable appearance.
+
+The GTK 4 failure was:
+
+#+begin_example
+GLib-GIO-ERROR: Settings schema 'org.gtk.gtk4.Settings.ColorChooser' is not installed
+#+end_example
+
+No session restart or reboot followed this stop.
+
+* Root cause
+
+Generation 43 reports only:
+
+#+begin_example
+gtk 4.22.1 bin /gnu/store/hnf5in75v83zmhcqxpbflvizdbcp8a2n-gtk-4.22.1-bin
+#+end_example
+
+That output references:
+
+#+begin_example
+/gnu/store/qk4czza15lsr1d1ir6xni5613knqqz49-gtk-4.22.1
+#+end_example
+
+The referenced GTK =out= store item contains the ColorChooser XML and its own
+compiled cache.  A closure reference keeps those bytes alive, but does not link
+them into the Home profile.  Generation 43's profile therefore lacks the XML,
+and its existing profile-generated =gschemas.compiled= does not register the
+ColorChooser schema.
+
+The correction is package ownership, not a GTK patch or environment override.
+It does not add =glib:bin=, copy schema files manually, or globally set
+=GSETTINGS_SCHEMA_DIR=.
+
+* Corrected ownership contract
+
+The Home declaration now has:
+
+- 87 ordinary package specifications;
+- exact =gtk:out= and =gtk:bin= selections;
+- one explicit runtime-detached Racket Mode package;
+- 90 total package/output selections; and
+- 89 unique logical package names.
+
+The unique-name projection still contains =gtk= once.  Package-name overlap
+and presence checks consume that projection; output-specific gates separately
+require both exact GTK records.
+
+The immutable candidate checker now binds:
+
+1. =gtk4-widget-factory= to the exact store path recorded for =gtk:bin=;
+2. =org.gtk.gtk4.Settings.ColorChooser.gschema.xml= to the exact store path
+   recorded for =gtk:out=; and
+3. the profile-generated =gschemas.compiled= to the exact schema ID and its
+   =custom-colors= and =selected-color= keys.
+
+Its failure-control fixture independently rejects missing =out=, missing
+=bin=, wrong factory provenance, absent schema XML, wrong schema provenance,
+missing compiled cache, and incomplete compiled cache.  The integrated build
+fixture removes each GTK output independently so it cannot pass for the wrong
+duplicate-output reason.
+
+* Corrected candidate evidence
+
+The isolated correction checkout is based on published =eeedb461=.  It passed:
+
+- direct ShellCheck and =git diff --check=;
+- the 281-test theme gate and pinned native parsers;
+- the complete strict repository =scripts/shell-check=;
+- package ownership at 13 recovery names and 89 unique Home names, including
+  exactly one explicit package object;
+- the strengthened immutable-candidate failure controls;
+- the integrated build-gate fixture;
+- pinned Home dry-run; and
+- the realized Home build and immutable Home checker.
+
+The realized profile contains 94 top-level records and exactly:
+
+#+begin_example
+gtk 4.22.1 bin /gnu/store/hnf5in75v83zmhcqxpbflvizdbcp8a2n-gtk-4.22.1-bin
+gtk 4.22.1 out /gnu/store/qk4czza15lsr1d1ir6xni5613knqqz49-gtk-4.22.1
+#+end_example
+
+Its profile ColorChooser XML resolves to the declared GTK =out= item, and the
+profile-generated cache contains the schema ID and required keys.
+
+The build prints the broad profile's existing file-collision warnings and new
+GTK =out= collisions for generated GdkPixbuf and MIME caches.  Guix selects its
+profile hooks and the build succeeds.  Runtime testing remains required; build
+success does not turn those warnings into a visual claim.
+
+* Planning synchronization
+
+The editable agenda at
+=~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org=
+was updated only after its live SHA256 still matched the P3.3 closure input:
+
+#+begin_example
+bfc9fd97f5a40fd407a9bf27fe87c6c5c44177c8fd9107300512e727fa9965c3
+#+end_example
+
+The first staged result passed =org-lint= before the hash-guarded copy:
+
+#+begin_example
+60588c70e4302ce8512a46c1a3f5cfb228178b5f2df9d1c13ad87f9230dfd315
+#+end_example
+
+An independent consistency review then qualified the nonvisual startup probes,
+added the successful GTK settings query, and moved the publication condition
+from whole-task =BLOCKED_BY= metadata to =NEXT_GATE=.  That revision also
+passed =org-lint= and was copied only while the live file still matched the
+intermediate hash.  The final live SHA256 is:
+
+#+begin_example
+dcc23c66db7372fed8feec05d76292e975883392c16bd079cd94900e061169e0
+#+end_example
+
+It records P3.4 as active, not complete, and keeps publication, corrected
+activation, GTK 4 runtime, session restart, and visual acceptance as separate
+pending gates.
+
+* Remaining sequential gates
+
+1. Commit, push, fetch, and prove clean =HEAD=/=origin/main= equality.
+2. Re-run the 14-live-plus-one-retired preflight.
+3. Activate the corrected Home result as a new generation and re-run the
+   immutable Home checker against the active result.
+4. From the real EXWM environment, launch the exact active-profile
+   =gtk4-widget-factory= without =GSETTINGS_SCHEMA_DIR= or =XDG_DATA_DIRS=
+   overrides.  Require it to remain alive and emit no GLib schema error.
+5. Obtain Rafael's visible-window confirmation and terminate the probe.
+6. Only then restart the X/EXWM session or reboot for wallpaper, Picom,
+   transparency, cursor, icon, font, contrast, and ultrawide hand tests.
+
+Generation 42 and its retained Kitty source remain the pre-theme rollback.
+Generation 43 is also retained as exact evidence of the schema stop.  No Qt,
+forced DPI, global toolkit scale, or complete visual acceptance is claimed.

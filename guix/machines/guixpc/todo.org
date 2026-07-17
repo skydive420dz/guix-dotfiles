@@ -599,23 +599,43 @@ CLOSED: [2026-07-17 Fri]
   activation.
 - [X] Perform no Home activation, consumer restart, GUI launch, EXWM/session
   restart, or reboot in P3.3.
+- [X] Preserve the historical P3.3 result and cross-reference the later P3.4
+  finding that =gtk:bin= alone did not expose GTK's private schemas.
 
 * TODO P3.4 activation and real-display visual acceptance
 :PROPERTIES:
 :created: 2026-07-17
-:blocked_by: P3.3 status-only closure checkpoint published and equal to upstream
+:NEXT_GATE: GTK correction checkpoint published and equal to upstream
 :END:
 
-- [ ] Capture the exact P3.3 source checkpoint, clean upstream equality,
+- Evidence: [[file:../../../docs/audits/2026-07-17-p3.4-theme-activation.org][2026-07-17 P3.4 activation, GTK schema stop, and correction]].
+- [X] Capture the exact P3.3 source checkpoint, clean upstream equality,
   generation 42/result, retained Kitty source, and rollback/retention plan.
-- [ ] Run the read-only 14-live-plus-one-retired link preflight, then run =ghr=
-  and record the new Home generation/result and legacy-backup path.  Treat this
-  as activation evidence only.
-- [ ] Before restarting consumers, prove all generated targets are store-backed
+- [X] Run the read-only 14-live-plus-one-retired link preflight, then run =ghr=
+  and record Home generation 43 at =1slsnsfv...-home= plus the exact legacy
+  Kitty backup.  Treat this as activation evidence only.
+- [X] Before restarting consumers, prove all generated targets are store-backed
   and golden-equal, Kitty has one Home owner, and all 14 continuing repository
   links remain correct.
-- [ ] Test fresh Kitty, Fish, Emacs, one GTK 3 app, and
-  =gtk4-widget-factory= separately.
+- [X] Test fresh Kitty, Fish, Emacs, and Blueman/GTK 3 separately; all remain
+  alive or pass their exact non-GUI assertions.
+- [X] Stop before session restart when =gtk4-widget-factory= aborts on missing
+  =org.gtk.gtk4.Settings.ColorChooser=; make no visual-acceptance claim.
+- [X] Trace the false positive: =gtk:bin= references =gtk:out= in its closure
+  but does not expose its schemas through the Home profile.
+- [X] Correct ownership to exact =gtk:out= plus =gtk:bin= while retaining 89
+  unique package names and recording 90 actual package/output selections.
+- [X] Strengthen output/provenance/schema/cache gates and independent negative
+  controls; pass the complete source gate, pinned Home dry-run, a Home build
+  whose profile has 94 top-level records, and the immutable candidate check at
+  =yr959z61...-home=.
+- [ ] Publish the correction checkpoint, fetch it, and prove clean
+  =HEAD=/=origin/main= equality at ahead/behind =0/0=.
+- [ ] Re-run the preflight, activate the corrected Home result, and prove the
+  active profile exposes both GTK outputs and the ColorChooser schema/cache.
+- [ ] Launch the exact active-profile =gtk4-widget-factory= through the real
+  EXWM environment without schema/data-directory overrides; require it to stay
+  alive without GLib schema errors and obtain Rafael's visible-window check.
 - [ ] Restart the X/EXWM session or reboot only after consumer checks, then
   inspect wallpaper/fit, Picom, opacity, cursor/icons, and the ultrawide result.
 - [ ] Complete real-display, contrast, and adjacent SSH/EXWM acceptance with

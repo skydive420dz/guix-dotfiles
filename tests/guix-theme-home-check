@@ -32,7 +32,10 @@ home_result=$store/00000000000000000000000000000000-home
 bundle=$store/11111111111111111111111111111111-sk-theme-home
 fish_file=$store/22222222222222222222222222222222-fish-config/config.fish
 fontconfig_file=$store/33333333333333333333333333333333-fontconfig/fonts.conf
-gtk_store=$store/44444444444444444444444444444444-gtk-4.22.1-bin
+gtk_out_store=$store/44444444444444444444444444444444-gtk-4.22.1
+gtk_bin_store=$store/55555555555555555555555555555555-gtk-4.22.1-bin
+wrong_gtk_out_store=$store/66666666666666666666666666666666-gtk-4.22.1
+wrong_gtk_bin_store=$store/77777777777777777777777777777777-gtk-4.22.1-bin
 commands=$tmp/commands
 records=$tmp/home-packages
 
@@ -48,7 +51,10 @@ mkdir -p \
     "$bundle/assets/wallpapers" \
     "$(dirname "$fish_file")" \
     "$(dirname "$fontconfig_file")" \
-    "$gtk_store/bin" \
+    "$gtk_out_store/share/glib-2.0/schemas" \
+    "$gtk_bin_store/bin" \
+    "$wrong_gtk_out_store/share/glib-2.0/schemas" \
+    "$wrong_gtk_bin_store/bin" \
     "$home_result/files/.config/emacs" \
     "$home_result/files/.config/fish" \
     "$home_result/files/.config/fontconfig" \
@@ -58,6 +64,7 @@ mkdir -p \
     "$home_result/files/.config/sk-theme" \
     "$home_result/files/.local/share/sk-theme/assets/wallpapers" \
     "$home_result/profile/bin" \
+    "$home_result/profile/share/glib-2.0/schemas" \
     "$home_result/profile/share/icons/Papirus-Dark" \
     "$home_result/profile/share/icons/Bibata-Modern-Ice" \
     "$home_result/profile/share/icons/hicolor" \
@@ -123,13 +130,26 @@ printf '%s\n' \
     '(sk:activate-repo-links)' >"$home_result/activate"
 cp "$home_result/activate" "$tmp/good-activate"
 
-cat >"$gtk_store/bin/gtk4-widget-factory" <<'EOF'
+cat >"$gtk_bin_store/bin/gtk4-widget-factory" <<'EOF'
 #!/bin/sh
 exit 0
 EOF
-chmod +x "$gtk_store/bin/gtk4-widget-factory"
-ln -s "$gtk_store/bin/gtk4-widget-factory" \
+chmod +x "$gtk_bin_store/bin/gtk4-widget-factory"
+ln -s "$gtk_bin_store/bin/gtk4-widget-factory" \
     "$home_result/profile/bin/gtk4-widget-factory"
+printf '%s\n' '<schemalist><schema id="org.gtk.gtk4.Settings.ColorChooser"/></schemalist>' \
+    >"$gtk_out_store/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml"
+cp "$gtk_out_store/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml" \
+    "$wrong_gtk_out_store/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml"
+cp "$gtk_bin_store/bin/gtk4-widget-factory" \
+    "$wrong_gtk_bin_store/bin/gtk4-widget-factory"
+chmod +x "$wrong_gtk_bin_store/bin/gtk4-widget-factory"
+ln -s \
+    "$gtk_out_store/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml" \
+    "$home_result/profile/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml"
+printf '%s\n' \
+    org.gtk.gtk4.Settings.ColorChooser custom-colors selected-color \
+    >"$home_result/profile/share/glib-2.0/schemas/gschemas.compiled"
 for index in \
     "$home_result/profile/share/icons/Papirus-Dark/index.theme" \
     "$home_result/profile/share/icons/Bibata-Modern-Ice/index.theme" \
@@ -205,17 +225,22 @@ EOF
 chmod +x "$commands"/*
 
 write_package_records() {
-    gtk_output=$1
+    mode=${1:-both}
     cat >"$records" <<EOF
-gtk 4.22.1 $gtk_output
 papirus-icon-theme 20250501 out
 bibata-cursor-theme 2.0.3 out
 hicolor-icon-theme 0.18 out
 font-awesome 4.7.0 out
 font-google-material-design-icons 4.0.0 out
 EOF
+    if [ "$mode" != no-out ]; then
+        printf 'gtk 4.22.1 out %s\n' "$gtk_out_store" >>"$records"
+    fi
+    if [ "$mode" != no-bin ]; then
+        printf 'gtk 4.22.1 bin %s\n' "$gtk_bin_store" >>"$records"
+    fi
 }
-write_package_records bin
+write_package_records
 
 run_check() {
     SK_THEME_HOME_STORE_PREFIX=$store \
@@ -284,11 +309,57 @@ expect_failure \
 cp "$tmp/good-manifest.scm" \
     "$fake_repo/guix/home/repo-links-manifest.scm"
 
-write_package_records out
+write_package_records no-bin
 expect_failure \
     "GTK 4 runtime without the bin output is rejected" \
     "candidate profile lacks gtk 4.22.1:bin"
-write_package_records bin
+write_package_records no-out
+expect_failure \
+    "GTK 4 runtime without the out output is rejected" \
+    "candidate profile lacks gtk 4.22.1:out"
+write_package_records
+
+ln -sf "$wrong_gtk_bin_store/bin/gtk4-widget-factory" \
+    "$home_result/profile/bin/gtk4-widget-factory"
+expect_failure \
+    "GTK 4 factory from undeclared bin provenance is rejected" \
+    "gtk4-widget-factory did not resolve from declared gtk 4.22.1:bin"
+ln -sf "$gtk_bin_store/bin/gtk4-widget-factory" \
+    "$home_result/profile/bin/gtk4-widget-factory"
+
+rm "$home_result/profile/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml"
+expect_failure \
+    "GTK 4 runtime without the ColorChooser schema is rejected" \
+    "candidate profile lacks GTK 4 ColorChooser schema"
+ln -s \
+    "$gtk_out_store/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml" \
+    "$home_result/profile/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml"
+
+ln -sf \
+    "$wrong_gtk_out_store/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml" \
+    "$home_result/profile/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml"
+expect_failure \
+    "GTK 4 schema from undeclared out provenance is rejected" \
+    "GTK 4 ColorChooser schema did not resolve from declared gtk 4.22.1:out"
+ln -sf \
+    "$gtk_out_store/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml" \
+    "$home_result/profile/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml"
+
+mv "$home_result/profile/share/glib-2.0/schemas/gschemas.compiled" \
+    "$tmp/good-gschemas.compiled"
+expect_failure \
+    "GTK 4 runtime without the merged schema cache is rejected" \
+    "candidate profile lacks merged GSettings schema cache"
+cp "$tmp/good-gschemas.compiled" \
+    "$home_result/profile/share/glib-2.0/schemas/gschemas.compiled"
+
+printf '%s\n' org.gtk.gtk4.Settings.ColorChooser custom-colors \
+    >"$home_result/profile/share/glib-2.0/schemas/gschemas.compiled"
+expect_failure \
+    "GTK 4 runtime with an incomplete schema cache is rejected" \
+    "candidate GSettings cache lacks GTK 4 schema term: selected-color"
+cp "$tmp/good-gschemas.compiled" \
+    "$home_result/profile/share/glib-2.0/schemas/gschemas.compiled"
 
 SK_FAKE_FONT_BREAK=1
 expect_failure \

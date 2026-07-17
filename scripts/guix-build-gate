@@ -758,11 +758,14 @@ validate_realized_package_ownership() {
             exit 1
         fi
     done
-    if ! profile_has_package_output "$home_records" gtk bin; then
-        printf '%s\n' \
-            'guix-build-gate: Home profile lacks declared package output: gtk:bin' >&2
-        exit 1
-    fi
+    for package_output in out bin; do
+        if ! profile_has_package_output "$home_records" gtk \
+            "$package_output"; then
+            printf 'guix-build-gate: Home profile lacks declared package output: gtk:%s\n' \
+                "$package_output" >&2
+            exit 1
+        fi
+    done
     for package in font-awesome font-google-material-design-icons \
         papirus-icon-theme bibata-cursor-theme hicolor-icon-theme; do
         if ! profile_has_package_output "$home_records" "$package" out; then

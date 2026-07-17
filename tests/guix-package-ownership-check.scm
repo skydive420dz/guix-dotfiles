@@ -44,14 +44,19 @@
 
 (assert (= (length home-specifications) 87)
         "reviewed Home specification list must contain exactly 87 packages")
-(assert (equal? home-output-specifications '("gtk:bin"))
+(assert (equal? home-output-specifications '("gtk:out" "gtk:bin"))
         "reviewed Home output specifications changed")
 (assert (equal? home-output-names '("gtk"))
         "reviewed Home output package names changed")
 (assert (equal? home-explicit '("emacs-racket-mode"))
         "reviewed explicit Home package names changed")
 (assert (= (length home) 89)
-        "reviewed Home ownership must contain exactly 89 package selections")
+        "reviewed Home ownership must contain exactly 89 unique package names")
+(assert (= (+ (length home-specifications)
+              (length home-output-specifications)
+              (length home-explicit))
+           90)
+        "reviewed Home declaration must contain exactly 90 selections")
 (assert
  (equal? home
          (append home-specifications home-output-names home-explicit))

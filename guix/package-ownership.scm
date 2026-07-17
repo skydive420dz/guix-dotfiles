@@ -1,8 +1,9 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; P3.3 expands the reviewed Home user/editor base to 89 package/output
-;; selections.  The six additions explicitly own the accepted global visual
-;; dependencies instead of relying on unrelated propagated package edges.
+;; P3.4 corrects the reviewed Home user/editor base to 90 package/output
+;; selections with 89 unique package names.  The seven visual selections
+;; explicitly own the accepted global dependencies instead of relying on
+;; unrelated propagated package edges.
 ;; Package-lint keeps the tracked Emacs Lisp project independent of mutable
 ;; ELPA state; Clojure mode, cljfmt, and clj-kondo provide the persistent
 ;; editor-side Clojure integration without leaking its JVM runtime into Home.
@@ -132,12 +133,18 @@
           %guixpc-home-emacs-package-specifications
           %guixpc-home-development-package-specifications))
 
-;; gtk4-widget-factory is deliberately selected from GTK's "bin" output.
-;; Keeping the output-qualified specification separate prevents
-;; specification->package from silently treating "gtk:bin" as a package name.
+;; GTK's runtime data and gtk4-widget-factory are deliberately selected from
+;; its "out" and "bin" outputs.  The out output supplies GTK 4's GSettings
+;; schemas; the bin output supplies the visual test application.  Keeping the
+;; output-qualified specifications separate prevents specification->package
+;; from silently treating them as package names.
 (define %guixpc-home-output-package-specifications
-  '("gtk:bin"))
+  '("gtk:out"
+    "gtk:bin"))
 
+;; This is the de-duplicated package-name projection of the output selections.
+;; Package-name ownership, overlap, and profile-presence gates consume it;
+;; output-specific gates independently require both declared outputs.
 (define %guixpc-home-output-package-names
   '("gtk"))
 

@@ -16,10 +16,12 @@ baseline and semantic-token architecture are accepted complete from published
 checkpoint =8933827=.  Emacs, Kitty, Fish, Xinit, Picom, and wallpaper have
 traceable live owners.  At that baseline GTK 3/4, icons, and the cursor had no
 declared GuixPC policy.  P3.2 records their accepted offline production policy,
-and P3.3 now supplies immutable candidate owners without activating them.  The
-live Emacs background matched Kitty's declared =#0d0e1c= canvas, but no running
-Kitty parser was sampled; their full palettes and different opacity mechanisms
-are not one contract.
+and P3.3 supplies immutable candidate owners.  P3.4 activated those owners as
+Home generation 43, passed exact fresh Fish/Emacs assertions, and kept fresh
+Kitty and GTK 3 startup probes alive for five seconds.  It then stopped when
+the GTK 4 factory exposed a missing profile schema.  The live Emacs background
+matched Kitty's declared =#0d0e1c= canvas, but its palette and opacity
+mechanism are not one contract with Kitty.
 
 Rafael accepted the recommended Phase 3 visual bundle, including the global
 JetBrainsMono Nerd Font roles, retained wallpaper, and 11 pt UI size.  P3.2's
@@ -28,8 +30,10 @@ published schema-v2 checkpoint =b74a98d= adds the inert production token datum,
 freezes the exact reviewed Modus 4.4.0 role/ANSI mapping and source provenance,
 and extends offline validation/rendering without wiring a live target.  P3.3
 then renders one complete Kitty config rather than a forbidden include, keeps
-Qt out of scope, and builds the immutable Home candidate while leaving the
-running desktop unchanged.
+Qt out of scope, and builds the immutable Home candidate.  P3.4's correction
+explicitly owns both =gtk:out= and =gtk:bin=; its isolated Home candidate has
+94 top-level profile records and passes the strengthened schema/provenance gate
+but is not yet published or active.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -76,7 +80,12 @@ evidence.
 [[file:docs/audits/2026-07-17-p3.3-immutable-theme-home-wiring.org][The P3.3 immutable Home wiring record]] owns the isolated theme derivation,
 candidate Home mappings and package outputs, Kitty ownership transition,
 realized build evidence, and the exact P3.4 activation/rollback handoff.  It
-contains no Home activation, consumer restart, GUI launch, or visual acceptance.
+records no P3.3 activation, consumer restart, GUI launch, or visual acceptance
+evidence.
+[[file:docs/audits/2026-07-17-p3.4-theme-activation.org][The P3.4 activation and GTK schema record]] owns generation 43 activation,
+the live ownership and fresh-consumer evidence, the GTK 4 stop/root cause, and
+the corrected isolated candidate.  It contains no session restart, reboot, or
+complete visual acceptance.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -113,10 +122,20 @@ adapter, parser, package, font, icon, cursor, and activation-order checks.
 Implementation checkpoint =530eb250e2e876f20b3c553be39533e5548cfb6d=
 and evidence checkpoint =00bf260d614ce4e5e4d023a7fba09826da48ae80=
 are published; fetched =HEAD= and =origin/main= equal =00bf260= at
-ahead/behind =0/0=.  Active Home generation 42 and every previous live owner
-remain unchanged.  P3.4 owns activation, live-owner inspection, consumer
-restarts, and real-display acceptance.  Source, build, activation, live, and
-visual acceptance remain different gates.
+ahead/behind =0/0=.
+
+P3.4 is active.  Published closure =eeedb461= was clean and upstream-equal
+before activation.  Home generation 43 at
+=/gnu/store/1slsnsfv8avdqzi3fsf0xhigyv6vfmal-home= owns the generated theme
+files.  Exact fresh Fish/Emacs assertions pass, while fresh Kitty and GTK 3
+startup probes remained alive for five seconds.  The GTK 4 factory correctly
+stopped acceptance because P3.3 selected only =gtk:bin=: the referenced
+=gtk:out= schema remained outside the profile.  The corrected isolated
+candidate =/gnu/store/yr959z61ml5wzvxc2ad3vm93nmrm7kd9-home= owns both
+outputs, has 94 top-level profile records, and passes the strengthened complete
+source and immutable-candidate gates.  It is not published or active.  No
+session restart, reboot, or visual acceptance has occurred.  Source, build,
+publication, activation, live, and visual acceptance remain different gates.
 
 P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
 parked.  Generation deletion and store collection remain Phase 5 work behind
@@ -124,11 +143,12 @@ the restore-tested-backup gate.
 
 ** Ready
 
-- [ ] P3.4: after publishing this status-only closure checkpoint and
-  rechecking clean upstream equality, record generation 42 and its legacy
-  Kitty source, run the read-only transition preflight, activate Home, inspect
-  every owner, and hand-test Kitty, Fish, Emacs, GTK 3/4, fonts, icons, cursor,
-  Picom, wallpaper, transparency, and the real display.
+- [ ] P3.4: publish the GTK output/schema correction, verify clean upstream
+  equality, re-run the 14-live-plus-one-retired preflight, and activate the
+  corrected Home result.  Re-test the exact active-profile GTK 4 factory from
+  the real EXWM environment before any session restart.  Then hand-test fonts,
+  icons, cursor, Picom, wallpaper, transparency, contrast, and the real
+  ultrawide display.
 
 ** Completed
 
@@ -1979,7 +1999,7 @@ scripts/guix-bootstrap prepare
 
 =--plan= validates the complete channel lock, chooses and freezes a runnable
 immutable user Pull or System Guix profile, plans the three declaration links,
-runs the 14-link Home preflight, and executes the authenticated build-gate
+runs the 14-live-plus-one-retired Home preflight, and executes the authenticated build-gate
 plan.  Its time-machine evaluation may fetch or add authenticated immutable
 store/cache objects.  It does not activate a live profile or generation, pull,
 reconfigure, reboot, alter retention, or collect garbage.

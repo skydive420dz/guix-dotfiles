@@ -285,6 +285,7 @@ require_record() {
     ' "$SK_FAKE_HOME_MANIFEST"
 }
 
+require_record gtk 4.22.1 out
 require_record gtk 4.22.1 bin
 require_record font-awesome 4.7.0 out
 require_record font-google-material-design-icons 4.0.0 out
@@ -507,6 +508,7 @@ reset_fake_home_manifest() {
         'papirus-icon-theme	20250501	out	/gnu/store/fake-papirus-icon-theme' \
         'bibata-cursor-theme	2.0.3	out	/gnu/store/fake-bibata-cursor-theme' \
         'hicolor-icon-theme	0.18	out	/gnu/store/fake-hicolor-icon-theme' \
+        'gtk	4.22.1	out	/gnu/store/fake-gtk-out' \
         'gtk	4.22.1	bin	/gnu/store/fake-gtk-bin' \
         >>"$fake_home_manifest"
 }
@@ -1122,9 +1124,16 @@ for package_output in out terminfo; do
     reset_fake_system_manifest
 done
 
-replace_fake_manifest_output "$fake_home_manifest" gtk out
+remove_fake_manifest_package_output "$fake_home_manifest" gtk out
 if output=$(run_gate 2>&1); then
-    fail 'Home manifest with gtk:out instead of gtk:bin passed the gate'
+    fail 'Home manifest without gtk:out passed the gate'
+fi
+contains "$output" 'Home profile lacks declared package output: gtk:out'
+reset_fake_home_manifest
+
+remove_fake_manifest_package_output "$fake_home_manifest" gtk bin
+if output=$(run_gate 2>&1); then
+    fail 'Home manifest without gtk:bin passed the gate'
 fi
 contains "$output" 'Home profile lacks declared package output: gtk:bin'
 reset_fake_home_manifest

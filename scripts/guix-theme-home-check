@@ -204,6 +204,26 @@ require_record() {
         fail "candidate profile lacks $name $version:$output"
 }
 
+record_store() {
+    name=$1
+    version=$2
+    output=$3
+    awk -v name="$name" -v version="$version" -v output="$output" '
+        $1 == name && $2 == version && $3 == output {
+            count += 1
+            store = $4
+        }
+        END {
+            if (count == 1 && store != "") {
+                print store
+            } else {
+                exit 1
+            }
+        }
+    ' "$records"
+}
+
+require_record gtk 4.22.1 out
 require_record gtk 4.22.1 bin
 require_record papirus-icon-theme 20250501 out
 require_record bibata-cursor-theme 2.0.3 out
@@ -211,12 +231,32 @@ require_record hicolor-icon-theme 0.18 out
 require_record font-awesome 4.7.0 out
 require_record font-google-material-design-icons 4.0.0 out
 
+gtk_out_store=$(record_store gtk 4.22.1 out) || \
+    fail "candidate profile does not have exactly one gtk 4.22.1:out store"
+gtk_bin_store=$(record_store gtk 4.22.1 bin) || \
+    fail "candidate profile does not have exactly one gtk 4.22.1:bin store"
+
 gtk_factory=$profile/bin/gtk4-widget-factory
 [ -x "$gtk_factory" ] || fail "candidate profile lacks gtk4-widget-factory"
-case $(readlink -f "$gtk_factory") in
-    "$store_prefix"/*-gtk-4.22.1-bin/bin/gtk4-widget-factory) ;;
-    *) fail "gtk4-widget-factory did not resolve from gtk 4.22.1:bin" ;;
-esac
+[ "$(readlink -f "$gtk_factory")" = \
+    "$gtk_bin_store/bin/gtk4-widget-factory" ] || \
+    fail "gtk4-widget-factory did not resolve from declared gtk 4.22.1:bin"
+
+gtk_schema_dir=$profile/share/glib-2.0/schemas
+gtk_color_schema=$gtk_schema_dir/org.gtk.gtk4.Settings.ColorChooser.gschema.xml
+gtk_schema_cache=$gtk_schema_dir/gschemas.compiled
+[ -r "$gtk_color_schema" ] || \
+    fail "candidate profile lacks GTK 4 ColorChooser schema"
+[ "$(readlink -f "$gtk_color_schema")" = \
+    "$gtk_out_store/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml" ] || \
+    fail "GTK 4 ColorChooser schema did not resolve from declared gtk 4.22.1:out"
+[ -r "$gtk_schema_cache" ] || \
+    fail "candidate profile lacks merged GSettings schema cache"
+for schema_term in \
+    org.gtk.gtk4.Settings.ColorChooser custom-colors selected-color; do
+    LC_ALL=C grep -aFq "$schema_term" "$gtk_schema_cache" || \
+        fail "candidate GSettings cache lacks GTK 4 schema term: $schema_term"
+done
 
 for icon_index in \
     "$profile/share/icons/Papirus-Dark/index.theme" \
