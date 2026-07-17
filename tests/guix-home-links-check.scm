@@ -10,6 +10,10 @@
 (define parent-links
   '((".config/blocked/child" "source/one")
     (".config/other/child" "source/two")))
+(define retired-links
+  '((".config/retired/item"
+     "source/legacy"
+     "expected/retired")))
 
 (primitive-load helper)
 
@@ -45,6 +49,14 @@
   (catch #t
     (lambda ()
       (sk:check-repo-links home repo selected-links)
+      #f)
+    (lambda _ #t)))
+
+(define (retired-preflight-fails? selected-links store-root)
+  (catch #t
+    (lambda ()
+      (sk:check-retired-repo-links
+       home repo selected-links store-root)
       #f)
     (lambda _ #t)))
 
@@ -132,5 +144,55 @@
         "dangling parent was overwritten")
 (assert (not (sk:path-stat other-child))
         "activation partially changed links after a dangling parent")
+
+;; A retiring target may be absent, the exact legacy link, or an immutable
+;; store-backed link whose bytes match the reviewed golden.
+(define retired-target
+  (string-append home "/.config/retired/item"))
+(define retired-legacy
+  (string-append repo "/source/legacy"))
+(define retired-golden
+  (string-append repo "/expected/retired"))
+(define fake-store
+  (string-append root "/store"))
+(define matching-store-file
+  (string-append fake-store "/theme/kitty.conf"))
+(define wrong-store-file
+  (string-append fake-store "/theme/wrong.conf"))
+(define matching-nonstore-file
+  (string-append root "/outside/kitty.conf"))
+
+(write-file retired-legacy "legacy\n")
+(write-file retired-golden "production\n")
+(write-file matching-store-file "production\n")
+(write-file wrong-store-file "wrong\n")
+(write-file matching-nonstore-file "production\n")
+
+(sk:check-retired-repo-links home repo retired-links fake-store)
+(sk:mkdir-p (dirname retired-target))
+(replace-with-link retired-target retired-legacy)
+(sk:check-retired-repo-links home repo retired-links fake-store)
+
+(replace-with-link retired-target matching-store-file)
+(sk:check-retired-repo-links home repo retired-links fake-store)
+
+(replace-with-link retired-target wrong-store-file)
+(assert (retired-preflight-fails? retired-links fake-store)
+        "wrong store-backed retired bytes passed preflight")
+
+(replace-with-link retired-target matching-nonstore-file)
+(assert (retired-preflight-fails? retired-links fake-store)
+        "matching bytes outside the store passed retired preflight")
+
+(replace-with-link retired-target (string-append root "/absent-retired"))
+(assert (retired-preflight-fails? retired-links fake-store)
+        "dangling retired link passed preflight")
+
+(delete-path retired-target)
+(write-file retired-target "blocked retired target\n")
+(assert (retired-preflight-fails? retired-links fake-store)
+        "regular retired target passed preflight")
+(assert (string=? (read-file retired-target) "blocked retired target\n")
+        "retired preflight changed a blocked target")
 
 (format #t "PASS: Guix Home repo-link activation safety~%")

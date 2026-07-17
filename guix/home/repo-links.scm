@@ -1,5 +1,8 @@
 ;; Shared two-pass link activation used by Guix Home and its focused tests.
 
+(use-modules (ice-9 textual-ports)
+             (srfi srfi-1))
+
 (define (sk:path-stat path)
   (false-if-exception (lstat path)))
 
@@ -109,3 +112,87 @@
   (for-each
    (lambda (link) (sk:install-repo-link home repo link))
    links))
+
+(define (sk:file-text path)
+  (call-with-input-file path get-string-all))
+
+(define (sk:path-below? path root)
+  (catch #t
+    (lambda ()
+      (let* ((resolved-path (canonicalize-path path))
+             (resolved-root (canonicalize-path root))
+             (prefix (string-append resolved-root "/")))
+        (string-prefix? prefix resolved-path)))
+    (lambda _ #f)))
+
+(define* (sk:retired-repo-link-problem
+          home repo link #:optional (store-root "/gnu/store"))
+  (let* ((target-path (string-append home "/" (car link)))
+         (legacy-path (string-append repo "/" (cadr link)))
+         (golden-path (string-append repo "/" (caddr link)))
+         (parent-problem (sk:nearest-parent-problem target-path))
+         (target-entry (sk:path-stat target-path)))
+    (cond
+     ((not (file-exists? legacy-path))
+      (list 'retired-source-missing target-path legacy-path))
+     ((not (file-exists? golden-path))
+      (list 'retired-golden-missing target-path golden-path))
+     (parent-problem
+      (list (car parent-problem) target-path (cadr parent-problem)))
+     ((not target-entry) #f)
+     ((not (sk:symlink-path? target-path))
+      (list 'retired-blocked target-path))
+     ((not (file-exists? target-path))
+      (list 'retired-dangling target-path (readlink target-path)))
+     ((string=? (readlink target-path) legacy-path) #f)
+     ((and (sk:path-below? target-path store-root)
+           (string=? (sk:file-text target-path)
+                     (sk:file-text golden-path)))
+      #f)
+     (else
+      (list 'retired-mismatch target-path (readlink target-path))))))
+
+(define (sk:report-retired-repo-link-problem problem)
+  (let ((port (current-error-port)))
+    (case (car problem)
+      ((retired-source-missing)
+       (format port "repo-links: RETIRED source missing for ~a: ~a~%"
+               (cadr problem) (caddr problem)))
+      ((retired-golden-missing)
+       (format port "repo-links: RETIRED golden missing for ~a: ~a~%"
+               (cadr problem) (caddr problem)))
+      ((dangling-parent)
+       (format port "repo-links: DANGLING parent for ~a: ~a~%"
+               (cadr problem) (caddr problem)))
+      ((blocked-parent)
+       (format port "repo-links: BLOCKED parent for ~a: ~a is not a directory~%"
+               (cadr problem) (caddr problem)))
+      ((retired-blocked)
+       (format port
+               "repo-links: RETIRED BLOCKED ~a: expected a migration symlink~%"
+               (cadr problem)))
+      ((retired-dangling)
+       (format port "repo-links: RETIRED DANGLING ~a -> ~a~%"
+               (cadr problem) (caddr problem)))
+      ((retired-mismatch)
+       (format port "repo-links: RETIRED MISMATCH ~a -> ~a~%"
+               (cadr problem) (caddr problem))))))
+
+(define* (sk:check-retired-repo-links
+          home repo links #:optional (store-root "/gnu/store"))
+  "Validate retired LINKS without changing them.
+
+Each entry is (TARGET LEGACY-SOURCE PRODUCTION-GOLDEN).  TARGET may be absent,
+the exact legacy repository symlink, or a link resolving below STORE-ROOT whose
+bytes match the production golden."
+  (let ((problems
+         (filter-map
+          (lambda (link)
+            (sk:retired-repo-link-problem
+             home repo link store-root))
+          links)))
+    (if (null? problems)
+        #t
+        (begin
+          (for-each sk:report-retired-repo-link-problem problems)
+          (error "retired repo link preflight refused; nothing was changed")))))

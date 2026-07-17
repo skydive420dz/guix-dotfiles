@@ -39,6 +39,7 @@ shellcheck \
     "$repo/scripts/guix-generation-retention" \
     "$repo/scripts/guix-disk-health" \
     "$repo/scripts/guix-lisp-shell" \
+    "$repo/scripts/guix-theme-home-check" \
     "$repo/scripts/clojure-project" \
     "$repo/scripts/clojure-project-check" \
     "$repo/scripts/lisp-project-check" \
@@ -58,6 +59,7 @@ shellcheck \
     "$repo/tests/guix-generation-retention-check" \
     "$repo/tests/guix-disk-health-check" \
     "$repo/tests/guix-lisp-shell-check" \
+    "$repo/tests/guix-theme-home-check" \
     "$repo/tests/clojure-project-check" \
     "$repo/tests/lisp-project-check" \
     "$repo/tests/guix-home-links-check" \
@@ -120,6 +122,7 @@ else
     printf '%s\n' 'SKIP: theme fixtures (Guile or Guild unavailable)'
 fi
 "$repo/tests/guix-lisp-shell-check"
+"$repo/tests/guix-theme-home-check"
 "$repo/tests/clojure-project-check"
 "$repo/tests/lisp-project-check"
 "$repo/tests/guix-package-ownership-check"

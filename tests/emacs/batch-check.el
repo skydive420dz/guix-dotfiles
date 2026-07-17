@@ -203,6 +203,35 @@
         (should (or (string-prefix-p "/gnu/store/" canonical)
                     (string-prefix-p sk/check-sandbox-root canonical)))))))
 
+(ert-deftest sk/check-preactivation-theme-fallback ()
+  "A missing or mutable Home adapter must preserve the legacy source result."
+  (should-not (featurep 'sk-theme-generated))
+  (should (equal sk/legacy-fixed-font-family "Iosevka Term"))
+  (let (default-face-arguments)
+    (cl-letf (((symbol-function 'set-face-attribute)
+               (lambda (face frame &rest arguments)
+                 (when (eq face 'default)
+                   (setq default-face-arguments
+                         (cons frame arguments)))))
+              ((symbol-function 'display-graphic-p)
+               (lambda (&optional _display) nil)))
+      (sk/setup-fonts))
+    (should
+     (equal default-face-arguments
+            (list nil
+                  :family sk/legacy-fixed-font-family
+                  :height 120))))
+  (should-not (file-readable-p sk/theme-generated-file))
+  (let ((mutable-adapter
+         (expand-file-name "mutable-theme.el" temporary-file-directory)))
+    (unwind-protect
+        (progn
+          (with-temp-file mutable-adapter
+            (insert "(provide 'sk-theme-generated)\n"))
+          (should-not (sk/immutable-store-file-p mutable-adapter)))
+      (when (file-exists-p mutable-adapter)
+        (delete-file mutable-adapter)))))
+
 (ert-deftest sk/check-profile-keyed-native-comp-and-org-generation ()
   (let* ((profile-link
           (expand-file-name ".guix-home/profile" (getenv "HOME")))

@@ -1,0 +1,258 @@
+#!/bin/sh
+
+set -eu
+
+if [ "$#" -ne 2 ]; then
+    printf 'usage: %s HOME-RESULT REPOSITORY\n' "$0" >&2
+    exit 64
+fi
+
+home_result=$(readlink -f "$1")
+repo=$(readlink -f "$2")
+profile=$home_result/profile
+files=$home_result/files
+goldens=$repo/fixtures/theme/expected-production
+store_prefix_input=${SK_THEME_HOME_STORE_PREFIX:-/gnu/store}
+guix=${SK_THEME_HOME_GUIX:-${GUIX:-$HOME/.config/guix/current/bin/guix}}
+fish=${SK_THEME_HOME_FISH:-$(command -v fish || true)}
+kitty=${SK_THEME_HOME_KITTY:-$(command -v kitty || true)}
+emacs=${SK_THEME_HOME_EMACS:-$profile/bin/emacs}
+fc_match=${SK_THEME_HOME_FC_MATCH:-$(command -v fc-match || true)}
+
+fail() {
+    printf 'guix-theme-home-check: %s\n' "$1" >&2
+    exit 1
+}
+
+case $store_prefix_input in
+    /*) ;;
+    *) fail "store prefix is not absolute: $store_prefix_input" ;;
+esac
+store_prefix=$(readlink -f "$store_prefix_input") || \
+    fail "store prefix cannot be resolved: $store_prefix_input"
+[ "$store_prefix" != / ] || fail "store prefix cannot be the filesystem root"
+
+case $home_result in
+    "$store_prefix"/*-home) ;;
+    *) fail "Home result is not an immutable store item: $home_result" ;;
+esac
+
+for command_path in "$guix" "$fish" "$kitty" "$emacs" "$fc_match"; do
+    [ -x "$command_path" ] || \
+        fail "required candidate command is unavailable: $command_path"
+done
+
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/guix-theme-home-check.XXXXXX")
+cleanup() {
+    rm -rf -- "$tmp"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+check_store_mapping() {
+    target=$1
+    expected=$2
+    [ -r "$target" ] || fail "candidate target is unreadable: $target"
+    resolved=$(readlink -f "$target") || \
+        fail "candidate target cannot be resolved: $target"
+    case $resolved in
+        "$store_prefix"/*) ;;
+        *) fail "candidate target is not store-backed: $target -> $resolved" ;;
+    esac
+    cmp -s "$target" "$expected" || \
+        fail "candidate bytes differ from production golden: $target"
+}
+
+check_store_mapping \
+    "$files/.config/emacs/sk-theme-generated.el" \
+    "$goldens/emacs.el"
+check_store_mapping \
+    "$files/.config/kitty/kitty.conf" \
+    "$goldens/kitty.conf"
+check_store_mapping \
+    "$files/.config/gtk-3.0/settings.ini" \
+    "$goldens/gtk3.ini"
+check_store_mapping \
+    "$files/.config/gtk-4.0/settings.ini" \
+    "$goldens/gtk4.ini"
+check_store_mapping \
+    "$files/.config/sk-theme/x-session.sh" \
+    "$goldens/x-session.sh"
+check_store_mapping \
+    "$files/.config/sk-theme/tokens.scm" \
+    "$repo/theme/tokens.scm"
+check_store_mapping \
+    "$files/.local/share/sk-theme/assets/wallpapers/waifu-cyberpunk.png" \
+    "$repo/assets/wallpapers/waifu-cyberpunk.png"
+
+fish_config=$files/.config/fish/config.fish
+fish_golden=$goldens/fish.fish
+[ -r "$fish_config" ] || fail "candidate Fish configuration is missing"
+fish_bytes=$(wc -c <"$fish_golden")
+fish_serialized_bytes=$((fish_bytes + 1))
+tail -c "$fish_serialized_bytes" "$fish_config" >"$tmp/fish-serialized"
+head -c "$fish_bytes" "$tmp/fish-serialized" >"$tmp/fish-suffix"
+cmp -s "$tmp/fish-suffix" "$fish_golden" || \
+    fail "generated Fish adapter is not the final exact config fragment"
+[ "$(tail -c 1 "$tmp/fish-serialized" | wc -l)" -eq 1 ] || \
+    fail "candidate Fish config has an unexpected post-adapter serialization"
+[ "$(grep -Fxc 'function fish_prompt' "$fish_config" || true)" -eq 1 ] || \
+    fail "candidate Fish config does not have exactly one prompt owner"
+"$fish" -n "$fish_config" || fail "candidate Fish config failed fish -n"
+
+sh -n "$files/.config/sk-theme/x-session.sh" || \
+    fail "generated X-session adapter failed sh -n"
+sh -n "$repo/shell/xinitrc" || fail "Xinit consumer failed sh -n"
+
+HOME="$tmp/home" \
+XDG_CACHE_HOME="$tmp/cache" \
+XDG_CONFIG_HOME="$tmp/config" \
+DISPLAY='' \
+DBUS_SESSION_BUS_ADDRESS='' \
+"$emacs" -Q --batch \
+    -l "$files/.config/emacs/sk-theme-generated.el" \
+    --eval \
+    '(unless
+         (and (featurep (quote sk-theme-generated))
+              (memq (quote modus-vivendi-tinted) custom-enabled-themes)
+              (equal (face-attribute (quote default) :family nil t)
+                     "JetBrainsMono Nerd Font Mono")
+              (= (face-attribute (quote default) :height nil t) 120)
+              (equal (face-attribute (quote variable-pitch) :family nil t)
+                     "JetBrainsMono Nerd Font")
+              (= (face-attribute (quote variable-pitch) :height nil t) 110))
+       (error "candidate generated Emacs adapter assertion failed"))'
+
+HOME="$tmp/home" \
+XDG_CACHE_HOME="$tmp/cache" \
+XDG_CONFIG_HOME="$tmp/config" \
+DISPLAY='' \
+DBUS_SESSION_BUS_ADDRESS='' \
+"$kitty" +runpy \
+    'import sys
+from kitty.config import parse_config
+bad = []
+with open(sys.argv[1], encoding="utf-8") as stream:
+    parsed = parse_config(
+        stream, accumulate_bad_lines=bad, allow_geninclude=False)
+if bad or not parsed:
+    raise SystemExit("candidate Kitty configuration failed parser checks")' \
+    "$files/.config/kitty/kitty.conf"
+
+adapter_line=$(grep -n -F \
+    '(load sk/theme-generated-file nil '\''nomessage)' \
+    "$repo/emacs/init.el" | awk -F: 'NR == 1 { print $1 }')
+ui_line=$(grep -n -F "(require 'sk-ui)" "$repo/emacs/init.el" |
+    awk -F: 'NR == 1 { print $1 }')
+if [ -z "$adapter_line" ] ||
+    [ -z "$ui_line" ] ||
+    [ "$adapter_line" -ge "$ui_line" ]; then
+    fail "Emacs adapter is not loaded before sk-ui"
+fi
+
+if ! awk '
+    index($0, "update-symlinks") {
+        update_count += 1
+        if (update_count == 1) {
+            update = NR ":" index($0, "update-symlinks")
+        }
+    }
+    index($0, "sk:activate-repo-links") {
+        repo_count += 1
+        if (repo_count == 1) {
+            repo = NR ":" index($0, "sk:activate-repo-links")
+        }
+    }
+    END {
+        split(update, u, ":")
+        split(repo, r, ":")
+        exit !(update_count == 1 && repo_count == 1 &&
+               (u[1] < r[1] || (u[1] == r[1] && u[2] < r[2])))
+    }
+' "$home_result/activate"; then
+    fail "candidate activation lacks exactly one ordered Home/repo-link transition"
+fi
+
+live_kitty_count=$(awk '
+    /\(define %guixpc-retired-repo-links/ { retired = 1 }
+    !retired && /\.config\/kitty\/kitty\.conf/ { count += 1 }
+    END { print count + 0 }
+' "$repo/guix/home/repo-links-manifest.scm")
+retired_kitty_count=$(awk '
+    /\(define %guixpc-retired-repo-links/ { retired = 1 }
+    retired && /\.config\/kitty\/kitty\.conf/ { count += 1 }
+    END { print count + 0 }
+' "$repo/guix/home/repo-links-manifest.scm")
+[ "$live_kitty_count:$retired_kitty_count" = 0:1 ] || \
+    fail "Kitty repository ownership did not migrate exactly once"
+[ -r "$repo/kitty/kitty.conf" ] || \
+    fail "legacy Kitty source required by the previous Home generation is missing"
+
+records=$tmp/home-packages
+"$guix" package -p "$profile" --list-installed >"$records"
+
+require_record() {
+    name=$1
+    version=$2
+    output=$3
+    awk -v name="$name" -v version="$version" -v output="$output" '
+        $1 == name && $2 == version && $3 == output { found = 1 }
+        END { exit !found }
+    ' "$records" || \
+        fail "candidate profile lacks $name $version:$output"
+}
+
+require_record gtk 4.22.1 bin
+require_record papirus-icon-theme 20250501 out
+require_record bibata-cursor-theme 2.0.3 out
+require_record hicolor-icon-theme 0.18 out
+require_record font-awesome 4.7.0 out
+require_record font-google-material-design-icons 4.0.0 out
+
+gtk_factory=$profile/bin/gtk4-widget-factory
+[ -x "$gtk_factory" ] || fail "candidate profile lacks gtk4-widget-factory"
+case $(readlink -f "$gtk_factory") in
+    "$store_prefix"/*-gtk-4.22.1-bin/bin/gtk4-widget-factory) ;;
+    *) fail "gtk4-widget-factory did not resolve from gtk 4.22.1:bin" ;;
+esac
+
+for icon_index in \
+    "$profile/share/icons/Papirus-Dark/index.theme" \
+    "$profile/share/icons/Bibata-Modern-Ice/index.theme" \
+    "$profile/share/icons/hicolor/index.theme"; do
+    [ -r "$icon_index" ] || fail "candidate icon policy is missing $icon_index"
+done
+
+mkdir -p "$tmp/font-home"
+ln -s "$home_result" "$tmp/font-home/.guix-home"
+
+check_font() {
+    pattern=$1
+    expected=$2
+    result=$(
+        HOME="$tmp/font-home" \
+        FONTCONFIG_FILE="$files/.config/fontconfig/fonts.conf" \
+        "$fc_match" -f '%{family[0]}\n%{file}\n' "$pattern"
+    )
+    family=$(printf '%s\n' "$result" | sed -n '1p')
+    file=$(printf '%s\n' "$result" | sed -n '2p')
+    [ "$family" = "$expected" ] || \
+        fail "font pattern $pattern resolved as $family, expected $expected"
+    case $file in
+        "$tmp/font-home/.guix-home/profile/share/fonts/"* | \
+            "$store_prefix"/*)
+            ;;
+        *) fail "font pattern $pattern escaped the candidate profile: $file" ;;
+    esac
+}
+
+check_font "JetBrainsMono Nerd Font Mono" "JetBrainsMono Nerd Font Mono"
+check_font "JetBrainsMono Nerd Font" "JetBrainsMono Nerd Font"
+check_font "Symbols Nerd Font Mono" "Symbols Nerd Font Mono"
+check_font "Noto Color Emoji" "Noto Color Emoji"
+check_font "Font Awesome" "FontAwesome"
+check_font "Material Icons" "Material Icons"
+
+printf 'guix-theme-home-check: PASS (%s)\n' "$home_result"

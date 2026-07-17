@@ -49,6 +49,7 @@ fake_emacs_check=$sandbox_repo/scripts/emacs-check
 fake_emacs_clojure_check=$sandbox_repo/scripts/emacs-clojure-check
 fake_emacs_racket_check=$sandbox_repo/scripts/emacs-racket-check
 fake_emacs_fennel_check=$sandbox_repo/scripts/emacs-fennel-check
+fake_theme_home_check=$sandbox_repo/scripts/guix-theme-home-check
 fake_clojure_project_check=$sandbox_repo/scripts/clojure-project-check
 fake_racket_project_check=$sandbox_repo/scripts/racket-project-check
 fake_fennel_project_check=$sandbox_repo/scripts/fennel-project-check
@@ -59,6 +60,8 @@ mkdir -p "$sandbox_repo/scripts" "$sandbox_repo/guix/home" \
     "$sandbox_repo/guix/systems" "$sandbox_repo/guix/manifests" \
     "$sandbox_repo/guix/modules/sk" "$sandbox_repo/fixtures/racket" \
     "$sandbox_repo/fixtures/fennel" \
+    "$sandbox_repo/fixtures/theme/expected-production" \
+    "$sandbox_repo/assets/wallpapers" "$sandbox_repo/theme" \
     "$sandbox_repo/guile" \
     "$(dirname "$fake_guix")" "$(dirname "$fake_guile")" \
     "$fake_profile/bin" "$fake_system/profile/bin" \
@@ -66,7 +69,17 @@ mkdir -p "$sandbox_repo/scripts" "$sandbox_repo/guix/home" \
     "$fake_system/profile/share/guile/site/3.0/ice-9" \
     "$fake_system/profile/share/terminfo/x" \
     "$fake_home/profile/bin" "$fake_home/profile/share/fish/functions" \
-    "$fake_home/files/.config/fish"
+    "$fake_home/profile/share/icons/Papirus-Dark" \
+    "$fake_home/profile/share/icons/Bibata-Modern-Ice" \
+    "$fake_home/profile/share/icons/hicolor" \
+    "$fake_home/files/.config/emacs" \
+    "$fake_home/files/.config/fish" \
+    "$fake_home/files/.config/fontconfig" \
+    "$fake_home/files/.config/gtk-3.0" \
+    "$fake_home/files/.config/gtk-4.0" \
+    "$fake_home/files/.config/kitty" \
+    "$fake_home/files/.config/sk-theme" \
+    "$fake_home/files/.local/share/sk-theme/assets/wallpapers"
 cp "$repo/scripts/guix-build-gate" "$gate"
 cp "$repo/scripts/lisp-project-check" \
     "$sandbox_repo/scripts/lisp-project-check"
@@ -81,6 +94,19 @@ cp "$repo/guix/package-ownership.scm" \
     "$sandbox_repo/guix/package-ownership.scm"
 cp "$repo/guix/modules/sk/emacs.scm" \
     "$sandbox_repo/guix/modules/sk/emacs.scm"
+cp "$repo/guix/modules/sk/theme.scm" \
+    "$sandbox_repo/guix/modules/sk/theme.scm"
+cp "$repo/guix/modules/sk/theme-home.scm" \
+    "$sandbox_repo/guix/modules/sk/theme-home.scm"
+cp "$repo/guix/home/repo-links.scm" \
+    "$sandbox_repo/guix/home/repo-links.scm"
+cp "$repo/guix/home/repo-links-manifest.scm" \
+    "$sandbox_repo/guix/home/repo-links-manifest.scm"
+cp "$repo/theme/tokens.scm" "$sandbox_repo/theme/tokens.scm"
+cp "$repo/assets/wallpapers/waifu-cyberpunk.png" \
+    "$sandbox_repo/assets/wallpapers/waifu-cyberpunk.png"
+cp "$repo"/fixtures/theme/expected-production/* \
+    "$sandbox_repo/fixtures/theme/expected-production/"
 cp -R "$repo/fixtures/elisp" "$sandbox_repo/fixtures/elisp"
 cp -R "$repo/fixtures/guile" "$sandbox_repo/fixtures/guile"
 cp -R "$repo/fixtures/common-lisp" "$sandbox_repo/fixtures/common-lisp"
@@ -212,6 +238,65 @@ if [ "${SK_FAKE_EMACS_FENNEL_MARKER:-1}" = 1 ]; then
 fi
 EOF
 chmod +x "$fake_emacs_fennel_check"
+cat >"$fake_theme_home_check" <<'EOF'
+#!/bin/sh
+set -eu
+
+[ "$#" -eq 2 ]
+[ "$1" = "$SK_FAKE_HOME" ]
+[ "$2" = "$SK_FAKE_REPO" ]
+[ "$SK_THEME_HOME_GUIX" = "$SK_FAKE_GUIX_PROFILE/bin/guix" ]
+[ "$SK_THEME_HOME_FISH" = "$SK_FAKE_SYSTEM/profile/bin/fish" ]
+[ "$SK_THEME_HOME_KITTY" = "$SK_FAKE_SYSTEM/profile/bin/kitty" ]
+[ "$SK_THEME_HOME_EMACS" = "$SK_FAKE_HOME/profile/bin/emacs" ]
+[ "$SK_THEME_HOME_FC_MATCH" = "$SK_FAKE_SYSTEM/profile/bin/fc-match" ]
+
+for command_path in "$SK_THEME_HOME_GUIX" "$SK_THEME_HOME_FISH" \
+    "$SK_THEME_HOME_KITTY" "$SK_THEME_HOME_EMACS" \
+    "$SK_THEME_HOME_FC_MATCH"; do
+    [ -x "$command_path" ]
+done
+
+for relative in \
+    .config/emacs/sk-theme-generated.el \
+    .config/fish/config.fish \
+    .config/fontconfig/fonts.conf \
+    .config/gtk-3.0/settings.ini \
+    .config/gtk-4.0/settings.ini \
+    .config/kitty/kitty.conf \
+    .config/sk-theme/tokens.scm \
+    .config/sk-theme/x-session.sh \
+    .local/share/sk-theme/assets/wallpapers/waifu-cyberpunk.png; do
+    [ -r "$SK_FAKE_HOME/files/$relative" ]
+done
+[ -r "$SK_FAKE_HOME/activate" ]
+[ -x "$SK_FAKE_HOME/profile/bin/gtk4-widget-factory" ]
+for icon_index in \
+    "$SK_FAKE_HOME/profile/share/icons/Papirus-Dark/index.theme" \
+    "$SK_FAKE_HOME/profile/share/icons/Bibata-Modern-Ice/index.theme" \
+    "$SK_FAKE_HOME/profile/share/icons/hicolor/index.theme"; do
+    [ -r "$icon_index" ]
+done
+
+require_record() {
+    awk -v name="$1" -v version="$2" -v output="$3" '
+        $1 == name && $2 == version && $3 == output { found = 1 }
+        END { exit !found }
+    ' "$SK_FAKE_HOME_MANIFEST"
+}
+
+require_record gtk 4.22.1 bin
+require_record font-awesome 4.7.0 out
+require_record font-google-material-design-icons 4.0.0 out
+require_record papirus-icon-theme 20250501 out
+require_record bibata-cursor-theme 2.0.3 out
+require_record hicolor-icon-theme 0.18 out
+
+printf '%s\n' THEME-HOME >>"$SK_FAKE_CANDIDATE_LOG"
+[ "${SK_FAKE_FAIL:-}" != theme-home ] || exit 95
+printf 'guix-theme-home-check: PASS (%s)\n' "$SK_FAKE_HOME"
+EOF
+chmod +x "$fake_theme_home_check"
 printf '%s\n' '(home-environment)' >"$sandbox_repo/guix/home/guixpc.scm"
 printf '%s\n' '(operating-system)' >"$sandbox_repo/guix/systems/guixpc.scm"
 printf '%s\n' '(define-module (sk development-tiers))' \
@@ -229,8 +314,9 @@ printf '%s\n' 'fake compiled Kitty terminfo' \
 printf '%s\n' 'fake compiled xterm-256color terminfo' \
     >"$fake_system/profile/share/terminfo/x/xterm-256color"
 
-for command in bluetoothctl curl dbus-update-activation-environment emacs fish \
-    git kitty picom reset rg startx vim xrandr xset xwallpaper; do
+for command in bluetoothctl curl dbus-update-activation-environment emacs \
+    fc-match fish git kitty picom reset rg startx vim xrandr xset \
+    xwallpaper; do
     printf '%s\n' '#!/bin/sh' 'exit 0' \
         >"$fake_system/profile/bin/$command"
     chmod +x "$fake_system/profile/bin/$command"
@@ -270,8 +356,8 @@ EOF
 write_fake_fish
 
 for command in bat btop chafa chromium clang cljfmt clj-kondo emacs fastfetch \
-    fzf gcc gdb guile jq lua lua-language-server make mediainfo pamixer \
-    pipemixer pylsp ranger ruff sbcl shellcheck shfmt; do
+    fzf gcc gdb gtk4-widget-factory guile jq lua lua-language-server make \
+    mediainfo pamixer pipemixer pylsp ranger ruff sbcl shellcheck shfmt; do
     printf '%s\n' '#!/bin/sh' 'exit 0' >"$fake_home/profile/bin/$command"
     chmod +x "$fake_home/profile/bin/$command"
 done
@@ -352,6 +438,30 @@ printf '%s\n' 'function fenv.main' 'end' \
 printf '%s\n' '# fake generated Fish config' \
     >"$fake_home/files/.config/fish/config.fish"
 printf '%s\n' '# fake generated profile' >"$fake_home/files/.profile"
+printf '%s\n' ';; fake generated Emacs theme adapter' \
+    >"$fake_home/files/.config/emacs/sk-theme-generated.el"
+printf '%s\n' '# fake generated Fontconfig policy' \
+    >"$fake_home/files/.config/fontconfig/fonts.conf"
+printf '%s\n' '# fake generated GTK 3 policy' \
+    >"$fake_home/files/.config/gtk-3.0/settings.ini"
+printf '%s\n' '# fake generated GTK 4 policy' \
+    >"$fake_home/files/.config/gtk-4.0/settings.ini"
+printf '%s\n' '# fake generated Kitty policy' \
+    >"$fake_home/files/.config/kitty/kitty.conf"
+printf '%s\n' ';; fake immutable theme tokens' \
+    >"$fake_home/files/.config/sk-theme/tokens.scm"
+printf '%s\n' '# fake generated X-session policy' \
+    >"$fake_home/files/.config/sk-theme/x-session.sh"
+printf '%s\n' 'fake immutable wallpaper bytes' \
+    >"$fake_home/files/.local/share/sk-theme/assets/wallpapers/waifu-cyberpunk.png"
+printf '%s\n' '(update-symlinks)' '(sk:activate-repo-links)' \
+    >"$fake_home/activate"
+for icon_index in \
+    "$fake_home/profile/share/icons/Papirus-Dark/index.theme" \
+    "$fake_home/profile/share/icons/Bibata-Modern-Ice/index.theme" \
+    "$fake_home/profile/share/icons/hicolor/index.theme"; do
+    printf '%s\n' '[Icon Theme]' >"$icon_index"
+done
 
 printf '%s\n' curl git fish emacs emacs-exwm bluez ncurses ripgrep vim \
     xset xwallpaper picom xrandr >"$fake_recovery_names"
@@ -359,6 +469,8 @@ printf '%s\n' fish-foreign-env emacs emacs-desktop-environment emacs-geiser \
     emacs-sly emacs-puni emacs-eshell-syntax-highlighting emacs-yasnippet \
     emacs-package-lint emacs-clojure-mode emacs-fennel-mode \
     emacs-racket-mode cljfmt clj-kondo \
+    font-awesome font-google-material-design-icons papirus-icon-theme \
+    bibata-cursor-theme hicolor-icon-theme gtk \
     guile sbcl lua-language-server python-lsp-server \
     ungoogled-chromium ranger shellcheck >"$fake_home_names"
 
@@ -389,6 +501,14 @@ reset_fake_home_manifest() {
         emacs-package-lint fish-foreign-env cljfmt clj-kondo guile \
         lua-language-server python-lsp-server ranger sbcl shellcheck \
         ungoogled-chromium
+    printf '%s\n' \
+        'font-awesome	4.7.0	out	/gnu/store/fake-font-awesome' \
+        'font-google-material-design-icons	4.0.0	out	/gnu/store/fake-font-google-material-design-icons' \
+        'papirus-icon-theme	20250501	out	/gnu/store/fake-papirus-icon-theme' \
+        'bibata-cursor-theme	2.0.3	out	/gnu/store/fake-bibata-cursor-theme' \
+        'hicolor-icon-theme	0.18	out	/gnu/store/fake-hicolor-icon-theme' \
+        'gtk	4.22.1	bin	/gnu/store/fake-gtk-bin' \
+        >>"$fake_home_manifest"
 }
 
 remove_fake_manifest_package() {
@@ -406,6 +526,18 @@ remove_fake_manifest_package_output() {
     awk -v package="$package" -v package_output="$package_output" \
         '$1 != package || $3 != package_output { print }' "$manifest" \
         >"$manifest.new"
+    mv "$manifest.new" "$manifest"
+}
+
+replace_fake_manifest_output() {
+    manifest=$1
+    package=$2
+    package_output=$3
+    awk -v package="$package" -v package_output="$package_output" '
+        BEGIN { OFS = "\t" }
+        $1 == package { $3 = package_output }
+        { print }
+    ' "$manifest" >"$manifest.new"
     mv "$manifest.new" "$manifest"
 }
 
@@ -792,6 +924,7 @@ contains "$output" 'System recovery profile: PASS'
 contains "$output" 'Detached Racket Mode closure requisites: PASS'
 contains "$output" 'Detached Fennel Mode closure requisites: PASS'
 contains "$output" 'Realized package ownership: PASS (overlap=emacs,fish,guile)'
+contains "$output" 'guix-theme-home-check: PASS'
 contains "$output" 'Candidate Guile profile: PASS'
 contains "$output" 'Non-login SSH Fish environment: PASS'
 contains "$output" 'Guile project fixture: PASS'
@@ -810,6 +943,7 @@ contains "$output" 'Candidate Emacs Fennel backend: PASS'
 contains "$output" 'Candidate Emacs Fennel deliberate-failure cleanup: PASS'
 contains "$(cat "$fake_candidate_log")" 'CLOJURE'
 contains "$(cat "$fake_candidate_log")" 'RACKET'
+contains "$(cat "$fake_candidate_log")" 'THEME-HOME'
 contains "$(cat "$fake_candidate_log")" 'GUILE'
 contains "$(cat "$fake_candidate_log")" 'ELISP'
 contains "$(cat "$fake_candidate_log")" 'EMACS'
@@ -821,6 +955,7 @@ RACKET
 RACKET-BREAK
 FENNEL
 FENNEL-BREAK
+THEME-HOME
 GUILE
 ELISP
 EMACS
@@ -857,6 +992,13 @@ if output=$(run_gate 2>&1); then
 fi
 contains "$output" 'System recovery profile lacks fish'
 write_fake_fish
+
+mv "$fake_system/profile/bin/fc-match" "$tmp/fc-match.absent"
+if output=$(run_gate 2>&1); then
+    fail 'System profile missing fc-match passed the gate'
+fi
+contains "$output" 'System recovery profile lacks fc-match'
+mv "$tmp/fc-match.absent" "$fake_system/profile/bin/fc-match"
 
 for terminal in xterm-kitty xterm-256color; do
     terminfo=$fake_system/profile/share/terminfo/x/$terminal
@@ -978,6 +1120,24 @@ for package_output in out terminfo; do
     contains "$output" \
         "System profile lacks declared package output: kitty-latest:$package_output"
     reset_fake_system_manifest
+done
+
+replace_fake_manifest_output "$fake_home_manifest" gtk out
+if output=$(run_gate 2>&1); then
+    fail 'Home manifest with gtk:out instead of gtk:bin passed the gate'
+fi
+contains "$output" 'Home profile lacks declared package output: gtk:bin'
+reset_fake_home_manifest
+
+for package in font-awesome font-google-material-design-icons \
+    papirus-icon-theme bibata-cursor-theme hicolor-icon-theme; do
+    replace_fake_manifest_output "$fake_home_manifest" "$package" doc
+    if output=$(run_gate 2>&1); then
+        fail "Home manifest with $package:doc instead of $package:out passed the gate"
+    fi
+    contains "$output" \
+        "Home profile lacks declared package output: $package:out"
+    reset_fake_home_manifest
 done
 
 if output=$(SK_FAKE_GUILE_FALLBACK=1 run_gate 2>&1); then
@@ -1310,10 +1470,11 @@ chmod +x "$fake_fennel_project_check"
 
 for required in \
     "$sandbox_repo/scripts/fennel-project" \
-    "$fake_emacs_fennel_check"; do
+    "$fake_emacs_fennel_check" \
+    "$fake_theme_home_check"; do
     chmod -x "$required"
     if output=$(run_gate --plan 2>&1); then
-        fail "plan accepted a non-executable Fennel input: $required"
+        fail "plan accepted a non-executable candidate checker: $required"
     fi
     contains "$output" 'candidate checker is not executable:'
     contains "$output" "$required"
@@ -1323,8 +1484,9 @@ done
 for stage in channels provenance exwm promoted fish core-manifest jvm-manifest \
     racket-manifest fennel-manifest core-runtime guile-fixture \
     common-lisp-fixture jvm-runtime clojure-fixture racket-runtime \
-    racket-fixture fennel-runtime fennel-fixture home system guile-profile \
-    elisp-fixture emacs emacs-clojure emacs-racket emacs-fennel; do
+    racket-fixture fennel-runtime fennel-fixture home system theme-home \
+    guile-profile elisp-fixture emacs emacs-clojure emacs-racket \
+    emacs-fennel; do
     if output=$(SK_FAKE_FAIL=$stage run_gate 2>&1); then
         fail "$stage failure passed the gate"
     fi
@@ -1341,6 +1503,12 @@ for stage in channels provenance exwm promoted fish core-manifest jvm-manifest \
             ;;
         system)
             contains "$(cat "$fake_candidate_log")" 'CLOJURE'
+            lacks "$(cat "$fake_candidate_log")" 'GUILE'
+            lacks "$(cat "$fake_candidate_log")" 'ELISP'
+            lacks "$(cat "$fake_candidate_log")" 'EMACS'
+            ;;
+        theme-home)
+            contains "$(cat "$fake_candidate_log")" 'THEME-HOME'
             lacks "$(cat "$fake_candidate_log")" 'GUILE'
             lacks "$(cat "$fake_candidate_log")" 'ELISP'
             lacks "$(cat "$fake_candidate_log")" 'EMACS'

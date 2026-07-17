@@ -15,6 +15,12 @@
   (module-ref (current-module) '%guixpc-recovery-package-specifications))
 (define home-specifications
   (module-ref (current-module) '%guixpc-home-package-specifications))
+(define home-output-specifications
+  (module-ref
+   (current-module)
+   '%guixpc-home-output-package-specifications))
+(define home-output-names
+  (module-ref (current-module) '%guixpc-home-output-package-names))
 (define home-explicit
   (module-ref (current-module) '%guixpc-home-explicit-package-names))
 (define home
@@ -36,14 +42,20 @@
            "ripgrep" "vim" "xset" "xwallpaper" "picom" "xrandr"))
  "reviewed 13-package recovery floor changed")
 
-(assert (= (length home-specifications) 82)
-        "reviewed Home specification list must contain exactly 82 packages")
+(assert (= (length home-specifications) 87)
+        "reviewed Home specification list must contain exactly 87 packages")
+(assert (equal? home-output-specifications '("gtk:bin"))
+        "reviewed Home output specifications changed")
+(assert (equal? home-output-names '("gtk"))
+        "reviewed Home output package names changed")
 (assert (equal? home-explicit '("emacs-racket-mode"))
         "reviewed explicit Home package names changed")
-(assert (= (length home) 83)
-        "reviewed Home ownership must contain exactly 83 packages")
-(assert (equal? home (append home-specifications home-explicit))
-        "Home ownership names do not match specifications plus explicit packages")
+(assert (= (length home) 89)
+        "reviewed Home ownership must contain exactly 89 package selections")
+(assert
+ (equal? home
+         (append home-specifications home-output-names home-explicit))
+ "Home ownership names do not match normal, output, and explicit selections")
 
 (for-each
  (lambda (specification)
@@ -54,7 +66,10 @@
    "emacs-package-lint" "emacs-clojure-mode" "cljfmt" "clj-kondo"
    "emacs-racket-mode" "emacs-fennel-mode"
    "guile" "sbcl" "python-lsp-server" "lua-language-server"
-   "ungoogled-chromium" "ranger" "shellcheck"))
+   "ungoogled-chromium" "ranger" "shellcheck"
+   "font-awesome" "font-google-material-design-icons"
+   "papirus-icon-theme" "bibata-cursor-theme" "hicolor-icon-theme"
+   "gtk"))
 
 (for-each
  (lambda (specification)
@@ -92,9 +107,11 @@
 (assert
  (string-contains
   home-source
-  (string-append
+ (string-append
    "(append\n"
    "   (map specification->package %guixpc-home-package-specifications)\n"
+   "   (specifications->packages\n"
+   "    %guixpc-home-output-package-specifications)\n"
    "   %guixpc-home-explicit-packages)"))
  "Home declaration does not append its explicit package objects")
 

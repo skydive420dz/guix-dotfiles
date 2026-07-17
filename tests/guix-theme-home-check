@@ -1,0 +1,306 @@
+#!/bin/sh
+
+set -eu
+
+source_repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+checker=$source_repo/scripts/guix-theme-home-check
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/guix-theme-home-check-test.XXXXXX")
+tmp=$(CDPATH='' cd "$tmp" && pwd -P)
+cleanup() {
+    rm -rf -- "$tmp"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+fail() {
+    printf 'FAIL: %s\n' "$1" >&2
+    exit 1
+}
+
+contains() {
+    case $1 in
+        *"$2"*) ;;
+        *) fail "expected output to contain: $2" ;;
+    esac
+}
+
+fake_repo=$tmp/repo
+store=$tmp/gnu/store
+home_result=$store/00000000000000000000000000000000-home
+bundle=$store/11111111111111111111111111111111-sk-theme-home
+fish_file=$store/22222222222222222222222222222222-fish-config/config.fish
+fontconfig_file=$store/33333333333333333333333333333333-fontconfig/fonts.conf
+gtk_store=$store/44444444444444444444444444444444-gtk-4.22.1-bin
+commands=$tmp/commands
+records=$tmp/home-packages
+
+mkdir -p \
+    "$fake_repo/assets/wallpapers" \
+    "$fake_repo/emacs" \
+    "$fake_repo/fixtures/theme/expected-production" \
+    "$fake_repo/guix/home" \
+    "$fake_repo/kitty" \
+    "$fake_repo/shell" \
+    "$fake_repo/theme" \
+    "$bundle/adapters" \
+    "$bundle/assets/wallpapers" \
+    "$(dirname "$fish_file")" \
+    "$(dirname "$fontconfig_file")" \
+    "$gtk_store/bin" \
+    "$home_result/files/.config/emacs" \
+    "$home_result/files/.config/fish" \
+    "$home_result/files/.config/fontconfig" \
+    "$home_result/files/.config/gtk-3.0" \
+    "$home_result/files/.config/gtk-4.0" \
+    "$home_result/files/.config/kitty" \
+    "$home_result/files/.config/sk-theme" \
+    "$home_result/files/.local/share/sk-theme/assets/wallpapers" \
+    "$home_result/profile/bin" \
+    "$home_result/profile/share/icons/Papirus-Dark" \
+    "$home_result/profile/share/icons/Bibata-Modern-Ice" \
+    "$home_result/profile/share/icons/hicolor" \
+    "$commands"
+
+cp "$source_repo/emacs/init.el" "$fake_repo/emacs/init.el"
+cp "$source_repo/shell/xinitrc" "$fake_repo/shell/xinitrc"
+cp "$source_repo/kitty/kitty.conf" "$fake_repo/kitty/kitty.conf"
+cp "$source_repo/theme/tokens.scm" "$fake_repo/theme/tokens.scm"
+cp "$source_repo/assets/wallpapers/waifu-cyberpunk.png" \
+    "$fake_repo/assets/wallpapers/waifu-cyberpunk.png"
+cp "$source_repo"/fixtures/theme/expected-production/* \
+    "$fake_repo/fixtures/theme/expected-production/"
+
+cat >"$fake_repo/guix/home/repo-links-manifest.scm" <<'EOF'
+(define %guixpc-repo-links
+  '((".bashrc" "shell/bashrc")))
+(define %guixpc-retired-repo-links
+  '((".config/kitty/kitty.conf"
+     "kitty/kitty.conf"
+     "fixtures/theme/expected-production/kitty.conf")))
+EOF
+cp "$fake_repo/guix/home/repo-links-manifest.scm" "$tmp/good-manifest.scm"
+
+cp "$fake_repo/fixtures/theme/expected-production/emacs.el" \
+    "$bundle/adapters/emacs.el"
+cp "$fake_repo/fixtures/theme/expected-production/kitty.conf" \
+    "$bundle/adapters/kitty.conf"
+cp "$fake_repo/fixtures/theme/expected-production/gtk3.ini" \
+    "$bundle/adapters/gtk3.ini"
+cp "$fake_repo/fixtures/theme/expected-production/gtk4.ini" \
+    "$bundle/adapters/gtk4.ini"
+cp "$fake_repo/fixtures/theme/expected-production/x-session.sh" \
+    "$bundle/adapters/x-session.sh"
+cp "$fake_repo/theme/tokens.scm" "$bundle/tokens.scm"
+cp "$fake_repo/assets/wallpapers/waifu-cyberpunk.png" \
+    "$bundle/assets/wallpapers/waifu-cyberpunk.png"
+printf '%s\n' '# immutable base Fish configuration' >"$fish_file"
+cat "$fake_repo/fixtures/theme/expected-production/fish.fish" >>"$fish_file"
+printf '\n' >>"$fish_file"
+printf '%s\n' '<?xml version="1.0"?>' >"$fontconfig_file"
+
+ln -s "$bundle/adapters/emacs.el" \
+    "$home_result/files/.config/emacs/sk-theme-generated.el"
+ln -s "$bundle/adapters/kitty.conf" \
+    "$home_result/files/.config/kitty/kitty.conf"
+ln -s "$bundle/adapters/gtk3.ini" \
+    "$home_result/files/.config/gtk-3.0/settings.ini"
+ln -s "$bundle/adapters/gtk4.ini" \
+    "$home_result/files/.config/gtk-4.0/settings.ini"
+ln -s "$bundle/adapters/x-session.sh" \
+    "$home_result/files/.config/sk-theme/x-session.sh"
+ln -s "$bundle/tokens.scm" \
+    "$home_result/files/.config/sk-theme/tokens.scm"
+ln -s "$bundle/assets/wallpapers/waifu-cyberpunk.png" \
+    "$home_result/files/.local/share/sk-theme/assets/wallpapers/waifu-cyberpunk.png"
+ln -s "$fish_file" "$home_result/files/.config/fish/config.fish"
+ln -s "$fontconfig_file" \
+    "$home_result/files/.config/fontconfig/fonts.conf"
+
+printf '%s\n' \
+    '(primitive-load "update-symlinks")' \
+    '(sk:activate-repo-links)' >"$home_result/activate"
+cp "$home_result/activate" "$tmp/good-activate"
+
+cat >"$gtk_store/bin/gtk4-widget-factory" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+chmod +x "$gtk_store/bin/gtk4-widget-factory"
+ln -s "$gtk_store/bin/gtk4-widget-factory" \
+    "$home_result/profile/bin/gtk4-widget-factory"
+for index in \
+    "$home_result/profile/share/icons/Papirus-Dark/index.theme" \
+    "$home_result/profile/share/icons/Bibata-Modern-Ice/index.theme" \
+    "$home_result/profile/share/icons/hicolor/index.theme"; do
+    printf '%s\n' '[Icon Theme]' >"$index"
+done
+
+cat >"$commands/guix" <<'EOF'
+#!/bin/sh
+set -eu
+[ "$#" -eq 4 ]
+[ "$1" = package ]
+[ "$2" = -p ]
+[ "$3" = "$SK_FAKE_HOME_PROFILE" ]
+[ "$4" = --list-installed ]
+cat "$SK_FAKE_PACKAGE_RECORDS"
+EOF
+
+cat >"$commands/fish" <<'EOF'
+#!/bin/sh
+set -eu
+[ "$#" -eq 2 ]
+[ "$1" = -n ]
+[ -r "$2" ]
+EOF
+
+cat >"$commands/kitty" <<'EOF'
+#!/bin/sh
+set -eu
+[ "$#" -eq 3 ]
+[ "$1" = +runpy ]
+[ -n "$2" ]
+[ -r "$3" ]
+EOF
+
+cat >"$commands/emacs" <<'EOF'
+#!/bin/sh
+set -eu
+[ "$#" -eq 6 ]
+[ "$1" = -Q ]
+[ "$2" = --batch ]
+[ "$3" = -l ]
+[ -r "$4" ]
+[ "$5" = --eval ]
+[ -n "$6" ]
+EOF
+
+cat >"$commands/fc-match" <<'EOF'
+#!/bin/sh
+set -eu
+pattern=
+for argument in "$@"; do
+    pattern=$argument
+done
+case $pattern in
+    "JetBrainsMono Nerd Font Mono") family="JetBrainsMono Nerd Font Mono" ;;
+    "JetBrainsMono Nerd Font") family="JetBrainsMono Nerd Font" ;;
+    "Symbols Nerd Font Mono") family="Symbols Nerd Font Mono" ;;
+    "Noto Color Emoji") family="Noto Color Emoji" ;;
+    "Font Awesome") family=FontAwesome ;;
+    "Material Icons")
+        if [ "${SK_FAKE_FONT_BREAK:-0}" = 1 ]; then
+            family="Wrong Material Font"
+        else
+            family="Material Icons"
+        fi
+        ;;
+    *) exit 65 ;;
+esac
+printf '%s\n%s\n' "$family" \
+    "$HOME/.guix-home/profile/share/fonts/fake-font.ttf"
+EOF
+chmod +x "$commands"/*
+
+write_package_records() {
+    gtk_output=$1
+    cat >"$records" <<EOF
+gtk 4.22.1 $gtk_output
+papirus-icon-theme 20250501 out
+bibata-cursor-theme 2.0.3 out
+hicolor-icon-theme 0.18 out
+font-awesome 4.7.0 out
+font-google-material-design-icons 4.0.0 out
+EOF
+}
+write_package_records bin
+
+run_check() {
+    SK_THEME_HOME_STORE_PREFIX=$store \
+    SK_THEME_HOME_GUIX=$commands/guix \
+    SK_THEME_HOME_FISH=$commands/fish \
+    SK_THEME_HOME_KITTY=$commands/kitty \
+    SK_THEME_HOME_EMACS=$commands/emacs \
+    SK_THEME_HOME_FC_MATCH=$commands/fc-match \
+    SK_FAKE_HOME_PROFILE=$home_result/profile \
+    SK_FAKE_PACKAGE_RECORDS=$records \
+    SK_FAKE_FONT_BREAK=${SK_FAKE_FONT_BREAK:-0} \
+        "$checker" "$home_result" "$fake_repo"
+}
+
+expect_failure() {
+    label=$1
+    expected=$2
+    if output=$(run_check 2>&1); then
+        fail "$label unexpectedly passed"
+    fi
+    contains "$output" "$expected"
+    printf 'PASS: %s\n' "$label"
+}
+
+if ! output=$(run_check 2>&1); then
+    printf '%s\n' "$output" >&2
+    fail "complete fake Home candidate did not pass"
+fi
+contains "$output" "guix-theme-home-check: PASS"
+printf '%s\n' 'PASS: complete immutable Home candidate'
+
+printf '%s\n' ';; deliberate adapter byte drift' >>"$bundle/adapters/emacs.el"
+expect_failure \
+    "generated adapter byte drift is rejected" \
+    "candidate bytes differ from production golden"
+cp "$fake_repo/fixtures/theme/expected-production/emacs.el" \
+    "$bundle/adapters/emacs.el"
+
+printf '%s\n' \
+    '(sk:activate-repo-links)' \
+    '(primitive-load "update-symlinks")' >"$home_result/activate"
+expect_failure \
+    "reversed Home/repository activation order is rejected" \
+    "candidate activation lacks exactly one ordered Home/repo-link transition"
+
+printf '%s\n' \
+    '(primitive-load "update-symlinks")' \
+    '(primitive-load "update-symlinks")' \
+    '(sk:activate-repo-links)' >"$home_result/activate"
+expect_failure \
+    "ambiguous duplicate Home activation marker is rejected" \
+    "candidate activation lacks exactly one ordered Home/repo-link transition"
+cp "$tmp/good-activate" "$home_result/activate"
+
+cat >"$fake_repo/guix/home/repo-links-manifest.scm" <<'EOF'
+(define %guixpc-repo-links
+  '((".config/kitty/kitty.conf" "kitty/kitty.conf")))
+(define %guixpc-retired-repo-links
+  '((".config/kitty/kitty.conf"
+     "kitty/kitty.conf"
+     "fixtures/theme/expected-production/kitty.conf")))
+EOF
+expect_failure \
+    "simultaneous Kitty repository and Home ownership is rejected" \
+    "Kitty repository ownership did not migrate exactly once"
+cp "$tmp/good-manifest.scm" \
+    "$fake_repo/guix/home/repo-links-manifest.scm"
+
+write_package_records out
+expect_failure \
+    "GTK 4 runtime without the bin output is rejected" \
+    "candidate profile lacks gtk 4.22.1:bin"
+write_package_records bin
+
+SK_FAKE_FONT_BREAK=1
+expect_failure \
+    "font policy resolution drift is rejected" \
+    "font pattern Material Icons resolved as Wrong Material Font"
+unset SK_FAKE_FONT_BREAK
+
+if ! output=$(run_check 2>&1); then
+    printf '%s\n' "$output" >&2
+    fail "restored fake Home candidate did not pass"
+fi
+contains "$output" "guix-theme-home-check: PASS"
+printf '%s\n' 'PASS: restored immutable Home candidate'
+
+printf '%s\n' 'guix-theme-home-check fixture: PASS'

@@ -16,5 +16,14 @@
  repo
  (module-ref (current-module) '%guixpc-repo-links))
 
-(format #t "guix-home-links-preflight: PASS (~a links)~%"
-        (length (module-ref (current-module) '%guixpc-repo-links)))
+((module-ref (current-module) 'sk:check-retired-repo-links)
+ home
+ repo
+ (module-ref (current-module) '%guixpc-retired-repo-links))
+
+(format #t
+        "guix-home-links-preflight: PASS (~a live links, ~a retired transition)~%"
+        (length (module-ref (current-module) '%guixpc-repo-links))
+        (length (module-ref
+                 (current-module)
+                 '%guixpc-retired-repo-links)))

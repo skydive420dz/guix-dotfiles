@@ -12,7 +12,14 @@
     (".gdbinit" "gdb/gdbinit")
     (".guile" "guile/guile")
     (".Xdefaults" "x11/Xdefaults")
-    (".config/kitty/kitty.conf" "kitty/kitty.conf")
     (".config/ranger/rc.conf" "ranger/rc.conf")
     (".config/ranger/rifle.conf" "ranger/rifle.conf")
     (".config/ranger/scope.sh" "ranger/scope.sh")))
+
+;; Paths retiring from mutable repository ownership during an atomic Guix Home
+;; migration.  Preflight accepts either the exact legacy link or an immutable
+;; store-backed link whose bytes match the reviewed production golden.
+(define %guixpc-retired-repo-links
+  '((".config/kitty/kitty.conf"
+     "kitty/kitty.conf"
+     "fixtures/theme/expected-production/kitty.conf")))

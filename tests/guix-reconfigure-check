@@ -36,6 +36,9 @@ for source in \
     mkdir -p "$repo/$(dirname "$source")"
     printf 'fixture: %s\n' "$source" >"$repo/$source"
 done
+mkdir -p "$repo/fixtures/theme/expected-production"
+cp "$repo/kitty/kitty.conf" \
+    "$repo/fixtures/theme/expected-production/kitty.conf"
 
 cat >"$repo/guix/channels.scm" <<'EOF'
 (list

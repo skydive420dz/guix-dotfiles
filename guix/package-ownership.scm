@@ -1,7 +1,8 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; Accepted Slice 18 expands the reviewed Home user/editor base to 83 packages
-;; with the runtime-free Fennel editor mode.
+;; P3.3 expands the reviewed Home user/editor base to 89 package/output
+;; selections.  The six additions explicitly own the accepted global visual
+;; dependencies instead of relying on unrelated propagated package edges.
 ;; Package-lint keeps the tracked Emacs Lisp project independent of mutable
 ;; ELPA state; Clojure mode, cljfmt, and clj-kondo provide the persistent
 ;; editor-side Clojure integration without leaking its JVM runtime into Home.
@@ -57,7 +58,12 @@
     "font-iosevka-term"
     "font-nerd-symbols"
     "font-google-noto-emoji"
-    "font-nerd-jetbrains-mono"))
+    "font-nerd-jetbrains-mono"
+    "font-awesome"
+    "font-google-material-design-icons"
+    "papirus-icon-theme"
+    "bibata-cursor-theme"
+    "hicolor-icon-theme"))
 
 (define %guixpc-home-emacs-package-specifications
   '("emacs"
@@ -126,6 +132,15 @@
           %guixpc-home-emacs-package-specifications
           %guixpc-home-development-package-specifications))
 
+;; gtk4-widget-factory is deliberately selected from GTK's "bin" output.
+;; Keeping the output-qualified specification separate prevents
+;; specification->package from silently treating "gtk:bin" as a package name.
+(define %guixpc-home-output-package-specifications
+  '("gtk:bin"))
+
+(define %guixpc-home-output-package-names
+  '("gtk"))
+
 ;; Keep names for explicit package objects in the shared ownership declaration
 ;; so duplicate, overlap, and source-wiring checks cover them too.  guixpc Home
 ;; validates that the package objects it selects have exactly these names.
@@ -134,6 +149,7 @@
 
 (define %guixpc-home-package-names
   (append %guixpc-home-package-specifications
+          %guixpc-home-output-package-names
           %guixpc-home-explicit-package-names))
 
 (define (sk:duplicates items)

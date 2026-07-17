@@ -53,15 +53,26 @@ fi
 
 picom_count=$(grep -Ec '^[[:space:]]*picom[[:space:]]' \
     "$repo/shell/xinitrc" || true)
-picom_prefix_count=$(grep -Fxc \
-    "    picom --config /dev/null --backend glx --vsync \\" \
+legacy_picom_prefix_count=$(grep -Fxc \
+    "        picom --config /dev/null --backend glx --vsync \\" \
     "$repo/shell/xinitrc" || true)
-picom_rule_count=$(grep -Fxc \
-    "        --opacity-rule '85:class_g = \"Emacs\"' &" \
+legacy_picom_rule_count=$(grep -Fxc \
+    "            --opacity-rule '85:class_g = \"Emacs\"' &" \
     "$repo/shell/xinitrc" || true)
-if [ "$picom_count:$picom_prefix_count:$picom_rule_count" != 1:1:1 ]; then
-    printf 'desktop-policy-check: Xinit Picom policy counts are %s:%s:%s; expected 1:1:1\n' \
-        "$picom_count" "$picom_prefix_count" "$picom_rule_count" >&2
+generated_picom_prefix_count=$(grep -Fxc \
+    "        picom --config \"\$SK_THEME_PICOM_CONFIG\" \\" \
+    "$repo/shell/xinitrc" || true)
+generated_picom_rule_count=$(grep -Fxc \
+    "            \"\$SK_THEME_PICOM_EMACS_OPACITY_PERCENT:class_g = \\\"Emacs\\\"\" &" \
+    "$repo/shell/xinitrc" || true)
+immutable_adapter_count=$(grep -Fxc \
+    '        /gnu/store/*)' "$repo/shell/xinitrc" || true)
+if [ "$picom_count:$legacy_picom_prefix_count:$legacy_picom_rule_count:$generated_picom_prefix_count:$generated_picom_rule_count:$immutable_adapter_count" != \
+    2:1:1:1:1:1 ]; then
+    printf 'desktop-policy-check: Xinit Picom/adapter counts are %s:%s:%s:%s:%s:%s; expected 2:1:1:1:1:1\n' \
+        "$picom_count" "$legacy_picom_prefix_count" \
+        "$legacy_picom_rule_count" "$generated_picom_prefix_count" \
+        "$generated_picom_rule_count" "$immutable_adapter_count" >&2
     exit 1
 fi
 

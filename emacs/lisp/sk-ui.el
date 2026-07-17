@@ -45,6 +45,9 @@
   "GUI font fallbacks used for icon and symbol glyphs.
 Terminal clients use the terminal emulator's font configuration instead.")
 
+(defconst sk/legacy-fixed-font-family "Iosevka Term"
+  "Pre-P3.4 fallback font used when no immutable adapter is active.")
+
 (defun sk/font-available-p (font)
   "Return non-nil when FONT is available to the current graphical frame."
   (and (display-graphic-p)
@@ -52,15 +55,16 @@ Terminal clients use the terminal emulator's font configuration instead.")
 
 (defun sk/setup-fonts ()
   "Set the default editing font and GUI icon font fallbacks."
-  (set-face-attribute 'default nil :family "Iosevka Term" :height 120)
+  (set-face-attribute
+   'default nil :family sk/legacy-fixed-font-family :height 120)
   (when (display-graphic-p)
     (dolist (font sk/icon-font-fallbacks)
       (when (sk/font-available-p font)
         (set-fontset-font t 'symbol font nil 'append)))))
 
-(sk/setup-fonts)
-
-(load-theme 'modus-vivendi-tinted)
+(unless (featurep 'sk-theme-generated)
+  (sk/setup-fonts)
+  (load-theme 'modus-vivendi-tinted))
 
 (use-package all-the-icons
   :if (locate-library "all-the-icons"))

@@ -33,6 +33,7 @@ emacs_check=$repo/scripts/emacs-check
 emacs_clojure_check=$repo/scripts/emacs-clojure-check
 emacs_racket_check=$repo/scripts/emacs-racket-check
 emacs_fennel_check=$repo/scripts/emacs-fennel-check
+theme_home_check=$repo/scripts/guix-theme-home-check
 lisp_project_check=$repo/scripts/lisp-project-check
 clojure_project_check=$repo/scripts/clojure-project-check
 racket_project_check=$repo/scripts/racket-project-check
@@ -49,6 +50,18 @@ quarantined_expression='(@ (sk packages shells) fish-latest)'
 for file in "$channels" "$home_config" "$system_config" \
     "$module_dir/sk/development-tiers.scm" \
     "$module_dir/sk/emacs.scm" \
+    "$module_dir/sk/theme.scm" \
+    "$module_dir/sk/theme-home.scm" \
+    "$repo/theme/tokens.scm" \
+    "$repo/assets/wallpapers/waifu-cyberpunk.png" \
+    "$repo/fixtures/theme/expected-production/emacs.el" \
+    "$repo/fixtures/theme/expected-production/kitty.conf" \
+    "$repo/fixtures/theme/expected-production/fish.fish" \
+    "$repo/fixtures/theme/expected-production/gtk3.ini" \
+    "$repo/fixtures/theme/expected-production/gtk4.ini" \
+    "$repo/fixtures/theme/expected-production/x-session.sh" \
+    "$repo/guix/home/repo-links.scm" \
+    "$repo/guix/home/repo-links-manifest.scm" \
     "$manifest_dir/core-lisp.scm" \
     "$manifest_dir/jvm-lisp.scm" \
     "$manifest_dir/racket.scm" \
@@ -93,6 +106,7 @@ for file in "$channels" "$home_config" "$system_config" \
     "$emacs_clojure_check" \
     "$emacs_racket_check" \
     "$emacs_fennel_check" \
+    "$theme_home_check" \
     "$lisp_project_check" \
     "$clojure_project_check" \
     "$racket_project_check" \
@@ -108,7 +122,7 @@ for file in "$channels" "$home_config" "$system_config" \
 done
 
 for checker in "$emacs_check" "$emacs_clojure_check" "$emacs_racket_check" \
-    "$emacs_fennel_check" \
+    "$emacs_fennel_check" "$theme_home_check" \
     "$lisp_project_check" "$clojure_project_check" "$racket_project_check" \
     "$racket_project" "$fennel_project_check" "$fennel_project" \
     "$lisp_shell"; do
@@ -392,7 +406,7 @@ validate_system_recovery_profile() {
     fi
 
     for command in bluetoothctl curl dbus-update-activation-environment emacs \
-        fish git infocmp kitty picom reset rg startx vim xrandr xset \
+        fc-match fish git infocmp kitty picom reset rg startx vim xrandr xset \
         xwallpaper; do
         if [ ! -x "$profile/bin/$command" ]; then
             printf 'guix-build-gate: System recovery profile lacks %s\n' \
@@ -744,6 +758,19 @@ validate_realized_package_ownership() {
             exit 1
         fi
     done
+    if ! profile_has_package_output "$home_records" gtk bin; then
+        printf '%s\n' \
+            'guix-build-gate: Home profile lacks declared package output: gtk:bin' >&2
+        exit 1
+    fi
+    for package in font-awesome font-google-material-design-icons \
+        papirus-icon-theme bibata-cursor-theme hicolor-icon-theme; do
+        if ! profile_has_package_output "$home_records" "$package" out; then
+            printf 'guix-build-gate: Home profile lacks declared package output: %s:out\n' \
+                "$package" >&2
+            exit 1
+        fi
+    done
     for package in guile-readline guile-colorized; do
         if ! profile_has_package "$system_records" "$package"; then
             printf 'guix-build-gate: System profile lacks base package: %s\n' \
@@ -1077,6 +1104,18 @@ validate_fennel_project() {
     printf '%s\n' 'Fennel project deliberate-failure cleanup: PASS'
 }
 
+validate_theme_home_candidate() {
+    home_result=$1
+    system_result=$2
+
+    SK_THEME_HOME_GUIX="$pinned_guix" \
+        SK_THEME_HOME_FISH="$system_result/profile/bin/fish" \
+        SK_THEME_HOME_KITTY="$system_result/profile/bin/kitty" \
+        SK_THEME_HOME_EMACS="$home_result/profile/bin/emacs" \
+        SK_THEME_HOME_FC_MATCH="$system_result/profile/bin/fc-match" \
+        "$theme_home_check" "$home_result" "$repo"
+}
+
 validate_candidate_emacs() {
     home_result=$1
     system_result=$2
@@ -1338,6 +1377,7 @@ else
     printf '%s\n' "$system_result"
     validate_system_recovery_profile "$system_result"
     validate_realized_package_ownership "$system_result" "$home_result"
+    validate_theme_home_candidate "$home_result" "$system_result"
     validate_guile_profile_environment "$system_result" "$home_result"
     validate_nonlogin_fish_environment "$system_result" "$home_result"
     validate_elisp_project_fixture "$home_result" "$system_result"

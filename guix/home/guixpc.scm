@@ -12,7 +12,8 @@
              (gnu services)
              (guix gexp)
              (guix packages)
-             (sk emacs))
+             (sk emacs)
+             (sk theme-home))
 
 (load (string-append (dirname (current-filename))
                      "/../package-ownership.scm"))
@@ -28,6 +29,32 @@
   (local-file
    (string-append (dirname (current-filename)) "/repo-links-manifest.scm")
    "sk-repo-links-manifest.scm"))
+
+(define %theme-token-source
+  (local-file (string-append %repo-root "/theme/tokens.scm")
+              "sk-theme-tokens.scm"))
+
+(define %theme-wallpaper-source
+  (local-file
+   (string-append
+    %repo-root
+    "/assets/wallpapers/waifu-cyberpunk.png")
+   "sk-theme-wallpaper.png"))
+
+(define %theme-home-bundle
+  (sk:theme-home-bundle
+   %theme-token-source
+   %theme-wallpaper-source))
+
+(define %fish-aliases-config
+  (plain-file
+   "sk-fish-aliases.fish"
+   (string-append
+    "alias ls \"ls -p --color=auto\"\n"
+    "alias ll \"ls -l\"\n"
+    "alias grep \"grep --color=auto\"\n"
+    "alias gsr \"$HOME/Projects/guix-dotfiles/scripts/guix-reconfigure system\"\n"
+    "alias ghr \"$HOME/Projects/guix-dotfiles/scripts/guix-reconfigure home\"\n")))
 
 (define %repo-link-activation
   #~(begin
@@ -54,24 +81,32 @@
 
 (home-environment
  (packages
-  (append
+ (append
    (map specification->package %guixpc-home-package-specifications)
+   (specifications->packages
+    %guixpc-home-output-package-specifications)
    %guixpc-home-explicit-packages))
  (services
   (list
+   (simple-service 'sk-theme-xdg-configuration
+                   home-xdg-configuration-files-service-type
+                   (sk:theme-home-xdg-configuration-files
+                    %theme-home-bundle))
+   (simple-service 'sk-theme-xdg-data
+                   home-xdg-data-files-service-type
+                   (sk:theme-home-xdg-data-files
+                    %theme-home-bundle))
    (simple-service 'sk-repo-dotfile-links
                    home-activation-service-type
                    %repo-link-activation)
    (service home-fish-service-type
             (home-fish-configuration
-             (config (list (local-file "../../shell/config.fish"
-                                       "sk-fish-config.fish")))
-             (aliases
-              '(("ls" . "ls -p --color=auto")
-                ("ll" . "ls -l")
-                ("grep" . "grep --color=auto")
-                ("gsr" . "$HOME/Projects/guix-dotfiles/scripts/guix-reconfigure system")
-                ("ghr" . "$HOME/Projects/guix-dotfiles/scripts/guix-reconfigure home")))))
+             (config
+              (list (local-file "../../shell/config.fish"
+                                "sk-fish-config.fish")
+                    %fish-aliases-config
+                    (sk:theme-home-fish-fragment
+                     %theme-home-bundle)))))
    (service home-dbus-service-type)
    (service home-pipewire-service-type
             (home-pipewire-configuration
