@@ -19,11 +19,13 @@ GuixPC policy.  The live Emacs background matched Kitty's declared
 =#0d0e1c= canvas, but no running Kitty parser was sampled; their full palettes
 and different opacity mechanisms are not one contract.
 
-Rafael selected JetBrainsMono Nerd Font globally and chose to keep the current
-wallpaper.  P3.2 is the correct next slice: complete the remaining production
-decisions, then add only the offline schema/validator, renderers, and fixtures.
-The later migration must render a complete Kitty config rather than a forbidden
-include and must keep Qt out of scope.
+Rafael accepted the recommended Phase 3 visual bundle, including the global
+JetBrainsMono Nerd Font roles and retained wallpaper.  P3.2 has implemented
+the fixture-only Scheme schema/validator, all six deterministic renderers, and
+their source gates.  The GTK/UI point size is the sole open production value,
+so the module rejects production data and P3.3 remains blocked.  The later
+migration must render a complete Kitty config rather than a forbidden include
+and must keep Qt out of scope.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -62,6 +64,10 @@ Emacs/Kitty/Fish/GTK/font/icon/cursor/X-session baseline, exact truth
 boundaries, corrected no-Kitty-include architecture, data/rendering contract,
 and P3.2-P3.4 migration gates.  It contains no visual implementation or live
 desktop change.
+[[file:docs/audits/2026-07-16-p3.2-offline-theme-schema.org][The P3.2 offline semantic-theme record]] owns the inert schema, pure renderers,
+synthetic goldens, validation evidence, accepted decision bundle, and closed
+production gate.  It contains no Home wiring, build, activation, or live
+desktop evidence.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -75,11 +81,14 @@ acceptance contract.  Closure added no package, theme, font, cursor, icon,
 wallpaper change, build, Home/System generation, process, activation, EXWM
 session, GUI launch, or reboot.
 
-P3.2 is =READY= and begins with the remaining production-choice review.  Its
-implementation boundary is the pure offline schema/validator, renderers, and
-synthetic fixtures.  Production tokens/outputs remain blocked until the
-palette authority, GTK, icon, cursor, scaling, contrast, Fish, and test-surface
-choices are accepted.
+P3.2 is =ACTIVE=.  Its fixture-only Scheme schema/validator, six deterministic
+renderers, synthetic goldens, negative controls, and aggregate source gate are
+implemented and pass 191 checks plus pinned Fish, Emacs, and Kitty parsers.
+The palette authority, GTK/icon/cursor/scaling/contrast/Fish/test-surface
+bundle is accepted.  The sole remaining production value is the GTK/UI point
+size; 11 pt at logical 96 DPI is recommended.  The validator rejects
+=kind=production= until that decision is explicit, and no production token,
+Home wiring, build, activation, or runtime change exists.
 P3.3 owns immutable Home wiring and the atomic Kitty ownership migration; P3.4
 owns activation and real-display acceptance.  Source, build, activation, live,
 and visual acceptance remain different gates.
@@ -90,10 +99,10 @@ the restore-tested-backup gate.
 
 ** Ready
 
-- [ ] P3.2: offline semantic-token schema, renderers, and fixtures
-  JetBrainsMono Nerd Font globally and the current wallpaper are accepted
-  inputs.  Resolve the remaining visual choices before production tokens; no
-  Home wiring, activation, or runtime change belongs to the offline slice.
+- [ ] P3.2: publish the validated fixture-only source checkpoint, then select
+  the GTK/UI point size before production tokens.  The offline Scheme module,
+  all six synthetic outputs, and 191-check/native-parser gate are implemented;
+  no Home wiring, activation, or runtime change belongs to this slice.
 
 ** Completed
 

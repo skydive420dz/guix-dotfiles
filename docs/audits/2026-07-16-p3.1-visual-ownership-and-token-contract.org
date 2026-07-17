@@ -45,6 +45,7 @@ choices stay open for a reviewed P3.2 decision gate.
 
 Related records:
 
+- [[file:2026-07-16-p3.2-offline-theme-schema.org][P3.2 offline semantic-theme schema and fixture gate]];
 - [[file:2026-07-15-phase-0-baseline.org][Phase 0 baseline and activation taxonomy]];
 - [[file:2026-07-12-full-configuration-audit.org][completed numbered configuration audit]];
 - [[file:~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org][editable GuixPC cohesion roadmap]];
@@ -495,12 +496,11 @@ non-production and complete enough to prove:
 - exact role/calibration propagation; and
 - no Qt artifact.
 
-A production =theme/tokens.scm= and complete production outputs are blocked on
-the unresolved proportional font, GTK base, icon, cursor, scaling, and other
-required policy choices.  If those decisions are accepted before P3.2 begins,
-production data may join the same checkpoint; otherwise P3.2 remains
-fixture-only and P3.3 cannot start.  GTK has no current declared policy that a
-renderer can honestly preserve as a production no-op.
+At P3.1 closure, a production =theme/tokens.scm= and complete production
+outputs were blocked on unresolved policy choices.  If those decisions were
+accepted before P3.2 began, production data could join the same checkpoint;
+otherwise P3.2 would remain fixture-only and P3.3 could not start.  GTK had no
+declared policy that a renderer could honestly preserve as a production no-op.
 
 For Kitty, combine a reviewed static nonvisual/security base with token-derived
 values to render one complete file.  Do not weaken the existing
@@ -634,7 +634,7 @@ Stop before implementation or activation if:
 - the first migration changes the accepted appearance without an explicit
   visual-change decision.
 
-* Unresolved user decisions
+* User-decision state at P3.1 closure
 
 | Decision | Current boundary |
 |----------+------------------|
@@ -652,6 +652,20 @@ Stop before implementation or activation if:
 None of these blocks the P3.1 contract review.  They may block a target in
 P3.2/P3.3 or should become separate visual-change slices after ownership is
 stable.
+
+* P3.2 post-contract decision addendum
+
+After P3.1 closed, Rafael accepted the recommended frozen Modus authority,
+GTK 3 =Adwaita-dark= / GTK 4 =Adwaita= base, =Papirus-Dark= icons,
+=Bibata-Modern-Ice= cursor at 32 px, logical 96 DPI with integer scale 1,
+7:1 / 4.5:1 / 3:1 contrast floors, first-migration Fish ownership, and
+=gtk4-widget-factory= acceptance surface.  The already accepted global
+JetBrainsMono Nerd Font families and retained wallpaper remain in force.
+
+The sole unresolved production value is the GTK/UI point size.  The P3.2
+implementation therefore remains fixture-only and rejects production data
+until that value is explicit; 11 pt is the current recommendation.  See the
+[[file:2026-07-16-p3.2-offline-theme-schema.org][P3.2 implementation record]].
 
 * Slice sequence
 

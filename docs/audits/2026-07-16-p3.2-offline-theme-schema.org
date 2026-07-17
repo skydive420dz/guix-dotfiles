@@ -1,0 +1,163 @@
+#+title: GuixPC P3.2 Offline Semantic-Theme Schema and Fixture Gate
+#+date: 2026-07-16
+#+status: implemented and validated; source checkpoint awaiting publication
+
+* Outcome
+
+P3.2 implements the offline half of the visual-token contract without changing
+the running desktop.  One inert Scheme datum is read by a pure Scheme module,
+validated against an exact schema, and rendered deterministically into six
+synthetic target fixtures:
+
+1. an Emacs adapter;
+2. one complete Kitty configuration;
+3. a Fish syntax, pager, and prompt fragment;
+4. GTK 3 settings;
+5. GTK 4 settings; and
+6. same-shell X-session/compositor/wallpaper data.
+
+The fixture is deliberately synthetic and every rendered file begins with a
+=SYNTHETIC FIXTURE - DO NOT INSTALL= warning.  There is no production
+=theme/tokens.scm=, Guix Home wiring, package change, build, generation,
+activation, process restart, GUI launch, or reboot in this checkpoint.
+
+Production rendering is not merely absent by convention.  The validator
+rejects =kind=production= with =production-not-ready= until the remaining
+GTK/UI point-size choice is explicitly accepted.  P3.3 therefore cannot
+accidentally consume a plausible-looking fixture as production policy.
+
+* Decision state
+
+Rafael accepted the proposed post-P3.1 visual bundle by authorizing P3.2:
+
+| Policy | Accepted value |
+|--------+----------------|
+| Palette authority | frozen reviewed subset of Emacs 30.2 =modus-vivendi-tinted= with pinned Guix/Emacs provenance |
+| Fixed family | =JetBrainsMono Nerd Font Mono= |
+| UI family | =JetBrainsMono Nerd Font= |
+| GTK base | GTK 3 =Adwaita-dark=; GTK 4 =Adwaita= |
+| Icons | =Papirus-Dark= with normal application/hicolor fallback |
+| Cursor | =Bibata-Modern-Ice= at 32 px |
+| Scaling | logical 96 DPI, integer scale 1, inherit/verify rather than force toolkit scale variables |
+| Contrast | 7:1 primary text, 4.5:1 secondary/text-on-state, 3:1 meaningful UI components |
+| Fish first migration | own prompt, syntax, autosuggestion, search, and pager colors |
+| GTK 4 acceptance app | =gtk4-widget-factory= |
+| Wallpaper | retain =assets/wallpapers/waifu-cyberpunk.png= with =zoom= fit |
+| Existing target calibration | Emacs 120 tenths-point; Kitty 14.0 pt and 0.0 background opacity; Picom Emacs opacity 85 percent |
+
+One required value remains open: the GTK/UI font size.  The recommended value
+is 11 pt at logical 96 DPI.  This does not alter the already accepted Emacs
+12 pt or Kitty 14 pt calibrations.  The fixture uses deliberately unrelated
+synthetic typography and does not settle that production decision.
+
+* Source architecture
+
+** Canonical data and reader
+
+=fixtures/theme/valid/tokens.scm= contains one quoted association list.  The
+reader in =guix/modules/sk/theme.scm= accepts exactly one inert quoted datum and
+EOF.  It never =primitive-load=s or evaluates token contents.
+
+The exact top-level schema covers provenance, semantic roles, ANSI colors,
+typography, desktop policy, per-target calibrations, repository-relative
+assets, contrast policy, structured Fish mappings, and the exact ordered target
+set.  Missing, unknown, recursively duplicated, shared, and cyclic data are
+rejected.
+
+** Pure module boundary
+
+Importing =(sk theme)= reads no live state and writes no file.  Its public
+surface returns validation records, contrast ratios, or deterministic strings:
+
+- =sk:read-theme=;
+- =sk:theme-validation-errors=;
+- =sk:theme-asset-errors=;
+- =sk:theme-contrast-ratio=;
+- =sk:render-theme=; and
+- =sk:render-all=.
+
+Asset existence is the one explicit read-only filesystem boundary.  Callers
+must supply an asset root to =sk:theme-asset-errors=.  Direct production
+rendering remains prohibited while the production gate is closed.
+
+** Target boundaries
+
+- Emacs loads =modus-vivendi-tinted= first, supplies a frozen adapter palette,
+  and owns fixed/UI face families without starting EXWM.
+- Kitty is a complete file: it has no include form, exactly one
+  =allow_remote_control no= directive, and retains the accepted security and
+  nonvisual base.
+- Fish emits every selected syntax, pager, and prompt variable from structured
+  semantic role/style records.
+- GTK 3 uses =gtk-application-prefer-dark-theme=true=.  GTK 4 uses the
+  =gtk-interface-color-scheme=dark= property introduced in GTK 4.20 rather
+  than copying GTK 3's deprecated mechanism.
+- X output is explicitly same-shell data.  It starts no process, exports only
+  the cursor variables that are meant to reach child applications, and does
+  not claim general environment ownership.
+- Qt is absent from the schema, renderers, fixtures, packages, and variables.
+
+* Validation evidence
+
+The focused gate currently passes:
+
+#+begin_example
+theme-check: PASS (191 checks)
+theme-check: native parsers PASS
+shell-check: PASS
+#+end_example
+
+The 191 Scheme checks cover:
+
+- safe inert reading and exact recursive schema validation;
+- canonical lowercase colors, conservative ASCII identities/paths, exact
+  numeric units, ranges, and rational/complex/inexact-integer rejection;
+- accepted production identities plus the closed production gate;
+- WCAG math, reviewed semantic pairs, actual Fish mappings, terminal ANSI
+  foregrounds, and transparent-target hand-test policy;
+- explicit-root asset existence, regular-file, containment, and symlink
+  escape controls;
+- deterministic bytes under repeated rendering and association-list
+  permutation;
+- exact semantic role-to-target projections rather than aggregate color
+  presence alone;
+- complete Fish variable enumeration;
+- Kitty include/remote-control security and exact ANSI slots;
+- structural GTK GKeyFile subsets with version-specific allowlists; and
+- golden equality, one final newline, synthetic headers, no absolute mutable
+  paths, no toolkit scale variables, and no Qt surface.
+
+Native source gates are pinned to the versions actually used by this GuixPC
+checkpoint:
+
+- Fish 4.7.1 =fish -n=;
+- GNU Emacs 30.2 isolated batch load and face assertions; and
+- Kitty 0.47.4's own no-GUI configuration parser.
+
+GTK fixture validation is intentionally structural and version-aware; it is
+not represented as a live GTK property test.  Candidate-profile lookup and
+real-display =gtk4-widget-factory= acceptance belong to P3.3/P3.4.
+
+The complete =scripts/shell-check --strict= repository suite also passed, as
+did direct ShellCheck, =git diff --check=, and =org-lint= over every changed
+repository Org file plus the editable agenda.  This remains source validation,
+not a Guix Home candidate build.
+
+* Truth boundary and next gate
+
+This checkpoint proves source behavior only.  It does not prove that any
+generated bytes are installed, built by Guix Home, active, consumed by a live
+application, or visually accepted.
+
+Before production tokens or P3.3:
+
+1. Rafael explicitly accepts a GTK/UI point size; 11 pt is recommended.
+2. Add the real =theme/tokens.scm= with the reviewed frozen Modus bytes and the
+   accepted size.
+3. Validate candidate-profile package identities and output-aware Guix package
+   entries, including =gtk:bin= for =gtk4-widget-factory=.
+4. Keep source validation, Home build, checkpoint/push, activation, live
+   inspection, and real-display acceptance as separate gates.
+
+Rollback before wiring is one source revert.  No Home or System generation and
+no running process need rollback because P3.2 owns none.

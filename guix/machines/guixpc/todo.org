@@ -525,20 +525,31 @@ CLOSED: [2026-07-16 Thu]
 - Add no visual source value, package, build, generation, activation, session
   reload/restart, GUI launch, or reboot merely to close P3.1.
 
-* TODO P3.2 offline semantic-token schema, renderers, and fixtures
+* ACTIVE P3.2 offline semantic-token schema, renderers, and fixtures
 :PROPERTIES:
 :created: 2026-07-16
 :END:
 
-- Accepted production inputs: use JetBrainsMono Nerd Font globally and keep the
-  current wallpaper/fit policy.
-- [ ] Accept the remaining palette authority, GTK base, icon, cursor,
-  DPI/scale, contrast, Fish, and GTK 4 test-surface choices before creating
-  production tokens.
-- [ ] Implement pure schema/renderer code and synthetic fixtures without Home
-  wiring, activation, GUI launch, or runtime mutation.
+- Evidence: [[file:../../../docs/audits/2026-07-16-p3.2-offline-theme-schema.org][2026-07-16 P3.2 offline semantic-theme schema and fixture gate]].
+- Accepted production inputs: frozen Emacs 30.2 =modus-vivendi-tinted= subset;
+  JetBrainsMono Nerd Font families; GTK 3 =Adwaita-dark= / GTK 4 =Adwaita=;
+  =Papirus-Dark=; =Bibata-Modern-Ice= at 32 px; logical 96 DPI and scale 1;
+  7:1 / 4.5:1 / 3:1 contrast floors; first-migration Fish ownership;
+  =gtk4-widget-factory=; and the current wallpaper/fit policy.
+- [X] Implement the pure =(sk theme)= schema/validator and all six renderers
+  without Home wiring, activation, GUI launch, or runtime mutation.
+- [X] Add unmistakably synthetic complete fixtures, deterministic goldens,
+  negative controls, explicit-root asset checks, and aggregate source-gate
+  integration.
+- [X] Pass 191 Scheme checks and pinned native Fish 4.7.1, Emacs 30.2, and
+  Kitty 0.47.4 source parsers; pass the complete strict repository source gate,
+  direct ShellCheck/diff checks, and changed-file Org lint.
+- [ ] Accept the remaining GTK/UI point size; 11 pt at logical 96 DPI is the
+  current recommendation.  Preserve Emacs 12 pt and Kitty 14 pt separately.
 - [ ] Add production =theme/tokens.scm= only after every required production
-  value is accepted.
+  value is accepted; the validator currently rejects =kind=production=.
+- [ ] Publish the fixture-only source checkpoint and verify clean upstream
+  equality before changing the production gate.
 - [ ] Preserve separate source, candidate build, checkpoint, Home activation,
   live application, real-display, and rollback gates for P3.3/P3.4.
 

@@ -62,7 +62,8 @@ shellcheck \
     "$repo/tests/lisp-project-check" \
     "$repo/tests/guix-home-links-check" \
     "$repo/tests/guix-package-ownership-check" \
-    "$repo/tests/guix-reconfigure-check"
+    "$repo/tests/guix-reconfigure-check" \
+    "$repo/tests/theme-check"
 
 "$repo/tests/exwm-session-check"
 "$repo/tests/desktop-audio-output-check"
@@ -93,6 +94,30 @@ else
         exit 127
     fi
     printf '%s\n' 'SKIP: Guix Home link fixture (guile unavailable)'
+fi
+if command -v guile >/dev/null 2>&1 && \
+    command -v guild >/dev/null 2>&1; then
+    if command -v fish >/dev/null 2>&1 && \
+        command -v emacs >/dev/null 2>&1 && \
+        command -v kitty >/dev/null 2>&1; then
+        "$repo/tests/theme-check"
+    else
+        if [ "$strict" -eq 1 ]; then
+            printf '%s\n' \
+                'shell-check: strict mode requires Fish, Emacs, and Kitty for theme parsers' >&2
+            exit 127
+        fi
+        "$repo/tests/theme-check" --core-only
+        printf '%s\n' \
+            'SKIP: native theme parsers (Fish, Emacs, or Kitty unavailable)'
+    fi
+else
+    if [ "$strict" -eq 1 ]; then
+        printf '%s\n' \
+            'shell-check: strict mode requires Guile and Guild for theme fixtures' >&2
+        exit 127
+    fi
+    printf '%s\n' 'SKIP: theme fixtures (Guile or Guild unavailable)'
 fi
 "$repo/tests/guix-lisp-shell-check"
 "$repo/tests/clojure-project-check"

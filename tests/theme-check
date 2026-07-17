@@ -1,0 +1,133 @@
+#!/bin/sh
+
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P) || exit 1
+guile=${GUILE:-guile}
+guild=${GUILD:-guild}
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/theme-check.XXXXXX") || exit 1
+log=$tmp/check.log
+core_only=0
+
+cleanup() {
+    rm -rf "$tmp"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+case $# in
+    0) ;;
+    1)
+        [ "$1" = --core-only ] || {
+            printf 'usage: %s [--core-only]\n' "$0" >&2
+            exit 64
+        }
+        core_only=1
+        ;;
+    *)
+        printf 'usage: %s [--core-only]\n' "$0" >&2
+        exit 64
+        ;;
+esac
+
+if ! guile_path=$(command -v "$guile"); then
+    printf 'theme-check: Guile executable not found: %s\n' "$guile" >&2
+    exit 127
+fi
+if ! guild_path=$(command -v "$guild"); then
+    printf 'theme-check: Guild executable not found: %s\n' "$guild" >&2
+    exit 127
+fi
+
+if ! GUILE_AUTO_COMPILE=0 \
+    "$guild_path" compile -W3 \
+    -L "$repo/guix/modules" \
+    -o "$tmp/sk-theme.go" \
+    "$repo/guix/modules/sk/theme.scm" >"$log" 2>&1; then
+    cat "$log" >&2
+    exit 1
+fi
+
+mkdir "$tmp/test"
+if ! LC_ALL=C TZ=UTC GUILE_AUTO_COMPILE=0 \
+    "$guile_path" --no-auto-compile \
+    -L "$repo/guix/modules" \
+    -s "$repo/tests/theme-check.scm" \
+    "$repo" "$tmp/test" >"$log" 2>&1; then
+    cat "$log" >&2
+    exit 1
+fi
+cat "$log"
+
+if [ "$core_only" -eq 1 ]; then
+    printf '%s\n' 'theme-check: SKIP native parsers (--core-only)'
+    exit 0
+fi
+
+for command in fish emacs kitty; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        printf 'theme-check: native parser is unavailable: %s\n' \
+            "$command" >&2
+        exit 127
+    fi
+done
+
+fish_version=$(LC_ALL=C fish --version)
+kitty_version=$(LC_ALL=C kitty --version)
+emacs_version=$(LC_ALL=C emacs --version | sed -n '1p')
+
+[ "$fish_version" = 'fish, version 4.7.1' ] || {
+    printf 'theme-check: Fish parser version drift: %s\n' \
+        "$fish_version" >&2
+    exit 1
+}
+[ "$kitty_version" = 'kitty 0.47.4 created by Kovid Goyal' ] || {
+    printf 'theme-check: Kitty parser version drift: %s\n' \
+        "$kitty_version" >&2
+    exit 1
+}
+[ "$emacs_version" = 'GNU Emacs 30.2' ] || {
+    printf 'theme-check: Emacs parser version drift: %s\n' \
+        "$emacs_version" >&2
+    exit 1
+}
+
+rendered=$tmp/test/rendered
+mkdir "$tmp/home" "$tmp/cache" "$tmp/config"
+
+fish -n "$rendered/fish.fish"
+sh -n "$rendered/x-session.sh"
+
+HOME=$tmp/home \
+XDG_CACHE_HOME=$tmp/cache \
+XDG_CONFIG_HOME=$tmp/config \
+DISPLAY='' \
+DBUS_SESSION_BUS_ADDRESS='' \
+emacs -Q --batch \
+    -l "$rendered/emacs.el" \
+    --eval \
+    '(unless (and (memq (quote modus-vivendi-tinted) custom-enabled-themes)
+                  (equal (face-attribute (quote default) :family nil t)
+                         "Fixture Mono")
+                  (not (featurep (quote sk-exwm))))
+       (error "generated Emacs adapter assertion failed"))'
+
+HOME=$tmp/home \
+XDG_CACHE_HOME=$tmp/cache \
+XDG_CONFIG_HOME=$tmp/config \
+DISPLAY='' \
+DBUS_SESSION_BUS_ADDRESS='' \
+kitty +runpy \
+    'import sys
+from kitty.config import parse_config
+bad = []
+with open(sys.argv[1], encoding="utf-8") as stream:
+    parsed = parse_config(
+        stream, accumulate_bad_lines=bad, allow_geninclude=False)
+if bad or not parsed:
+    raise SystemExit("generated Kitty configuration failed parser checks")' \
+    "$rendered/kitty.conf"
+
+printf '%s\n' 'theme-check: native parsers PASS'
