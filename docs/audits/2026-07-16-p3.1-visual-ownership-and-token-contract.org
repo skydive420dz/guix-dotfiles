@@ -1,0 +1,687 @@
+#+title: GuixPC P3.1 Visual Ownership Baseline and Semantic-Token Contract
+#+date: 2026-07-16
+#+status: design checkpoint; review pending
+
+* Outcome
+
+P3.1 establishes the current visual ownership map and a bounded architecture
+for making it coherent.  It changes no palette, font, theme, cursor, icon,
+wallpaper, compositor, package, Home/System declaration, generation, or live
+process.
+
+The audit finds a useful partial baseline rather than a broken desktop:
+
+- Emacs, Kitty, Fish, Xinit, Picom, and wallpaper have identifiable repository
+  owners and live entrypoints.
+- The live Emacs default background matched Kitty's declared canvas literal,
+  but no running Kitty parser was sampled; the rest of their palettes and
+  their different transparency mechanisms are not under one contract.
+- GTK 3/4, proportional UI fonts, icons, and cursors have no declared GuixPC
+  visual policy.  Their current behavior is toolkit/profile fallback behavior.
+- Qt has no selected application or current configuration and remains outside
+  the target set.
+- The first implementation must preserve the accepted visual result and the
+  current Iosevka fixed-width role.  Font, icon, cursor, and wallpaper changes
+  require later explicit choices and real-display acceptance.
+
+The proposed implementation uses a data-only Scheme token source, a pure
+validator/renderer module, deterministic complete target files, and a later
+atomic ownership migration through Guix Home.  In particular, Kitty must not
+use an include: the repository's security policy rejects every Kitty include
+form.  A later renderer must produce the complete immutable =kitty.conf=.
+
+P3.1 is documentation and design only.  User review and publication remain
+separate gates before P3.2 can implement the offline token/renderer layer.
+
+Related records:
+
+- [[file:2026-07-15-phase-0-baseline.org][Phase 0 baseline and activation taxonomy]];
+- [[file:2026-07-12-full-configuration-audit.org][completed numbered configuration audit]];
+- [[file:~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org][editable GuixPC cohesion roadmap]];
+- [[file:../../guix/machines/guixpc/todo.org][low-noise GuixPC machine queue]].
+
+* Scope and truth boundary
+
+** In scope
+
+- verify the actual GuixPC host, synchronized checkout, active System/Home,
+  and live visual entrypoints;
+- map declared and live ownership for Emacs, Kitty, Fish, GTK 3/4, fonts,
+  icons, cursor, X session, compositor, opacity, and wallpaper;
+- distinguish an observed runtime value from a source declaration, packaged
+  default, fallback, inference, or user choice still required;
+- define a semantic schema, renderer boundary, validation rules, migration
+  sequence, rollback, and stop conditions; and
+- promote only the documentation/design slice.
+
+** Explicitly out of scope
+
+- editing any visual source value or live configuration;
+- adding a package, theme, font, icon set, cursor, wallpaper, daemon, or CSS;
+- rendering or wiring generated files;
+- running a Guix build, =guix home reconfigure=, =guix system reconfigure=,
+  generation activation, EXWM reload/restart, GUI launch, or reboot;
+- changing or restarting Emacs, Kitty, Fish, Picom, Xwallpaper, GTK, or X11;
+- taking a screenshot or claiming current root-window pixels were sampled;
+- selecting a contrast floor or the unresolved font/icon/cursor/wallpaper
+  choices; and
+- producing a Qt adapter, Qt environment variable, or Qt package.
+
+** Evidence vocabulary
+
+- =DECLARED= is found in the synchronized repository.
+- =GENERATED= is emitted by the active Guix Home/System artifact.
+- =OBSERVED= is read from the live host or graphical Emacs process.
+- =PACKAGED DEFAULT= is read from the installed package, not owned by this
+  repository and subject to change on package upgrade.
+- =INFERRED= follows from bounded evidence but was not directly sampled.
+- =UNMEASURED= or =UNOWNED= must not be rewritten as a defect or a chosen
+  policy.
+
+* Provenance
+
+The read-only capture began at =2026-07-16T20:27:00-04:00=.
+
+| Item | Verified value |
+|------+----------------|
+| Host / user | =guixpc= / =skydive420dz= |
+| Checkout | =/home/skydive420dz/Projects/guix-dotfiles= |
+| Branch | clean =main= |
+| Local / upstream | =df780efc96dad004010c19a7b753d6b8a3eaeefb= / same |
+| Ahead / behind | =0 / 0= |
+| Current System | generation 87, =/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system= |
+| Current Home | generation 42, =/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home= |
+| Home package profile | =/gnu/store/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile= |
+| Current Guix | =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile= |
+
+=guix home list-generations 1= selects generation 1; it is not a query for the
+latest generation.  The active =~/.guix-home= link and generation inventory
+identify generation 42.  This distinction prevents a command-argument mistake
+from being promoted into the baseline.
+
+Live entrypoints were:
+
+| Surface | Live entrypoint | Owner |
+|---------+-----------------+-------|
+| X session | =~/.xinitrc= | repository =shell/xinitrc= |
+| EXWM loader | =~/.exwm= | repository =emacs/exwm-loader.el= |
+| Emacs init | =~/.emacs.d/init.el= | repository =emacs/init.el= |
+| Kitty | =~/.config/kitty/kitty.conf= | repository =kitty/kitty.conf= |
+| X resources | =~/.Xdefaults= | repository =x11/Xdefaults= |
+| Fish | =~/.config/fish/config.fish= | Home-generated wrapper containing repository =shell/config.fish= |
+
+* Current ownership map
+
+| Surface | Present owner | Live result/evidence | Gap or drift boundary |
+|---------+---------------+----------------------+------------------------|
+| Emacs theme | =emacs/lisp/sk-ui.el= selects =modus-vivendi-tinted= | active graphical Emacs reports that theme | theme name is owned; palette bytes come from packaged Emacs/Modus |
+| Emacs fixed font | =sk-ui.el= | =Iosevka Term=, height 120 | Org repeats the family in =sk-org.el= |
+| Kitty | =kitty/kitty.conf= | linked source; Kitty 0.47.4 installed | no Kitty process existed, so runtime parser application was not sampled; many colors remain package defaults |
+| Fish prompt | =shell/config.fish= via Guix Home wrapper | generated body exactly matches tracked source | prompt colors are local literals; syntax/pager colors remain Fish defaults |
+| GTK 3/4 | none | no settings, theme environment, XSettings owner, or dconf store found | confirmed ownership gap; user-visible breakage not established |
+| Qt | none | no selected app, qt5ct/qt6ct/Kvantum config, or environment | deliberately deferred and excluded from render targets |
+| Fixed-width fonts | Guix Home package ownership plus Emacs/Kitty declarations | Iosevka resolves and is selected | JetBrainsMono Nerd Font is installed but unused |
+| Proportional font | none | =Inter= is absent; fontconfig falls back to DejaVu Sans | role and package are unresolved |
+| Symbols/emoji | Emacs fallback declarations plus Home dependencies | Symbols Nerd Font Mono, Noto Color Emoji, Font Awesome, and Material Icons resolve | no desktop-wide icon policy follows from Emacs glyph fallbacks |
+| Desktop icons | none | only =hicolor=/=locolor= roots found | no selected theme or declared fallback contract |
+| Cursor | none | no =XCURSOR_THEME= or =XCURSOR_SIZE= | toolkit/X fallback behavior is unowned |
+| Picom | =shell/xinitrc= | active process uses =/dev/null=, GLX, VSync, and Emacs opacity 85 | =sk-exwm.el= duplicates a manual helper and value |
+| Wallpaper | =shell/xinitrc= | starts =xwallpaper --zoom= for the tracked cyberpunk asset | current root pixels were not sampled; helper path is duplicated in =sk-exwm.el= |
+| X resources | =x11/Xdefaults= | live link exists | =xrdb= and XTerm were unavailable; Xinit does not load the file, so ownership is probably stale but not proven removed |
+
+* Detailed baseline
+
+** Emacs and EXWM
+
+=emacs/lisp/sk-ui.el= removes normal chrome, establishes editor display
+defaults, selects =Iosevka Term= at height 120, and loads
+=modus-vivendi-tinted=.  The active graphical EXWM Emacs reported =fullboth=,
+no native frame alpha, and the selected theme.
+
+The following face values were observed from that live Emacs process.  They
+are a baseline for no-drift comparison, not the proposed token palette:
+
+| Semantic interpretation | Live face/value |
+|-------------------------+-----------------|
+| Canvas / primary text | default background =#0d0e1c=, foreground =#ffffff= |
+| Cursor | cursor background =#ff66ff= |
+| Low surface | fringe background =#1d2235= |
+| Raised surface | mode-line background =#484d67= |
+| Inactive raised surface | inactive mode-line background =#292d48=, foreground =#969696= |
+| Selection | region background =#555a66= |
+| Highlight | highlight background =#45605e= |
+| Prompt / success-like accent | minibuffer prompt =#6ae4b9= |
+| Link / string | =#79a8ff= |
+| Warning | =#fec43f= |
+| Error | =#ff5f59= |
+| Comment | =#ff9f80= |
+| Keyword | =#b6a0ff= |
+| Function | =#feacd0= |
+| Variable | =#00d3d0= |
+| Border | =#61647a= |
+
+The repository owns the theme identity but not these exact palette bytes.
+They are supplied by the packaged Emacs 30.2 Modus theme.  A package upgrade
+can therefore alter the visual result without a repository color diff.
+
+The configured fallback families =Symbols Nerd Font Mono=,
+=Noto Color Emoji=, =Font Awesome=, and =Material Icons= all resolve live.
+=all-the-icons= and =doom-modeline= are present.  =emacs/lisp/sk-org.el=
+repeats =Iosevka Term= in Org face declarations; that is a future raw-font
+drift site, not an active mismatch.
+
+** Kitty
+
+=kitty/kitty.conf= explicitly declares:
+
+- canvas =#0d0e1c=;
+- =background_opacity 0.0=;
+- =Iosevka Term= at 14 points;
+- window padding 10;
+- cursor trail duration 10 and decay =0.2 0.6=, with named trail color =blue=;
+- powerline tabs; and
+- remote control disabled, with no include form.
+
+The installed =kitty-latest= is 0.47.4.  No Kitty process was open during the
+capture, so source/link ownership and installed-version evidence are
+confirmed, while application of every value by a running parser is
+=UNMEASURED=.
+
+Only Kitty's declared canvas numerically matches the observed live Emacs
+background.  Kitty foreground, ANSI colors, selection, cursor, and tab colors
+are not declared by the repository.  Installed 0.47.4 defaults include
+foreground =#dddddd=, cursor
+=#cccccc=, selection =#000000= on =#fffacd=, active tab =#000000= on
+=#eeeeee=, and inactive tab =#444444= on =#999999=.  These are =PACKAGED
+DEFAULT= values and can drift with Kitty; they are not accepted semantic
+tokens merely because the current desktop looks coherent.
+
+The two transparency controls are intentionally different quantities:
+
+- Kitty uses a background-opacity ratio of =0.0=; and
+- Picom applies whole-window opacity =85= percent to Emacs.
+
+The user accepts the combined visual result.  A semantic contract must preserve
+the result while keeping separate target calibrations and units; it must not
+invent one cross-toolkit “opacity” number.
+
+=tests/desktop-policy-check= rejects =include=, =globinclude=, =envinclude=,
+and =geninclude= in Kitty configuration, alongside unsafe remote-control
+surfaces.  The earlier roadmap suggestion to generate a Kitty include is
+therefore invalid.  Later work must render the complete config from a reviewed
+static/security base plus semantic data, then re-run the security gate.
+
+** Fish
+
+=guix/home/guixpc.scm= owns a generated Fish file that prepends login setup and
+aliases around the tracked =shell/config.fish=.  Comparing the whole generated
+file to the source produces an expected mismatch.  Comparing the embedded
+active body instead shows lines 13 through 194 match the tracked file
+byte-for-byte.  There is no current Fish-source drift.
+
+The prompt owns these literals:
+
+| Role in current prompt | Value |
+|------------------------+-------|
+| Panel canvas | =#30343a= |
+| Panel text | =#b4c0c8= |
+| Branch/accent | =#89b4fa= |
+| Muted/status | =#8a949e= |
+| Success | =#a6d189= |
+| Error | =#e78284= |
+
+No =fish_color_*= or pager palette is declared, so syntax and completion
+presentation remain Fish defaults.  P3 should first normalize the explicitly
+owned prompt and then decide whether syntax/pager roles enter scope; it must not
+claim they are already unified.
+
+** GTK 3, GTK 4, icons, and cursor
+
+No repository or generated owner was found for GTK 2/3/4 settings, visual CSS,
+theme package, =GTK_THEME=, =GTK2_RC_FILES=, =GDK_BACKEND=, XSettings,
+=gsettings=/dconf state, cursor theme/size, or desktop icon theme.  The active
+Emacs/EXWM environment also had no Qt platform/style variables.
+
+No GuixPC-specific GTK scale or Xft DPI declaration was found.  The display's
+mode and physical dimensions were observed, but effective per-toolkit DPI and
+scaling were not measured.  P3 must preserve the current result until that is
+measured; it must not infer a desired scale from monitor metadata alone.
+
+=~/.config/gtk-3.0= exists but is empty; no GTK 4 directory or user dconf store
+exists.  There is no =xsettingsd= process.  The System theme directory contains
+only GTK keyboard-theme material such as Emacs key bindings, not a visual GTK
+theme.  Home/System icon roots expose only fallback =hicolor= and =locolor=
+directories; no selected Adwaita, Papirus, Bibata, or similar visual policy was
+found.
+
+This is a confirmed configuration-ownership gap, not proof that a current GTK
+application is unusable.  Blueman and Chromium can become later GTK smoke-test
+surfaces.  No explicit GTK 4 test application was identified, so P3.4 must
+select one before claiming GTK 4 live acceptance.
+
+Qt has no selected application, current settings owner, or test surface.  The
+schema and renderer target set must reject accidental Qt output rather than
+leaving a dormant partial adapter.
+
+** Fonts
+
+=guix/package-ownership.scm= declares =font-iosevka-term=,
+=font-nerd-symbols=, =font-google-noto-emoji=, and
+=font-nerd-jetbrains-mono=.  Live font resolution showed:
+
+- Iosevka Term resolves, is observed in live Emacs, and is declared by Kitty;
+- JetBrainsMono Nerd Font is installed but no audited surface selects it;
+- Inter is absent and =fc-match Inter= falls back to DejaVu Sans; and
+- the four Emacs symbol/emoji fallback families resolve.
+
+The Home-generated fontconfig file adds the Home profile font directory but
+declares no GuixPC-specific aliases, hinting, antialiasing, or subpixel policy.
+That is an ownership boundary, not evidence that the underlying fontconfig
+defaults are visually wrong.
+
+Changing GuixPC to MSI's JetBrainsMono/Inter role split or to JetBrains Mono
+globally is a visual migration, not normalization of an already-declared
+contract.  The initial ownership migration must keep Iosevka until D-05 is
+explicitly completed.
+
+** Wallpaper and compositor
+
+=shell/xinitrc= is the sole automatic owner.  The active display was
+=HDMI-A-0= at 3440x1440 and 100 Hz.  Xinit starts:
+
+#+begin_src sh
+picom --config /dev/null --backend glx --vsync \
+  --opacity-rule '85:class_g = "Emacs"'
+xwallpaper --zoom .../assets/wallpapers/waifu-cyberpunk.png
+#+end_src
+
+The active Picom process matched that declaration exactly.  Using
+=--config /dev/null= deliberately excludes ambient user Picom settings.
+=xwallpaper= normally exits after setting the root pixmap, so absence of a
+resident process is expected.
+
+The selected wallpaper is 1939x811 and is enlarged by about 1.78 times for the
+3440x1440 display.  Its aspect ratio is close to the display.  The unused
+=sky.png= is 3840x2160 but 16:9 and would crop on the ultrawide display.  P3.1
+did not inspect the current root-window pixels, so startup declaration and the
+absence of a recorded startup error are confirmed; current pixel content is
+not independently observed.
+
+=emacs/lisp/sk-exwm.el= duplicates the Picom opacity rule and wallpaper path
+for manual helpers.  The values agree today, but the automatic and interactive
+restart implementations differ and can drift.  A later X-session renderer or
+shared command-data owner should remove the duplicated literals without
+changing startup semantics.
+
+** X resources
+
+=x11/Xdefaults= contains only XTerm UTF-8/meta settings.  The link is live, but
+Xinit does not load it and neither =xrdb= nor XTerm was available for a
+resource-database test.  It is probably stale configuration, but P3.1 does not
+claim it is dead or authorize deletion.  Phase 5 hygiene may remove it only
+after ownership and consumer evidence are revisited.
+
+** Asset-specific colors
+
+=emacs/assets/skydive420dz.svg= is used by the dashboard and contains
+logo-specific =#f0e6cc= and =#b89a5a=.  Generic raw-token drift checks must
+exclude reviewed artwork/SVG assets, documentation, fixtures, and test data
+unless an asset is intentionally migrated into the theme contract.
+
+* Findings and priorities
+
+** Confirmed configuration gaps
+
+| ID | Priority | Finding | Consequence |
+|----+----------+---------+-------------|
+| P3-F01 | High | GTK 3/4, desktop icons, cursor, and proportional UI font have no declared owner | new/current GUI applications can inherit unrelated fallback behavior |
+| P3-F02 | High | Emacs owns a Modus theme name while Kitty/Fish own independent literals/defaults | upgrades or local edits can change visual meaning without a shared contract |
+| P3-F03 | High | Kitty includes are forbidden but the old roadmap proposed one | that proposed wiring would fail the repository security policy |
+| P3-F04 | Medium | Kitty leaves foreground, ANSI, selection, cursor, and tab colors to packaged defaults | Kitty upgrades can change more than the repository diff shows |
+| P3-F05 | Medium | Fish owns prompt colors but not syntax/pager colors | “Fish is normalized” would overstate current ownership |
+| P3-F06 | Medium | Picom/wallpaper literals are duplicated between Xinit and EXWM helpers | automatic/manual paths can drift independently |
+| P3-F07 | Medium | Org repeats the fixed font family outside =sk-ui.el= | font-role migration has more than one Emacs raw owner |
+| P3-F08 | Low | Xdefaults is linked but has no proven loader/consumer | likely stale configuration remains in the ownership graph |
+
+None of these findings proves a current crash or performance defect.  P3-F01
+through P3-F07 are ownership and reproducibility problems.  P3-F08 remains a
+qualified probable stale surface.
+
+** Strong points
+
+- Active visual entrypoints resolve to repository or immutable Home owners.
+- The live Emacs background exactly matched Kitty's declared canvas value.
+- Inspection found one automatic wallpaper/Picom owner, and tests pin the
+  expected command inside Xinit; they do not globally prove that no second
+  startup owner could be added elsewhere.
+- Picom excludes ambient configuration with =--config /dev/null=.
+- Every declared Emacs glyph/emoji fallback resolves.
+- Kitty remote control is disabled and source gates reject listener/password
+  and include surfaces.
+- The current fixed family is installed, resolves, is observed in live Emacs,
+  and is declared by Kitty; a running Kitty parser was not sampled.
+- The roadmap already separates source, build, activation, live, cold, and
+  rollback gates; P3 can reuse that discipline.
+
+** Weak points and risks
+
+- Exact Modus palette bytes are package-owned even though the selected theme
+  name is repository-owned.
+- GTK and desktop integration lack a reproducible baseline.
+- Package defaults still supply substantial Kitty/Fish presentation.
+- Transparency has target-specific semantics and can be broken by an
+  over-general schema.
+- Contrast against transparent backgrounds depends on the wallpaper and real
+  display; static color-pair math is necessary but not sufficient.
+- Font, icon, cursor, and wallpaper choices are incomplete, so implementation
+  must preserve rather than guess.
+
+* Semantic-token contract
+
+** Ownership model
+
+The canonical input should be =theme/tokens.scm=: data only, primitive-loadable
+without importing Guix modules, starting processes, reading the network, or
+consulting mutable user state.  A plain quoted alist or equivalently inert
+Scheme data is preferred.
+
+=guix/modules/sk/theme.scm= should provide pure validation and rendering.  It
+must accept explicit input data and return deterministic strings/files; module
+import must not inspect the live machine or mutate state.
+
+The source distinguishes four kinds of data:
+
+1. semantic roles shared where their meaning actually matches;
+2. typography and desktop-policy identities;
+3. target calibrations with explicit units; and
+4. repo-relative visual assets.
+
+It must not encode target syntax in the canonical data or pretend that every
+toolkit implements the same property.
+
+** Required semantic roles
+
+The initial exact schema should contain:
+
+- =canvas=, =surface=, and =surface-raised=;
+- =text=, =text-muted=, and =text-disabled=;
+- =accent= and =on-accent=;
+- =selection= and =on-selection=;
+- =focus=;
+- =success=, =warning=, and =error=;
+- =border= and =shadow=; and
+- =cursor= and =on-cursor=.
+
+These are UI roles, not a complete syntax-highlighting palette.  Emacs syntax
+faces and terminal ANSI colors need explicit adapter policy: either map them
+from a reviewed extended role set or preserve the current theme/default
+identity during the first migration.  The renderer must never silently invent
+unlisted colors.
+
+** Typography and desktop policy
+
+The schema should name:
+
+- fixed-width family;
+- proportional/UI family;
+- UI size with an explicit unit;
+- ordered symbol/emoji fallback families;
+- GTK base theme identity;
+- desktop icon-theme identity;
+- cursor-theme identity and cursor size.
+
+The first implementation may not fabricate unresolved values.  It should
+either require accepted values before emitting a target or deliberately retain
+the current target behavior with that boundary represented and tested.
+
+** Target calibrations
+
+Target-specific quantities must preserve units in their key names or validated
+records:
+
+- Emacs default face height in tenths of a point;
+- Kitty font size in points;
+- Emacs whole-frame/Picom opacity in percent; and
+- Kitty background opacity as a ratio.
+
+The captured current values are live Emacs height 120, Kitty's declared 14
+points, the active Picom rule's 85 percent, and Kitty's declared 0.0 ratio.
+They are proposed preservation inputs pending P3.1 review.  Sharing an untyped
+=opacity= key is prohibited.
+
+** Assets
+
+The schema may contain a repository-relative wallpaper path and an enumerated
+fit mode.  Absolute Home paths, store paths, URLs, mutable external state, and
+command strings are not token values.  Asset existence and safe path
+containment must be validated from an explicit repository root.
+
+** Target set
+
+The exact initial render-target set is:
+
+1. Emacs adapter data/source;
+2. complete Kitty configuration;
+3. Fish color/prompt fragment;
+4. GTK 3 settings;
+5. GTK 4 settings; and
+6. X-session/compositor/wallpaper data.
+
+The validator must reject unknown target names and Qt output.  Chromium is a
+GTK smoke-test consumer, not a separate website-theme renderer.
+
+* Rendering and wiring contract
+
+** P3.2 offline outputs
+
+P3.2 may add the pure schema/validator, renderers, and synthetic complete
+fixtures without wiring or activation.  Those fixtures must be unmistakably
+non-production and complete enough to prove:
+
+- deterministic output across two renders;
+- correct escaping and syntax per target;
+- no timestamps, absolute Home paths, store paths, host identity, or mutable
+  state;
+- exact role/calibration propagation; and
+- no Qt artifact.
+
+A production =theme/tokens.scm= and complete production outputs are blocked on
+the unresolved proportional font, GTK base, icon, cursor, scaling, and other
+required policy choices.  If those decisions are accepted before P3.2 begins,
+production data may join the same checkpoint; otherwise P3.2 remains
+fixture-only and P3.3 cannot start.  GTK has no current declared policy that a
+renderer can honestly preserve as a production no-op.
+
+For Kitty, combine a reviewed static nonvisual/security base with token-derived
+values to render one complete file.  Do not weaken the existing
+=desktop-policy-check= or introduce any include form.  Preserve trail timing
+as reviewed Kitty-specific policy while mapping its visual trail color from an
+explicit semantic role rather than retaining the named =blue= literal.
+
+For Emacs, preserve early theme/font ownership so Org or another package cannot
+load a conflicting built-in/newer theme path before the adapter.  Loading the
+adapter must be testable in isolated batch Emacs without starting EXWM.
+
+For GTK, prefer stable settings and a named dark base over broad widget CSS.
+GTK 3 and GTK 4 outputs may differ syntactically while consuming the same
+approved roles.  The design does not promise pixel identity.
+
+** P3.3 immutable Home wiring
+
+P3.3 should wire outputs through Guix Home and build the candidate before any
+live activation.  Kitty requires an atomic ownership migration:
+
+1. render a complete candidate config;
+2. pass the Kitty security and syntax/static gates;
+3. remove the current repo-link ownership in the same source change that adds
+   immutable Home ownership; and
+4. prove exactly one generated live target exists after activation.
+
+Source validation, Home evaluation/build, checkpoint/push, activation, and
+runtime inspection remain separate gates.  Building a Home candidate does not
+mean it is live.
+
+** P3.4 live visual acceptance
+
+Only after the source checkpoint is pushed should a separate activation and
+live slice inspect:
+
+- Emacs/EXWM normal, inactive, selected, prompt, warning, and error states;
+- a real Kitty process, ANSI/selection/cursor/tab states, and remote-control
+  security invariants;
+- Fish prompt, syntax, autosuggestion, and pager states;
+- one GTK 3 application, one explicitly selected GTK 4 application, and
+  Chromium UI without forcing website colors;
+- cursor and icon fallbacks;
+- Picom/wallpaper ownership, real-screen contrast, and the ultrawide result;
+  and
+- adjacent SSH, desktop-session, and EXWM stability gates.
+
+A cold reboot is required only if startup/session persistence is part of the
+accepted wiring.  Visual acceptance requires Rafael at the real display; a
+build or SSH query cannot substitute for it.
+
+* Validation contract
+
+The offline checker should fail on:
+
+- missing, unknown, or recursively duplicated keys;
+- any color outside canonical lowercase =#rrggbb=;
+- incorrect types, invalid enum values, unsafe relative paths, missing assets,
+  or out-of-range sizes/opacities;
+- unrecognized font/theme names after a deterministic candidate-profile lookup
+  is available;
+- timestamps, nondeterministic ordering, absolute Home paths, or live-state
+  reads in rendered output;
+- a target set other than the exact six-surface set;
+- any Qt output, environment variable, package, or adapter;
+- any Kitty include or unsafe remote-control surface;
+- raw in-scope colors, font families, opacity values, or wallpaper paths left
+  outside approved source/adapter boundaries after migration; and
+- adapter output that changes when the same source is rendered twice.
+
+Raw-literal scanning must explicitly exclude documentation, fixtures/test
+expectations, generated golden files as appropriate, and reviewed artwork such
+as SVG logos.  Otherwise the checker would confuse evidence and asset pixels
+with configuration drift.
+
+The checker should also run target-specific parsing/load gates:
+
+- Fish syntax;
+- isolated Emacs load/face assertions;
+- Kitty config/security assertions without requiring a GUI process;
+- GTK INI/settings syntax for both versions; and
+- X-session shell/static ownership checks.
+
+Contrast validation should cover agreed foreground/background pairs only after
+Rafael selects a floor.  Transparent target contrast also requires the later
+wallpaper/display hand test.  P3.1 records this unresolved decision rather than
+silently choosing WCAG numbers for desktop chrome.
+
+* Migration invariants, rollback, and stop conditions
+
+** Proposed initial invariants
+
+- Preserve the observed live Emacs / declared Kitty =#0d0e1c= baseline and
+  D-06's accepted visual-result intent through the first ownership migration;
+  the exact token/calibration contract remains pending P3.1 review.
+- Preserve Iosevka as the fixed-width family until D-05 is completed.
+- Preserve =modus-vivendi-tinted= as the initial Emacs base identity unless a
+  separately reviewed palette freeze/replacement is selected.
+- Preserve Kitty remote-control and include restrictions.
+- Keep one automatic Picom/wallpaper owner.
+- Add no Qt surface.
+- Treat a generated candidate, active Home, live process, and accepted visual
+  result as different facts.
+
+** Rollback
+
+P3.1 rollback is documentation-only: revert its checkpoint.  It has no runtime
+generation to roll back.
+
+P3.2 rollback removes unused offline source/fixtures; it must not own live
+files.  P3.3/P3.4 must record the exact previous Home generation and source
+checkpoint before activation.  Because current Kitty ownership is a direct
+repository link, rollback must restore both source ownership and the prior Home
+generation when relevant; switching only one side is incomplete.
+
+** Stop conditions
+
+Stop before implementation or activation if:
+
+- the renderer requires a Kitty include or weakens its security checks;
+- more than one owner would write the same live target;
+- unresolved font/icon/cursor/wallpaper choices are guessed;
+- a build is represented as live activation;
+- GTK support requires broad unreviewed CSS or a Qt dependency;
+- deterministic rendering or raw-literal drift checks cannot distinguish
+  source from assets/evidence;
+- visual comparison cannot be performed at the real display; or
+- the first migration changes the accepted appearance without an explicit
+  visual-change decision.
+
+* Unresolved user decisions
+
+| Decision | Current boundary |
+|----------+------------------|
+| Fixed/proportional font roles | preserve Iosevka initially; later choose MSI-like JetBrainsMono/Inter split, JetBrains globally, or another reviewed pair |
+| Icon theme | no selection |
+| Cursor theme and size | no selection |
+| GTK base identity | stable dark base proposed; exact installed/package choice not selected |
+| DPI and scaling | no explicit GuixPC policy or effective per-toolkit measurement; preserve current result first |
+| Contrast floor | no numeric floor selected |
+| Wallpaper | keep/replace/upscale not selected |
+| GTK 4 smoke-test app | no explicit application selected |
+| Fish syntax/pager palette | decide whether first migration owns it or deliberately preserves defaults |
+| Freeze exact Modus palette vs retain theme identity | initial recommendation is retain identity and detect observed drift; decision not accepted |
+
+None of these blocks the P3.1 contract review.  They may block a target in
+P3.2/P3.3 or should become separate visual-change slices after ownership is
+stable.
+
+* Slice sequence
+
+** P3.1 — Baseline and contract (this document)
+
+- [X] Verify live host, synchronized checkout, active generations, and
+  entrypoints.
+- [X] Map current source/generated/live/default/fallback ownership.
+- [X] Record exact observed/declared baseline values and explicit unknowns.
+- [X] Correct the Kitty-include architecture conflict.
+- [X] Define schema, target set, validators, wiring stages, rollback, and stop
+  conditions.
+- [ ] Review and accept the contract.
+- [ ] Publish the documentation checkpoint and verify upstream equality.
+
+No source implementation, build, activation, process restart, GUI launch, or
+reboot belongs to P3.1.
+
+** P3.2 — Offline schema, renderer, and fixtures
+
+Implement the pure schema/validator and renderers in
+=guix/modules/sk/theme.scm= with deterministic synthetic target fixtures,
+negative controls, and aggregate source gates.  Do not wire live targets,
+build/activate Home, or change the running desktop.  Add production
+=theme/tokens.scm= only if all required production choices have first been
+accepted; otherwise keep P3.2 fixture-only and leave P3.3 blocked.
+
+** P3.3 — Guix Home wiring and atomic ownership migration
+
+Wire the accepted outputs, migrate Kitty from repo link to one complete
+immutable Home-generated file, run source/candidate build gates, and checkpoint
+before activation.  No source/build result is runtime acceptance.
+
+** P3.4 — Activation and real-display acceptance
+
+Activate only the reviewed Home/session boundary, inspect actual owners and
+applications, perform the real-display hand test, prove adjacent invariants,
+and record rollback/retention.  Keep font/icon/cursor/wallpaper redesign as
+separate decisions if the baseline-preserving migration can close first.
+
+* P3.1 completion boundary
+
+The documentation checkpoint may be committed without claiming the contract is
+accepted or published.  P3.1 closes only after Rafael reviews it, the commit is
+pushed and upstream equality is verified, and the roadmap records acceptance.
+P3.2 is the recommended next implementation slice; it is not authorized merely
+by this draft.

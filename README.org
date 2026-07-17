@@ -5,29 +5,29 @@ Source of truth for the guixpc experiment machine.
 * Current progress
 
 The numbered stabilization pass is complete through Slice 19.  The later dated
-polishing roadmap has accepted Phase 1's SSH/terminal contract, Phase 2's first
-measurement-only Emacs/EXWM baseline, P2.2's one-shot startup attribution,
-P2.K1a's read-only boot-edge attribution, and P2.S1a's passive
-system/build/storage baseline, followed by P2.M1's storage-maintenance contract
-design.  P2.S1a sampled favorable pressure, idle-temperature, and capacity
-indicators and confirmed that periodic SSD TRIM has no declared owner; its
-maintenance policy remains unselected.  P2.M1 then validated the existing
-UDisks ATA SMART path with one disclosed lazy-activation probe.  The sanitized
-cache snapshot contained favorable selected indicators, not a full diagnostic
-or future-health guarantee.  P2.M1a's no-new-package Scheme reader is now
-implemented and fixture-verified at a source checkpoint.  After that commit
-was pushed and verified, one cached-only live read passed with a fresh,
-=favorable= selected snapshot; the same numeric =udisksd= PID was observed
-before and after, with no PID change observed.
-Rafael explicitly accepted P2.M1a at that cached-only boundary.  Ordinary
-UDisks D-Bus activation remains unselected and was not required for
-completion.  The
-effects of Guix permitting one local build job and reporting/allowing up to
-four cores to it, HPET cost, sustained
-thermals, and real boot-to-ready time remain unmeasured.  No tuning or
-maintenance policy follows automatically from these point samples.  Keep this
-section aligned with accepted machine state so the repo records intent, not
-only implementation commits.
+polishing roadmap has accepted Phase 1's SSH/terminal contract and the selected
+Phase 2 measurement, attribution, and storage-visibility work.  P2.M1a's
+no-new-package Scheme reader passed its source and cached-only live boundaries,
+and Rafael accepted it complete.  P2.3, P2.S1b/P2.S1c, P2.M1b/P2.M1c, and
+parked P2.M1d remain available but are not active.
+
+Phase 3 is now the promoted workstream.  P3.1 records a read-only source/live
+visual ownership baseline and a semantic-token architecture without changing
+the desktop.  Emacs, Kitty, Fish, Xinit, Picom, and wallpaper have traceable
+owners; GTK 3/4, proportional UI fonts, icons, and the cursor do not yet have a
+declared GuixPC policy.  The live Emacs background matched Kitty's declared
+=#0d0e1c= canvas, but no running Kitty parser was sampled; their full palettes
+and different opacity mechanisms are not one contract.  The first migration
+proposal preserves Iosevka and D-06's accepted visual result, renders a complete
+Kitty config rather than a forbidden include, and keeps Qt out of scope.  P3.1
+review and publication remain separate gates before any renderer implementation
+or Home wiring.
+
+The effects of Guix permitting one local build job and reporting/allowing up
+to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
+remain unmeasured.  No tuning or maintenance policy follows automatically from
+the earlier point samples.  Keep this section aligned with accepted machine
+state so the repo records intent, not only implementation commits.
 
 The canonical record for the completed numbered roadmap is
 [[file:docs/audits/2026-07-12-full-configuration-audit.org][the 2026-07-12 full configuration audit]].  It records verified state,
@@ -55,27 +55,43 @@ evidence.
 [[file:docs/audits/2026-07-16-p2.m1a-cached-only-runtime-acceptance.org][The P2.M1a cached-only runtime record]] owns the pushed-checkpoint equality,
 single live cached observation, sanitized result, no-PID-change evidence, and
 explicit completion boundary.
+[[file:docs/audits/2026-07-16-p3.1-visual-ownership-and-token-contract.org][The P3.1 visual ownership and semantic-token record]] owns the current
+Emacs/Kitty/Fish/GTK/font/icon/cursor/X-session baseline, exact truth
+boundaries, corrected no-Kitty-include architecture, data/rendering contract,
+and P3.2-P3.4 migration gates.  It contains no visual implementation or live
+desktop change.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
 
 ** Current boundary
 
-P2.M1a is accepted complete from pushed checkpoint =7756938=, its 185-check
-offline gate, and one separately authorized =--cached-only= runtime
-observation.  The fresh summary classified the selected snapshot as
-=favorable=; this is not a full diagnosis or future-health claim.  The same
-numeric =udisksd= PID was observed before and after the read, with no PID
-change observed.  Ordinary UDisks D-Bus activation was not run and was not
-required by the accepted scope.  Completion added no package, service
-declaration, privilege, System/Home generation, or device-changing method.
+Phase 3 is active and P3.1 is the only promoted slice.  Its documentation-only
+checkpoint verifies the live/repository ownership map and proposes an exact
+semantic-token, validation, rendering, wiring, rollback, and acceptance
+contract.  It does not select unresolved visual choices and does not add or
+change a package, theme, font, cursor, icon, wallpaper, config value, build,
+Home/System generation, process, activation, EXWM session, or reboot.
 
-No successor workstream is promoted automatically.
-P2.M1b/P2.M1c keep TRIM policy, dry-run, declaration/build, activation, and
-actual FITRIM separate;
-P2.M1d alerting/deep diagnostics is parked.  P2.3, P2.S1b, and P2.S1c also
-remain =BACKLOG=.  Generation deletion and store collection remain Phase 5
-work behind the restore-tested-backup gate.
+The checkpoint still needs Rafael's review, push, and upstream-equality check
+before P3.1 closes.  P3.2 is the recommended next implementation slice after
+acceptance: add only the pure offline schema/validator, renderers, and synthetic
+fixtures.  Production tokens/outputs remain blocked until the required GTK,
+font, icon, cursor, scaling, and related choices are accepted.  P3.3 owns
+immutable Home wiring and the atomic Kitty ownership migration; P3.4 owns
+activation and real-display acceptance.  Source, build, activation, live, and
+visual acceptance remain different gates.
+
+P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
+parked.  Generation deletion and store collection remain Phase 5 work behind
+the restore-tested-backup gate.
+
+** Active
+
+- [ ] P3.1: visual ownership baseline and semantic-token contract
+  The source/live audit, schema, validation rules, migration stages, rollback,
+  and stop conditions are documented.  Review and publish the checkpoint
+  before promoting P3.2.  No visual or runtime change is included.
 
 ** Completed
 

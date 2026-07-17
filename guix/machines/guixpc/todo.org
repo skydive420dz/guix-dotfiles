@@ -495,6 +495,33 @@ CLOSED: [2026-07-16 Thu]
   System/Home generation, device setting, SMART refresh/self-test, alert,
   trim, or reboot merely to close this slice.
 
+* TODO P3.1 visual ownership baseline and semantic-token contract
+:PROPERTIES:
+:created: 2026-07-16
+:END:
+
+- Evidence: [[file:../../../docs/audits/2026-07-16-p3.1-visual-ownership-and-token-contract.org][2026-07-16 P3.1 visual ownership and token contract]].
+- [X] Verify the synchronized GuixPC checkout, active System/Home, live
+  entrypoints, and current visual owners without changing runtime state.
+- [X] Map Emacs, Kitty, Fish, GTK 3/4, fonts, icons, cursor, Picom, wallpaper,
+  and X-resource ownership with explicit observed/default/fallback boundaries.
+- [X] Record the live Emacs / declared Kitty canvas match and target-specific
+  opacity values without claiming live Kitty parser evidence or a unified
+  palette.
+- [X] Define the contract for a data-only Scheme schema, pure
+  validator/renderers, deterministic target set, drift checks, migration
+  stages, rollback, and stop conditions; do not imply those files exist yet.
+- [X] Correct the earlier architecture: repository policy forbids Kitty
+  includes, so later work must render one complete immutable =kitty.conf=.
+- [ ] Review and accept the contract with Rafael.
+- [ ] Push the documentation checkpoint and verify upstream equality.
+- Keep fixture-only P3.2 implementation, P3.3 Home wiring/build, and P3.4
+  activation/live visual acceptance separate.  Production tokens/outputs and
+  P3.3 remain blocked until the required font, GTK base, icon, cursor, scaling,
+  and related choices are accepted; do not guess them.
+- Add no visual source value, package, build, generation, activation, session
+  reload/restart, GUI launch, or reboot merely to close P3.1.
+
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:
 :created: 2026-07-03
