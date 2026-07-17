@@ -1,0 +1,259 @@
+#+title: P3.3 immutable Guix Home theme wiring and candidate build
+#+date: 2026-07-17
+#+status: candidate built and validated; source checkpoint publication pending; not activated
+
+* Outcome
+
+P3.3 wires the accepted P3.2 production theme through an isolated Guix
+derivation and Guix Home, builds the candidate, and stops before activation.
+The realized candidate is:
+
+#+begin_example
+/gnu/store/b668045vxgnx7mnsi99pf4nsdd4md9hc-home
+#+end_example
+
+All six generated adapters are store-backed and byte-identical to the P3.2
+production goldens.  The candidate also contains the immutable token datum and
+wallpaper, exact theme/font/icon/cursor package identities, and
+=gtk4-widget-factory= from =gtk:bin=.
+
+This is build evidence, not active or visual evidence.  No Home reconfigure,
+generation switch, process restart, GUI launch, EXWM restart, reboot, or
+real-display check occurred.
+
+Implementation checkpoint
+=530eb250e2e876f20b3c553be39533e5548cfb6d= was created on the actual clean
+checkout after all gates passed.  It was one commit ahead of =origin/main= at
+ahead/behind =0/1= immediately after creation; publication and fetched
+upstream equality remain the final P3.3 gate.
+
+* Predecessor and unchanged live boundary
+
+P3.2's second source checkpoint
+=b74a98d736b6dfbca421b115d1a0c979d707a853= was pushed and equal to
+=origin/main= at ahead/behind =0/0= before P3.3 began.
+
+The following state was rechecked after the candidate build:
+
+| Boundary | Still active |
+|----------+--------------|
+| Home generation | 42 |
+| Home result | =/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home= |
+| Kitty | repository link to =kitty/kitty.conf= |
+| Fish | prior Home-generated =farpm8f5c6wka0ispz0zikprrqm9j90h-fish-config.fish= |
+| GTK 4 settings | absent |
+| generated Emacs adapter | absent |
+
+Building added authenticated store objects and substitute cache traffic, but
+did not change the active Home result or any live owner.
+
+* Immutable build architecture
+
+The new =(sk theme-home)= module constructs one =computed-file= bundle.  Its
+only explicit inputs are Guix-captured =theme/tokens.scm= and the accepted
+wallpaper.  The derivation imports =(sk theme)=, requires production-kind
+tokens, validates the copied asset below its explicit output root, and renders
+the canonical six targets inside the isolated build environment.
+
+#+begin_example
+adapters/emacs.el
+adapters/kitty.conf
+adapters/fish.fish
+adapters/gtk3.ini
+adapters/gtk4.ini
+adapters/x-session.sh
+tokens.scm
+assets/wallpapers/waifu-cyberpunk.png
+#+end_example
+
+It does not read =$HOME=, the live checkout, profile, display, process state,
+dconf, fontconfig state, or the network while rendering.
+
+Guix Home maps the bundle to:
+
+| Home target | Bundle member |
+|-------------+---------------|
+| =~/.config/emacs/sk-theme-generated.el= | =adapters/emacs.el= |
+| =~/.config/kitty/kitty.conf= | =adapters/kitty.conf= |
+| =~/.config/gtk-3.0/settings.ini= | =adapters/gtk3.ini= |
+| =~/.config/gtk-4.0/settings.ini= | =adapters/gtk4.ini= |
+| =~/.config/sk-theme/x-session.sh= | =adapters/x-session.sh= |
+| =~/.config/sk-theme/tokens.scm= | =tokens.scm= |
+| =~/.local/share/sk-theme/assets/wallpapers/waifu-cyberpunk.png= | immutable wallpaper |
+
+Fish remains owned by its existing Home service.  The static shell structure,
+Scheme-owned alias fragment, and generated Fish adapter are concatenated in
+that order.  Guix adds one serialization newline after the final adapter; the
+adapter bytes themselves match the golden exactly and the complete candidate
+file passes =fish -n=.
+
+* Package ownership
+
+The reviewed declaration now has 89 package/output selections: 87 ordinary
+specifications, one exact output specification, and the existing explicit
+runtime-detached Racket Mode package.
+
+P3.3 directly owns:
+
+- =font-awesome= 4.7.0;
+- =font-google-material-design-icons= 4.0.0;
+- =papirus-icon-theme= 20250501;
+- =bibata-cursor-theme= 2.0.3;
+- =hicolor-icon-theme= 0.18; and
+- =gtk:bin= 4.22.1.
+
+Font Awesome and Material Icons were previously available only through
+=emacs-all-the-icons=.  Direct ownership prevents a global production fallback
+from disappearing with an unrelated Emacs package.  Papirus does not provide
+the terminal hicolor definition by itself, so hicolor is also explicit.
+=font-iosevka-term= remains temporarily for pre-activation behavior and
+generation rollback; removal is a post-P3.4 decision.
+
+The resulting profile reports 93 top-level records because Home services add
+their own packages beyond the 89 declaration selections.  The gate compares
+the declaration subset and exact outputs rather than confusing those counts.
+
+* Atomic Kitty ownership transition
+
+=~/.config/kitty/kitty.conf= was removed from the live repository-link list in
+the same source change that adds its complete Home XDG file.  It is retained in
+a one-entry retired-transition manifest.
+
+The candidate activation script orders Guix Home's =update-symlinks= before
+the custom =sk:activate-repo-links= action.  On P3.4 activation, Home therefore
+backs up the old repository symlink, installs the store-backed generated file,
+and only then refreshes the remaining repository links.  This is one
+generation-level ownership migration; Guix still briefly deletes and recreates
+the individual symlink and does not promise a syscall-level atomic rename.
+
+The read-only =ghr= preflight accepts only:
+
+1. a missing retiring target;
+2. the exact old repository symlink; or
+3. a symlink resolving below =/gnu/store= whose bytes equal the reviewed
+   production Kitty golden.
+
+Regular files, wrong links, dangling links, mutable lookalikes, and
+store-backed byte drift fail before reconfiguration.  The legacy
+=kitty/kitty.conf= remains tracked because generation 42's stored activation
+manifest still needs it for complete rollback.
+
+* Consumer transition behavior
+
+Emacs loads the generated adapter before =use-package=, =sk-ui=, and Org only
+when the configured file resolves below =/gnu/store=.  A missing or mutable
+lookalike is ignored.  Before P3.4, =sk-ui= therefore preserves the exact
+Iosevka/Modus behavior.  Once the generated feature is loaded, the legacy
+theme/font setup is skipped and Org inherits the generated fixed-pitch role.
+
+Xinit applies the same rule to the generated same-shell adapter.  Until it is
+active, the existing wallpaper, zoom fit, Picom backend/VSync, 85-percent Emacs
+opacity, and no cursor override remain unchanged.  With the immutable adapter,
+Xinit resolves the wallpaper through =XDG_DATA_HOME=, enumerates the accepted
+fit and Picom values, and exports only the cursor identity/size.  It does not
+force GTK, GDK, Qt, DPI, or scale environment variables.
+
+Fish source no longer owns raw prompt colors.  The active generation still has
+its old immutable file; only the later candidate activation will select the
+generated prompt, syntax, autosuggestion, search, and pager policy.
+
+* Corrections found by the real build
+
+The dry-run evaluated successfully and predicted only Papirus and Bibata as
+new downloads.  The first real derivation then exposed two module-closure
+errors:
+
+1. =(guix build utils)= was used by the builder but omitted from the imported
+   module closure;
+2. =source-module-closure='s default selector includes Guix modules but excludes
+   the project-local =(sk theme)= module.
+
+The final module imports Guix's build closure and explicitly admits
+=(sk theme)= through a narrow selector.  The resulting build compiled both
+modules inside the derivation and succeeded.
+
+Candidate inspection then showed that =home-fish-configuration='s =aliases=
+field serializes after all =config= fragments.  Although the generated theme
+was semantically effective, it was not the final auditable fragment.  The
+aliases remain Scheme-owned but now occupy an explicit fragment before the
+theme adapter.
+
+These were candidate-build corrections.  None reached the active Home.
+
+* Validation evidence
+
+| Gate | Result |
+|------+--------|
+| P3.2 schema/renderers | 281 Scheme checks pass |
+| native target parsers | Fish 4.7.1, Emacs 30.2, Kitty 0.47.4 pass |
+| Home/link/package source fixtures | pass; declaration =13 recovery / 89 Home / 1 explicit= |
+| strict repository shell gate | pass |
+| isolated Emacs batch/backend gate | 60/60 ERT plus connected Guile/SBCL backends pass |
+| immutable-candidate failure-control fixture | pass; byte drift, reversed/duplicate activation markers, dual Kitty ownership, missing =gtk:bin=, and font drift are rejected |
+| build-gate integration fixture | pass, including command/output and invocation-order negative controls |
+| complete pinned build gate | pass; manifests, Home/System builds, ownership, candidate, SSH Fish, and connected editor backends |
+| Home dry-run | pass; 61.0 MB Papirus/Bibata substitutes predicted |
+| Home build | pass; candidate =b668045v...-home= |
+| real immutable candidate checker | pass against =b668045v...-home= |
+| candidate adapter bytes | all six equal production goldens |
+| candidate parsers | complete Fish, Emacs adapter, Kitty, X-session pass |
+| package outputs | exact fonts/icons/cursor and =gtk 4.22.1:bin= pass |
+| GTK 4 acceptance binary | =gtk4-widget-factory= resolves from =gtk-4.22.1-bin= |
+| font resolution | JetBrains fixed/UI, Symbols, Emoji, FontAwesome, Material Icons pass |
+| icon/cursor fallback | Papirus-Dark, Bibata-Modern-Ice, hicolor indices pass |
+| activation inspection | =update-symlinks= precedes repository-link activation |
+| live boundary after build | generation 42 and all prior owners unchanged |
+
+The profile build still prints several file-collision warnings already present
+in the broad development profile.  Adding =gtk:bin= also participates in the
+GdkPixbuf loader-cache collision set; Guix chooses its generated cache hook and
+the candidate builds successfully.  P3.4 must still test the actual GTK 3/4
+applications rather than treating build success as visual proof.
+
+One disclosed read-only inventory command, =guix locate=, may have refreshed
+=~/.cache/guix/locate/db.sqlite=.  It changed no repository, profile,
+generation, service, process, GUI, or application state.
+
+* Durable planning state
+
+=README.org=, the P3.2 source record, and the machine TODO now identify P3.2
+as published, P3.3 as built but not active, and P3.4 as the separate sequential
+activation/acceptance gate.
+
+The editable agenda at
+=~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org=
+was copied only after its live hash still matched the reviewed input
+=d15caa4d04f9a987a84de6e78c2f5a2e1e51a5e113da00bfa3d59424b12c6c7d=.
+The synchronized result is
+=a6236e73db15c36a171b0bf8e9e6057769b51c09fd408c741a683ed3dc684c12=.
+All four repository records and the agenda pass =org-lint=.
+
+* Rollback and P3.4 handoff
+
+P3.3 rollback before activation is a source revert only.  The realized
+candidate may be garbage-collected without affecting generation 42.
+
+P3.4 must begin only after the P3.3 source checkpoint is pushed and upstream
+equality is verified.  Its gates are deliberately sequential:
+
+1. record the exact source checkpoint, clean ahead/behind evidence, previous
+   Home generation 42/result, retained =kitty/kitty.conf=, and rollback plan;
+2. run the read-only 14-live-plus-one-retired link preflight;
+3. run =ghr= and record the new Home generation/result plus the standard
+   legacy-backup path; this proves activation only;
+4. before restarting consumers, prove every generated target is store-backed
+   and golden-equal, Kitty has exactly one Home owner, and all 14 continuing
+   repository links remain correct;
+5. test fresh Kitty, Fish, Emacs, one GTK 3 application, and
+   =gtk4-widget-factory= separately;
+6. because Xinit owns the session adapter, restart X/EXWM or reboot only as a
+   later recorded gate, then inspect Papirus/hicolor fallback, Bibata cursor,
+   Picom, wallpaper fit, transparency, and the real ultrawide display; and
+7. obtain Rafael's real-display acceptance and recheck adjacent SSH/EXWM
+   behavior.
+
+Stop and roll back on preflight failure, dual or mutable Kitty ownership,
+non-store/generated byte drift, parser/load regression, session instability,
+or unacceptable contrast/appearance.  Preserve both halves of Kitty rollback:
+generation 42 and its retained repository source.  Do not claim Qt, forced
+scaling, or global toolkit environment ownership.

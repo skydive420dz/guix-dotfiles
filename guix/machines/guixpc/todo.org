@@ -525,9 +525,11 @@ CLOSED: [2026-07-16 Thu]
 - Add no visual source value, package, build, generation, activation, session
   reload/restart, GUI launch, or reboot merely to close P3.1.
 
-* ACTIVE P3.2 offline semantic-token schema, renderers, fixtures, and production datum
+* DONE P3.2 offline semantic-token schema, renderers, fixtures, and production datum
+CLOSED: [2026-07-17 Fri]
 :PROPERTIES:
 :created: 2026-07-16
+:completed: 2026-07-17
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-16-p3.2-offline-theme-schema.org][2026-07-16 P3.2 offline semantic-theme schema, fixture, and production gate]].
@@ -559,11 +561,65 @@ CLOSED: [2026-07-16 Thu]
 - [X] Pass the extended production/golden/native-parser source gate: 281
   Scheme checks, pinned native parsers, complete strict repository gate,
   changed-file/agenda Org lint, and clean diff check.
-- [ ] Commit the second P3.2 source-only checkpoint, push it, and verify clean
-  upstream equality.
+- [X] Publish production source checkpoint
+  =b74a98d736b6dfbca421b115d1a0c979d707a853= and verify clean upstream
+  equality at ahead/behind =0/0=.
 - [X] Preserve separate source, candidate Home evaluation/build, checkpoint,
   Home activation, live application, real-display, and rollback gates for
   P3.3/P3.4.  P3.2 performs no Home build or runtime mutation.
+
+* ACTIVE P3.3 immutable Guix Home theme wiring and candidate build
+:PROPERTIES:
+:created: 2026-07-17
+:END:
+
+- Evidence: [[file:../../../docs/audits/2026-07-17-p3.3-immutable-theme-home-wiring.org][2026-07-17 P3.3 immutable Home wiring and candidate build]].
+- [X] Build one isolated Scheme-generated bundle and map its six adapters,
+  token datum, and wallpaper through Guix Home.
+- [X] Add exact font/icon/cursor package ownership and =gtk:bin= for
+  =gtk4-widget-factory= without broadening Qt or scaling scope.
+- [X] Move Kitty from the live repository-link manifest to a guarded retired
+  transition in the same candidate that gives Guix Home its complete immutable
+  config; retain =kitty/kitty.conf= for generation-42 rollback.
+- [X] Build and validate candidate
+  =/gnu/store/b668045vxgnx7mnsi99pf4nsdd4md9hc-home= while Home generation 42
+  and every prior live owner remain unchanged.
+- [X] Pass the integrated source, 60-test Emacs/backend, immutable-candidate,
+  and strict repository gates.
+- [X] Pass the complete pinned build gate, including development manifests,
+  Home/System builds, realized ownership, non-login SSH Fish, and connected
+  editor backends.
+- [X] Commit implementation checkpoint
+  =530eb250e2e876f20b3c553be39533e5548cfb6d= after the complete source/build
+  gates pass.
+- [ ] Publish the implementation and evidence checkpoints, fetch them, and
+  prove clean upstream equality before activation.
+- [X] Perform no Home activation, consumer restart, GUI launch, EXWM/session
+  restart, or reboot in P3.3.
+
+* TODO P3.4 activation and real-display visual acceptance
+:PROPERTIES:
+:created: 2026-07-17
+:blocked_by: P3.3 published and equal to upstream
+:END:
+
+- [ ] Capture the exact P3.3 source checkpoint, clean upstream equality,
+  generation 42/result, retained Kitty source, and rollback/retention plan.
+- [ ] Run the read-only 14-live-plus-one-retired link preflight, then run =ghr=
+  and record the new Home generation/result and legacy-backup path.  Treat this
+  as activation evidence only.
+- [ ] Before restarting consumers, prove all generated targets are store-backed
+  and golden-equal, Kitty has one Home owner, and all 14 continuing repository
+  links remain correct.
+- [ ] Test fresh Kitty, Fish, Emacs, one GTK 3 app, and
+  =gtk4-widget-factory= separately.
+- [ ] Restart the X/EXWM session or reboot only after consumer checks, then
+  inspect wallpaper/fit, Picom, opacity, cursor/icons, and the ultrawide result.
+- [ ] Complete real-display, contrast, and adjacent SSH/EXWM acceptance with
+  Rafael; stop and roll back on ownership drift, parser/load regression,
+  session instability, or unacceptable appearance.
+- [ ] Preserve two-sided Kitty rollback evidence and do not claim Qt, forced
+  DPI, or global toolkit-scale ownership.
 
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:

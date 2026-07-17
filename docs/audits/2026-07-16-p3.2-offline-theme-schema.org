@@ -1,6 +1,6 @@
 #+title: GuixPC P3.2 Offline Semantic-Theme Schema, Fixture, and Production Gate
 #+date: 2026-07-16
-#+status: schema-v2 production source candidate; second checkpoint awaiting publication
+#+status: complete; both source-only checkpoints published
 
 * Outcome
 
@@ -21,13 +21,14 @@ begins with =SYNTHETIC FIXTURE - DO NOT INSTALL=.  Fixture-only checkpoint
 =3627f0b9c98e01279e8aafa42ef81128686f3ade= is pushed, clean, and equal to
 =origin/main= at ahead/behind =0/0=.
 
-Rafael then accepted the final production choice, 11 pt UI text.  The pending
-second source-only checkpoint evolves the contract to schema version 2, adds
-=theme/tokens.scm=, pins exact Modus source provenance, freezes every
-production semantic role and ANSI slot, and adds deterministic production
-goldens and negative controls.  Production rendering is allowed only for the
-exact accepted identity; changing a provenance field, role, ANSI value, or
-accepted policy value is a validation error.
+Rafael then accepted the final production choice, 11 pt UI text.  Published
+checkpoint =b74a98d736b6dfbca421b115d1a0c979d707a853= evolves the contract
+to schema version 2, adds =theme/tokens.scm=, pins exact Modus source
+provenance, freezes every production semantic role and ANSI slot, and adds
+deterministic production goldens and negative controls.  It was verified clean
+and equal to =origin/main= at ahead/behind =0/0=.  Production rendering is
+allowed only for the exact accepted identity; changing a provenance field,
+role, ANSI value, or accepted policy value is a validation error.
 
 Neither source checkpoint wires a generated file into Guix Home.  No package
 change, Home candidate build, generation, activation, process restart, GUI
@@ -214,7 +215,8 @@ checkpoint:
 
 GTK fixture validation is intentionally structural and version-aware; it is
 not represented as a live GTK property test.  Candidate-profile lookup and
-real-display =gtk4-widget-factory= acceptance belong to P3.3/P3.4.
+=gtk:bin= identity belong to P3.3; real-display =gtk4-widget-factory=
+acceptance belongs to P3.4.
 
 The fixture checkpoint's complete =scripts/shell-check --strict= repository
 suite also passed, as did direct ShellCheck, =git diff --check=, and =org-lint=
@@ -245,13 +247,13 @@ Current checkpoint state:
 
 1. fixture-only checkpoint =3627f0b= is pushed and equal to upstream;
 2. 11 pt UI text is accepted;
-3. schema version 2 and the frozen production datum are the pending second
-   source-only checkpoint;
-4. that checkpoint has passed its complete source gate and must be committed
-   and pushed before P3.3 begins; and
-5. P3.3 must separately validate candidate-profile identities and output-aware
+3. schema version 2 and the frozen production datum are published as
+   =b74a98d= and equal to upstream;
+4. both checkpoints passed their complete source-only gates without Home
+   wiring, a Home build, activation, or runtime change; and
+5. P3.3 separately validates candidate-profile identities and output-aware
    Guix package entries, including =gtk:bin= for
-   =gtk4-widget-factory=, then evaluate/build immutable Home wiring before any
+   =gtk4-widget-factory=, then evaluates/builds immutable Home wiring before any
    activation.
 
 P3.4 retains activation, live ownership inspection, and real-display
