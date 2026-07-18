@@ -1,6 +1,6 @@
 #+title: P3.4 theme activation: runtime stops and visual corrections
 #+date: 2026-07-17
-#+status: active; generation 47 startup correction accepted with qualification; wider visual checks pending
+#+status: complete; generation 47 active; scoped visual and adjacent acceptance passed
 
 * Outcome so far
 
@@ -60,7 +60,9 @@ That candidate-stage evidence preceded published correction =e6492cc= and
 generation 46.  The fresh structural frame, GTK 3/Blueman, and keybinding
 gates pass.  A later mapped-opacity correction was published as =f24b7b5=,
 activated as generation 47, and received a strongly positive attended startup
-report; the wider visual surfaces remain open.
+report.  The remaining declared real-display and adjacent SSH/EXWM checks then
+passed on current boot =b36bfc06-65d3-4534-9ff2-b8383c1dc9ed=.  P3.4 is
+complete at that scoped boundary.
 
 * Published activation boundary
 
@@ -767,7 +769,51 @@ Rafael attended the first-paint boundary and reported that startup was “SO
 much better!”  This is strong positive evidence that the correction materially
 improved the dashboard transition.  It is not silently rewritten as an
 absolute claim that every trace of a transition, blank interval, or stale
-paint is absent.  The wider visual and adjacent SSH/EXWM gates remain open.
+paint is absent.
+
+* Final scoped acceptance
+
+The final paired pass ran on =2026-07-18= under boot
+=b36bfc06-65d3-4534-9ff2-b8383c1dc9ed= with:
+
+#+begin_example
+System generation 87 /gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+Home generation 47   /gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home
+#+end_example
+
+The read-only runtime checks retained five 3440x1440 EXWM frames and one exact
+Picom daemon with the declared GLX/VSync and 85-percent Emacs opacity rule.
+The startup gate had completed and removed its temporary alpha owners, so
+Picom—not a surviving per-frame startup override—owned steady-state
+transparency.
+
+The remaining hand checks passed:
+
+- the wallpaper fit the ultrawide screen exactly;
+- transparency was consistent and comfortable, all text remained readable,
+  and there was no flicker, ghosting, or anomalous menu rendering;
+- the Bibata cursor and Papirus/hicolor icon behavior were acceptable;
+- the declared JetBrains font roles and contrast were readable;
+- the exact-profile GTK 4 factory was visually acceptable;
+- Fish syntax and completion-pager colors were readable; and
+- Rafael completed the adjacent keybinding, SSH, terminal, and EXWM checks
+  with the final report “everything works.”
+
+The automated boundary corroborated that hand pass:
+
+- =desktop-session-check= passed, with physical-audio and Bluetooth endpoint
+  checks explicitly skipped because neither endpoint was connected;
+- clean noninteractive SSH returned its exact marker;
+- a PTY carried =TERM=xterm-kitty= unchanged, and remote =infocmp= succeeded
+  without a per-command =TERM= override; and
+- the SSH/Emacsclient probe was cleaned up with no residual client, GTK probe,
+  extra Picom, or extra X frame.
+
+The disconnected endpoint skips are not fresh connected audio/Bluetooth
+acceptance; earlier connected-device evidence remains historical.  This
+closure also does not claim Qt theming, forced DPI, global toolkit scaling, or
+an absolute absence of every startup transition, blank interval, or stale
+paint.
 
 * Planning synchronization
 
@@ -910,14 +956,34 @@ input.  The corrected live SHA256 is:
 43059b8055f823c849fe6c6a0ec7272b0698db5dd947c4192c96752501e51661
 #+end_example
 
-* Remaining sequential gates
+The P3.4 closure revision was first copied only while the live agenda still
+matched that exact =43059b80= input.  It records boot =b36bfc06...=, the
+remaining visual and adjacent acceptance, decision D-29, the explicit
+disconnected audio/Bluetooth skips, and the retained
+Qt/scaling/zero-transition exclusions.  The staged agenda and all changed
+repository Org files passed =org-lint=.  Its intermediate SHA256 was:
 
-1. Complete wallpaper, Picom, transparency, cursor, icon, font, contrast,
-   ultrawide, and adjacent SSH/EXWM hand tests with Rafael.
+#+begin_example
+c3a73cf95b303abc34ed4e40898f7b153f1776808eadfa0d994e765a5da7f176
+#+end_example
+
+A final workflow-consistency pass added the standard Org =CLOSED= timestamp to
+the two completed P3.4 headings.  It was staged and copied only while the live
+agenda still matched that exact =c3a73cf9= intermediate input.  All four final
+Org files passed =org-lint=.  The final live agenda SHA256 is:
+
+#+begin_example
+e59001905251b78c9eba7caa66785bfdb85e7644a92b7e399aad820c0b59d825
+#+end_example
+
+* Closure boundary
+
+No P3.4 sequential gate remains.  The declared activation, runtime,
+real-display, and adjacent SSH/EXWM acceptance scope is complete.
 
 Generation 42 and its retained Kitty source remain the pre-theme rollback.
 Generation 43 is retained as exact evidence of the schema stop; generation 44
 is retained as exact evidence of the GStreamer stop; generation 45 is the
 earlier corrected-runtime rollback; generation 46 is immediate rollback and
-generation 47 is active.  No Qt, forced DPI, global toolkit scale, absolute
-zero-transition result, or complete visual acceptance is claimed.
+generation 47 is active.  No Qt, forced DPI, global toolkit scale, connected
+audio/Bluetooth retest, or absolute zero-transition result is claimed.

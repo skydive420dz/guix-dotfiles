@@ -606,10 +606,11 @@ CLOSED: [2026-07-17 Fri]
 - [X] Preserve the historical P3.3 result and cross-reference the later P3.4
   finding that =gtk:bin= alone did not expose GTK's private schemas.
 
-* TODO P3.4 activation and real-display visual acceptance
+* DONE P3.4 activation and real-display visual acceptance
+CLOSED: [2026-07-18 Sat]
 :PROPERTIES:
 :created: 2026-07-17
-:NEXT_GATE: finish wider visual surfaces and adjacent SSH/EXWM acceptance
+:completed: 2026-07-18
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-17-p3.4-theme-activation.org][2026-07-17 P3.4 GTK/GStreamer activation stops and corrections]].
@@ -722,13 +723,15 @@ CLOSED: [2026-07-17 Fri]
   reported that startup was “SO much better!”; record that as strong positive
   evidence without silently upgrading it to an absolute zero-transition
   claim.
-- [ ] Inspect wallpaper/fit, Picom, opacity, cursor/icons, and the ultrawide
-  result after the corrected reboot.
-- [ ] Complete real-display, contrast, and adjacent SSH/EXWM acceptance with
-  Rafael; stop and roll back on ownership drift, parser/load regression,
-  session instability, or unacceptable appearance.
-- [ ] Preserve two-sided Kitty rollback evidence and do not claim Qt, forced
-  DPI, or global toolkit-scale ownership.
+- [X] Accept wallpaper/ultrawide fit, Picom transparency, cursor/icons,
+  font/contrast, GTK 4, and Fish syntax/pager colors on boot =b36bfc06...=.
+- [X] Complete adjacent keybinding, SSH, terminal, and EXWM acceptance with
+  Rafael.  The final desktop-session run passes with physical-audio and
+  Bluetooth endpoint checks explicitly skipped because they were disconnected.
+- [X] Preserve two-sided Kitty rollback evidence and the generation-46
+  immediate rollback.  Do not claim Qt, forced DPI, global toolkit-scale
+  ownership, connected audio/Bluetooth retesting, or absolute
+  zero-transition behavior.
 
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:

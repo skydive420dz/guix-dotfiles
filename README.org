@@ -73,9 +73,14 @@ same 96-record profile and generation 46 retained as immediate rollback.
 Attended boot =6c560dab-b745-41a5-9f45-8087580c8929= passes the exact
 single-Picom and live five-frame reveal-gate contracts.  Rafael reported that
 startup was “SO much better!”; this is strong positive evidence that the
-dashboard transition is materially corrected.  The wider visual and adjacent
-SSH/EXWM checks remain open; this report is not rewritten as an absolute
-zero-transition claim.
+dashboard transition is materially corrected.  P3.4 is now accepted complete
+on current boot =b36bfc06-65d3-4534-9ff2-b8383c1dc9ed=: wallpaper and
+ultrawide fit, Picom transparency, font/contrast, Papirus icons, the Bibata
+cursor, GTK 4, Fish syntax/pager colors, and adjacent SSH/EXWM behavior passed
+Rafael's paired hand checks.  The final desktop-session invocation explicitly
+skipped disconnected physical-audio and Bluetooth endpoints.  This scoped
+acceptance is not rewritten as an absolute zero-transition claim and does not
+claim Qt, forced DPI, or global toolkit scaling.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -168,7 +173,8 @@ and evidence checkpoint =00bf260d614ce4e5e4d023a7fba09826da48ae80=
 are published; fetched =HEAD= and =origin/main= equal =00bf260= at
 ahead/behind =0/0=.
 
-P3.4 is active.  Generation 43 at
+P3.4 is complete at its scoped activation and real-display boundary.
+Generation 43 at
 =/gnu/store/1slsnsfv8avdqzi3fsf0xhigyv6vfmal-home= records the first factory
 stop: =gtk:bin= exposed the executable while =gtk:out= remained outside the
 profile.  GTK correction =1358cb2= is published and upstream-equal; generation
@@ -231,7 +237,12 @@ fresh-process failure fixture, connected backends, and desktop-session gate
 all pass.  Rafael reported that the attended startup was “SO much better!”
 That is strong positive evidence of a material correction, not an unqualified
 claim that every trace of a visual transition is absent.  Remaining
-cursor/icon, contrast, ultrawide, and adjacent SSH/EXWM checks remain open.
+real-display checks on current boot =b36bfc06...= accepted wallpaper and
+ultrawide fit, transparency and readable contrast without flicker or ghosting,
+the cursor and icons, GTK 4, Fish syntax/pager colors, and adjacent SSH/EXWM
+behavior.  The final automated desktop-session run passed with explicit
+disconnected audio/Bluetooth skips.  No Qt, forced-DPI, global toolkit-scale,
+or absolute zero-transition result is claimed.
 
 P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
 parked.  Generation deletion and store collection remain Phase 5 work behind
@@ -239,13 +250,16 @@ the restore-tested-backup gate.
 
 ** Ready
 
-- [ ] P3.4: finish fonts, icons, cursor, Picom, wallpaper, transparency,
-  contrast, ultrawide, and adjacent SSH/EXWM hand tests.  Generation 47 has
-  passed publication, guarded activation, exact fresh-runtime checks, and a
-  strongly positive attended startup report; preserve the distinction between
-  that qualified evidence and an absolute zero-transition claim.
+No Phase 3 slice is waiting at a ready gate.  Select the next bounded roadmap
+slice separately.
 
 ** Completed
+
+- [X] P3.4: activation and scoped real-display visual acceptance
+  Generation 47 passed publication, guarded activation, exact fresh-runtime
+  checks, the attended startup correction, the remaining visual hand pass,
+  and adjacent SSH/EXWM acceptance.  Preserve the recorded disconnected
+  audio/Bluetooth skips and the Qt/scaling/zero-transition exclusions.
 
 - [X] P3.3: immutable Guix Home theme wiring and candidate build
   Published implementation =530eb25= and evidence =00bf260= are fetched,
