@@ -4,7 +4,8 @@ set -eu
 program=${0##*/}
 
 usage() {
-    printf 'usage: %s inventory|plan|verify|rollback-drill\n' "$program" >&2
+    printf 'usage: %s inventory|plan|estimate|verify|rollback-drill\n' \
+        "$program" >&2
     exit 64
 }
 
@@ -16,7 +17,7 @@ fail() {
 [ "$#" -eq 1 ] || usage
 action=$1
 case $action in
-    inventory | plan | verify | rollback-drill) ;;
+    inventory | plan | estimate | verify | rollback-drill) ;;
     *) usage ;;
 esac
 
@@ -26,6 +27,9 @@ pins=${GUIX_RETENTION_PINS:-$repo/guix/machines/guixpc/generation-pins.tsv}
 root=${GUIX_RETENTION_ROOT:-/}
 retention_user=${GUIX_RETENTION_USER:-$(id -un)}
 retention_home=${GUIX_RETENTION_HOME:-${HOME:?HOME must be set}}
+estimator_override=${GUIX_RETENTION_ESTIMATOR_HELPER:-}
+estimator_scheme=$repo/scripts/guix-generation-retention-estimator.scm
+estimator_guix=${GUIX_RETENTION_GUIX:-$retention_home/.config/guix/current/bin/guix}
 
 case $root in
     /*) ;;
@@ -90,6 +94,14 @@ currents=$work/currents.tsv
 normalized_pins=$work/pins.tsv
 protected=$work/protected.tsv
 candidates=$work/candidates.tsv
+policy_input=$work/policy-input.tsv
+policy_rows=$work/policy-rows.tsv
+candidate_targets=$work/candidate-targets.txt
+retained_targets=$work/retained-targets.txt
+ignored_roots=$work/ignored-roots.txt
+helper_output=$work/helper-output.tsv
+snapshot_before=$work/snapshot-before.tsv
+snapshot_after=$work/snapshot-after.tsv
 : >"$inventory"
 : >"$currents"
 : >"$normalized_pins"
@@ -277,6 +289,379 @@ prepare_state() {
         fail "plan would remove every generation root for the booted System"
 }
 
+snapshot_kind() {
+    sk_output=$1
+    sk_kind=$2
+    sk_directory=$3
+    sk_prefix=$4
+
+    for sk_link in "$sk_directory"/"$sk_prefix"[0-9]*-link; do
+        [ -L "$sk_link" ] || continue
+        sk_name=${sk_link##*/}
+        sk_generation=${sk_name#"$sk_prefix"}
+        sk_generation=${sk_generation%-link}
+        sk_raw=$(readlink "$sk_link") ||
+            fail "cannot snapshot $sk_kind generation $sk_generation"
+        sk_target=$(canonical_path "$sk_link") ||
+            fail "cannot snapshot $sk_kind generation $sk_generation target"
+        printf 'generation\t%s\t%s\t%s\t%s\n' \
+            "$sk_kind" "$sk_generation" "$sk_raw" "$sk_target" >>"$sk_output"
+    done
+}
+
+snapshot_pointer() {
+    sp_output=$1
+    sp_name=$2
+    sp_path=$3
+    [ -L "$sp_path" ] || fail "cannot snapshot missing pointer: $sp_path"
+    sp_raw=$(readlink "$sp_path") || fail "cannot read pointer: $sp_path"
+    sp_target=$(canonical_path "$sp_path") ||
+        fail "cannot resolve pointer: $sp_path"
+    printf 'pointer\t%s\t%s\t%s\n' \
+        "$sp_name" "$sp_raw" "$sp_target" >>"$sp_output"
+}
+
+snapshot_generation_state() {
+    sgs_output=$1
+    sgs_unsorted=$work/snapshot-unsorted.tsv
+    : >"$sgs_unsorted"
+
+    snapshot_kind "$sgs_unsorted" system "$ps_system_profiles" system-
+    snapshot_kind "$sgs_unsorted" home "$ps_user_profiles" guix-home-
+    snapshot_kind "$sgs_unsorted" pull "$ps_user_profiles" current-guix-
+    snapshot_pointer "$sgs_unsorted" system-profile "$ps_system_profiles/system"
+    snapshot_pointer "$sgs_unsorted" runtime-current \
+        "$(root_path /run/current-system)"
+    snapshot_pointer "$sgs_unsorted" runtime-booted \
+        "$(root_path /run/booted-system)"
+    snapshot_pointer "$sgs_unsorted" home-profile "$ps_user_profiles/guix-home"
+    snapshot_pointer "$sgs_unsorted" pull-profile \
+        "$ps_user_profiles/current-guix"
+    snapshot_pointer "$sgs_unsorted" user-current \
+        "$retention_home/.config/guix/current"
+    sgs_pin_record=$(sha256sum "$pins") ||
+        fail "cannot hash pin manifest: $pins"
+    sgs_pin_hash=${sgs_pin_record%% *}
+    case $sgs_pin_hash in
+        '' | *[!0-9a-f]*) fail "invalid pin-manifest SHA256: $sgs_pin_hash" ;;
+    esac
+    [ "${#sgs_pin_hash}" -eq 64 ] ||
+        fail "invalid pin-manifest SHA256 length: $sgs_pin_hash"
+    printf 'pins\t%s\n' "$sgs_pin_hash" >>"$sgs_unsorted"
+    LC_ALL=C sort "$sgs_unsorted" >"$sgs_output"
+}
+
+prepare_estimate_policy() {
+    : >"$policy_input"
+    {
+        awk -F '\t' '{
+            printf "generation\t%s\t%s\t%s\n", $1, $2, $3
+        }' "$inventory"
+        awk -F '\t' '{
+            printf "current\t%s\t%s\t%s\n", $1, $2, $3
+        }' "$currents"
+        awk -F '\t' '{
+            printf "pin\t%s\t%s\t%s\t%s\n", $1, $2, $3, $4
+        }' "$normalized_pins"
+        printf 'booted\t%s\n' "$booted_target"
+    } >>"$policy_input"
+
+    awk -F '\t' '
+        function add_reason(key, value, current) {
+            current = reason[key]
+            if (current == "")
+                reason[key] = value
+            else if (index("," current ",", "," value ",") == 0)
+                reason[key] = current "," value
+        }
+        $1 == "generation" {
+            row_kind[++rows] = $2
+            row_generation[rows] = $3 + 0
+            row_target[rows] = $4
+            key = $2 SUBSEP $4
+            present[key] = 1
+            target_links[key]++
+            if (($3 + 0) > newest[key])
+                newest[key] = $3 + 0
+            next
+        }
+        $1 == "current" {
+            current_generation[$2] = $3 + 0
+            current_target[$2] = $4
+            add_reason("link" SUBSEP $2 SUBSEP ($3 + 0), "current")
+            next
+        }
+        $1 == "pin" {
+            pinned[$2 SUBSEP $4] = 1
+            add_reason("link" SUBSEP $2 SUBSEP ($3 + 0), "pin-" $5)
+            next
+        }
+        $1 == "booted" {
+            booted = $2
+            next
+        }
+        END {
+            kinds[1] = "system"
+            kinds[2] = "home"
+            kinds[3] = "pull"
+
+            for (i = 1; i <= 3; i++) {
+                kind = kinds[i]
+                key = kind SUBSEP current_target[kind]
+                retained[key] = 1
+                add_reason("closure" SUBSEP key, "current")
+
+                if (kind == "system" && booted != current_target[kind]) {
+                    key = kind SUBSEP booted
+                    retained[key] = 1
+                    add_reason("closure" SUBSEP key, "booted")
+                }
+
+                for (slot = 1; slot <= 5; slot++) {
+                    best_key = ""
+                    best_generation = -1
+                    for (key in present) {
+                        split(key, field, SUBSEP)
+                        if (field[1] != kind || selected[key])
+                            continue
+                        if (field[2] == current_target[kind])
+                            continue
+                        if (kind == "system" && field[2] == booted)
+                            continue
+                        if (newest[key] > best_generation) {
+                            best_key = key
+                            best_generation = newest[key]
+                        }
+                    }
+                    if (best_key == "")
+                        break
+                    selected[best_key] = 1
+                    retained[best_key] = 1
+                    add_reason("closure" SUBSEP best_key,
+                               "newest-additional")
+                }
+            }
+
+            for (key in pinned) {
+                retained[key] = 1
+                add_reason("closure" SUBSEP key, "pin")
+            }
+
+            for (key in present) {
+                split(key, field, SUBSEP)
+                state = retained[key] ? "retain" : "candidate"
+                tags = reason["closure" SUBSEP key]
+                if (tags == "")
+                    tags = "outside-floor"
+                printf "closure\t%s\t%d\t%s\t%s\t%s\n",
+                       field[1], newest[key], field[2], state, tags
+            }
+
+            for (i = 1; i <= rows; i++) {
+                kind = row_kind[i]
+                generation = row_generation[i]
+                target = row_target[i]
+                key = kind SUBSEP target
+                link_key = "link" SUBSEP kind SUBSEP generation
+
+                if (kind == "system" && target == booted) {
+                    if (target_links[key] > 1)
+                        add_reason(link_key, "booted-ambiguous")
+                    else if (booted != current_target[kind])
+                        add_reason(link_key, "booted")
+                }
+
+                if (retained[key] && generation == newest[key])
+                    add_reason(link_key, "closure-survivor")
+
+                tags = reason[link_key]
+                if (tags != "")
+                    printf "retain\t%s\t%d\t%s\t%s\n",
+                           kind, generation, target, tags
+                else if (retained[key])
+                    printf "candidate\t%s\t%d\t%s\tduplicate-retained-closure\n",
+                           kind, generation, target
+                else
+                    printf "candidate\t%s\t%d\t%s\tunretained-closure\n",
+                           kind, generation, target
+            }
+        }
+    ' "$policy_input" | LC_ALL=C sort -t "$tab" \
+        -k1,1 -k2,2 -k3,3n -k4,4 >"$policy_rows"
+
+    awk -F '\t' '
+        $1 == "candidate" && $5 == "unretained-closure" { print $4 }
+    ' "$policy_rows" | LC_ALL=C sort -u >"$candidate_targets"
+    awk -F '\t' '
+        $1 == "closure" && $5 == "retain" { print $4 }
+    ' "$policy_rows" | LC_ALL=C sort -u >"$retained_targets"
+
+    : >"$ignored_roots"
+    while IFS="$tab" read -r pep_record pep_kind pep_generation \
+        pep_target pep_class; do
+        [ "$pep_record" = candidate ] || continue
+        : "$pep_target" "$pep_class"
+        case $pep_kind in
+            system)
+                pep_path=$ps_system_profiles/system-$pep_generation-link
+                ;;
+            home)
+                pep_path=$ps_user_profiles/guix-home-$pep_generation-link
+                ;;
+            pull)
+                pep_path=$ps_user_profiles/current-guix-$pep_generation-link
+                ;;
+            *)
+                fail "unexpected estimate kind: $pep_kind"
+                ;;
+        esac
+        printf '%s\n' "$pep_path" >>"$ignored_roots"
+    done <"$policy_rows"
+    LC_ALL=C sort -u "$ignored_roots" -o "$ignored_roots"
+}
+
+validate_helper_output() {
+    vho_file=$1
+    if ! awk -F '\t' '
+        BEGIN { valid = 1 }
+        $1 == "helper-schema" && NF == 2 {
+            schemas++
+            valid = valid && ($2 == "p5.1-store-estimate/v1")
+            next
+        }
+        $1 == "known-root" && NF == 4 {
+            roots++
+            next
+        }
+        $1 == "estimate" && NF == 5 {
+            estimates[$2]++
+            if ($3 !~ /^[0-9]+$/ || $4 !~ /^[0-9]+$/)
+                valid = 0
+            counts[$2] = $3
+            bytes[$2] = $4
+            semantics[$2] = $5
+            next
+        }
+        $1 == "coverage" && NF == 3 {
+            coverage[$2]++
+            next
+        }
+        $1 == "helper-status" && NF == 2 {
+            statuses++
+            valid = valid && ($2 == "PASS")
+            next
+        }
+        { valid = 0 }
+        END {
+            required[1] = "candidate-closure-union"
+            required[2] = "candidate-exclusive-vs-policy"
+            required[3] = "candidate-exclusive-vs-persistent-known-roots"
+            required[4] = "guaranteed-reclaimable"
+            for (i = 1; i <= 4; i++)
+                if (estimates[required[i]] != 1)
+                    valid = 0
+            if (semantics["candidate-closure-union"] != "measurement" ||
+                semantics["candidate-exclusive-vs-policy"] != "forward-references-only" ||
+                semantics["candidate-exclusive-vs-persistent-known-roots"] != "forward-references-only" ||
+                semantics["guaranteed-reclaimable"] != "lower-bound" ||
+                counts["guaranteed-reclaimable"] != "0" ||
+                bytes["guaranteed-reclaimable"] != "0")
+                valid = 0
+            persistent_count = counts["candidate-exclusive-vs-persistent-known-roots"]
+            policy_count = counts["candidate-exclusive-vs-policy"]
+            candidate_count = counts["candidate-closure-union"]
+            persistent_bytes = bytes["candidate-exclusive-vs-persistent-known-roots"]
+            policy_bytes = bytes["candidate-exclusive-vs-policy"]
+            candidate_bytes = bytes["candidate-closure-union"]
+            if (persistent_count > policy_count ||
+                policy_count > candidate_count ||
+                persistent_bytes > policy_bytes ||
+                policy_bytes > candidate_bytes)
+                valid = 0
+            if (coverage["persistent-roots"] != 1 ||
+                coverage["gc-derivation-policy"] != 1 ||
+                coverage["process-roots"] != 1 ||
+                coverage["temporary-roots"] != 1 ||
+                coverage["filesystem-allocation"] != 1)
+                valid = 0
+            exit !(valid && schemas == 1 && statuses == 1)
+        }
+    ' "$vho_file"; then
+        fail "estimator helper returned malformed or incomplete output"
+    fi
+}
+
+run_estimator_helper() {
+    : >"$helper_output"
+    if [ -n "$estimator_override" ]; then
+        [ -x "$estimator_override" ] ||
+            fail "estimator helper override is not executable: $estimator_override"
+        "$estimator_override" \
+            "$candidate_targets" "$retained_targets" "$ignored_roots" \
+            >"$helper_output" ||
+            fail "estimator helper override failed"
+    else
+        [ "$root" = / ] ||
+            fail "the live estimator helper requires GUIX_RETENTION_ROOT=/"
+        [ -r "$estimator_scheme" ] ||
+            fail "estimator Scheme helper is missing: $estimator_scheme"
+        [ -x "$estimator_guix" ] ||
+            fail "current Guix is unavailable: $estimator_guix"
+        "$estimator_guix" repl -q -- "$estimator_scheme" \
+            "$candidate_targets" "$retained_targets" "$ignored_roots" \
+            >"$helper_output" ||
+            fail "read-only Guix store estimator failed"
+    fi
+    validate_helper_output "$helper_output"
+}
+
+profile_distinct_count() {
+    pdc_kind=$1
+    awk -F '\t' -v kind="$pdc_kind" '
+        $1 == kind { seen[$3] = 1 }
+        END { for (target in seen) count++; print count + 0 }
+    ' "$inventory"
+}
+
+policy_link_count() {
+    plc_kind=$1
+    plc_record=$2
+    awk -F '\t' -v kind="$plc_kind" -v record="$plc_record" '
+        $1 == record && $2 == kind { count++ }
+        END { print count + 0 }
+    ' "$policy_rows"
+}
+
+print_estimate() {
+    printf 'schema\tp5.1-estimate/v1\n'
+    printf 'mode\tread-only\n'
+    printf 'policy\tadditional-distinct-closures\t5\n'
+    for pe_kind in system home pull; do
+        pe_links=$(count_kind "$inventory" "$pe_kind")
+        pe_distinct=$(profile_distinct_count "$pe_kind")
+        pe_current=$(awk -F '\t' -v kind="$pe_kind" '
+            $1 == kind { print $2 "\t" $3 }
+        ' "$currents")
+        printf 'profile\t%s\t%s\t%s\t%s\n' \
+            "$pe_kind" "$pe_links" "$pe_distinct" "$pe_current"
+        printf 'summary\t%s\tretained-links\t%s\n' \
+            "$pe_kind" "$(policy_link_count "$pe_kind" retain)"
+        printf 'summary\t%s\tcandidate-links\t%s\n' \
+            "$pe_kind" "$(policy_link_count "$pe_kind" candidate)"
+    done
+    cat "$policy_rows"
+    cat "$helper_output"
+    pe_fingerprint=$(
+        {
+            cat "$snapshot_before"
+            cat "$policy_rows"
+            cat "$helper_output"
+        } | sha256sum | awk '{ print $1 }'
+    )
+    printf 'fingerprint\t%s\n' "$pe_fingerprint"
+    printf 'status\tPASS\n'
+}
+
 count_kind() {
     ck_file=$1
     ck_kind=$2
@@ -408,6 +793,15 @@ case $action in
         print_plan_command home
         print_plan_command pull
         printf '%s\n' 'Apply is intentionally unavailable; rerun plan after review and implement deletion only in a separately tested change.'
+        ;;
+    estimate)
+        snapshot_generation_state "$snapshot_before"
+        prepare_estimate_policy
+        run_estimator_helper
+        snapshot_generation_state "$snapshot_after"
+        cmp -s "$snapshot_before" "$snapshot_after" ||
+            fail "generation, pointer, or pin state changed during estimation"
+        print_estimate
         ;;
     verify)
         print_summary

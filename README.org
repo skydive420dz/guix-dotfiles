@@ -107,6 +107,18 @@ estimator may be promoted separately, while generation deletion and store
 collection require different explicit destructive approvals.  No backup,
 restore, package, disk, service, activation, cleanup, or reboot is claimed.
 
+P5.1 now passes its source, fixture, deterministic live-estimation, and
+before/after no-mutation gates.  The new =estimate= action implements the D-34
+distinct-closure floor while preserving =plan= as the duplicate-only reporter.
+Its exact snapshot reports 108 candidate links: 99 target 64 unretained
+closures; the remaining 9 are duplicate links to 4 retained closures.  The
+NAR-byte rows are forward-reference footprints rather than reclaim predictions;
+derivation policy, process and temporary roots, and filesystem allocation
+remain unmodeled, so guaranteed reclaimable bytes are =0=.  This
+checkpoint still awaits publication before P5.1 closes.  P5.2 deletion and
+P5.3 collection remain unpromoted, separately reviewed, and explicitly
+attended.
+
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
 remain unmeasured.  No tuning or maintenance policy follows automatically from
@@ -169,6 +181,10 @@ decision and residual risk, the no-disk-mutation boundary and observed
 second-SSD drift, reviewed storage alternatives, private-Org-repository
 handoff, and inert future =current + booted System when different + five newest
 additional distinct closures + explicit pins= maintenance policy.
+[[file:docs/audits/2026-07-18-p5.1-read-only-retention-estimator.org][The P5.1 read-only retention-estimator record]] owns the D-34 selection
+algorithm, safe Scheme store-API boundary, exact retained/candidate snapshot,
+forward-reference NAR accounting, fixture and live no-mutation evidence, and
+the separate P5.2/P5.3 stop boundary.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -283,15 +299,16 @@ or absolute zero-transition result is claimed.
 P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
 parked.  Phase 4 backup/storage implementation is parked by explicit owner
 decision.  Phase 5 generation deletion and store collection remain separate
-future gates behind an exact no-mutation estimator and attended authorization;
-no cleanup is promoted by P4.2.
+future gates behind publication and review of the now-live-gated no-mutation
+estimator plus separate attended authorization; no cleanup is promoted.
 
 ** Ready
 
-No slice is currently ready for unattended implementation.  P4.O1 private Org
-sync/history, P5.1 retention estimation, and P5.S1 storage reorganization are
-documented selectable successors, not promoted work.  Backup/restore
-implementation is parked as P4.3.
+No slice is currently ready for unattended implementation.  P5.1 source and
+evidence are ready for publication; upstream equality is its remaining closure
+gate.  P4.O1 private Org sync/history remains a selectable successor.
+P5.2/P5.3 are not ready, P5.S1 storage reorganization remains parked, and
+backup/restore implementation is parked as P4.3.
 
 ** Completed
 
@@ -2091,20 +2108,28 @@ generations have each passed their live acceptance gates.
 scripts/guix-generation-retention inventory
 scripts/guix-generation-retention verify
 scripts/guix-generation-retention plan
+scripts/guix-generation-retention estimate
 scripts/guix-generation-retention rollback-drill
 #+end_src
 
-The current implementation is intentionally read-only.  It reports only older
-generation links whose identical canonical closure is retained by a newer
-generation; it has no =apply= action and never invokes =guix gc=.  P4.2 records
-an inert future floor, per System/Home/Pull profile, equal to the union of the
-current generation, the booted System when different, the five newest
-additional distinct closures, and every explicit pin.  The present tool does
-not implement that broader policy.  P5.1 must first enumerate exact retained
-closures and candidate links without mutation; P5.2 generation deletion and
-P5.3 unreachable-store collection then require separate reviewed plans and
-explicit attended authorization.  The booted generation-number link must be
-identified and protected before any deletion.
+The implementation is intentionally read-only and has no =apply= action.
+=plan= retains its original narrow behavior: it reports only older links whose
+identical canonical closure survives through a newer link.  =estimate=
+implements the P4.2/D-34 floor, per System/Home/Pull profile, as the union of
+the current closure, booted System closure when different, five newest
+additional distinct closures, and every explicit pin.  It enumerates exact
+retained closures and candidate links, simulates candidate-root removal, and
+uses a Scheme helper to measure ordinary forward requisites and NAR bytes.
+
+=estimate= never invokes =guix gc= or =guix size=.  It reports persistent-root,
+derivation-policy, process-root, temporary-root, and filesystem-allocation
+coverage explicitly.  Since the latter four surfaces are incomplete, its
+forward-reference byte differences are not expected free space or proven
+reclaim bounds; guaranteed reclaim remains zero.  P5.2 generation deletion and
+P5.3 unreachable-store collection require separate reviewed plans and explicit
+attended authorization.  When a booted closure maps to multiple System
+generation links, the estimator protects them all rather than guessing the
+booted generation number.
 
 The P4.2 retained-link counts are System/Home/Pull =86/47/5=.  Exact pins
 promote current/booted System 87, retain System 86 as its immediate fallback,
@@ -2113,6 +2138,13 @@ Home 46 is its immediate fallback, and older accepted Home pins remain
 protected.  Pull 5 is current and promoted, while older accepted Pull pins
 remain protected.  Acceptance left no checker residue and performed no
 generation deletion or garbage collection.
+
+The P5.1 snapshot retains System/Home/Pull =8/17/5= distinct closures and
+=8/17/5= links.  It classifies =78/30/0= candidate links, of which =4/5/0=
+target retained closures and =74/25/0= target =51/13/0= unretained closures.
+The exact 329-row result and all coverage limits live in
+[[file:docs/audits/data/2026-07-18-p5.1-retention-estimate.tsv][the P5.1 estimator data]].  These rows are review input, not deletion
+authorization.
 
 * Live symlinks
 

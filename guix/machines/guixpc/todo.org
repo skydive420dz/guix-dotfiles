@@ -810,6 +810,37 @@ CLOSED: [2026-07-18 Sat]
 - [X] Make no disk, mount, filesystem, package, service, backup, restore,
   generation, GC, activation, process, or reboot change.
 
+* NEXT P5.1 read-only retention and closure-accounting estimator
+:PROPERTIES:
+:created: 2026-07-18
+:blocked_by: publication of the staged source/evidence checkpoint
+:END:
+
+- Evidence: [[file:../../../docs/audits/2026-07-18-p5.1-read-only-retention-estimator.org][2026-07-18 P5.1 read-only retention and closure-accounting estimator]].
+- Exact data: [[file:../../../docs/audits/data/2026-07-18-p5.1-retention-estimate.tsv][329-row live estimator snapshot]].
+- [X] Preserve =plan= as the duplicate-only reporter and add a distinct
+  no-mutation =estimate= action implementing current, booted System when
+  different, five newest additional distinct closures, and every explicit pin.
+- [X] Classify exact retained/candidate closures and generation links.  The
+  live snapshot retains System/Home/Pull =8/17/5= closures and links and
+  classifies =78/30/0= candidate links across =51/13/0= unretained closures.
+- [X] Use only reviewed read-only Guix store APIs; reject collector, root
+  registration, substitution, build, realization, deletion, and hidden apply
+  paths in the fixture.
+- [X] Report NAR forward-reference footprints with explicit derivation-policy,
+  process-root, temporary-root, and filesystem-allocation gaps.  Guaranteed
+  reclaimable bytes remain exactly zero.
+- [X] Pass ShellCheck, shell syntax, the expanded isolated fixture, two
+  byte-identical live runs, pre/post retention verification and rollback drill,
+  and a 32,831-record before/after no-mutation snapshot.
+- [ ] Push the staged checkpoint, fetch it into the actual checkout, and prove
+  clean upstream equality before marking P5.1 complete.
+- [X] Keep P5.2 generation deletion and P5.3 store collection in backlog.
+  Neither exact estimator output nor publication authorizes mutation.
+- [X] Change no generation link, store object, profile, pin, package,
+  configuration, activation, backup, disk, boot state, or persistent process
+  state.
+
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:
 :created: 2026-07-03

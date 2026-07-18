@@ -15,6 +15,8 @@ store=$root/gnu/store
 grub=$root/boot/grub/grub.cfg
 pins=$sandbox/pins.tsv
 marker=$sandbox/guix-executed
+estimator=$sandbox/fake-estimator
+estimator_marker=$sandbox/estimator-executed
 
 mkdir -p "$user_profiles" "$store" "$root/run" "$(dirname "$grub")" \
     "$home/.config/guix"
@@ -62,21 +64,41 @@ system_a=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-system
 system_b=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-system
 system_c=cccccccccccccccccccccccccccccccc-system
 system_d=dddddddddddddddddddddddddddddddd-system
+system_e=mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm-system
+system_f=nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn-system
+system_g=oooooooooooooooooooooooooooooooo-system
+system_h=pppppppppppppppppppppppppppppppp-system
+system_i=qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq-system
+system_j=rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr-system
 home_a=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-home
 home_b=ffffffffffffffffffffffffffffffff-home
 home_c=gggggggggggggggggggggggggggggggg-home
 home_d=hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh-home
+home_e=ssssssssssssssssssssssssssssssss-home
+home_f=tttttttttttttttttttttttttttttttt-home
+home_g=uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu-home
+home_h=vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-home
+home_i=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww-home
+home_j=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-home
 pull_a=iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii-profile
 pull_b=jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-profile
 pull_c=kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk-profile
+pull_d=yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy-profile
+pull_e=zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-profile
+pull_f=00000000000000000000000000000000-profile
+pull_g=11111111111111111111111111111111-profile
+pull_h=22222222222222222222222222222222-profile
 
-for item in "$system_a" "$system_b" "$system_c" "$system_d"; do
+for item in "$system_a" "$system_b" "$system_c" "$system_d" "$system_e" \
+    "$system_f" "$system_g" "$system_h" "$system_i" "$system_j"; do
     make_store_item system "$item"
 done
-for item in "$home_a" "$home_b" "$home_c" "$home_d"; do
+for item in "$home_a" "$home_b" "$home_c" "$home_d" "$home_e" "$home_f" \
+    "$home_g" "$home_h" "$home_i" "$home_j"; do
     make_store_item home "$item"
 done
-for item in "$pull_a" "$pull_b" "$pull_c"; do
+for item in "$pull_a" "$pull_b" "$pull_c" "$pull_d" "$pull_e" "$pull_f" \
+    "$pull_g" "$pull_h"; do
     make_store_item pull "$item"
 done
 
@@ -85,28 +107,48 @@ link_generation system 2 "$system_a"
 link_generation system 3 "$system_b"
 link_generation system 4 "$system_c"
 link_generation system 5 "$system_d"
+link_generation system 6 "$system_e"
+link_generation system 7 "$system_f"
+link_generation system 8 "$system_g"
+link_generation system 9 "$system_h"
+link_generation system 10 "$system_i"
+link_generation system 11 "$system_j"
+link_generation system 12 "$system_e"
 link_generation home 1 "$home_a"
 link_generation home 2 "$home_a"
 link_generation home 3 "$home_b"
 link_generation home 4 "$home_b"
 link_generation home 5 "$home_c"
 link_generation home 6 "$home_d"
+link_generation home 7 "$home_e"
+link_generation home 8 "$home_f"
+link_generation home 9 "$home_g"
+link_generation home 10 "$home_h"
+link_generation home 11 "$home_i"
+link_generation home 12 "$home_j"
+link_generation home 13 "$home_e"
 link_generation pull 1 "$pull_a"
 link_generation pull 2 "$pull_a"
 link_generation pull 3 "$pull_b"
 link_generation pull 4 "$pull_c"
+link_generation pull 5 "$pull_d"
+link_generation pull 6 "$pull_e"
+link_generation pull 7 "$pull_f"
+link_generation pull 8 "$pull_g"
+link_generation pull 9 "$pull_h"
 
-ln -s system-5-link "$system_profiles/system"
-ln -s guix-home-6-link "$user_profiles/guix-home"
-ln -s current-guix-4-link "$user_profiles/current-guix"
-ln -s "$store/$system_d" "$root/run/current-system"
-ln -s "$store/$system_d" "$root/run/booted-system"
+ln -s system-11-link "$system_profiles/system"
+ln -s guix-home-12-link "$user_profiles/guix-home"
+ln -s current-guix-9-link "$user_profiles/current-guix"
+ln -s "$store/$system_j" "$root/run/current-system"
+ln -s "$store/$system_j" "$root/run/booted-system"
 ln -s "$user_profiles/current-guix" "$home/.config/guix/current"
 
 printf '%b\n' \
     '# kind	generation	canonical-store-target	role	reason' \
     "system\t4\t/gnu/store/$system_c\tpromotion-rollback\tfixture promotion System" \
     "system\t3\t/gnu/store/$system_b\tpreferred-rollback\tfixture older System fallback" \
+    "system\t9\t/gnu/store/$system_h\tlast-known-good\tfixture pin inside newest five" \
     "home\t5\t/gnu/store/$home_c\tpromotion-rollback\tfixture promotion Home" \
     "home\t1\t/gnu/store/$home_a\tpreferred-rollback\tprotected older duplicate" \
     "pull\t3\t/gnu/store/$pull_b\tpromotion-rollback\tfixture promotion pull" \
@@ -117,13 +159,41 @@ printf '%s\n' \
     'menuentry current-system' \
     'gnu.system=/var/guix/profiles/system-4-link' \
     'gnu.system=/var/guix/profiles/system-3-link' \
+    'gnu.system=/var/guix/profiles/system-9-link' \
     >"$grub"
+
+# The single-quoted lines are the literal fake helper body.
+# shellcheck disable=SC2016
+printf '%s\n' \
+    '#!/bin/sh' \
+    'set -eu' \
+    '[ "$#" -eq 3 ]' \
+    'candidate_count=$(awk "NF { count++ } END { print count + 0 }" "$1")' \
+    'retained_count=$(awk "NF { count++ } END { print count + 0 }" "$2")' \
+    'ignored_count=$(awk "NF { count++ } END { print count + 0 }" "$3")' \
+    ': >"${GUIX_RETENTION_TEST_ESTIMATOR_MARKER:?}"' \
+    'printf "helper-schema\tp5.1-store-estimate/v1\n"' \
+    'printf "known-root\t/fixture/root\t/gnu/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-system\tpersistent\n"' \
+    'printf "estimate\tcandidate-closure-union\t%s\t4000\tmeasurement\n" "$candidate_count"' \
+    'printf "estimate\tcandidate-exclusive-vs-policy\t%s\t3000\tforward-references-only\n" "$candidate_count"' \
+    'printf "estimate\tcandidate-exclusive-vs-persistent-known-roots\t%s\t2000\tforward-references-only\n" "$candidate_count"' \
+    'printf "estimate\tguaranteed-reclaimable\t0\t0\tlower-bound\n"' \
+    'printf "coverage\tpersistent-roots\tretained-targets:%s-ignored-roots:%s\n" "$retained_count" "$ignored_count"' \
+    'printf "coverage\tgc-derivation-policy\tnot-modeled\n"' \
+    'printf "coverage\tprocess-roots\tnot-enumerated\n"' \
+    'printf "coverage\ttemporary-roots\tnot-enumerated\n"' \
+    'printf "coverage\tfilesystem-allocation\tnot-modeled\n"' \
+    'printf "helper-status\tPASS\n"' \
+    >"$estimator"
+chmod +x "$estimator"
 
 run_tool() {
     GUIX_RETENTION_ROOT=$root \
     GUIX_RETENTION_USER=$fixture_user \
     GUIX_RETENTION_HOME=$home \
     GUIX_RETENTION_PINS=$pins \
+    GUIX_RETENTION_ESTIMATOR_HELPER=$estimator \
+    GUIX_RETENTION_TEST_ESTIMATOR_MARKER=$estimator_marker \
     GUIX_FAKE_EXECUTED=$marker \
         "$tool" "$@"
 }
@@ -135,6 +205,21 @@ run_tool_with_pins() {
     GUIX_RETENTION_USER=$fixture_user \
     GUIX_RETENTION_HOME=$home \
     GUIX_RETENTION_PINS=$rtwp_pins \
+    GUIX_RETENTION_ESTIMATOR_HELPER=$estimator \
+    GUIX_RETENTION_TEST_ESTIMATOR_MARKER=$estimator_marker \
+    GUIX_FAKE_EXECUTED=$marker \
+        "$tool" "$@"
+}
+
+run_tool_with_helper() {
+    rtwh_helper=$1
+    shift
+    GUIX_RETENTION_ROOT=$root \
+    GUIX_RETENTION_USER=$fixture_user \
+    GUIX_RETENTION_HOME=$home \
+    GUIX_RETENTION_PINS=$pins \
+    GUIX_RETENTION_ESTIMATOR_HELPER=$rtwh_helper \
+    GUIX_RETENTION_TEST_ESTIMATOR_MARKER=$estimator_marker \
     GUIX_FAKE_EXECUTED=$marker \
         "$tool" "$@"
 }
@@ -171,22 +256,72 @@ if ! awk -F '\t' '
 fi
 
 inventory_output=$(run_tool inventory)
-printf '%s\n' "$inventory_output" | grep -q 'System generations: 5'
-printf '%s\n' "$inventory_output" | grep -q 'Home generations: 6'
-printf '%s\n' "$inventory_output" | grep -q 'Pull generations: 4'
+printf '%s\n' "$inventory_output" | grep -q 'System generations: 12'
+printf '%s\n' "$inventory_output" | grep -q 'Home generations: 13'
+printf '%s\n' "$inventory_output" | grep -q 'Pull generations: 9'
 
 plan_output=$(run_tool plan)
-printf '%s\n' "$plan_output" | grep -q '^System duplicate candidates: 1$'
-printf '%s\n' "$plan_output" | grep -q '^Home duplicate candidates: 3$'
+printf '%s\n' "$plan_output" | grep -q '^System duplicate candidates: 1,6$'
+printf '%s\n' "$plan_output" | grep -q '^Home duplicate candidates: 3,7$'
 printf '%s\n' "$plan_output" | grep -q '^Pull duplicate candidates: none$'
-printf '%s\n' "$plan_output" | grep -q 'system delete-generations 1$'
-printf '%s\n' "$plan_output" | grep -q 'home delete-generations 3$'
+printf '%s\n' "$plan_output" | grep -q 'system delete-generations 1,6$'
+printf '%s\n' "$plan_output" | grep -q 'home delete-generations 3,7$'
 if printf '%s\n' "$plan_output" | grep -Eq 'delete-generations[[:space:]]*$|delete-generations[ =][0-9]+[dwm]'; then
     fail_check 'plan emitted a bare or duration-based deletion selector'
 fi
 if printf '%s\n' "$plan_output" | grep -q 'pull --delete-generations'; then
     fail_check 'plan emitted a pull deletion without a candidate'
 fi
+
+link_count_before_estimate=$(find "$root" "$home" -type l | wc -l | tr -d ' ')
+store_count_before_estimate=$(find "$store" -mindepth 1 -maxdepth 1 -type d |
+    wc -l | tr -d ' ')
+estimate_output=$(run_tool estimate)
+link_count_after_estimate=$(find "$root" "$home" -type l | wc -l | tr -d ' ')
+store_count_after_estimate=$(find "$store" -mindepth 1 -maxdepth 1 -type d |
+    wc -l | tr -d ' ')
+[ "$link_count_before_estimate" -eq "$link_count_after_estimate" ] ||
+    fail_check 'estimate changed the fixture link count'
+[ "$store_count_before_estimate" -eq "$store_count_after_estimate" ] ||
+    fail_check 'estimate changed the fixture store-item count'
+[ -e "$estimator_marker" ] || fail_check 'estimate did not invoke its helper'
+[ ! -e "$marker" ] || fail_check 'estimate invoked the fake historical Guix'
+printf '%s\n' "$estimate_output" |
+    grep -q '^schema	p5.1-estimate/v1$'
+printf '%s\n' "$estimate_output" |
+    grep -q "^profile	system	12	10	11	/gnu/store/$system_j\$"
+printf '%s\n' "$estimate_output" |
+    grep -q "^profile	home	13	10	12	/gnu/store/$home_j\$"
+printf '%s\n' "$estimate_output" |
+    grep -q "^profile	pull	9	8	9	/gnu/store/$pull_h\$"
+printf '%s\n' "$estimate_output" |
+    grep -q '^summary	system	candidate-links	4$'
+printf '%s\n' "$estimate_output" |
+    grep -q '^summary	home	candidate-links	4$'
+printf '%s\n' "$estimate_output" |
+    grep -q '^summary	pull	candidate-links	0$'
+printf '%s\n' "$estimate_output" |
+    grep -q "^candidate	system	6	/gnu/store/$system_e	duplicate-retained-closure\$"
+printf '%s\n' "$estimate_output" |
+    grep -q "^candidate	system	1	/gnu/store/$system_a	unretained-closure\$"
+printf '%s\n' "$estimate_output" |
+    grep -q "^candidate	home	7	/gnu/store/$home_e	duplicate-retained-closure\$"
+printf '%s\n' "$estimate_output" |
+    grep -q "^closure	system	9	/gnu/store/$system_h	retain	newest-additional,pin\$"
+printf '%s\n' "$estimate_output" |
+    grep -q '^estimate	guaranteed-reclaimable	0	0	lower-bound$'
+printf '%s\n' "$estimate_output" |
+    grep -q '^estimate	candidate-exclusive-vs-persistent-known-roots	[0-9][0-9]*	[0-9][0-9]*	forward-references-only$'
+printf '%s\n' "$estimate_output" |
+    grep -q '^coverage	persistent-roots	retained-targets:24-ignored-roots:8$'
+printf '%s\n' "$estimate_output" | grep -q '^status	PASS$'
+if printf '%s\n' "$estimate_output" |
+    grep -Eq 'Would run|delete-generations|guix[[:space:]]+gc'; then
+    fail_check 'estimate emitted a mutation command'
+fi
+estimate_output_repeat=$(run_tool estimate)
+[ "$estimate_output" = "$estimate_output_repeat" ] ||
+    fail_check 'unchanged estimate output is not deterministic'
 
 verify_output=$(run_tool verify)
 printf '%s\n' "$verify_output" | grep -q '^Retention verification: PASS$'
@@ -201,6 +336,147 @@ printf '%s\n' "$drill_output" | grep -q 'Rollback drill: PASS (read-only artifac
 printf '%s\n' "$drill_output" | grep -q 'system switch-generation 4'
 printf '%s\n' "$drill_output" | grep -q 'home switch-generation 5'
 printf '%s\n' "$drill_output" | grep -q 'pull --switch-generation=3'
+
+unlink "$user_profiles/current-guix"
+ln -s current-guix-4-link "$user_profiles/current-guix"
+for generation in 5 6 7 8 9; do
+    unlink "$user_profiles/current-guix-$generation-link"
+done
+small_pull_output=$(run_tool estimate)
+printf '%s\n' "$small_pull_output" |
+    grep -q "^profile	pull	4	3	4	/gnu/store/$pull_c\$"
+printf '%s\n' "$small_pull_output" |
+    grep -q '^summary	pull	candidate-links	0$'
+link_generation pull 5 "$pull_d"
+link_generation pull 6 "$pull_e"
+link_generation pull 7 "$pull_f"
+link_generation pull 8 "$pull_g"
+link_generation pull 9 "$pull_h"
+unlink "$user_profiles/current-guix"
+ln -s current-guix-9-link "$user_profiles/current-guix"
+
+link_generation system 14 "$system_h"
+unlink "$root/run/booted-system"
+ln -s "$store/$system_h" "$root/run/booted-system"
+ambiguous_boot_output=$(run_tool estimate)
+printf '%s\n' "$ambiguous_boot_output" |
+    grep -q "^retain	system	9	/gnu/store/$system_h	.*booted-ambiguous"
+printf '%s\n' "$ambiguous_boot_output" |
+    grep -q "^retain	system	14	/gnu/store/$system_h	.*booted-ambiguous"
+unlink "$system_profiles/system-14-link"
+unlink "$root/run/booted-system"
+ln -s "$store/$system_j" "$root/run/booted-system"
+
+link_generation system 15 "$system_j"
+link_generation system 16 "$system_j"
+same_closure_boot_output=$(run_tool estimate)
+printf '%s\n' "$same_closure_boot_output" |
+    grep -q "^retain	system	11	/gnu/store/$system_j	.*booted-ambiguous"
+printf '%s\n' "$same_closure_boot_output" |
+    grep -q "^retain	system	15	/gnu/store/$system_j	.*booted-ambiguous"
+printf '%s\n' "$same_closure_boot_output" |
+    grep -q "^retain	system	16	/gnu/store/$system_j	.*booted-ambiguous"
+unlink "$system_profiles/system-15-link"
+unlink "$system_profiles/system-16-link"
+
+bad_estimator=$sandbox/bad-estimator
+printf '%s\n' \
+    '#!/bin/sh' \
+    'printf "helper-status\tPASS\n"' \
+    >"$bad_estimator"
+chmod +x "$bad_estimator"
+if run_tool_with_helper "$bad_estimator" estimate \
+    >"$sandbox/bad-estimator.out" 2>&1; then
+    fail_check 'malformed estimator helper output unexpectedly passed'
+fi
+grep -q 'estimator helper returned malformed or incomplete output' \
+    "$sandbox/bad-estimator.out"
+
+dishonest_estimator=$sandbox/dishonest-estimator
+# The single-quoted lines are the literal dishonest helper body.
+# shellcheck disable=SC2016
+printf '%s\n' \
+    '#!/bin/sh' \
+    'set -eu' \
+    '"${GUIX_RETENTION_TEST_BASE_HELPER:?}" "$@" |' \
+    '  sed "s/guaranteed-reclaimable	0	0	lower-bound/guaranteed-reclaimable	1	1	lower-bound/"' \
+    >"$dishonest_estimator"
+chmod +x "$dishonest_estimator"
+if GUIX_RETENTION_TEST_BASE_HELPER=$estimator \
+    run_tool_with_helper "$dishonest_estimator" estimate \
+    >"$sandbox/dishonest-estimator.out" 2>&1; then
+    fail_check 'nonzero guaranteed-reclaim output unexpectedly passed'
+fi
+grep -q 'estimator helper returned malformed or incomplete output' \
+    "$sandbox/dishonest-estimator.out"
+
+nonmonotonic_estimator=$sandbox/nonmonotonic-estimator
+# The single-quoted lines are the literal non-monotonic helper body.
+# shellcheck disable=SC2016
+printf '%s\n' \
+    '#!/bin/sh' \
+    'set -eu' \
+    '"${GUIX_RETENTION_TEST_BASE_HELPER:?}" "$@" |' \
+    '  sed "s/candidate-closure-union	\\([0-9][0-9]*\\)	4000	measurement/candidate-closure-union	\\1	1000	measurement/"' \
+    >"$nonmonotonic_estimator"
+chmod +x "$nonmonotonic_estimator"
+if GUIX_RETENTION_TEST_BASE_HELPER=$estimator \
+    run_tool_with_helper "$nonmonotonic_estimator" estimate \
+    >"$sandbox/nonmonotonic-estimator.out" 2>&1; then
+    fail_check 'non-monotonic estimator metrics unexpectedly passed'
+fi
+grep -q 'estimator helper returned malformed or incomplete output' \
+    "$sandbox/nonmonotonic-estimator.out"
+
+wrong_semantics_estimator=$sandbox/wrong-semantics-estimator
+# The single-quoted lines are the literal wrong-semantics helper body.
+# shellcheck disable=SC2016
+printf '%s\n' \
+    '#!/bin/sh' \
+    'set -eu' \
+    '"${GUIX_RETENTION_TEST_BASE_HELPER:?}" "$@" |' \
+    '  sed "s/forward-references-only/upper-bound/g"' \
+    >"$wrong_semantics_estimator"
+chmod +x "$wrong_semantics_estimator"
+if GUIX_RETENTION_TEST_BASE_HELPER=$estimator \
+    run_tool_with_helper "$wrong_semantics_estimator" estimate \
+    >"$sandbox/wrong-semantics-estimator.out" 2>&1; then
+    fail_check 'incorrect estimator semantics unexpectedly passed'
+fi
+grep -q 'estimator helper returned malformed or incomplete output' \
+    "$sandbox/wrong-semantics-estimator.out"
+
+drift_estimator=$sandbox/drift-estimator
+# The single-quoted lines are the literal drift helper body.
+# shellcheck disable=SC2016
+printf '%s\n' \
+    '#!/bin/sh' \
+    'set -eu' \
+    '"${GUIX_RETENTION_TEST_BASE_HELPER:?}" "$@"' \
+    'unlink "${GUIX_RETENTION_TEST_DRIFT_LINK:?}"' \
+    'ln -s "${GUIX_RETENTION_TEST_DRIFT_TARGET:?}" "${GUIX_RETENTION_TEST_DRIFT_LINK:?}"' \
+    >"$drift_estimator"
+chmod +x "$drift_estimator"
+if GUIX_RETENTION_TEST_BASE_HELPER=$estimator \
+    GUIX_RETENTION_TEST_DRIFT_LINK=$system_profiles/system-2-link \
+    GUIX_RETENTION_TEST_DRIFT_TARGET=$store/$system_b \
+    run_tool_with_helper "$drift_estimator" estimate \
+    >"$sandbox/drift-estimator.out" 2>&1; then
+    fail_check 'generation drift during estimate unexpectedly passed'
+fi
+grep -q 'state changed during estimation' "$sandbox/drift-estimator.out"
+unlink "$system_profiles/system-2-link"
+ln -s "$store/$system_a" "$system_profiles/system-2-link"
+
+estimator_scheme=$repo/scripts/guix-generation-retention-estimator.scm
+[ -r "$estimator_scheme" ] ||
+    fail_check 'production Scheme estimator helper is missing'
+if grep -En \
+    'collect-garbage|run-gc|dead-paths|live-paths|delete-paths|add-temp-root|add-indirect-root|substitutable-path-info|substitutable-references|build-things|ensure-path|guix[[:space:]]+(gc|size)' \
+    "$estimator_scheme" >"$sandbox/forbidden-estimator.out"; then
+    cat "$sandbox/forbidden-estimator.out" >&2
+    fail_check 'forbidden estimator operation found'
+fi
 
 if run_tool apply >"$sandbox/apply.out" 2>&1; then
     fail_check 'unsupported apply action unexpectedly succeeded'
@@ -224,7 +500,7 @@ if run_tool verify >"$sandbox/current-mismatch.out" 2>&1; then
 fi
 grep -q 'System profile and /run/current-system differ' "$sandbox/current-mismatch.out"
 unlink "$system_profiles/system"
-ln -s system-5-link "$system_profiles/system"
+ln -s system-11-link "$system_profiles/system"
 
 unrooted=llllllllllllllllllllllllllllllll-system
 make_store_item system "$unrooted"
@@ -235,7 +511,7 @@ if run_tool verify >"$sandbox/unrooted-boot.out" 2>&1; then
 fi
 grep -q 'booted System has no retained generation root' "$sandbox/unrooted-boot.out"
 unlink "$root/run/booted-system"
-ln -s "$store/$system_d" "$root/run/booted-system"
+ln -s "$store/$system_j" "$root/run/booted-system"
 
 cp "$grub" "$sandbox/grub.saved"
 printf '%s\n' \

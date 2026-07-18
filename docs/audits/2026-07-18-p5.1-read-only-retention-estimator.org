@@ -1,0 +1,314 @@
+#+title: P5.1 read-only retention and closure-accounting estimator
+#+date: 2026-07-18
+#+status: source, fixture, and live read-only gates pass; publication pending
+
+* Outcome
+
+P5.1 adds a new =estimate= action to
+=scripts/guix-generation-retention=.  It implements the D-34 planning floor
+without changing the older =plan= action:
+
+- =plan= remains the narrow same-target duplicate-link reporter;
+- =estimate= retains the current closure, the booted System closure when it
+  differs, up to five newest additional distinct closures, and every explicit
+  pin; and
+- =estimate= classifies every other System, Home, and Pull generation link,
+  simulates removal of those roots, and measures forward-reference NAR bytes
+  through a Scheme helper.
+
+The exact live result is preserved as
+[[file:data/2026-07-18-p5.1-retention-estimate.tsv][the 329-row P5.1 estimator snapshot]].  Two consecutive runs on unchanged
+state were byte-identical.  The tool and its live acceptance invoked no Guix
+collector mode and changed no generation link, store object, profile pointer,
+pin, configuration, activation, disk, backup, boot state, or persistent
+process/session state.
+
+The byte results are deliberately not called reclaim predictions or upper
+bounds.  They cover ordinary forward references and NAR serialization sizes.
+Guix derivation-retention policy, process roots, temporary roots, hardlink/block
+allocation, and collector-time races are not modeled.  The only guaranteed
+reclaim figure is therefore exactly zero.
+
+P5.1 is ready for publication.  It becomes complete only after this source
+checkpoint is pushed and fetched cleanly.  P5.2 generation-link deletion and
+P5.3 store collection remain unpromoted and require separate review and
+explicit attended authorization.
+
+* Promotion and scope
+
+The source baseline was clean and upstream-equal at:
+
+#+begin_example
+44c61583bc5da352937772aad4e6e80a1854d5d9
+#+end_example
+
+P4.2's D-32/D-34 decision allows this read-only estimator to proceed without a
+backup implementation.  It does not authorize deletion or collection and does
+not change the accepted no-backup-now/storage-deferral decision.
+
+P5.1 is limited to:
+
+1. deterministic policy selection from generation links, current pointers,
+   booted System state, and the tracked pin manifest;
+2. a stable snapshot of daemon-known persistent roots;
+3. forward-reference closure and NAR-byte accounting;
+4. explicit coverage and truth-boundary records; and
+5. before/after no-mutation validation.
+
+It has no =apply= action.  It does not call =guix gc=, =guix size=, the
+collector RPC, a generation deletion command, a profile switch, a build,
+reconfiguration, activation, restart, or reboot.
+
+* Retention policy
+
+For each System, Home, and Pull profile, closure recency is the greatest
+generation number targeting that canonical store closure.  The retained set is
+the union of:
+
+1. the current closure and current generation link;
+2. the booted System closure when it differs from current;
+3. up to five newest additional distinct closures, excluding current and
+   booted before selecting those slots; and
+4. every exact generation and closure in =generation-pins.tsv=.
+
+Pins do not consume or replace the five recency slots.  A retained closure
+keeps at least one generation link.  If the booted closure has multiple
+generation links, every matching link is retained and reported as ambiguous
+rather than guessing which generation number supplied the boot.
+
+Every non-retained link is classified as:
+
+- =duplicate-retained-closure= when another retained link keeps the same
+  closure; or
+- =unretained-closure= when the closure is outside the policy floor.
+
+The Scheme helper simulates removal of all candidate generation roots,
+including duplicate links, and fails unless every retained closure remains
+directly rooted afterward.
+
+* Implementation and API boundary
+
+=scripts/guix-generation-retention= owns inventory, pin and pointer
+validation, deterministic policy selection, machine-readable output, and
+before/after fingerprints.  The existing =inventory=, =plan=, =verify=, and
+=rollback-drill= behavior remains available.
+
+=scripts/guix-generation-retention-estimator.scm= runs through the currently
+selected Guix and imports only these store operations:
+
+#+begin_example
+find-roots
+valid-path?
+requisites
+query-path-info
+path-info-nar-size
+with-store
+#+end_example
+
+The helper validates absolute regular input files, canonical local store
+items, ignored-root membership, retained-root survival, local path validity,
+root snapshot stability, and non-negative NAR sizes.  It buffers output until
+the second root snapshot matches the first.
+
+The fixture statically rejects collector, root-registration, substitution,
+build, and realization operations, including =run-gc=, =dead-paths=,
+=live-paths=, =delete-paths=, =add-temp-root=, =add-indirect-root=,
+=build-things=, and =ensure-path=.  Neither the shell action nor the helper
+contains an alternate mutating path.
+
+* Output truth table
+
+| Record | Meaning | Reclaim interpretation |
+|--------+---------+------------------------|
+| =profile= | exact link count, distinct-closure count, current generation and target | inventory only |
+| =closure= | retained/candidate closure with newest generation and reasons | policy result |
+| =retain= | protected generation link and reasons | must survive P5.2 |
+| =candidate ... duplicate-retained-closure= | removable link whose target closure remains retained | zero store release from that link alone |
+| =candidate ... unretained-closure= | link outside the D-34 floor | exact P5.2 review candidate, not authorization |
+| =known-root= | daemon-known persistent root after hypothetical candidate-link removal | incomplete collector-liveness view |
+| =candidate-closure-union= | union of ordinary forward requisites for candidate closures | measured NAR footprint, not reclaim |
+| =candidate-exclusive-vs-policy= | candidate forward requisites absent from retained-policy forward requisites | forward-reference difference only |
+| =candidate-exclusive-vs-persistent-known-roots= | candidate forward requisites absent from the simulated persistent-root forward closure | forward-reference difference only |
+| =guaranteed-reclaimable= | conservative guaranteed lower bound | always =0 paths / 0 bytes= under current coverage |
+| =coverage= | modeled and unmodeled surfaces | mandatory qualification |
+
+The shell validator requires one of every estimate and coverage record, exact
+semantics labels, a hard =0/0= guaranteed lower bound, and monotonic path/byte
+counts.  Malformed or incomplete helper output fails closed.
+
+* Exact live snapshot
+
+The validated pre-publication read-only observation used:
+
+| Item | Value |
+|------+-------|
+| Host | =guixpc= |
+| Boot ID | =64140768-9522-4cad-8021-9db54e070e8a= |
+| System | 86 links; 59 distinct closures; generation 87 current and booted |
+| Home | 47 links; 30 distinct closures; generation 47 current |
+| Pull | 5 links; 5 distinct closures; generation 5 current |
+| Existing duplicate-only =plan= | System 27; Home 17; Pull 0 candidates |
+| Estimator artifact SHA256 | =1fe7ab18d7fb4e7d3c6ed0e3fd148f796d36d1122a80f1aa903165dd7eee8e11= |
+| Estimator internal fingerprint | =ef037f5ca38d06a918eb7a08276d5e979a317e6c18f06ea98a18151c06e431ca= |
+
+The D-34 policy result is:
+
+| Profile | Retained closures | Retained links | Candidate closures | Candidate links | Unretained-closure links | Duplicate-retained links |
+|---------+-------------------+----------------+--------------------+-----------------+--------------------------+--------------------------|
+| System | 8 | 8 | 51 | 78 | 74 | 4 |
+| Home | 17 | 17 | 13 | 30 | 25 | 5 |
+| Pull | 5 | 5 | 0 | 0 | 0 | 0 |
+| Total | 30 | 30 | 64 | 108 | 99 | 9 |
+
+Exact retained generation links:
+
+#+begin_example
+System: 75,80,81,83,84,85,86,87
+Home:   29,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47
+Pull:   1,2,3,4,5
+#+end_example
+
+Exact candidate generation links by class:
+
+#+begin_example
+System duplicate-retained:
+71,72,73,82
+
+System unretained-closure:
+1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,
+26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,
+47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,
+68,69,70,74,76,77,78,79
+
+Home duplicate-retained:
+25,26,27,28,31
+
+Home unretained-closure:
+1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,30
+
+Pull:
+none
+#+end_example
+
+These are estimator results for P5.2 review, not accepted deletion commands.
+The data artifact preserves every exact target, closure reason, simulated
+persistent root, estimate, and coverage row.
+
+* NAR accounting and coverage limits
+
+After hypothetically ignoring all 108 candidate generation roots, 72
+daemon-known persistent roots remained.  The helper observed:
+
+| Metric | Paths | Exact NAR bytes | Approximate GiB | Semantics |
+|--------+-------+-----------------+-----------------+-----------|
+| Candidate closure union | 3,845 | 27,363,164,296 | 25.48 | measured forward-reference footprint |
+| Candidate-exclusive vs retained policy | 2,535 | 11,299,406,400 | 10.52 | forward-reference difference only |
+| Candidate-exclusive vs persistent known roots | 2,534 | 11,299,357,328 | 10.52 | forward-reference difference only |
+| Guaranteed reclaimable | 0 | 0 | 0 | conservative lower bound |
+
+NAR bytes are serialized store-object sizes, not allocated filesystem blocks.
+The two exclusive rows are neither guaranteed lower bounds nor proven upper
+bounds on collector release:
+
+- daemon =gc-keep-derivations= behavior can introduce reverse deriver
+  liveness that ordinary requisites do not traverse;
+- running processes and temporary roots can retain paths not present in the
+  persistent-root snapshot;
+- hardlinks, block rounding, filesystem metadata, and collector-time state
+  determine actual freed blocks; and
+- root and store state can change after any point-in-time report.
+
+The 49,072-byte difference between the policy-only and persistent-root rows
+shows one additional forward-referenced path retained by another known root.
+It does not improve the zero guaranteed-reclaim lower bound.
+
+* Fixture and live validation
+
+The expanded isolated fixture covers:
+
+- more than six distinct closures and generation-number gaps;
+- fewer than six Pull closures;
+- pins inside and outside the newest-five set;
+- protected and unprotected duplicate links;
+- current and booted System differing;
+- multiple links to one booted closure, both when it differs from current and
+  when current and booted resolve to the same closure;
+- malformed helper output;
+- generation drift during estimation;
+- current/runtime mismatch, unrooted booted System, bad pins, missing GRUB
+  recovery entries, and dangling generations;
+- estimator determinism and before/after link/store counts; and
+- absence of a hidden Guix mutation path.
+
+The following gates passed on GuixPC from the temporary source clone:
+
+#+begin_example
+shellcheck scripts/guix-generation-retention \
+  tests/guix-generation-retention-check
+sh -n scripts/guix-generation-retention
+sh -n tests/guix-generation-retention-check
+tests/guix-generation-retention-check
+
+scripts/guix-generation-retention verify
+scripts/guix-generation-retention rollback-drill
+scripts/guix-generation-retention estimate
+scripts/guix-generation-retention estimate
+#+end_example
+
+The two live estimator outputs matched exactly.  A separate before/after
+snapshot covered generation/profile/GC-root symlinks, current and booted
+pointers, the pin manifest, and every top-level store-path name:
+
+#+begin_example
+combined state records:       32,831
+before/after state SHA256:     2f782e6c2f052512175216be714b1677acb1bfc85c7e358bd902f894bfe0bfb4
+estimator records:             329
+repeated estimator SHA256:     1fe7ab18d7fb4e7d3c6ed0e3fd148f796d36d1122a80f1aa903165dd7eee8e11
+live no-mutation gate:         PASS
+pre/post verify:               PASS
+pre/post rollback drill:       PASS
+#+end_example
+
+No build or activation gate is applicable because P5.1 changes only a
+read-only maintenance reporter, its fixture, and documentation.
+
+* Roadmap synchronization
+
+The editable agenda lives outside the repository at
+=~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org=.
+It was copied only after its live SHA256 still matched the reviewed source:
+
+#+begin_example
+before: 1a486eedddf24334399fd277cf9c363ba54c3789edec0e72c50f88ce6b6084fa
+after:  f71bd1f464cd6862b7cbb500032fa80891a7456d56a8f33bd7ce10dd7b7f6efc
+#+end_example
+
+The synchronized roadmap marks Phase 5 =ACTIVE= and P5.1 =NEXT= pending
+publication, leaves P5.2/P5.3 in backlog, corrects the stale D-08/D-09
+reference, and records the same accounting limits as this audit.  The
+publication follow-up returns the parent to =BACKLOG= when P5.1 becomes
+=DONE=.  Org lint passes for the agenda, README, machine TODO, and this audit
+after the new repository links exist.  This same-disk agenda update is
+planning continuity, not backup coverage.
+
+* Stop boundary and handoff
+
+P5.1 stops before generation deletion.  Publication completes only this
+read-only slice.
+
+P5.2 must:
+
+1. start from a clean, upstream-equal checkout and fresh estimator snapshot;
+2. present exact generation numbers again and obtain explicit attended
+   destructive authorization;
+3. delete only reviewed generation links and collect no store object;
+4. prove current, booted, pins, generation counts, =verify=, and
+   =rollback-drill= afterward; and
+5. stop for review.
+
+P5.3 remains separate.  It must use a fresh post-P5.2 non-mutating estimate,
+must not silently use =guix gc --list-dead=, and needs a distinct explicit
+authorization before any potentially mutating discovery or collection step.
+
+The private Org sync/history idea, backup/storage deferral, Home hygiene, Git
+hygiene, and filesystem reorganization remain separate roadmap work.
