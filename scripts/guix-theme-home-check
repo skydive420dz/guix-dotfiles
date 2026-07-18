@@ -110,22 +110,28 @@ sh -n "$repo/shell/xinitrc" || fail "Xinit consumer failed sh -n"
 
 HOME="$tmp/home" \
 XDG_CACHE_HOME="$tmp/cache" \
-XDG_CONFIG_HOME="$tmp/config" \
+XDG_CONFIG_HOME="$files/.config" \
 DISPLAY='' \
 DBUS_SESSION_BUS_ADDRESS='' \
 "$emacs" -Q --batch \
-    -l "$files/.config/emacs/sk-theme-generated.el" \
+    -l "$repo/emacs/early-init.el" \
     --eval \
     '(unless
          (and (featurep (quote sk-theme-generated))
+              (fboundp (quote sk/theme-setup-symbol-fonts))
+              (memq (function sk/theme-setup-symbol-fonts)
+                    after-make-frame-functions)
               (memq (quote modus-vivendi-tinted) custom-enabled-themes)
               (equal (face-attribute (quote default) :family nil t)
                      "JetBrainsMono Nerd Font Mono")
               (= (face-attribute (quote default) :height nil t) 120)
               (equal (face-attribute (quote variable-pitch) :family nil t)
                      "JetBrainsMono Nerd Font")
-              (= (face-attribute (quote variable-pitch) :height nil t) 110))
-       (error "candidate generated Emacs adapter assertion failed"))'
+              (= (face-attribute (quote variable-pitch) :height nil t) 110)
+              (eq (alist-get (quote fullscreen) initial-frame-alist)
+                  (quote fullboth))
+              (eq (alist-get (quote undecorated) default-frame-alist) t))
+       (error "candidate early-init theme assertion failed"))'
 
 HOME="$tmp/home" \
 XDG_CACHE_HOME="$tmp/cache" \
@@ -143,15 +149,12 @@ if bad or not parsed:
     raise SystemExit("candidate Kitty configuration failed parser checks")' \
     "$files/.config/kitty/kitty.conf"
 
-adapter_line=$(grep -n -F \
-    '(load sk/theme-generated-file nil '\''nomessage)' \
-    "$repo/emacs/init.el" | awk -F: 'NR == 1 { print $1 }')
-ui_line=$(grep -n -F "(require 'sk-ui)" "$repo/emacs/init.el" |
-    awk -F: 'NR == 1 { print $1 }')
-if [ -z "$adapter_line" ] ||
-    [ -z "$ui_line" ] ||
-    [ "$adapter_line" -ge "$ui_line" ]; then
-    fail "Emacs adapter is not loaded before sk-ui"
+early_init=$repo/emacs/early-init.el
+[ -r "$early_init" ] || fail "Emacs early-init consumer is unreadable"
+[ "$(grep -Fxc '(sk/load-generated-theme)' "$early_init" || true)" -eq 1 ] ||
+    fail "Emacs early-init lacks exactly one generated-theme load"
+if grep -Fq 'sk/theme-generated-file' "$repo/emacs/init.el"; then
+    fail "Emacs init retains a late generated-theme owner"
 fi
 
 if ! awk '

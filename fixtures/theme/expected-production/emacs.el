@@ -57,16 +57,28 @@
 (set-face-attribute 'fixed-pitch nil :family "JetBrainsMono Nerd Font Mono" :height 120)
 (set-face-attribute 'variable-pitch nil :family "JetBrainsMono Nerd Font" :height 110)
 
-(when (display-graphic-p)
-  (dolist (family
-           '(
-             "Symbols Nerd Font Mono"
-             "Noto Color Emoji"
-             "Font Awesome"
-             "Material Icons"
-             ))
-    (when (find-font (font-spec :name family))
-      (set-fontset-font t 'symbol family nil 'append))))
+(defun sk/theme-setup-symbol-fonts (frame)
+  "Install generated symbol fallbacks in graphical FRAME once."
+  (when (and (frame-live-p frame)
+             (display-graphic-p frame)
+             (not (frame-parameter
+                   frame 'sk-theme-symbol-fonts-configured)))
+    (dolist (family
+             '(
+               "Symbols Nerd Font Mono"
+               "Noto Color Emoji"
+               "Font Awesome"
+               "Material Icons"
+               ))
+      (when (find-font (font-spec :name family) frame)
+        (set-fontset-font nil 'symbol family frame 'append)))
+    (set-frame-parameter
+     frame 'sk-theme-symbol-fonts-configured t)))
+
+(add-hook 'after-make-frame-functions
+          #'sk/theme-setup-symbol-fonts)
+(dolist (frame (frame-list))
+  (sk/theme-setup-symbol-fonts frame))
 
 (provide 'sk-theme-generated)
 ;;; sk-theme-generated.el ends here

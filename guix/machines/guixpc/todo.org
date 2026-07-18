@@ -540,6 +540,11 @@ CLOSED: [2026-07-17 Fri]
   12 pt);
   7:1 / 4.5:1 / 3:1 contrast floors; first-migration Fish ownership;
   =gtk4-widget-factory=; and the current wallpaper/fit policy.
+- This records the historical P3.2 decision.  P3.4's later real-display A/B
+  invalidated only the GTK 3 alias: this Guix GTK 3 reports the configured
+  =Adwaita-dark= string but renders the light fallback.  Its corrected
+  production successor is =Adwaita= plus
+  =gtk-application-prefer-dark-theme=true=.
 - [X] Implement the pure =(sk theme)= schema/validator and all six renderers
   without Home wiring, activation, GUI launch, or runtime mutation.
 - [X] Add unmistakably synthetic complete fixtures, deterministic goldens,
@@ -605,7 +610,7 @@ CLOSED: [2026-07-17 Fri]
 * TODO P3.4 activation and real-display visual acceptance
 :PROPERTIES:
 :created: 2026-07-17
-:NEXT_GATE: session restart and EXWM inherited-environment visual acceptance
+:NEXT_GATE: publish the realized visual correction candidate
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-17-p3.4-theme-activation.org][2026-07-17 P3.4 GTK/GStreamer activation stops and corrections]].
@@ -661,11 +666,41 @@ CLOSED: [2026-07-17 Fri]
   data, or plugin-directory overrides.  It remains alive for five seconds with
   no fatal GLib or GStreamer diagnostic.  The only log output is the known
   nonfatal 896-versus-1445 EXWM allocation warning.
-- [ ] Restart the X/EXWM session or reboot, prove the new Emacs inherited the
-  active Home =GST_PLUGIN_SYSTEM_PATH=, and repeat the exact factory launch
-  with Rafael's visible-window check.
+- [X] Reboot into fresh EXWM twice.  Prove the new Emacs inherited the active
+  Home =GST_PLUGIN_SYSTEM_PATH=; repeat the isolated factory launch through the
+  real Emacs environment; obtain Rafael's positive visible GTK 4 result; and
+  terminate every diagnostic client.
+- [X] Prove there is no structural keymap/grab regression:
+  all 30 reviewed EXWM global bindings and commands are installed, the private
+  grabbed-key set matches, and the startup log has no =BadAccess= or grab
+  failure.
+- [X] Stop broader visual acceptance on two reproducible findings.  GTK 3
+  reports =Adwaita-dark= but renders its widget factory and Blueman light.
+  Emacs creates its first X frame before loading the generated theme and
+  applies bar/fringe policy in normal init; EXWM then creates four additional
+  frames before its deferred fullscreen transition.
+- [X] Prove the GTK 3 correction process-locally: with no session-wide
+  =GTK_THEME=, =Adwaita= plus the existing prefer-dark setting renders both
+  exact-profile GTK 3 widget factory and Blueman dark.  Reject XSettings,
+  GSettings/dconf, and application-specific overrides.
+- [X] Build the source correction in an isolated checkout: move immutable
+  theme consumption and all eight creation-time frame parameters into
+  =early-init.el=; make generated symbol fallbacks idempotent per graphical
+  frame; and freeze GTK 3 =Adwaita= with prefer-dark.  Pass 298 theme checks
+  plus native parsers, 61 Emacs tests plus connected backends, the immutable
+  Home fixture, and the strict repository gate.
+- [X] Build and validate the realized Home candidate
+  =/gnu/store/dkasc56ngxmyg4gq453xx71h5xzaka3m-home=.  Its unchanged
+  96-record profile, corrected GTK 3 adapter, generated per-frame Emacs helper,
+  complete immutable checker, five-frame fontset behavior test, and pinned
+  Home/System gate pass.
+- [ ] Publish the checkpoint, fetch it into the actual clean checkout, run the
+  guarded Home activation, and retain generation 45 as rollback.
+- [ ] Reboot the activated correction.  Confirm all five EXWM frames are
+  fullscreen, undecorated, bar-free, generated-theme/font configured, and free
+  of visible construction; confirm GTK 3 widget factory and Blueman are dark.
 - [ ] Inspect wallpaper/fit, Picom, opacity, cursor/icons, and the ultrawide
-  result.
+  result after the corrected reboot.
 - [ ] Complete real-display, contrast, and adjacent SSH/EXWM acceptance with
   Rafael; stop and roll back on ownership drift, parser/load regression,
   session instability, or unacceptable appearance.

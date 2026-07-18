@@ -54,6 +54,12 @@ Rafael accepted the proposed post-P3.1 visual bundle by authorizing P3.2:
 | UI font size | 11 pt at logical 96 DPI |
 | Existing target calibration | Emacs default/fixed 120 tenths-point (12 pt), variable-pitch 110 tenths-point (11 pt); Kitty 14.0 pt and 0.0 background opacity; Picom Emacs opacity 85 percent |
 
+P3.4 later corrected one value after real-display evidence: GTK 3
+=Adwaita-dark= was parsed but rendered the light fallback on Guix GTK 3.24.51.
+The validated successor uses base =Adwaita= with
+=gtk-application-prefer-dark-theme=true=.  The table remains the historical
+offline decision; the P3.4 activation record owns its runtime correction.
+
 The 11 pt decision is intentionally role-specific.  It supplies GTK UI text
 and Emacs =variable-pitch=; Emacs =default= and =fixed-pitch= remain at the
 accepted 12 pt calibration, and Kitty remains 14 pt.

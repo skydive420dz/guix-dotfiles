@@ -1,6 +1,6 @@
-#+title: P3.4 theme activation: GTK schema and GStreamer stops
+#+title: P3.4 theme activation: runtime stops and visual corrections
 #+date: 2026-07-17
-#+status: active; generation 45 and pre-restart runtime gate passed
+#+status: active; generation 45 restarted; visual correction candidate built
 
 * Outcome so far
 
@@ -37,8 +37,26 @@ That correction was then published as =d83feb8= and activated as Home
 generation 45.  The active immutable profile passes the same 96-record gate.
 A factory launched from a clean shell that sourced the generated Home profile
 remained alive for five seconds with no fatal GLib or GStreamer diagnostic.
-The X/EXWM session has not yet restarted, and no visible-result acceptance is
-claimed.
+The X/EXWM session later restarted twice.  A fresh EXWM-launched exact-profile
+factory remained healthy, and Rafael accepted its visible GTK 4 result.
+
+That did not close the full visual gate.  The wider hand test exposed two
+specific successor findings:
+
+1. GTK 3 reported the configured =Adwaita-dark= name but rendered both
+   =gtk3-widget-factory= and Blueman light.
+2. Emacs visibly constructed its bars, decoration, fullscreen state, and theme
+   after the first X frame appeared.
+
+Both findings are now reproduced and attributed.  A correction based on
+published =191eff7= passes the complete source and pinned build gates as:
+
+#+begin_example
+/gnu/store/dkasc56ngxmyg4gq453xx71h5xzaka3m-home
+#+end_example
+
+It has not been published, activated, or reboot-tested.  Generation 45 remains
+the active rollback.
 
 * Published activation boundary
 
@@ -345,6 +363,180 @@ This proves active pre-restart runtime sufficiency.  It does not prove that a
 new EXWM process inherits the Home search path or that the visible theme is
 acceptable.  No session restart or reboot occurred.
 
+* Fresh-session and visible evidence
+
+The session subsequently rebooted twice.  The second observed boot has:
+
+#+begin_example
+boot-id cd8e4bd2-7b91-4256-b430-0fc72373a988
+Home /gnu/store/9rmcgpl41riggidbkjz7ah3fj7a9wfky-home
+profile /gnu/store/2p4vnz9y2ndfsbary431rzlf41jhanrs-profile
+EXWM Emacs PID 498
+Picom PID 518
+#+end_example
+
+The fresh Emacs inherited the Home GStreamer plugin search path.  It contains
+four repeated copies of the same valid Home directory plus a stale nonexistent
+legacy =GST_PLUGIN_PATH=.  That is deferred session-environment hygiene; it did
+not prevent the exact GTK 4 factory from discovering the required plugins.
+
+An isolated-registry factory launched through the real EXWM Emacs remained
+alive with an empty log and occupied the visible ultrawide workspace.  Rafael
+reported that it looked great.  The diagnostic process, buffer, registry, and
+temporary runtime state were then removed.
+
+The second boot found no structural keymap or X-grab regression:
+
+- EXWM and its input layer are live with five workspaces and an open XELB
+  connection;
+- all 30 public global bindings equal the reviewed source values;
+- every bound command is defined;
+- the private grabbed-key set contains the same 30 keys; and
+- the log contains no =BadAccess= or key-grab failure.
+
+Focusing a fullscreen foreign client can change how non-global input feels,
+but the GTK probe neither rewrote Emacs Lisp keymaps nor survived the reboot.
+
+* Third root cause: GTK 3 base identity
+
+The active generated GTK 3 file is store-backed and contains:
+
+#+begin_example
+gtk-theme-name=Adwaita-dark
+gtk-icon-theme-name=Papirus-Dark
+gtk-font-name=JetBrainsMono Nerd Font 11
+gtk-cursor-theme-name=Bibata-Modern-Ice
+gtk-cursor-theme-size=32
+gtk-application-prefer-dark-theme=true
+#+end_example
+
+Matching GTK 3.24.51 =gtk-query-settings= and Python GI queries report those
+same values.  That is a consumption check, not a rendering check: both the
+matching widget factory and Blueman were visibly light.
+
+There is no =_XSETTINGS_S0= owner, no XSettings daemon, no GNOME interface
+schema, no =GTK_THEME= override, and no Blueman CSS/theme override.  Blueman's
+wrapper sets only its normal Guix search paths and launches the GTK 3 program.
+The failure is therefore not application-specific and not a startup race.
+
+A process-local test changed only =XDG_CONFIG_HOME= for fresh GTK 3 children.
+With:
+
+#+begin_example
+gtk-theme-name=Adwaita
+gtk-application-prefer-dark-theme=true
+#+end_example
+
+the exact GTK 3 widget factory rendered dark.  After terminating the original
+manager, a fresh exact-profile Blueman process with that same isolated config
+also rendered dark.  All icon, font, cursor, DPI, and scaling values were
+unchanged.  Every diagnostic process and hidden Emacs buffer was terminated.
+
+The corrected declarative contract is therefore GTK 3 base =Adwaita= plus its
+supported prefer-dark boolean.  Do not add session-wide =GTK_THEME=, an
+XSettings daemon, dconf/GSettings state, or a Blueman-specific override.
+=Adwaita-dark= remains in the P3.1/P3.2 record only as the historical accepted
+input that this real-display gate invalidated.
+
+* Fourth root cause: first-frame ordering
+
+=scripts/exwm-session= runs Xinit, and =shell/xinitrc= applies the generated X
+policy, wallpaper, and Picom before:
+
+#+begin_example
+exec emacs -fs --eval '(load-file "~/.exwm")'
+#+end_example
+
+Emacs loads =early-init.el= before constructing the initial graphical frame,
+but the active file owns only startup tracing and native-comp cache selection.
+=init.el= loads the generated adapter after the initial frame exists, then
+loads =sk-ui=.  Only =sk-ui= disables the menu, tool, scroll, and tooltip
+modes and sets fringes.  Those are confirmed late redraw/geometry owners.
+
+The later =~/.exwm= load starts EXWM after normal init.  EXWM creates four
+additional workspace frames and defers their fullscreen transition until idle.
+The active initial frame receives fullscreen from =-fs=, but
+=default-frame-alist= has neither fullscreen nor undecorated defaults.  All
+five final live frames reported =undecorated=nil=.  This is confirmed
+construction ordering; its attribution to the exact titlebar pixels is a
+strong source hypothesis because no startup video trace exists.
+
+No current causal module ranking is claimed.  The observed
+=emacs-init-time= was about 8.99 seconds, but startup attribution was not
+enabled on that boot.  The finding concerns when visible state is applied, not
+proof that the same code dominates total startup time.
+
+The correction:
+
+- installs menu/tool/scrollbar, fringe, fullscreen, and undecorated parameters
+  in both =initial-frame-alist= and =default-frame-alist= during early init;
+- inhibits the startup screen/message at that same pre-frame boundary;
+- consumes the immutable generated theme in =early-init.el= after native-cache
+  redirection and removes the late =init.el= owner;
+- keeps GUI-dependent global mode calls in =sk-ui= after GUI initialization;
+  and
+- changes the generated symbol-font block into an idempotent per-frame helper
+  registered in =after-make-frame-functions= from early init, then applies it
+  to any already-existing graphical frames.
+
+The per-frame path is necessary because a pre-frame =display-graphic-p= guard
+would otherwise skip symbol fallbacks permanently, and EXWM creates four
+workspace frames after the initial one.
+
+* Third correction candidate source and build evidence
+
+The isolated source candidate is based on the clean published checkpoint:
+
+#+begin_example
+191eff7f0ffee5d8ee3fe125a6795af189b637b9
+#+end_example
+
+It changes the GTK 3 production identity/golden and the Emacs early-frame
+ordering together because both were stops discovered by the same generation
+45 real-display gate.  It adds:
+
+- an immediate test loaded after =early-init.el= but before =init.el=, so late
+  frame mutations cannot false-pass;
+- immutable-loader store-only and idempotence ERT coverage;
+- generated per-frame font helper/hook/idempotence assertions, including a
+  five-frame behavioral test that rejects global-fontset mutation;
+- an explicit negative production identity for the known
+  =Adwaita-dark= light-fallback alias;
+- a candidate checker that consumes the generated adapter through the real
+  =early-init.el= path instead of loading it directly; and
+- a post-reboot live check for theme/fonts and all five EXWM frame parameters.
+
+Observed source gates:
+
+| Gate | Result |
+|------+--------|
+| Theme schema/render/goldens | PASS, 298 checks |
+| Native Fish/Emacs/Kitty parsers | PASS |
+| Immediate pre-init visual policy | PASS |
+| Emacs ERT | PASS, 61/61 |
+| Connected Geiser/Guile and SLY/SBCL | PASS |
+| Immutable Home checker fixture and failure controls | PASS |
+| Strict repository source gate | PASS |
+| =git diff --check= and shell syntax | PASS |
+| Pinned Home/System dry-run | PASS; five candidate-specific derivations |
+| Realized Home | =/gnu/store/dkasc56ngxmyg4gq453xx71h5xzaka3m-home= |
+| Candidate profile | unchanged 96 records at =/gnu/store/2p4vnz9y2ndfsbary431rzlf41jhanrs-profile= |
+| Generated GTK 3 | exact =Adwaita= plus prefer-dark |
+| Generated Emacs | per-frame helper, hook, and idempotence marker present |
+| Real immutable Home checker | PASS |
+| Complete pinned Home/System gate | PASS; system =lfm4xrqh...-system= |
+| Candidate Clojure/Racket/Fennel editor backends | PASS, including deliberate-failure cleanup |
+
+The realized candidate changes no package selection, so its profile store path
+and 96-record count equal generation 45.  Its generated bytes differ only
+where expected: GTK 3 uses =Adwaita=, and the Emacs adapter contains the
+per-frame symbol-font path.  The broad profile's previously documented
+collision/import warnings remain nonfatal and unchanged.
+
+These are source, fixture, and build results.  No publication checkpoint, Home
+activation, process restart, reboot, or corrected visible result follows from
+them.
+
 * Planning synchronization
 
 The editable agenda at
@@ -393,18 +585,52 @@ cb26789bc9cd55ffb0de0cdb3d77469bcb41f894096278e154e0e22d2a73eb72
 It records the active result, unchanged consumer PIDs, clean-shell factory
 smoke, and session restart as the next gate.
 
+The post-reboot visual-correction revision was staged only after the live file
+still matched that exact =cb26789b= input.  It records the fresh GTK 4 result,
+healthy EXWM key/grab state, GTK 3 and first-frame findings, decision D-27, the
+initial =rxb42vd...-home= candidate, and publication as the next gate.  It
+passed =org-lint= before the hash-guarded copy.  The final live SHA256 is:
+
+#+begin_example
+65aafe420502517dd3b87e79bfc9b0cf63b9e52973fa1251da08de21d027e618
+#+end_example
+
+The final code review then caught a global-fontset mutation inside the
+nominally per-frame helper.  After correcting it to use =FONTSET=nil=,
+adding the five-frame behavior test, and rebuilding
+=dkasc56...-home=, the agenda was staged only while the live file still matched
+the exact =65aafe42= input.  The staged revision passed =org-lint= before the
+hash-guarded copy.  Its intermediate live SHA256 is:
+
+#+begin_example
+82cb3908769381a4956e56ae1a2f9eaa636030da7fc82e89eaaf14c5423bb931
+#+end_example
+
+An independent final documentation review found one current sequential-gate
+checkbox that still abbreviated the initial candidate.  It was corrected to
+=dkasc56...-home= and the five-frame behavior test only while the live agenda
+still matched the exact =82cb3908= input.  That staged revision also passed
+=org-lint=.  The final live SHA256 is:
+
+#+begin_example
+31e4c43cbac076ebb055015b4eb3e255cd9e375d846189c526c99be16fac7e85
+#+end_example
+
 * Remaining sequential gates
 
-1. Restart the X/EXWM session or reboot.  Prove the new Emacs environment
-   inherited the active Home =GST_PLUGIN_SYSTEM_PATH=.
-2. Through that fresh EXWM environment, launch the exact active-profile
-   factory with only an isolated registry, obtain Rafael's visible-window
-   confirmation, and terminate the probe.
-3. Complete wallpaper, Picom, transparency, cursor, icon, font, contrast, and
+1. Publish the source/evidence checkpoint, fetch it into the actual clean
+   checkout, and prove upstream equality.
+2. Run the guarded Home activation while retaining generation 45 as rollback.
+3. Reboot.  Prove all five EXWM frames are generated-theme/font configured,
+   fullscreen, undecorated, and bar-free, then hand-check that no transient
+   construction is visible.
+4. Launch exact-profile GTK 3 widget factory and Blueman normally; obtain
+   Rafael's dark-theme confirmation and terminate the probes.
+5. Complete wallpaper, Picom, transparency, cursor, icon, font, contrast, and
    ultrawide hand tests.
 
 Generation 42 and its retained Kitty source remain the pre-theme rollback.
 Generation 43 is retained as exact evidence of the schema stop; generation 44
 is retained as exact evidence of the GStreamer stop; generation 45 is the
-active pre-restart evidence.  No Qt, forced DPI, global toolkit scale, or
-complete visual acceptance is claimed.
+active corrected-runtime but visually incomplete rollback.  No Qt, forced DPI,
+global toolkit scale, or complete visual acceptance is claimed.

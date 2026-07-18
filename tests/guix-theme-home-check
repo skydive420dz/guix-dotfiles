@@ -81,6 +81,7 @@ mkdir -p \
     "$commands"
 
 cp "$source_repo/emacs/init.el" "$fake_repo/emacs/init.el"
+cp "$source_repo/emacs/early-init.el" "$fake_repo/emacs/early-init.el"
 cp "$source_repo/shell/xinitrc" "$fake_repo/shell/xinitrc"
 cp "$source_repo/kitty/kitty.conf" "$fake_repo/kitty/kitty.conf"
 cp "$source_repo/theme/tokens.scm" "$fake_repo/theme/tokens.scm"
@@ -268,7 +269,8 @@ set -eu
 [ "$1" = -Q ]
 [ "$2" = --batch ]
 [ "$3" = -l ]
-[ -r "$4" ]
+[ "$4" = "$SK_FAKE_REPO/emacs/early-init.el" ]
+[ "$XDG_CONFIG_HOME" = "$SK_FAKE_HOME_FILES/.config" ]
 [ "$5" = --eval ]
 [ -n "$6" ]
 EOF
@@ -342,6 +344,8 @@ run_check() {
     SK_THEME_HOME_EMACS=$commands/emacs \
     SK_THEME_HOME_FC_MATCH=$commands/fc-match \
     SK_FAKE_HOME_PROFILE=$home_result/profile \
+    SK_FAKE_HOME_FILES=$home_result/files \
+    SK_FAKE_REPO=$fake_repo \
     SK_FAKE_PACKAGE_RECORDS=$records \
     SK_FAKE_FONT_BREAK=${SK_FAKE_FONT_BREAK:-0} \
     SK_FAKE_GST_BREAK=${SK_FAKE_GST_BREAK:-} \
@@ -367,6 +371,14 @@ if ! output=$(run_check 2>&1); then
 fi
 contains "$output" "guix-theme-home-check: PASS"
 printf '%s\n' 'PASS: complete immutable Home candidate'
+
+cp "$fake_repo/emacs/early-init.el" "$tmp/good-early-init.el"
+grep -Fvx '(sk/load-generated-theme)' \
+    "$tmp/good-early-init.el" >"$fake_repo/emacs/early-init.el"
+expect_failure \
+    "late or absent generated-theme loading is rejected" \
+    "Emacs early-init lacks exactly one generated-theme load"
+cp "$tmp/good-early-init.el" "$fake_repo/emacs/early-init.el"
 
 printf '%s\n' ';; deliberate adapter byte drift' >>"$bundle/adapters/emacs.el"
 expect_failure \

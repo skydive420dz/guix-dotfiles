@@ -6,25 +6,6 @@
 
 (require 'subr-x)
 
-(defconst sk/theme-generated-file
-  (expand-file-name
-   "emacs/sk-theme-generated.el"
-   (or (getenv "XDG_CONFIG_HOME")
-       (expand-file-name ".config" "~")))
-  "Guix Home's immutable generated Emacs theme adapter.")
-
-(defun sk/immutable-store-file-p (file)
-  "Return non-nil when readable FILE resolves below /gnu/store."
-  (and (file-readable-p file)
-       (condition-case nil
-           (string-prefix-p "/gnu/store/" (file-truename file))
-         (file-error nil))))
-
-;; Before P3.4 activation this file is absent and sk-ui retains the exact
-;; legacy Iosevka/Modus behavior.  Never load a mutable lookalike from ~/.config.
-(when (sk/immutable-store-file-p sk/theme-generated-file)
-  (load sk/theme-generated-file nil 'nomessage))
-
 (require 'use-package)
 
 (defvar sk/user-directory

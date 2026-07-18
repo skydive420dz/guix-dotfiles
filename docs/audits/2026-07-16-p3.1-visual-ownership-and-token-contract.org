@@ -667,6 +667,14 @@ GTK 3 =Adwaita-dark= / GTK 4 =Adwaita= base, =Papirus-Dark= icons,
 =gtk4-widget-factory= acceptance surface.  The already accepted global
 JetBrainsMono Nerd Font families and retained wallpaper remain in force.
 
+Forward correction: P3.4's generation-45 real-display gate later proved that
+this Guix GTK 3 reports the configured =Adwaita-dark= string but renders the light
+fallback.  Process-local widget-factory and Blueman A/B tests established the
+supported successor as =Adwaita= plus
+=gtk-application-prefer-dark-theme=true=.  This paragraph preserves the
+historical P3.1/P3.2 decision while pointing to the runtime evidence that
+invalidated that one target value.
+
 Rafael subsequently accepted the final production value: 11 pt for GTK/UI text
 at logical 96 DPI.  In Emacs this sets =variable-pitch= to 11 pt while the
 accepted =default= and =fixed-pitch= calibration remains 12 pt; Kitty remains

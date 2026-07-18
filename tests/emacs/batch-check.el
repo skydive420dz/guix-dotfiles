@@ -33,6 +33,7 @@
   "Real user home that must not own batch state or package paths.")
 
 (defvar fennel-proto-repl--message-buf)
+(defvar sk/check-generated-theme-load-count nil)
 
 (defun sk/check-fixture-path (relative)
   "Return the copied fixture path for RELATIVE."
@@ -228,9 +229,36 @@
         (progn
           (with-temp-file mutable-adapter
             (insert "(provide 'sk-theme-generated)\n"))
-          (should-not (sk/immutable-store-file-p mutable-adapter)))
+          (should-not (sk/immutable-store-file-p mutable-adapter))
+          (should-not (sk/load-generated-theme mutable-adapter)))
       (when (file-exists-p mutable-adapter)
         (delete-file mutable-adapter)))))
+
+(ert-deftest sk/check-generated-theme-loader-is-idempotent ()
+  "An accepted immutable adapter is loaded once and must provide its feature."
+  (let ((adapter
+         (expand-file-name "generated-theme-fixture.el"
+                           temporary-file-directory))
+        (features (copy-sequence features))
+        (sk/check-generated-theme-load-count 0))
+    (unwind-protect
+        (progn
+          (with-temp-file adapter
+            (insert
+             "(setq sk/check-generated-theme-load-count\n"
+             "      (1+ sk/check-generated-theme-load-count))\n"
+             "(provide 'sk-theme-generated)\n"))
+          (cl-letf (((symbol-function 'sk/immutable-store-file-p)
+                     (lambda (file)
+                       (file-equal-p file adapter))))
+            (should (sk/load-generated-theme adapter))
+            (should (featurep 'sk-theme-generated))
+            (should-not (sk/load-generated-theme adapter))
+            (should (= sk/check-generated-theme-load-count 1))))
+      (when (featurep 'sk-theme-generated)
+        (unload-feature 'sk-theme-generated t))
+      (when (file-exists-p adapter)
+        (delete-file adapter)))))
 
 (ert-deftest sk/check-profile-keyed-native-comp-and-org-generation ()
   (let* ((profile-link

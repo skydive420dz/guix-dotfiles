@@ -37,9 +37,19 @@ Qt out of scope, and builds the immutable Home candidate.  P3.4's first
 correction explicitly owns both =gtk:out= and =gtk:bin= and is active as
 generation 44.  The second correction explicitly owns =gst-plugins-base= and
 =gst-plugins-good=.  Published checkpoint =d83feb8= is active as Home
-generation 45; its 96-record profile and clean profile-sourced five-second
-factory probe pass.  Session restart, EXWM inherited-environment verification,
-and visible acceptance remain pending.
+generation 45; its 96-record profile passes.  Two fresh boots proved the new
+EXWM Emacs inherited the Home GStreamer path, and the exact GTK 4 factory
+remained healthy and passed Rafael's visible check.  The wider visual pass then
+found two narrower blockers: GTK 3's accepted =Adwaita-dark= string rendered a
+light fallback, and Emacs applied theme/frame creation policy only after its
+first X frame existed.  Process-local GTK 3 A/B tests proved that =Adwaita=
+plus the existing prefer-dark flag renders both the widget factory and Blueman
+dark.  The realized correction candidate is
+=/gnu/store/dkasc56ngxmyg4gq453xx71h5xzaka3m-home=.  It passes 298 theme
+checks, native parsers, 61 Emacs tests, connected Lisp backends,
+immutable-candidate failure controls, the strict source gate, and the complete
+pinned Home/System build gate.  It is not yet published, activated, or
+reboot-tested.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -90,8 +100,10 @@ records no P3.3 activation, consumer restart, GUI launch, or visual acceptance
 evidence.
 [[file:docs/audits/2026-07-17-p3.4-theme-activation.org][The P3.4 GTK/GStreamer activation record]] owns generations 43 through 45,
 the live ownership and fresh-consumer evidence, both exact factory stops and
-root causes, the second corrected candidate, and its active pre-restart runtime
-gate.  It contains no session restart, reboot, or complete visual acceptance.
+root causes, the fresh-session GTK 4 result, the GTK 3 light-fallback and
+late-first-frame findings, and their realized correction candidate.  It does
+not claim that this newest candidate is published, activated, or visually
+accepted.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -150,9 +162,28 @@ with no fatal GLib or GStreamer diagnostic.  The known nonfatal allocation
 warnings remain attributable to EXWM tiling the 1445-pixel test surface at 896
 pixels.
 
-The X/EXWM session has not restarted.  New-Emacs inherited-environment
-verification, the final factory/visible-window check, and visual acceptance
-remain separate pending gates.
+The X/EXWM session subsequently restarted twice.  The fresh Emacs inherited
+the active Home GStreamer path, all 30 reviewed EXWM global bindings remained
+installed and grabbed, and the exact factory passed both its runtime and
+visible-window checks.  The broader hand test did not close P3.4: GTK 3
+reported =Adwaita-dark= but rendered both its widget factory and Blueman light,
+while Emacs visibly added bars, decoration, fullscreen, and theme state after
+frame creation.  Isolated GTK 3 tests proved the corrected base is =Adwaita=
+with =gtk-application-prefer-dark-theme=true=.  Source review proved the Emacs
+adapter and frame policy were loaded after the initial X frame, while EXWM
+created four additional frames before its deferred fullscreen transition.
+
+The correction candidate changes only those discovered boundaries.  It moves
+immutable theme consumption and eight initial/default frame parameters into
+=early-init.el=, keeps GUI-dependent mode calls in normal init, and makes
+generated symbol-font setup per-frame so the pre-frame load cannot skip the
+initial or four EXWM workspace frames.  The candidate passes 298 theme checks
+and native parsers, all 61 Emacs tests and connected backends, immutable Home
+failure controls, the strict repository gate, and the complete pinned
+Home/System gate.  Its realized Home result is
+=/gnu/store/dkasc56ngxmyg4gq453xx71h5xzaka3m-home= with the unchanged
+96-record profile.  Checkpoint publication, activation, fresh reboot, and
+Rafael's no-flash/GTK 3 visual check remain separate gates.
 
 P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
 parked.  Generation deletion and store collection remain Phase 5 work behind
@@ -160,10 +191,12 @@ the restore-tested-backup gate.
 
 ** Ready
 
-- [ ] P3.4: restart the session or reboot.  Prove the new EXWM Emacs inherited
-  the active Home plugin search path, repeat the exact isolated-registry
-  factory/visible-window test, and hand-test fonts, icons, cursor, Picom,
-  wallpaper, transparency, contrast, and the real ultrawide display.
+- [ ] P3.4: publish the validated visual-correction checkpoint, fetch it into
+  the actual clean checkout, activate it through the guarded Home workflow,
+  then reboot.  Confirm all five EXWM frames begin fullscreen and undecorated
+  without visible bar/theme construction; confirm GTK 3 and Blueman are dark;
+  then finish fonts, icons, cursor, Picom, wallpaper, transparency, contrast,
+  and ultrawide hand tests.
 
 ** Completed
 

@@ -57,14 +57,26 @@
 (set-face-attribute 'fixed-pitch nil :family "Fixture Mono" :height 130)
 (set-face-attribute 'variable-pitch nil :family "Fixture UI" :height 130)
 
-(when (display-graphic-p)
-  (dolist (family
-           '(
-             "Fixture Symbols"
-             "Fixture Emoji"
-             ))
-    (when (find-font (font-spec :name family))
-      (set-fontset-font t 'symbol family nil 'append))))
+(defun sk/theme-setup-symbol-fonts (frame)
+  "Install generated symbol fallbacks in graphical FRAME once."
+  (when (and (frame-live-p frame)
+             (display-graphic-p frame)
+             (not (frame-parameter
+                   frame 'sk-theme-symbol-fonts-configured)))
+    (dolist (family
+             '(
+               "Fixture Symbols"
+               "Fixture Emoji"
+               ))
+      (when (find-font (font-spec :name family) frame)
+        (set-fontset-font nil 'symbol family frame 'append)))
+    (set-frame-parameter
+     frame 'sk-theme-symbol-fonts-configured t)))
+
+(add-hook 'after-make-frame-functions
+          #'sk/theme-setup-symbol-fonts)
+(dolist (frame (frame-list))
+  (sk/theme-setup-symbol-fonts frame))
 
 (provide 'sk-theme-generated)
 ;;; sk-theme-generated.el ends here

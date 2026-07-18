@@ -264,7 +264,7 @@
 
 (define %expected-production-desktop
   '((color-scheme . dark)
-    (gtk3-theme . "Adwaita-dark")
+    (gtk3-theme . "Adwaita")
     (gtk4-theme . "Adwaita")
     (icon-theme . "Papirus-Dark")
     (cursor-theme . "Bibata-Modern-Ice")
@@ -572,6 +572,34 @@
                         "gtk-application-prefer-dark-theme=true"))
        "GTK 3 does not emit its accepted dark-theme preference")
 
+(for-each
+ (lambda (outputs label)
+   (let ((emacs (assq-ref outputs 'emacs)))
+     (for-each
+      (lambda (line description)
+        (check (= 1 (line-count emacs line))
+               (string-append label " Emacs " description)))
+      '("(defun sk/theme-setup-symbol-fonts (frame)"
+        "(add-hook 'after-make-frame-functions"
+        "          #'sk/theme-setup-symbol-fonts)"
+        "(dolist (frame (frame-list))"
+        "      (when (find-font (font-spec :name family) frame)"
+        "        (set-fontset-font nil 'symbol family frame 'append)))"
+        "     frame 'sk-theme-symbol-fonts-configured t)))")
+      '("symbol helper is not unique"
+        "frame hook is not unique"
+        "frame hook target is not unique"
+        "existing-frame application is not unique"
+        "font lookup is not frame-specific"
+        "fontset application is not frame-specific"
+        "per-frame idempotence marker is not unique"))
+     (check (not (string-contains emacs "(when (display-graphic-p)"))
+            (string-append
+             label
+             " Emacs retains the pre-frame one-shot graphic guard"))))
+ (list %outputs %production-outputs)
+ '("fixture" "production"))
+
 ;; Production data is frozen, validated, and rendered offline.  These checks
 ;; do not imply Home wiring, a Guix build, activation, or live consumption.
 (check (null? (sk:theme-validation-errors %production-theme))
@@ -708,7 +736,7 @@
              (production-role-without-hash 'text-disabled))
     "production Fish autosuggestion role drifted")
    (gtk3
-    "gtk-theme-name=Adwaita-dark"
+    "gtk-theme-name=Adwaita"
     "production GTK 3 base drifted")
    (gtk3
     "gtk-font-name=JetBrainsMono Nerd Font 11"
@@ -836,8 +864,16 @@
    %production-theme 'typography
    (lambda (typography)
      (alist-replace typography 'ui-size-pt 11.0)))
-  'invalid-production-identity)
+ 'invalid-production-identity)
  "inexact production UI point size 11.0 passed")
+(check
+ (has-code?
+  (mutate-group
+   %production-theme 'desktop
+   (lambda (desktop)
+     (alist-replace desktop 'gtk3-theme "Adwaita-dark")))
+  'invalid-production-identity)
+ "known GTK 3 light-fallback alias passed as production")
 (check
  (has-code?
   (mutate-group

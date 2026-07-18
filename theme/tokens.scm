@@ -57,7 +57,7 @@
     "Material Icons"))
   (desktop
    (color-scheme . dark)
-   (gtk3-theme . "Adwaita-dark")
+   (gtk3-theme . "Adwaita")
    (gtk4-theme . "Adwaita")
    (icon-theme . "Papirus-Dark")
    (cursor-theme . "Bibata-Modern-Ice")

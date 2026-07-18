@@ -110,8 +110,13 @@ DISPLAY='' \
 DBUS_SESSION_BUS_ADDRESS='' \
 emacs -Q --batch \
     -l "$rendered/emacs.el" \
+    -l "$repo/tests/emacs/generated-theme-frame-check.el" \
     --eval \
-    '(unless (and (memq (quote modus-vivendi-tinted) custom-enabled-themes)
+    '(unless (and (featurep (quote sk-theme-generated))
+                  (fboundp (quote sk/theme-setup-symbol-fonts))
+                  (memq (function sk/theme-setup-symbol-fonts)
+                        after-make-frame-functions)
+                  (memq (quote modus-vivendi-tinted) custom-enabled-themes)
                   (equal (face-attribute (quote default) :family nil t)
                          "Fixture Mono")
                   (not (featurep (quote sk-exwm))))
@@ -124,8 +129,13 @@ DISPLAY='' \
 DBUS_SESSION_BUS_ADDRESS='' \
 emacs -Q --batch \
     -l "$production_rendered/emacs.el" \
+    -l "$repo/tests/emacs/generated-theme-frame-check.el" \
     --eval \
-    '(unless (and (memq (quote modus-vivendi-tinted) custom-enabled-themes)
+    '(unless (and (featurep (quote sk-theme-generated))
+                  (fboundp (quote sk/theme-setup-symbol-fonts))
+                  (memq (function sk/theme-setup-symbol-fonts)
+                        after-make-frame-functions)
+                  (memq (quote modus-vivendi-tinted) custom-enabled-themes)
                   (equal (face-attribute (quote default) :family nil t)
                          "JetBrainsMono Nerd Font Mono")
                   (= (face-attribute (quote default) :height nil t) 120)

@@ -299,6 +299,32 @@
                     (seq-every-p #'frame-live-p exwm-workspace--list)
                     (eq (sk/exwm-workspace-frame 0)
                         (car exwm-workspace--list))))
+         (cons "early generated visual policy"
+               (and
+                (featurep 'sk-theme-generated)
+                (memq 'modus-vivendi-tinted custom-enabled-themes)
+                (fboundp 'sk/theme-setup-symbol-fonts)
+                (= 1 (cl-count #'sk/theme-setup-symbol-fonts
+                               after-make-frame-functions :test #'eq))
+                (equal (face-attribute 'default :family nil t)
+                       "JetBrainsMono Nerd Font Mono")
+                (= (face-attribute 'default :height nil t) 120)
+                (equal (face-attribute 'variable-pitch :family nil t)
+                       "JetBrainsMono Nerd Font")
+                (= (face-attribute 'variable-pitch :height nil t) 110)
+                (seq-every-p
+                 (lambda (frame)
+                   (and (eq (frame-parameter frame 'fullscreen) 'fullboth)
+                        (eq (frame-parameter frame 'undecorated) t)
+                        (equal (frame-parameter frame 'menu-bar-lines) 0)
+                        (equal (frame-parameter frame 'tool-bar-lines) 0)
+                        (not (frame-parameter frame 'vertical-scroll-bars))
+                        (not (frame-parameter frame 'horizontal-scroll-bars))
+                        (equal (frame-parameter frame 'left-fringe) 10)
+                        (equal (frame-parameter frame 'right-fringe) 10)
+                        (frame-parameter
+                         frame 'sk-theme-symbol-fonts-configured)))
+                 exwm-workspace--list)))
          (cons "owned display policy"
                (and sk/window-display-policy-migrated
                     sk/window-xref-compatible-p

@@ -76,6 +76,7 @@ done
 
 live_expression_file="$repo/tests/emacs/live-check.el"
 early_init="$repo/emacs/early-init.el"
+early_visual_checks="$repo/tests/emacs/early-init-visual-check.el"
 batch_bootstrap="$repo/tests/emacs/batch-bootstrap.el"
 batch_checks="$repo/tests/emacs/batch-check.el"
 backend_checks="$repo/tests/emacs/backend-check.el"
@@ -84,9 +85,9 @@ clojure_project="$repo/scripts/clojure-project"
 racket_project="$repo/scripts/racket-project"
 fennel_project="$repo/scripts/fennel-project"
 
-for file in "$live_expression_file" "$early_init" "$batch_bootstrap" \
-    "$batch_checks" "$backend_checks" "$guix_lisp_shell" "$clojure_project" \
-    "$racket_project" "$fennel_project"; do
+for file in "$live_expression_file" "$early_init" "$early_visual_checks" \
+    "$batch_bootstrap" "$batch_checks" "$backend_checks" "$guix_lisp_shell" \
+    "$clojure_project" "$racket_project" "$fennel_project"; do
     if [ ! -r "$file" ]; then
         printf 'preflight: unreadable %s\n' "$file" >&2
         exit 2
@@ -187,6 +188,7 @@ run_batch_checks() (
         --eval '(setq user-emacs-directory (file-name-as-directory (expand-file-name ".emacs.d" (getenv "HOME"))))' \
         --load "$batch_bootstrap" \
         --load "$source_root/emacs/early-init.el" \
+        --load "$early_visual_checks" \
         --eval '(setq flycheck-check-syntax-automatically nil)' \
         --load "$source_root/emacs/init.el" \
         --eval '(run-hooks (quote after-init-hook))' \

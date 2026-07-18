@@ -703,7 +703,7 @@
                   (object-ref desktop key)
                   expected)))
        '((color-scheme dark)
-         (gtk3-theme "Adwaita-dark")
+         (gtk3-theme "Adwaita")
          (gtk4-theme "Adwaita")
          (icon-theme "Papirus-Dark")
          (cursor-theme "Bibata-Modern-Ice")
@@ -1260,15 +1260,27 @@
                     (elisp-string (typography theme 'ui-family))
                     ui-height)
             ""
-            "(when (display-graphic-p)"
-            "  (dolist (family"
-            "           '(")
+            "(defun sk/theme-setup-symbol-fonts (frame)"
+            "  \"Install generated symbol fallbacks in graphical FRAME once.\""
+            "  (when (and (frame-live-p frame)"
+            "             (display-graphic-p frame)"
+            "             (not (frame-parameter"
+            "                   frame 'sk-theme-symbol-fonts-configured)))"
+            "    (dolist (family"
+            "             '(")
       (map (lambda (family)
-             (string-append "             " (elisp-string family)))
+             (string-append "               " (elisp-string family)))
            fallbacks)
-      (list "             ))"
-            "    (when (find-font (font-spec :name family))"
-            "      (set-fontset-font t 'symbol family nil 'append))))"
+      (list "               ))"
+            "      (when (find-font (font-spec :name family) frame)"
+            "        (set-fontset-font nil 'symbol family frame 'append)))"
+            "    (set-frame-parameter"
+            "     frame 'sk-theme-symbol-fonts-configured t)))"
+            ""
+            "(add-hook 'after-make-frame-functions"
+            "          #'sk/theme-setup-symbol-fonts)"
+            "(dolist (frame (frame-list))"
+            "  (sk/theme-setup-symbol-fonts frame))"
             ""
             "(provide 'sk-theme-generated)"
             ";;; sk-theme-generated.el ends here")))))
