@@ -18,13 +18,27 @@
     (left-fringe . 10)
     (right-fringe . 10)
     (fullscreen . fullboth)
-    (undecorated . t))
+    (undecorated . t)
+    (alpha . 0))
   "Exact creation-time frame policy expected before init.el.")
 
 (unless inhibit-startup-message
   (error "early-init did not inhibit the startup message"))
 (unless inhibit-startup-screen
   (error "early-init did not inhibit the startup screen"))
+(unless (and sk/startup-frame-gate-active-p
+             (not sk/startup-frame-gate-release-complete-p)
+             (= sk/startup-frame-final-opacity-percent 85)
+             (= sk/startup-frame-saved-alpha-lower-limit 20)
+             (= sk/startup-frame-gate-watchdog-seconds 30)
+             (= sk/startup-frame-geometry-timeout 2.0)
+             (null sk/startup-frame-gate-watchdog-timer)
+             (null sk/startup-frame-gate-release-timer)
+             (null sk/startup-frame-geometry-deadline)
+             (= frame-alpha-lower-limit 0)
+             (= 1 (cl-count #'sk/startup-frame-schedule-release
+                            window-setup-hook :test #'eq)))
+  (error "early-init startup opacity gate has the wrong batch contract"))
 (unless (equal sk/early-frame-parameters
                sk/check-expected-early-frame-parameters)
   (error "early-init frame contract drifted: %S"

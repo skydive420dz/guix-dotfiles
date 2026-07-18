@@ -325,6 +325,61 @@
                         (frame-parameter
                          frame 'sk-theme-symbol-fonts-configured)))
                  exwm-workspace--list)))
+         (cons "startup opacity release"
+               (or
+                ;; Pre-activation sessions do not yet define the gate.  This
+                ;; keeps candidate source validation separate from activation.
+                (not (boundp 'sk/startup-frame-gate-release-complete-p))
+                (and sk/startup-frame-gate-release-complete-p
+                     (not sk/startup-frame-gate-active-p)
+                     (null sk/startup-frame-gate-watchdog-timer)
+                     (null sk/startup-frame-gate-release-timer)
+                     (null sk/startup-frame-geometry-deadline)
+                     (= sk/startup-frame-final-opacity-percent 85)
+                     (= sk/picom-emacs-opacity-percent 85)
+                     (equal
+                      sk/picom-opacity-condition
+                      (concat
+                       "class_g = \"Emacs\""
+                       " && !_NET_WM_WINDOW_OPACITY"
+                       " && !_NET_WM_WINDOW_OPACITY@"))
+                     (equal
+                      sk/picom-opacity-rule
+                      (concat
+                       "85:class_g = \"Emacs\""
+                       " && !_NET_WM_WINDOW_OPACITY"
+                       " && !_NET_WM_WINDOW_OPACITY@"))
+                     (= frame-alpha-lower-limit
+                        sk/startup-frame-saved-alpha-lower-limit)
+                     (not
+                      (getenv
+                       sk/startup-frame-opacity-environment-variable))
+                     (not (assq 'alpha initial-frame-alist))
+                     (not (assq 'alpha default-frame-alist))
+                     (seq-every-p
+                      (lambda (frame)
+                        (or
+                         (not
+                          (or (eq frame (selected-frame))
+                              (frame-parameter frame 'exwm-active)))
+                         (let ((geometry
+                                (frame-monitor-attribute 'geometry frame)))
+                           (and (= (frame-pixel-width frame)
+                                   (nth 2 geometry))
+                                (= (frame-pixel-height frame)
+                                   (nth 3 geometry))))))
+                      exwm-workspace--list)
+                     (seq-every-p
+                     (lambda (frame)
+                        (let ((alpha (frame-parameter frame 'alpha))
+                              (target
+                               (/ sk/startup-frame-final-opacity-percent
+                                  100.0)))
+                          ;; The five configured workspaces are startup frames
+                          ;; and must retain their explicit release value.
+                          (and (numberp alpha)
+                               (< (abs (- alpha target)) 0.001))))
+                      exwm-workspace--list))))
          (cons "owned display policy"
                (and sk/window-display-policy-migrated
                     sk/window-xref-compatible-p

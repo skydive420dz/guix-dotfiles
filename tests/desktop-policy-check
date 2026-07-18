@@ -51,28 +51,52 @@ if awk '
     exit 1
 fi
 
-picom_count=$(grep -Ec '^[[:space:]]*picom[[:space:]]' \
+picom_count=$(grep -Fxc \
+    "    if picom --config \"\$picom_config\" \\" \
     "$repo/shell/xinitrc" || true)
-legacy_picom_prefix_count=$(grep -Fxc \
-    "        picom --config /dev/null --backend glx --vsync \\" \
+picom_detect_count=$(grep -Fxc \
+    "        --detect-client-opacity \\" \
     "$repo/shell/xinitrc" || true)
-legacy_picom_rule_count=$(grep -Fxc \
-    "            --opacity-rule '85:class_g = \"Emacs\"' &" \
+picom_rule_count=$(grep -Fxc \
+    "        --opacity-rule \"\$picom_opacity_rule\" \\" \
     "$repo/shell/xinitrc" || true)
-generated_picom_prefix_count=$(grep -Fxc \
-    "        picom --config \"\$SK_THEME_PICOM_CONFIG\" \\" \
+picom_daemon_count=$(grep -Fxc \
+    '        --daemon; then' \
     "$repo/shell/xinitrc" || true)
-generated_picom_rule_count=$(grep -Fxc \
-    "            \"\$SK_THEME_PICOM_EMACS_OPACITY_PERCENT:class_g = \\\"Emacs\\\"\" &" \
+picom_condition_count=$(grep -Fxc \
+    "    picom_opacity_condition='class_g = \"Emacs\" && !_NET_WM_WINDOW_OPACITY && !_NET_WM_WINDOW_OPACITY@'" \
+    "$repo/shell/xinitrc" || true)
+picom_gate_count=$(grep -Fxc \
+    '        export SK_EMACS_STARTUP_OPACITY_PERCENT' \
     "$repo/shell/xinitrc" || true)
 immutable_adapter_count=$(grep -Fxc \
     '        /gnu/store/*)' "$repo/shell/xinitrc" || true)
-if [ "$picom_count:$legacy_picom_prefix_count:$legacy_picom_rule_count:$generated_picom_prefix_count:$generated_picom_rule_count:$immutable_adapter_count" != \
-    2:1:1:1:1:1 ]; then
-    printf 'desktop-policy-check: Xinit Picom/adapter counts are %s:%s:%s:%s:%s:%s; expected 2:1:1:1:1:1\n' \
-        "$picom_count" "$legacy_picom_prefix_count" \
-        "$legacy_picom_rule_count" "$generated_picom_prefix_count" \
-        "$generated_picom_rule_count" "$immutable_adapter_count" >&2
+if [ "$picom_count:$picom_detect_count:$picom_rule_count:$picom_daemon_count:$picom_condition_count:$picom_gate_count:$immutable_adapter_count" != \
+    1:1:1:1:1:1:1 ]; then
+    printf 'desktop-policy-check: Xinit Picom/gate/adapter counts are %s:%s:%s:%s:%s:%s:%s; expected 1:1:1:1:1:1:1\n' \
+        "$picom_count" "$picom_detect_count" "$picom_rule_count" \
+        "$picom_daemon_count" "$picom_condition_count" \
+        "$picom_gate_count" "$immutable_adapter_count" >&2
+    exit 1
+fi
+
+session_cmdline_count=$(grep -Fc \
+    "\"/proc/\$picom_pid/cmdline\"" \
+    "$repo/scripts/desktop-session-check" || true)
+session_exact_arguments_count=$(grep -Fc \
+    "expected_picom_arguments=\$(printf" \
+    "$repo/scripts/desktop-session-check" || true)
+session_argv0_case_count=$(grep -Fxc \
+    '        picom|*/picom)' \
+    "$repo/scripts/desktop-session-check" || true)
+session_legacy_ps_count=$(grep -Fc \
+    "ps -u \"\$uid\" -o stat=,comm=,args=" \
+    "$repo/scripts/desktop-session-check" || true)
+if [ "$session_cmdline_count:$session_exact_arguments_count:$session_argv0_case_count:$session_legacy_ps_count" != \
+    2:1:1:0 ]; then
+    printf 'desktop-policy-check: runtime Picom argv proof counts are %s:%s:%s:%s; expected 2:1:1:0\n' \
+        "$session_cmdline_count" "$session_exact_arguments_count" \
+        "$session_argv0_case_count" "$session_legacy_ps_count" >&2
     exit 1
 fi
 

@@ -1010,6 +1010,16 @@
 (check
  (has-code?
   (mutate-group
+   %theme 'calibrations
+   (lambda (calibrations)
+     (alist-replace calibrations
+                    'picom-emacs-opacity-percent
+                    0)))
+  'out-of-range)
+ "Picom accepted an invisible final desktop")
+(check
+ (has-code?
+  (mutate-group
    %theme 'contrast
    (lambda (contrast)
      (alist-replace contrast 'primary-text-min "7")))

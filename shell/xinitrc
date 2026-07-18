@@ -102,6 +102,7 @@ if command -v xwallpaper >/dev/null 2>&1 && [ -r "$wallpaper_file" ]; then
     esac
 fi
 
+unset SK_EMACS_STARTUP_OPACITY_PERCENT
 if command -v picom >/dev/null 2>&1; then
     pkill -x picom 2>/dev/null || true
     if [ "$sk_theme_active" -eq 1 ]; then
@@ -111,13 +112,44 @@ if command -v picom >/dev/null 2>&1; then
                 'EXWM: generated Picom policy contains an unsupported value' >&2
             exit 1
         fi
-        picom --config "$SK_THEME_PICOM_CONFIG" \
-            --backend "$SK_THEME_PICOM_BACKEND" --vsync \
-            --opacity-rule \
-            "$SK_THEME_PICOM_EMACS_OPACITY_PERCENT:class_g = \"Emacs\"" &
+        picom_config=$SK_THEME_PICOM_CONFIG
+        picom_backend=$SK_THEME_PICOM_BACKEND
+        picom_emacs_opacity_percent=$SK_THEME_PICOM_EMACS_OPACITY_PERCENT
     else
-        picom --config /dev/null --backend glx --vsync \
-            --opacity-rule '85:class_g = "Emacs"' &
+        picom_config=/dev/null
+        picom_backend=glx
+        picom_emacs_opacity_percent=85
+    fi
+
+    case $picom_emacs_opacity_percent in
+        ''|*[!0-9]*)
+            printf 'EXWM: invalid Picom opacity: %s\n' \
+                "$picom_emacs_opacity_percent" >&2
+            exit 1
+            ;;
+    esac
+    if [ "$picom_emacs_opacity_percent" -lt 1 ] || \
+       [ "$picom_emacs_opacity_percent" -gt 100 ]; then
+        printf 'EXWM: Picom opacity is outside 1..100: %s\n' \
+            "$picom_emacs_opacity_percent" >&2
+        exit 1
+    fi
+
+    picom_opacity_condition='class_g = "Emacs" && !_NET_WM_WINDOW_OPACITY && !_NET_WM_WINDOW_OPACITY@'
+    picom_opacity_rule="$picom_emacs_opacity_percent:$picom_opacity_condition"
+    if picom --config "$picom_config" \
+        --backend "$picom_backend" --vsync \
+        --detect-client-opacity \
+        --opacity-rule "$picom_opacity_rule" \
+        --daemon; then
+        # Export only after the compositor owns the display.  Emacs consumes
+        # and clears this one-shot token after EXWM's final workspace geometry.
+        SK_EMACS_STARTUP_OPACITY_PERCENT=$picom_emacs_opacity_percent
+        export SK_EMACS_STARTUP_OPACITY_PERCENT
+    else
+        printf '%s\n' \
+            'EXWM: Picom failed; continuing without the startup opacity gate' \
+            >&2
     fi
 fi
 

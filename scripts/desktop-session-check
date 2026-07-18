@@ -167,17 +167,43 @@ else
     fail "X DPMS policy is $dpms_policy or disabled"
 fi
 
-picom_processes=$(ps -u "$uid" -o stat=,comm=,args= | awk '
-    $2 == "picom" && $1 !~ /^[ZX]/ {
-        count += 1
-        if (index($0, "--config /dev/null") &&
-            index($0, "--backend glx") && index($0, "--vsync") &&
-            index($0, "85:class_g = ") && index($0, "Emacs")) expected += 1
-    }
-    END { print count + 0, expected + 0 }
-')
-picom_count=$(printf '%s\n' "$picom_processes" | awk '{ print $1 }')
-expected_picom_count=$(printf '%s\n' "$picom_processes" | awk '{ print $2 }')
+picom_count=0
+picom_pid=
+for candidate in $(pgrep -u "$uid" -x picom 2>/dev/null || true); do
+    [ -r "/proc/$candidate/stat" ] || continue
+    candidate_state=$(awk '{ print $3; exit }' "/proc/$candidate/stat")
+    case $candidate_state in
+        Z|X) ;;
+        *)
+            picom_count=$((picom_count + 1))
+            picom_pid=$candidate
+            ;;
+    esac
+done
+
+expected_picom_count=0
+if [ "$picom_count" -eq 1 ] && [ -r "/proc/$picom_pid/cmdline" ]; then
+    picom_argv=$(tr '\000' '\n' < "/proc/$picom_pid/cmdline")
+    picom_argv0=$(printf '%s\n' "$picom_argv" | sed -n '1p')
+    picom_arguments=$(printf '%s\n' "$picom_argv" | sed -n '2,$p')
+    expected_picom_arguments=$(printf '%s\n' \
+        '--config' \
+        '/dev/null' \
+        '--backend' \
+        'glx' \
+        '--vsync' \
+        '--detect-client-opacity' \
+        '--opacity-rule' \
+        '85:class_g = "Emacs" && !_NET_WM_WINDOW_OPACITY && !_NET_WM_WINDOW_OPACITY@' \
+        '--daemon')
+    case $picom_argv0 in
+        picom|*/picom)
+            if [ "$picom_arguments" = "$expected_picom_arguments" ]; then
+                expected_picom_count=1
+            fi
+            ;;
+    esac
+fi
 if [ "$picom_count" -eq 1 ] && [ "$expected_picom_count" -eq 1 ]; then
     pass 'exactly one Picom process uses the declared isolated policy'
 else

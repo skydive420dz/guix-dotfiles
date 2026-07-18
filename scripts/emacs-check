@@ -77,6 +77,7 @@ done
 live_expression_file="$repo/tests/emacs/live-check.el"
 early_init="$repo/emacs/early-init.el"
 early_visual_checks="$repo/tests/emacs/early-init-visual-check.el"
+early_watchdog_failure_checks="$repo/tests/emacs/early-init-watchdog-failure-check.el"
 batch_bootstrap="$repo/tests/emacs/batch-bootstrap.el"
 batch_checks="$repo/tests/emacs/batch-check.el"
 backend_checks="$repo/tests/emacs/backend-check.el"
@@ -86,8 +87,9 @@ racket_project="$repo/scripts/racket-project"
 fennel_project="$repo/scripts/fennel-project"
 
 for file in "$live_expression_file" "$early_init" "$early_visual_checks" \
-    "$batch_bootstrap" "$batch_checks" "$backend_checks" "$guix_lisp_shell" \
-    "$clojure_project" "$racket_project" "$fennel_project"; do
+    "$early_watchdog_failure_checks" "$batch_bootstrap" "$batch_checks" \
+    "$backend_checks" "$guix_lisp_shell" "$clojure_project" \
+    "$racket_project" "$fennel_project"; do
     if [ ! -r "$file" ]; then
         printf 'preflight: unreadable %s\n' "$file" >&2
         exit 2
@@ -176,12 +178,30 @@ run_batch_checks() (
         LANG=en_US.utf8 \
         LC_ALL=en_US.utf8 \
         SK_EMACS_CHECK_SOURCE_ROOT="$source_root" \
+        timeout 30 "$batch_emacs" --batch -Q \
+        --eval '(setq user-emacs-directory (file-name-as-directory (expand-file-name ".emacs.d" (getenv "HOME"))))' \
+        --load "$early_watchdog_failure_checks"
+
+    env -i \
+        HOME="$isolated_home" \
+        TMPDIR="$isolated_tmp" \
+        XDG_CACHE_HOME="$isolated_cache" \
+        XDG_CONFIG_HOME="$isolated_config" \
+        XDG_DATA_HOME="$isolated_data" \
+        XDG_STATE_HOME="$isolated_state" \
+        XDG_RUNTIME_DIR="$isolated_runtime" \
+        PATH="$PATH" \
+        EMACSLOADPATH="$EMACSLOADPATH" \
+        LANG=en_US.utf8 \
+        LC_ALL=en_US.utf8 \
+        SK_EMACS_CHECK_SOURCE_ROOT="$source_root" \
         SK_EMACS_CHECK_SANDBOX_ROOT="$sandbox" \
         SK_EMACS_CHECK_ORIGINAL_REPO="$repo" \
         SK_EMACS_CHECK_REAL_HOME="$real_home" \
         SK_EMACS_CHECK_HOME_PROFILE="$home_profile" \
         SK_EMACS_CHECK_SYSTEM_PROFILE="$system_profile" \
         SK_EMACS_CHECK_BATCH_EMACS="$batch_emacs" \
+        SK_EMACS_STARTUP_OPACITY_PERCENT=85 \
         SK_EMACS_CHECK_BREAK_BATCH="${SK_EMACS_CHECK_BREAK_BATCH:-0}" \
         SK_EMACS_CHECK_BREAK_WARNING="${SK_EMACS_CHECK_BREAK_WARNING:-0}" \
         timeout 120 "$batch_emacs" --batch -Q \

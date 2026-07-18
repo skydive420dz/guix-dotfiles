@@ -913,11 +913,11 @@
               (unless (integer-in-range?
                        (object-ref calibrations
                                    'picom-emacs-opacity-percent)
-                       0 100)
+                       1 100)
                 (add-error
                  'out-of-range
                  '(calibrations picom-emacs-opacity-percent)
-                 "Picom opacity must be an integer percent"))
+                 "Picom opacity must be an integer percent in [1,100]"))
               (unless (and
                        (renderable-decimal?
                         (object-ref

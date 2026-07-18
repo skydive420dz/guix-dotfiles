@@ -14,6 +14,11 @@
 (defconst sk/exwm-reviewed-version "0.35"
   "EXWM release whose client metadata contracts this policy reviews.")
 
+(defvar sk/startup-frame-gate-active-p nil)
+(defvar sk/startup-frame-gate-release-complete-p nil)
+(defvar sk/startup-frame-final-opacity-percent nil)
+(declare-function sk/startup-frame-schedule-release nil)
+
 (defun sk/exwm-installed-version ()
   "Return the EXWM version encoded in the installed library path."
   (when-let ((library (locate-library "exwm")))
@@ -456,11 +461,23 @@ applications whose new window belongs to an existing process."
     (start-process "xset-repeat" nil
                    "xset" "r" "rate" "210" "67")))
 
-(defconst sk/picom-opacity-rule "85:class_g = \"Emacs\""
+(defconst sk/picom-emacs-opacity-percent
+  (or sk/startup-frame-final-opacity-percent 85)
+  "Final Emacs frame opacity shared with the managed Picom policy.")
+
+(defconst sk/picom-opacity-condition
+  "class_g = \"Emacs\" && !_NET_WM_WINDOW_OPACITY && !_NET_WM_WINDOW_OPACITY@"
+  "Match Emacs only when neither frame nor client owns an opacity property.")
+
+(defconst sk/picom-opacity-rule
+  (format "%d:%s" sk/picom-emacs-opacity-percent sk/picom-opacity-condition)
   "Picom opacity rule for Emacs frame transparency.")
 
 (defconst sk/picom-stop-timeout 2.0
   "Seconds to wait for the previous Picom process to stop.")
+
+(defconst sk/picom-start-timeout 2.0
+  "Seconds to wait for the replacement Picom compositor to become ready.")
 
 (defun sk/picom--active-pids ()
   "Return this user's non-dead Picom process IDs on the local host."
@@ -489,6 +506,21 @@ applications whose new window belongs to an existing process."
       (accept-process-output nil 0.05))
     (not occupied)))
 
+(defun sk/picom--ready-p ()
+  "Return non-nil when exactly one Picom owns the X compositor selection."
+  (and (= (length (sk/picom--active-pids)) 1)
+       (eq window-system 'x)
+       (gui-backend-selection-exists-p '_NET_WM_CM_S0)))
+
+(defun sk/picom--wait-for-ready ()
+  "Wait boundedly for one Picom and the X compositor selection."
+  (let ((deadline (+ (float-time) sk/picom-start-timeout))
+        ready)
+    (while (and (not (setq ready (sk/picom--ready-p)))
+                (< (float-time) deadline))
+      (accept-process-output nil 0.05))
+    ready))
+
 (defun sk/start-picom ()
   "Start the session compositor with the managed EXWM opacity rule."
   (interactive)
@@ -503,17 +535,40 @@ applications whose new window belongs to an existing process."
       (unless (sk/picom--wait-for-stop)
         (let ((survivors (sk/picom--active-pids)))
           (user-error
-           "Picom/X compositor selection did not clear within %.1f seconds; active PIDs: %s"
-           sk/picom-stop-timeout
-           (if survivors
-               (mapconcat #'number-to-string survivors ",")
-             "none")))))
-    (start-process "picom" nil
-                   "picom"
-                   "--config" "/dev/null"
-                   "--backend" "glx"
-                   "--vsync"
-                   "--opacity-rule" sk/picom-opacity-rule)))
+             "Picom/X compositor selection did not clear within %.1f seconds; active PIDs: %s"
+             sk/picom-stop-timeout
+             (if survivors
+                 (mapconcat #'number-to-string survivors ",")
+               "none")))))
+    ;; `--daemon' returns only after Picom has initialized and forked.  Keep
+    ;; this manual restart path aligned with Xinit's compositor-ready contract
+    ;; instead of reporting success for an asynchronous process that may fail.
+    (let (diagnostics status)
+      (with-temp-buffer
+        (setq status
+              (call-process
+               "picom" nil '(t t) nil
+               "--config" "/dev/null"
+               "--backend" "glx"
+               "--vsync"
+               "--detect-client-opacity"
+               "--opacity-rule" sk/picom-opacity-rule
+               "--daemon")
+              diagnostics (string-trim (buffer-string))))
+      (unless (eq status 0)
+        (user-error "Picom failed to initialize (status %s)%s"
+                    status
+                    (if (string-empty-p diagnostics)
+                        ""
+                      (format ": %s" diagnostics))))
+      (unless (sk/picom--wait-for-ready)
+        (ignore-errors
+          (call-process
+           "pkill" nil nil nil
+           "-u" (number-to-string (user-uid)) "-x" "picom"))
+        (user-error
+         "Picom did not own the compositor selection within %.1f seconds"
+         sk/picom-start-timeout)))))
 
 (defvar sk/wallpaper-file
   (expand-file-name "~/Projects/guix-dotfiles/assets/wallpapers/waifu-cyberpunk.png"))
@@ -603,8 +658,25 @@ applications whose new window belongs to an existing process."
   (add-hook 'exwm-update-title-hook #'sk/exwm-update-title)
   (sk/exwm-bind-keys)
   (sk/set-keyboard-repeat)
-  (unless exwm-wm-mode
-    (exwm-wm-mode 1)))
+  (if (and sk/startup-frame-gate-active-p
+           (not sk/startup-frame-gate-release-complete-p)
+           (fboundp 'sk/startup-frame-schedule-release))
+      (progn
+        ;; Early init installs a fail-open scheduler.  Re-arm it only after
+        ;; `exwm-wm-mode' has appended the real `exwm--init' window-setup
+        ;; function.  The scheduler then returns to the command loop so EXWM's
+        ;; deferred idle fullscreen work can finish before transparent frames
+        ;; become visible.
+        (remove-hook
+         'window-setup-hook #'sk/startup-frame-schedule-release)
+        (unwind-protect
+            (unless exwm-wm-mode
+              (exwm-wm-mode 1))
+          (unless sk/startup-frame-gate-release-complete-p
+            (add-hook
+             'window-setup-hook #'sk/startup-frame-schedule-release t))))
+    (unless exwm-wm-mode
+      (exwm-wm-mode 1))))
 
 (provide 'sk-exwm)
 

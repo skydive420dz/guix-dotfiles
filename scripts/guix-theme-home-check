@@ -113,6 +113,7 @@ XDG_CACHE_HOME="$tmp/cache" \
 XDG_CONFIG_HOME="$files/.config" \
 DISPLAY='' \
 DBUS_SESSION_BUS_ADDRESS='' \
+SK_EMACS_STARTUP_OPACITY_PERCENT='' \
 "$emacs" -Q --batch \
     -l "$repo/emacs/early-init.el" \
     --eval \
@@ -130,7 +131,15 @@ DBUS_SESSION_BUS_ADDRESS='' \
               (= (face-attribute (quote variable-pitch) :height nil t) 110)
               (eq (alist-get (quote fullscreen) initial-frame-alist)
                   (quote fullboth))
-              (eq (alist-get (quote undecorated) default-frame-alist) t))
+              (eq (alist-get (quote undecorated) default-frame-alist) t)
+              (not sk/startup-frame-gate-active-p)
+              (not (assq (quote alpha) initial-frame-alist))
+              (not (assq (quote alpha) default-frame-alist))
+              (= frame-alpha-lower-limit 20)
+              (not sk/startup-frame-gate-release-timer)
+              (not sk/startup-frame-geometry-deadline)
+              (not (memq (function sk/startup-frame-schedule-release)
+                         window-setup-hook)))
        (error "candidate early-init theme assertion failed"))'
 
 HOME="$tmp/home" \
