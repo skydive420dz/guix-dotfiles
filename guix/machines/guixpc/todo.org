@@ -733,6 +733,41 @@ CLOSED: [2026-07-18 Sat]
   ownership, connected audio/Bluetooth retesting, or absolute
   zero-transition behavior.
 
+* DONE P4.1 recovery inventory and backup decision packet
+CLOSED: [2026-07-18 Sat]
+:PROPERTIES:
+:created: 2026-07-18
+:completed: 2026-07-18
+:END:
+
+- Evidence: [[file:../../../docs/audits/2026-07-18-p4.1-recovery-inventory.org][2026-07-18 P4.1 recovery inventory and backup decision packet]].
+- [X] Verify clean upstream equality, boot/system/home/pull identity, storage
+  topology, mounted destinations, backup clients/services, and generation
+  retention without reading user or secret contents.
+- [X] Inventory Org, repositories, SSH/GPG, Chromium, Downloads, selected
+  editor state, same-disk migration backups, caches, and declarative
+  entrypoints by metadata only.
+- [X] Confirm restrictive SSH/GPG ownership and modes, record public
+  fingerprints and key expiry, and separate permission correctness from
+  off-machine recovery coverage.
+- [X] Record that both project repositories were clean and synchronized to
+  GitHub at the pre-source inventory baseline while Org and private/mutable
+  state remained uncovered.
+- [X] Correct =generation-pins.tsv= to accepted Home 47/46
+  promotion/preferred roles while retaining Home 42/41 as older
+  =last-known-good= history.  Perform no generation switch or deletion.
+- [X] Record the unexpected =guix gc --list-dead= side effect: 26
+  already-dangling automatic roots were pruned; no store object or generation
+  was deleted; after-state retention verification passes.
+- [X] Define the recovery dependency order and the exact data, destination,
+  encryption, RPO/RTO, cadence, retention, and notification choices required
+  before P4.2.
+- [X] Keep Phase 5 deletion, collection, quarantine, and Git cleanup blocked
+  until a representative off-machine restore succeeds.
+- [X] Add no backup package/service, write no backup payload or secret, change
+  no permission, activate no configuration, restart no process, and perform no
+  reboot.  Temporary source/roadmap staging is not backup evidence.
+
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:
 :created: 2026-07-03

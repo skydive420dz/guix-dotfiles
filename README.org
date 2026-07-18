@@ -11,7 +11,7 @@ no-new-package Scheme reader passed its source and cached-only live boundaries,
 and Rafael accepted it complete.  P2.3, P2.S1b/P2.S1c, P2.M1b/P2.M1c, and
 parked P2.M1d remain available but are not active.
 
-Phase 3 is now the promoted workstream.  P3.1's read-only source/live ownership
+Phase 3 is complete.  P3.1's read-only source/live ownership
 baseline and semantic-token architecture are accepted complete from published
 checkpoint =8933827=.  Emacs, Kitty, Fish, Xinit, Picom, and wallpaper have
 traceable live owners.  At that baseline GTK 3/4, icons, and the cursor had no
@@ -82,6 +82,26 @@ skipped disconnected physical-audio and Bluetooth endpoints.  This scoped
 acceptance is not rewritten as an absolute zero-transition claim and does not
 claim Qt, forced DPI, or global toolkit scaling.
 
+Phase 4 is now active.  P4.1's metadata-only recovery inventory confirms that
+both ext4 filesystems live on the same unencrypted internal SSD, no off-machine
+backup destination or scheduled backup owner is present, and local-only Org,
+SSH/GPG, Chromium, Downloads, and selected editor state need explicit policy.
+At the pre-source inventory baseline, both project repositories were clean and
+GitHub-synchronized; Git coverage does not protect secrets or mutable user
+data.  SSH/GPG modes are restrictive; the channel-signing key expires in July
+2028, while its private material and revocation certificate remain on the same
+disk.
+
+P4.1 also found that the Home recovery pins still advertised generations
+42/41 despite P3.4 accepting active generation 47 and immediate rollback 46.
+The source-only correction promotes 47/46 and retains 42/41 as older
+known-good history.  One nominal inventory command,
+=guix gc --list-dead=, pruned 26 already-dangling automatic GC-root symlinks;
+no generation or store object was deleted, the 86/47/5 generation counts are
+unchanged, and retention verification still passes.  This side effect is now
+part of the contract: future no-mutation inventory must not use that command.
+No backup, restore, package, service, activation, cleanup, or reboot is claimed.
+
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
 remain unmeasured.  No tuning or maintenance policy follows automatically from
@@ -135,16 +155,21 @@ root causes, the fresh-session GTK 4 result, the GTK 3 light-fallback and
 late-first-frame findings, the attended EXWM/dashboard reveal-order finding,
 the isolated opacity-gate evidence, its publication and generation-47
 activation, and the qualified attended startup result.
+[[file:docs/audits/2026-07-18-p4.1-recovery-inventory.org][The P4.1 recovery inventory and decision packet]] owns the metadata-only
+asset/coverage matrix, key and storage boundaries, recovery dependency order,
+Home-pin correction, unexpected GC-root side effect, and exact inputs required
+before backup implementation.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
 
 ** Current boundary
 
-Phase 3 is active and P3.1 is accepted complete.  Its published
-documentation-only checkpoint verifies the live/repository ownership map and
-defines the semantic-token, validation, rendering, wiring, rollback, and
-acceptance contract.  Closure added no package, theme, font, cursor, icon,
+Phase 3 is complete through P3.4, and Phase 4 is active at its P4.1 recovery
+inventory boundary.  The sequential record below begins with P3.1's published
+documentation-only checkpoint, which verifies the live/repository ownership
+map and defines the semantic-token, validation, rendering, wiring, rollback,
+and acceptance contract.  Closure added no package, theme, font, cursor, icon,
 wallpaper change, build, Home/System generation, process, activation, EXWM
 session, GUI launch, or reboot.
 
@@ -250,10 +275,17 @@ the restore-tested-backup gate.
 
 ** Ready
 
-No Phase 3 slice is waiting at a ready gate.  Select the next bounded roadmap
-slice separately.
+No slice is currently ready for unattended implementation.  P4.2 requires
+Rafael's data, destination, encryption, RPO/RTO, cadence, retention, and
+failure-notification choices before any backup write or package selection.
 
 ** Completed
+
+- [X] P4.1: recovery inventory and backup decision packet
+  Captured recovery assets and coverage without reading secret contents,
+  corrected Home recovery roles to accepted generations 47/46, retained
+  42/41, and recorded the =guix gc --list-dead= stale-root side effect.
+  No backup, restore, deletion, collection, activation, or reboot occurred.
 
 - [X] P3.4: activation and scoped real-display visual acceptance
   Generation 47 passed publication, guarded activation, exact fresh-runtime

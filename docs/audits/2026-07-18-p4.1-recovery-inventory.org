@@ -1,0 +1,352 @@
+#+title: P4.1 recovery inventory and backup decision packet
+#+date: 2026-07-18
+#+status: complete at metadata/source boundary; backup policy and restore remain open
+
+* Outcome
+
+P4.1 establishes the first durable recovery inventory for GuixPC without
+selecting a backup product or destination.  It records what is declarative,
+what is held off-machine through Git, what exists only on the internal SSD,
+which state is sensitive, and which choices must be accepted before P4.2 can
+write a backup.
+
+The inventory commands read filesystem, repository, key, agent, generation,
+mount, and service metadata.  They did not read private-key contents, browser
+preferences, Org-note contents outside the in-scope roadmap, shell histories,
+or credential payloads.  The repository documents and editable roadmap were
+copied through temporary workspaces for authorized editing and linting; that
+staging is not a durable or restore-tested backup.  The slice added no package
+or service, wrote no backup payload or secret, changed no permission, switched
+no generation, activated no configuration, restarted no process, and performed
+no reboot.
+
+One command violated the intended read-only boundary in a narrow, confirmed
+way: =guix gc --list-dead= pruned 26 already-dangling automatic GC-root
+symlinks while enumerating dead store items.  No store object or generation
+was deleted.  The exact side effect and after-state are recorded below so it
+does not disappear behind a false “read-only” claim.
+
+The source correction in this slice updates the Home recovery-role metadata to
+the already accepted P3.4 state: Home 47 is the promotion rollback and Home 46
+is the preferred rollback.  Home 42 and 41 remain retained older
+=last-known-good= records.  This changes no live profile or generation link.
+
+* Selection and stop boundary
+
+Phase 4 is the highest-priority open roadmap phase.  Its only declared
+prerequisite is the completed Phase 0 baseline.  Phase 5 cleanup and garbage
+collection remain explicitly blocked by a restore-tested backup.
+
+P4.1 is limited to:
+
+1. current identity, storage, generation, and repository state;
+2. location/size/count/owner/mode metadata for recovery-relevant paths;
+3. SSH/GPG public identity, expiry, permission, and agent metadata;
+4. a coverage and restore-order matrix;
+5. confirmed gaps and the exact decisions required for P4.2; and
+6. a source-only correction where existing accepted recovery roles and the pin
+   file disagree.
+
+P4.1 does not choose a destination, encryption method, backup tool, cadence,
+retention window, recovery-point objective, recovery-time objective, or
+failure-notification channel.  It does not claim backup or restore acceptance.
+
+* Captured baseline
+
+| Item | Observed state |
+|------+----------------|
+| Host | =guixpc= |
+| Boot ID | =b36bfc06-65d3-4534-9ff2-b8383c1dc9ed= |
+| Repository checkpoint | =93e747e6e2c23f5709695b6131877fe85dca884e= |
+| Repository sync before source work | clean =main=, =HEAD= equals =origin/main= |
+| System | generation 87, current and booted, =gz53dagd...-system= |
+| Home | generation 47, current, =84pm5bd8...-home= |
+| Pull | generation 5, current, =mm52g4iy...-profile= |
+| Retained generation links | System 86; Home 47; Pull 5 |
+| Retention verifier | PASS |
+| Root filesystem | ext4 on =/dev/sda2=; 53 percent used; about 36.0 GB available |
+| Home filesystem | ext4 on =/dev/sda4=; 2 percent used; about 148.9 GB available |
+| Physical storage | both filesystems are partitions on the same 232.9 GB internal =sda= disk |
+| Encryption layer | none visible in the block topology; ordinary ext4 plus unencrypted swap |
+| External/remote backup mount | none observed |
+| Backup scheduler/service | none observed in user or system Shepherd service names |
+| Common backup clients in active PATH | Restic, Borg/Borgmatic, Rclone, Duplicity, rsync: absent |
+
+Separate =/= and =/home= partitions protect neither surface from loss of the
+single physical SSD.  Current free space also means there is no capacity
+emergency that justifies bypassing backup and restore gates.
+
+* Recovery asset registry
+
+Sizes are approximate allocated bytes from one metadata-only =du= pass.  “Git
+covered” means committed repository bytes exist on the configured GitHub
+remote; it is not a claim about untracked files, secrets, credentials, or a
+tested bare-metal restore.
+
+| ID | Surface | Class | Approximate state | Off-machine coverage | Sensitivity | Restore order / decision |
+|----+---------+-------+-------------------+----------------------+-------------+--------------------------|
+| R01 | =~/Documents/OrgFiles= | irreplaceable user data | 27 files; 286,720 B | none observed; Emacs backups are on the same SSD | private | restore early; Rafael must confirm it is mandatory |
+| R02 | =~/Projects/guix-dotfiles= | declarative machine source | 12,881,920 B; clean, =main=, =origin/main=, 0/0 | committed bytes on GitHub | machine-public/private mix | clone after base network/Git; restore matching source before Home rollback |
+| R03 | =~/Projects/sk-guix= | channel source/public keyring | 724,992 B; clean, =main=, =origin/main=, 0/0 | committed bytes on GitHub | public source; signing continuity is secret | clone before authenticated channel work |
+| R04 | =~/.ssh= | authentication secret/state | 24,576 B; directory 0700; private key 0600 | none observed | secret | restore through an offline-safe secret path before private Git/SSH access |
+| R05 | =~/.gnupg= | signing secret/trust state | 106,496 B; directory 0700; private key material 0600 | none observed | secret | restore before signing a new =sk-guix= channel commit |
+| R06 | =~/.config/chromium= | mutable application state | 286,683,136 B; directory 0700 | sync/remote coverage not inspected | private | Rafael must choose backup, sync-only, or disposable policy |
+| R07 | =~/Downloads= | mixed user data | 728 files; 20,819,968 B | none observed | mixed/TBD | classify inclusions before backup |
+| R08 | =~/.emacs.d= | mixed editor state/cache | 92,737,536 B | none observed | mostly rebuildable, with small personal state | split caches from bookmarks/projects/snippets before policy |
+| R09 | =~/.config/guix/backups= and =recovery= | same-disk migration aids | about 11.0 MB total | none observed | configuration history | retain until classified; not disaster backup |
+| R10 | =~/1784329267-guix-home-legacy-configs-backup= | same-disk P3.4 rollback aid | 16,384 B | repository retained source also exists | low | retain through recovery-policy review |
+| R11 | Guix System/Home/Pull profiles | local rollback roots | 86/47/5 links; verifier passes | source/channel history partly remote; store roots local | operational | pins and source checkpoint must precede any pruning |
+| R12 | =~/.cache= | rebuildable state | 2,174,840,832 B | intentionally none | low, except misfiled user data risk | presumptive exclusion only after a reviewed classifier |
+| R13 | Guix/EXWM entrypoints | declarative/generated state | channels, Home, System, EXWM, and Xinit resolve to repo; profile is store-generated | covered through R02 plus Guix channels | low | reconstruct after repository/channel bootstrap |
+
+The largest editor areas are three rebuildable-looking native/cache trees:
+
+| Path | Approximate bytes |
+|------+-------------------|
+| =~/.emacs.d/eln-cache.quarantine-20260713-slice19= | 36,990,976 |
+| =~/.emacs.d/eln-cache= | 29,343,744 |
+| =~/.emacs.d/.cache= | 26,324,992 |
+
+Small mutable editor records such as bookmarks, project lists, snippets, and
+TRAMP/places state must not be silently classified with those caches.
+
+The home root also contains zero-byte unknown regular files named === and
+=%l=, plus one whitespace-only/formatting-artifact name.  They are Phase 5
+classification candidates only.  No quarantine or deletion occurred.
+
+* Repository and declarative coverage
+
+Exactly two Git repositories were found under =~/Projects=:
+
+| Repository | Branch/upstream | Worktree | Ahead/behind | Remote class |
+|------------+-----------------+----------+--------------+--------------|
+| =guix-dotfiles= | =main= / =origin/main= | clean before P4.1 source work | 0/0 | GitHub |
+| =sk-guix= | =main= / =origin/main= | clean | 0/0 | GitHub |
+
+No non-repository top-level project directory was found.  The Org tree has no
+Git ancestor and is therefore not covered by either repository.
+
+The live declarative entrypoints resolve as:
+
+#+begin_example
+~/.config/guix/channels.scm        -> ~/Projects/guix-dotfiles/guix/channels.scm
+~/.config/guix/home.scm            -> ~/Projects/guix-dotfiles/guix/home/guixpc.scm
+~/.config/guix/systems/guixpc.scm -> ~/Projects/guix-dotfiles/guix/systems/guixpc.scm
+~/.exwm                            -> ~/Projects/guix-dotfiles/emacs/exwm-loader.el
+~/.xinitrc                         -> ~/Projects/guix-dotfiles/shell/xinitrc
+~/.profile                         -> active Home generation store profile
+#+end_example
+
+This is strong source coverage for the declared workstation.  It does not
+cover mutable user data, private keys, browser state, or blank-disk bootstrap
+dependencies.
+
+* Key and credential boundary
+
+The inspected permission contract is healthy:
+
+- =~/.ssh= and =~/.gnupg= are 0700;
+- =~/.ssh/id_ed25519=, =authorized_keys=, GPG private-key records, the trust
+  database, and the revocation certificate are 0600;
+- the SSH public key is 0644;
+- the live GPG-agent sockets are user-owned and 0700; and
+- no =~/.ssh/config= exists.
+
+The public SSH fingerprint is:
+
+#+begin_example
+SHA256:r0dQ4jacE2cEarb4/hObnFEmVpvuPboe6y04l/wJP38 guixpc (ED25519)
+#+end_example
+
+The channel-signing primary key metadata is:
+
+#+begin_example
+fingerprint 6B094D15B02E54B0F6B5E9E86F83FC62D232E5EC
+4096-bit RSA
+created 2026-07-12T23:59:57Z
+expires 2028-07-11T23:59:57Z
+#+end_example
+
+Its revocation certificate exists, but it is on the same SSD as the private
+key.  Permission correctness is not recovery coverage.  P4.2 must choose an
+encrypted off-machine copy and an independent way to recover its encryption
+credential.
+
+* Recovery dependency order
+
+A complete recovery cannot begin with =guix-bootstrap= alone.  The current
+safe order is:
+
+1. bootable installer/recovery media, partitioning, filesystems, EFI/GRUB,
+   firmware/network, and the user account;
+2. trusted network and Git access, including SSH material if private access is
+   required;
+3. Guix channels and both Git repositories;
+4. the System configuration and a bootable System generation;
+5. the matching repository checkpoint before any Home generation rollback or
+   activation;
+6. GPG signing/trust state before new authenticated channel history;
+7. Org and other irreplaceable user data; and
+8. selected browser/editor/application state.
+
+The existing bootstrap and retention tooling cover important installed-system
+boundaries, but not steps 1, 2, 6, 7, or 8 as a blank-disk recovery workflow.
+
+* Confirmed findings
+
+| ID | Severity | Finding | Consequence / next boundary |
+|----+----------+---------+-----------------------------|
+| P4.1-F01 | Critical | No off-machine backup destination or tested backup was observed | Loss of the internal SSD loses local-only Org, SSH/GPG, browser, and other mutable state |
+| P4.1-F02 | High | GPG private material and its revocation certificate occupy the same disk | One disk failure can remove both signing continuity and the local revocation path |
+| P4.1-F03 | High | Home recovery pins still named 42/41 as promotion/preferred while accepted P3.4 uses 47/46 | Recovery tooling printed a stale Home rollback story; corrected source-only in P4.1 |
+| P4.1-F04 | Medium | =guix gc --list-dead= prunes stale automatic GC-root links | It is not operationally read-only and must not be used by a no-mutation inventory |
+| P4.1-F05 | Medium | Existing Guix and Emacs backup directories are on the same SSD | They help with local mistakes but do not survive disk loss |
+| P4.1-F06 | Medium | No backup job or visible failure owner exists | There is currently no successful or failed backup event to observe |
+| P4.1-F07 | Medium | Blank-disk prerequisites are outside the current bootstrap contract | Repository/config recovery alone cannot rebuild a lost disk from zero |
+| P4.1-F08 | Low | Zero-byte anomalous home-root files and large rebuildable caches exist | They belong to later backup-gated classification, not immediate cleanup |
+
+* Unexpected GC-root side effect
+
+The command was:
+
+#+begin_src sh
+~/.config/guix/current/bin/guix gc --list-dead
+#+end_src
+
+While producing the list, Guix reported removing 26 stale symlinks under
+=/var/guix/gcroots/auto=.  Twenty-four targeted already-absent per-user
+profile roots; two targeted already-removed temporary
+=guix-bootstrap-acceptance= trees.
+
+Afterward:
+
+- =/var/guix/gcroots/auto= contains 44 symlinks;
+- a filesystem-level dangling-link count is zero;
+- System/Home/Pull link counts remain 86/47/5;
+- current and booted System remain generation 87;
+- current Home remains generation 47;
+- current Pull remains generation 5; and
+- =scripts/guix-generation-retention verify= still passes.
+
+No =guix gc --delete=, unqualified collecting =guix gc=, generation deletion,
+switch, reconfigure, or activation command ran.  Command output reported no
+store-object or generation deletion.  Recreating links whose targets no longer
+exist would restore stale metadata rather than a usable root, so no
+counter-mutation was attempted.
+
+Future no-mutation reporters must use direct filesystem/profile metadata or an
+isolated fixture.  They must not describe =guix gc --list-dead= as read-only.
+
+* Recovery-pin correction
+
+The accepted recovery roles now become:
+
+| Role | Home generation | Target |
+|------+-----------------+--------|
+| promotion rollback | 47 | =/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home= |
+| preferred rollback | 46 | =/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home= |
+| older known-good | 42 | =/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home= |
+| older known-good | 41 | =/gnu/store/ci9szqljcz4jjvwcrp76865j8q8ihl3d-home= |
+
+This is not a new retention-count decision.  It makes
+=generation-pins.tsv= agree with the already accepted P3.4 activation and
+rollback record while retaining the older fallbacks.
+
+Required source/live gates are:
+
+- =tests/guix-generation-retention-check=;
+- strict repository validation;
+- live =inventory=, =verify=, =plan=, and =rollback-drill=;
+- exact printed Home recovery commands for 47 and 46;
+- no generation-link, current-profile, boot, or runtime change.
+
+* P4.2 decision packet
+
+The next slice cannot select policy without Rafael's input.  It needs:
+
+1. mandatory data:
+   - confirm Org notes;
+   - confirm SSH/GPG;
+   - decide Chromium;
+   - decide Downloads;
+   - identify any other irreplaceable path;
+2. one off-machine destination with known usable capacity;
+3. encryption policy and a recovery credential stored independently of this
+   SSD;
+4. maximum acceptable data loss between backups (RPO);
+5. maximum acceptable recovery time (RTO);
+6. backup frequency and retention history;
+7. a visible failure-notification path; and
+8. the representative files and secret-safe checks for a disposable restore
+   drill.
+
+Tool selection follows those answers.  Installing a convenient tool first
+would reverse the dependency order.
+
+* Validation evidence
+
+The staged source passed:
+
+| Gate | Result |
+|------+--------|
+| =git diff --check= | PASS |
+| =tests/guix-generation-retention-check= | PASS |
+| complete strict =scripts/shell-check --strict= | PASS |
+| staged-pin live =inventory=/=verify= | PASS; 86/47/5 links; current 87/47/5 |
+| staged-pin live =plan= | PASS; remains read-only and prints no apply path |
+| staged-pin live =rollback-drill= | PASS; Home 47 and older tier 46 |
+| repository Org files | =org-lint= PASS |
+| editable agenda in staged link context | =org-lint= PASS |
+
+The full strict gate includes the generation fixture, disk-health and Home-link
+fixtures, 299 theme checks plus native parsers, immutable Home negative
+controls, Lisp project gates, package ownership, and reconfigure fixtures.
+This broad source validation does not turn P4.1 into a Home/System build or
+activation slice.
+
+* Planning synchronization
+
+The editable agenda is copied only if its live SHA256 still equals the P3.4
+closure result:
+
+#+begin_example
+e59001905251b78c9eba7caa66785bfdb85e7644a92b7e399aad820c0b59d825
+#+end_example
+
+The staged P4.1 agenda passed =org-lint=.  Its first guarded output SHA256 was:
+
+#+begin_example
+0ff13f5984e60cfa57fef07656a450c8ecaf62fffdfdb6b5297c32edc83271ce
+#+end_example
+
+A final accuracy pass distinguished temporary authorized source/roadmap
+staging from a durable backup payload.  It was staged and copied only while the
+live agenda still matched that exact =0ff13f59= intermediate result.  The final
+live SHA256 is:
+
+#+begin_example
+c3dfea324e42493e83546169795189a1135549931dc10e0097400924fd1915b8
+#+end_example
+
+Independent review then qualified repository cleanliness as the pre-source
+inventory baseline rather than the dirty implementation worktree.  That
+wording-only correction is copied only while the live agenda still matches the
+=c3dfea32= intermediate result.  The final agenda SHA256 is:
+
+#+begin_example
+07b7cf9ca07449aca586779b2580306d5a5b10e36bc10289d2c6149db1dc7fd7
+#+end_example
+
+* Closure and residual boundary
+
+P4.1 is complete at the local metadata/source boundary when the pin correction
+passes source and live read-only retention gates, this audit and the editable
+agenda pass =org-lint=, and a documentation/source checkpoint is created.
+Publication and upstream-equality verification are the checkpoint handoff and
+are not silently claimed by the staged document.
+
+Phase 4 remains active.  P4.2 backup policy and destination selection remains
+blocked on the decision packet.  Phase 5 generation deletion, store
+collection, home quarantine, and Git cleanup remain blocked until a
+representative backup restore passes.  No current local directory or Git
+remote is described as that accepted backup.
