@@ -12,12 +12,11 @@ Chromium, and Downloads, is consciously accepted for the present rather than
 treated as resolved.
 
 The second Samsung 860 EVO 250 GB SSD remains unmounted and undeclared, and this
-documentation slice issues no disk mutation.  Its prior contents are
-disposable, but its observed layout changed outside this slice between the
-earlier inventory and final guard; that drift is recorded below rather than
-silently described as stable.  No backup product, destination, encryption
-policy, cadence, retention policy, RPO/RTO, or restore drill is selected.  No
-hardware purchase is planned.
+documentation workflow issues no disk mutation.  Rafael deliberately removed
+the prior Windows-oriented layout before the final guard; that owner-performed
+change is recorded below.  No further repartitioning, storage role, backup
+product, destination, encryption policy, cadence, retention policy, RPO/RTO, or
+restore drill is selected.  No hardware purchase is planned.
 
 P4.2 also preserves two future directions without promoting either:
 
@@ -82,17 +81,18 @@ An earlier read-only observation reported a 4 GiB FAT partition and a 228.9 GiB
 Btrfs partition.  The final pre-apply guard, after boot
 =64140768-9522-4cad-8021-9db54e070e8a=, instead reported one
 250058113024-byte GPT Linux-filesystem-type partition with no filesystem
-signature exposed by =lsblk= or UDisks.  P4.2's staging and validation issued no
-partitioning, formatting, or wipe command, so the cause and timing of that
-external state change are not attributed here.
+signature exposed by =lsblk= or UDisks.  Rafael subsequently confirmed that he
+had deliberately formatted/repartitioned the disk to remove the unwanted
+Windows partitioning.  P4.2's automated staging and validation issued no
+partitioning, formatting, or wipe command.
 
-The user confirmed that prior contents are disposable and that the disk should
-eventually be wiped.  The current signature-free observation is not accepted
-wipe evidence and does not make the disk ready for use.  P4.2 does not perform
-or authorize a wipe.  Any later destructive command must identify the target
-by the stable serial-backed =by-id= path, re-prove that root/Home remain on
-serial =S59WNZFN905850D=, prove the target has no mount or active swap, and
-obtain explicit attended authorization.
+The owner-performed removal of the prior layout is accepted as intentional, but
+the disk remains unprovisioned, unmounted, and without a selected role.  No
+further partition redesign is needed now.  Any later destructive command or
+filesystem creation must identify the target by the stable serial-backed
+=by-id= path, re-prove that root/Home remain on serial =S59WNZFN905850D=,
+prove the target has no mount or active swap, and obtain explicit attended
+authorization.
 
 ** Storage-layout comparison
 
@@ -281,7 +281,7 @@ closure result:
 The staged P4.2 agenda output SHA256 is:
 
 #+begin_example
-350347ecd803909ceca9479dc6ddbc3f1e897c3ec5b730d3bab7265178de2be3
+1a486eedddf24334399fd277cf9c363ba54c3789edec0e72c50f88ce6b6084fa
 #+end_example
 
 P4.2 closes the decision packet only.  Phase 4 returns to parked status without

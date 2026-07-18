@@ -784,10 +784,11 @@ CLOSED: [2026-07-18 Sat]
   drill, storage migration, or hardware purchase for now.  Preserve the
   P4.1-recorded exposure of local-only mutable state as explicit residual risk.
 - [X] Perform no mutation of the added Samsung 860 EVO 250 GB SSD, serial
-  =S59WNZFN905509A=, and leave it unmounted and undeclared.  Record that an
-  earlier FAT/Btrfs observation changed outside this slice to one
-  filesystem-signature-free Linux partition at the final guard; prior contents
-  remain disposable, but no wipe is accepted or authorized.
+  =S59WNZFN905509A=, through P4.2 automation and leave it unmounted and
+  undeclared.  Record Rafael's deliberate removal of its prior
+  Windows-oriented FAT/Btrfs layout and the final observation of one
+  filesystem-signature-free Linux partition.  No further repartitioning or
+  storage role is selected or authorized.
 - [X] Record the current-layout, Home-migration/root-expansion,
   separate-store, local-backup, and future-M.2 alternatives.  Prefer measured
   generation/store maintenance first; park any partition migration behind a

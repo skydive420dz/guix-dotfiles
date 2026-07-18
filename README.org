@@ -297,11 +297,12 @@ implementation is parked as P4.3.
 
 - [X] P4.2: recovery/storage deferral and maintenance-policy decision
   Accepted no backup or storage implementation for now, recorded residual
-  risk, performed no second-SSD mutation, recorded its observed state drift,
-  compared future layouts, separated a private Org sync/history repository
-  from backup, and defined an inert =current + booted System when different +
-  five newest additional distinct closures + explicit pins= planning floor.
-  No disk, generation, GC, activation, or reboot change occurred.
+  risk, performed no automated second-SSD mutation, recorded Rafael's deliberate
+  removal of its prior Windows-oriented layout, compared future layouts,
+  separated a private Org sync/history repository from backup, and defined an
+  inert =current + booted System when different + five newest additional
+  distinct closures + explicit pins= planning floor.  No automated disk,
+  generation, GC, activation, or reboot change occurred.
 
 - [X] P4.1: recovery inventory and backup decision packet
   Captured recovery assets and coverage without reading secret contents,
