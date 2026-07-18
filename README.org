@@ -82,25 +82,30 @@ skipped disconnected physical-audio and Bluetooth endpoints.  This scoped
 acceptance is not rewritten as an absolute zero-transition claim and does not
 claim Qt, forced DPI, or global toolkit scaling.
 
-Phase 4 is now active.  P4.1's metadata-only recovery inventory confirms that
-both ext4 filesystems live on the same unencrypted internal SSD, no off-machine
-backup destination or scheduled backup owner is present, and local-only Org,
-SSH/GPG, Chromium, Downloads, and selected editor state need explicit policy.
-At the pre-source inventory baseline, both project repositories were clean and
-GitHub-synchronized; Git coverage does not protect secrets or mutable user
-data.  SSH/GPG modes are restrictive; the channel-signing key expires in July
-2028, while its private material and revocation certificate remain on the same
-disk.
+P4.2 closes Phase 4's current decision-only boundary and returns the phase to
+parked status.  Rafael explicitly defers backup and storage implementation,
+accepts the recorded exposure of local-only or otherwise uncovered/unverified
+mutable data, selects no hardware purchase, and performs no mutation of the
+added Samsung 860 EVO 250 GB SSD, which the final guard observed unmounted and
+undeclared.  A future private Org remote remains a separate
+sync/history slice; it is not current coverage or a complete-backup claim.
 
-P4.1 also found that the Home recovery pins still advertised generations
-42/41 despite P3.4 accepting active generation 47 and immediate rollback 46.
-The source-only correction promotes 47/46 and retains 42/41 as older
-known-good history.  One nominal inventory command,
-=guix gc --list-dead=, pruned 26 already-dangling automatic GC-root symlinks;
-no generation or store object was deleted, the 86/47/5 generation counts are
-unchanged, and retention verification still passes.  This side effect is now
-part of the contract: future no-mutation inventory must not use that command.
-No backup, restore, package, service, activation, cleanup, or reboot is claimed.
+P4.1's metadata inventory remains the baseline: GitHub covers committed and
+pushed project bytes but not secrets or mutable user data; SSH/GPG modes are
+restrictive; and the channel-signing key expires in July 2028 while its private
+material and revocation certificate remain local.  Its pin correction promotes
+Home 47/46 and retains 42/41 as older known-good history.
+
+One P4.1 nominal inventory command, =guix gc --list-dead=, pruned 26
+already-dangling automatic GC-root symlinks.  No generation or store object
+was deleted, the 86/47/5 generation counts were unchanged, and retention
+verification passed.  That command remains forbidden in no-mutation reporters.
+P4.2 supersedes the former unconditional backup gate only for future Guix
+generation/store maintenance: a read-only =current + booted System when
+different + five newest additional distinct closures + explicit pins=
+estimator may be promoted separately, while generation deletion and store
+collection require different explicit destructive approvals.  No backup,
+restore, package, disk, service, activation, cleanup, or reboot is claimed.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -159,14 +164,20 @@ activation, and the qualified attended startup result.
 asset/coverage matrix, key and storage boundaries, recovery dependency order,
 Home-pin correction, unexpected GC-root side effect, and exact inputs required
 before backup implementation.
+[[file:docs/audits/2026-07-18-p4.2-recovery-storage-deferral.org][The P4.2 recovery/storage deferral record]] owns the explicit no-backup-now
+decision and residual risk, the no-disk-mutation boundary and observed
+second-SSD drift, reviewed storage alternatives, private-Org-repository
+handoff, and inert future =current + booted System when different + five newest
+additional distinct closures + explicit pins= maintenance policy.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
 
 ** Current boundary
 
-Phase 3 is complete through P3.4, and Phase 4 is active at its P4.1 recovery
-inventory boundary.  The sequential record below begins with P3.1's published
+Phase 3 is complete through P3.4.  P4.2 completed Phase 4's current
+decision-only boundary; Phase 4 is parked without backup or restore acceptance.
+The sequential record below begins with P3.1's published
 documentation-only checkpoint, which verifies the live/repository ownership
 map and defines the semantic-token, validation, rendering, wiring, rollback,
 and acceptance contract.  Closure added no package, theme, font, cursor, icon,
@@ -270,16 +281,27 @@ disconnected audio/Bluetooth skips.  No Qt, forced-DPI, global toolkit-scale,
 or absolute zero-transition result is claimed.
 
 P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
-parked.  Generation deletion and store collection remain Phase 5 work behind
-the restore-tested-backup gate.
+parked.  Phase 4 backup/storage implementation is parked by explicit owner
+decision.  Phase 5 generation deletion and store collection remain separate
+future gates behind an exact no-mutation estimator and attended authorization;
+no cleanup is promoted by P4.2.
 
 ** Ready
 
-No slice is currently ready for unattended implementation.  P4.2 requires
-Rafael's data, destination, encryption, RPO/RTO, cadence, retention, and
-failure-notification choices before any backup write or package selection.
+No slice is currently ready for unattended implementation.  P4.O1 private Org
+sync/history, P5.1 retention estimation, and P5.S1 storage reorganization are
+documented selectable successors, not promoted work.  Backup/restore
+implementation is parked as P4.3.
 
 ** Completed
+
+- [X] P4.2: recovery/storage deferral and maintenance-policy decision
+  Accepted no backup or storage implementation for now, recorded residual
+  risk, performed no second-SSD mutation, recorded its observed state drift,
+  compared future layouts, separated a private Org sync/history repository
+  from backup, and defined an inert =current + booted System when different +
+  five newest additional distinct closures + explicit pins= planning floor.
+  No disk, generation, GC, activation, or reboot change occurred.
 
 - [X] P4.1: recovery inventory and backup decision packet
   Captured recovery assets and coverage without reading secret contents,
@@ -533,7 +555,8 @@ Ethernet:  Realtek RTL8111/8168/8211/8411 PCIe Gigabit
 Wi-Fi:     Intel Wi-Fi 6 AX200
 Bluetooth: Intel AX200 Bluetooth USB device
 Audio:     AMD HDMI/DP audio + AMD HD audio
-Storage:   Samsung SSD 860 EVO 250GB SATA
+Storage:   2x Samsung SSD 860 EVO 250GB SATA
+           sda is the active System/Home disk; sdb is unused and unmounted
 #+end_src
 
 ** Memory
@@ -2072,22 +2095,23 @@ scripts/guix-generation-retention rollback-drill
 
 The current implementation is intentionally read-only.  It reports only older
 generation links whose identical canonical closure is retained by a newer
-generation; it has no =apply= action and never invokes =guix gc=.  Unique
-closures are not future deletion candidates unless they are older than 30 days,
-outside the newest three distinct closures, unpinned, not current/booted, and
-superseded by an accepted realization.  Any mutating cleanup needs a separate,
-reviewed implementation and a freshly generated exact-number plan.  The
-read-only tool currently proves retention of the booted closure; an apply
-implementation must additionally identify and protect the exact booted
-generation-number link before deleting anything.
+generation; it has no =apply= action and never invokes =guix gc=.  P4.2 records
+an inert future floor, per System/Home/Pull profile, equal to the union of the
+current generation, the booted System when different, the five newest
+additional distinct closures, and every explicit pin.  The present tool does
+not implement that broader policy.  P5.1 must first enumerate exact retained
+closures and candidate links without mutation; P5.2 generation deletion and
+P5.3 unreachable-store collection then require separate reviewed plans and
+explicit attended authorization.  The booted generation-number link must be
+identified and protected before any deletion.
 
-The P1.1 retained-link counts are System/Home/Pull =86/42/5=.  Exact pins
+The P4.2 retained-link counts are System/Home/Pull =86/47/5=.  Exact pins
 promote current/booted System 87, retain System 86 as its immediate fallback,
-and keep System 85 as an older accepted fallback.  Home 42 remains promoted,
-Home 41 remains the preferred pre-native-cache fallback, and Home 40 remains the
-last-known-good Racket fallback.  Pull 5 and older pins remain protected.
-Acceptance left no checker residue and performed no generation deletion or
-garbage collection.
+and keep older accepted System fallbacks.  Home 47 is current and promoted,
+Home 46 is its immediate fallback, and older accepted Home pins remain
+protected.  Pull 5 is current and promoted, while older accepted Pull pins
+remain protected.  Acceptance left no checker residue and performed no
+generation deletion or garbage collection.
 
 * Live symlinks
 
@@ -2179,7 +2203,7 @@ a local recovery tty:
    Home, and Pull targets in =generation-pins.tsv= and pass retention
    verification plus the rollback drill.
 
-The recorded 86/42/5 generation identities and their older retained tiers are
+The recorded 86/47/5 generation identities and their older retained tiers are
 this installation's historical rollback evidence and are not valid new-install
 targets.  Blank-disk partitioning,
 filesystem creation, initial GRUB/EFI installation, initial user/network/

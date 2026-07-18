@@ -350,3 +350,16 @@ blocked on the decision packet.  Phase 5 generation deletion, store
 collection, home quarantine, and Git cleanup remain blocked until a
 representative backup restore passes.  No current local directory or Git
 remote is described as that accepted backup.
+
+* Subsequent P4.2 decision
+
+On 2026-07-18, the documentation-only
+[[file:2026-07-18-p4.2-recovery-storage-deferral.org][P4.2 recovery/storage deferral and maintenance-policy decision]]
+explicitly deferred backup implementation and accepted the recorded residual
+risk.  It supersedes P4.1's unconditional restore-tested-backup gate only for
+future Guix generation-link deletion and unreachable-store collection.
+
+P4.1's inventory and closure statements remain historical truth at their
+boundary.  User-data deletion, secret handling, Home quarantine deletion, and
+partition/storage migration do not inherit the Guix-store exception.  P4.2
+implements none of those operations.

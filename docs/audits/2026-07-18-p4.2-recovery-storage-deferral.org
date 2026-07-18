@@ -1,0 +1,327 @@
+#+title: P4.2 recovery/storage deferral and maintenance-policy decision
+#+date: 2026-07-18
+#+status: complete; documentation-only decision; backup and storage implementation deferred
+
+* Outcome
+
+P4.2 records Rafael's explicit decision not to implement a backup system or
+reorganize storage now.  Existing GitHub remotes remain the accepted recovery
+source for committed repository history.  The known exposure of local-only or
+otherwise uncovered/unverified mutable state, including Org, SSH/GPG,
+Chromium, and Downloads, is consciously accepted for the present rather than
+treated as resolved.
+
+The second Samsung 860 EVO 250 GB SSD remains unmounted and undeclared, and this
+documentation slice issues no disk mutation.  Its prior contents are
+disposable, but its observed layout changed outside this slice between the
+earlier inventory and final guard; that drift is recorded below rather than
+silently described as stable.  No backup product, destination, encryption
+policy, cadence, retention policy, RPO/RTO, or restore drill is selected.  No
+hardware purchase is planned.
+
+P4.2 also preserves two future directions without promoting either:
+
+1. a private remote Git repository for reviewed Org notes, shared among the
+   user's machines as a synchronization and history workflow; and
+2. conservative Guix generation pruning and store collection when Rafael
+   explicitly promotes the work or capacity observations justify review.
+
+This slice changes only source documentation and the editable roadmap.  It
+does not partition, format, mount, copy, back up, restore, install, build,
+activate, delete a generation, collect a store object, restart a process, or
+reboot.
+
+* Accepted decisions
+
+** Backup implementation and accepted residual risk
+
+- No dedicated backup disk or backup service will be implemented now.
+- GitHub covers pushed, committed bytes in =guix-dotfiles= and =sk-guix=.
+  It does not cover uncommitted work, local-only Org, private keys, browser
+  state, Downloads, or other mutable Home data.
+- Same-disk Guix recovery directories, retained generations, and the unused
+  second internal SSD are not described as backup evidence.
+- No restore acceptance is claimed.
+- The residual loss risk is an owner decision, not an implementation defect
+  to work around silently.
+- Backup work may be reconsidered when Rafael explicitly promotes it, when
+  recovery priorities change, or when inexpensive capacity becomes
+  conveniently available.
+
+This decision supersedes the earlier roadmap rule that a restore-tested
+off-machine backup must precede every Guix generation/store-maintenance step.
+It does not authorize maintenance automatically: read-only estimation,
+generation-link deletion, and unreachable-store collection remain different
+gates.  User-data deletion, secret handling, Home quarantine deletion, and
+storage migration retain their own recovery and explicit-authorization
+requirements.
+
+** Second-SSD boundary
+
+The added disk was observed as:
+
+#+begin_example
+device:       /dev/sdb
+stable ID:    ata-Samsung_SSD_860_EVO_250GB_S59WNZFN905509A
+WWN:          wwn-0x5002538ed09eb0ce
+size:         250059350016 bytes
+model:        Samsung SSD 860 EVO 250GB
+serial:       S59WNZFN905509A
+current GPT:  one 250058113024-byte Linux-filesystem-type partition
+filesystem:   none reported by lsblk or UDisks at the final guard
+mounts/swap:  none
+#+end_example
+
+UDisks reported SMART enabled, no failing or previously failed attributes, no
+bad sectors, a successful prior self-test status, and a temperature around
+27--28 degrees Celsius.  The reported powered-on time was about 4.7 years.
+These observations are not a fresh extended self-test and are not permission
+to trust or repurpose the disk without a new attended preflight.
+
+An earlier read-only observation reported a 4 GiB FAT partition and a 228.9 GiB
+Btrfs partition.  The final pre-apply guard, after boot
+=64140768-9522-4cad-8021-9db54e070e8a=, instead reported one
+250058113024-byte GPT Linux-filesystem-type partition with no filesystem
+signature exposed by =lsblk= or UDisks.  P4.2's staging and validation issued no
+partitioning, formatting, or wipe command, so the cause and timing of that
+external state change are not attributed here.
+
+The user confirmed that prior contents are disposable and that the disk should
+eventually be wiped.  The current signature-free observation is not accepted
+wipe evidence and does not make the disk ready for use.  P4.2 does not perform
+or authorize a wipe.  Any later destructive command must identify the target
+by the stable serial-backed =by-id= path, re-prove that root/Home remain on
+serial =S59WNZFN905850D=, prove the target has no mount or active swap, and
+obtain explicit attended authorization.
+
+** Storage-layout comparison
+
+Current primary layout:
+
+| Device | Approximate size | Role | Observed use |
+|--------+------------------+------+--------------|
+| =sda1= | 260 MiB | EFI | about 1 percent |
+| =sda2= | 76.8 GiB | root and Guix store | 53 percent; about 34 GiB available |
+| =sda3= | 3.7 GiB | swap | active, unused at observation |
+| =sda4= | 152.1 GiB | Home | 2 percent; about 139 GiB available |
+
+The Guix store accounts for about 36 GiB and nearly all allocated root use.
+Moving ordinary Home files does not itself reclaim root; generation pruning
+and collection are the first lower-risk capacity experiment.
+
+*** A — Keep the current layout and run measured maintenance later
+
+This is the accepted present state.
+
+- Strengths: no boot or data migration, no partition risk, and about 34 GiB of
+  root space remains available.
+- Limitation: root and Home remain imbalanced, and the second SSD remains
+  unused.
+- Next gate: an explicitly promoted, no-mutation retention/reclaim estimator.
+
+*** B — Move Home to the second SSD and expand root/store
+
+This is the preferred future layout if primary-capacity expansion becomes
+necessary.
+
+The primary disk's root, swap, and Home partitions are contiguous.  After an
+accepted Home migration to the second SSD, deleting the old swap and Home
+partitions would let the existing root partition grow by approximately
+167,356,923,904 bytes while preserving its start sector and filesystem UUID.
+A root-hosted swap file can replace the current partition; Guix supports a
+file path as a =swap-space= target, and hibernation is not configured here.
+
+The work must remain two slices:
+
+1. provision and accept the new Home filesystem while the original =sda4=
+   remains intact as a rollback copy; then
+2. only after independent recovery media and representative restore evidence
+   exist outside both internal disks, use independent boot media for the
+   separately authorized, irreversible offline partition and filesystem
+   expansion.
+
+After =sda4= is deleted, an old Guix generation cannot recreate the former
+partition table or Home filesystem.  Rollback becomes repartition-and-restore,
+not =guix system switch-generation=.  This option is parked, not authorized.
+
+*** C — Move =/gnu/store= to the second SSD
+
+This option is rejected under the current requirements.
+
+It would provide a large store filesystem without moving Home, but it would
+make normal boot and application execution depend on both same-model SSDs.
+The store filesystem is an early-boot dependency, and migrating the store
+while keeping =/var/guix= consistent is a more delicate boundary than moving
+the small Home tree.  It supplies no backup and no meaningful storage-tier
+performance advantage.
+
+*** D — Reserve the second SSD for local backup
+
+This remains a valid future recovery layout but is explicitly deferred.  The
+roughly 320 MiB of currently inventoried candidate data does not justify
+dedicating the whole disk under the owner's current priorities; actual backup
+scope and retained history are still unselected.  Same-chassis storage would
+also leave theft, fire, power, controller, and whole-machine risks open.
+
+*** E — Add an M.2 NVMe SSD
+
+The IdeaCentre exposes a storage M.2 slot, but no purchase is selected.  This
+option is revisited only on Rafael's initiative when component pricing and
+capacity needs make it worthwhile.  It is not a prerequisite for current
+maintenance.
+
+** Recommended revisit triggers
+
+The following are recommended, non-authorizing review triggers rather than
+owner-accepted automatic thresholds:
+
+- root/store reaches at least 75 percent used or at most 25 GiB available in
+  two consecutive passive observations;
+- the read-only retention estimator predicts insufficient useful recovery;
+- disk-health evidence degrades;
+- recovery requirements or the physical trust model change;
+- Rafael explicitly promotes backup or storage migration; or
+- hardware capacity becomes inexpensive and useful enough to reconsider.
+
+The present 53-percent root use and roughly 34 GiB available do not meet the
+capacity trigger.
+
+** Private Org sync/history boundary
+
+A future private remote repository is desirable so reviewed Org notes can be
+shared among the user's Guix, NixOS, macOS, and Windows environments.  That is
+a separate synchronization/history slice, not P4.2 implementation and not a
+complete-machine backup claim.
+
+Before creating a remote, the future slice must decide:
+
+1. provider and private repository;
+2. which Org trees and attachments are included;
+3. sensitive-content exclusions and whether provider-side privacy is
+   sufficient;
+4. per-machine authentication and signing;
+5. pull-before-edit, commit, push, conflict, and simultaneous-edit policy;
+6. generated, cache, lock, archive, and machine-local exclusions; and
+7. a representative clone/restore test.
+
+SSH/GPG private material, browser profiles, credentials, and unrelated mutable
+state must not be added merely because the Org repository exists.  Current Org
+remains local-only until that slice is explicitly promoted.  This future
+direction supersedes the roadmap's earlier local-only/no-remote publication
+preference for any Org content selected into the shared repository; the
+historical decision remains recorded.
+
+** Future generation-retention and GC policy
+
+The inert planning floor for each System, Home, and Pull profile is the union
+of:
+
+1. the current generation;
+2. the booted System generation when different;
+3. up to five newest additional *distinct* store closures; and
+4. every explicit entry in =generation-pins.tsv=.
+
+Duplicate generation links to one retained closure do not consume the
+five-distinct-closure floor.  A profile with fewer than six distinct available
+closures retains all of them.
+
+The currently implemented =scripts/guix-generation-retention plan= reports
+same-target duplicate-link candidates only.  Removing those links improves
+metadata hygiene but may reclaim no store bytes while another link retains the
+same closure.  A new estimator must precede any broader retention decision.
+
+The future sequence is:
+
+1. *P5.1 — read-only estimator*: enumerate exact retained closures, candidate
+   links, other known roots, and conservative reclaimable-byte estimates.
+   It must not call =guix gc --list-dead= and must fail closed when it cannot
+   estimate without mutation.
+2. *P5.2 — generation deletion*: delete only the exact reviewed System, Home,
+   or Pull links under separate attended authorization; collect nothing.
+3. verify current, booted, pinned, rollback-drill, and profile state.
+4. *P5.3 — unreachable-store collection*: first use only the non-mutating
+   estimator to inventory the post-deletion boundary.  If exact dead-object
+   discovery requires a potentially mutating Guix GC query, fail closed and
+   obtain explicit attended authorization for that query, then record any
+   side effects.  Collection requires another, separate attended
+   authorization.
+5. record before/after bytes and complete two manual accepted cycles before
+   considering scheduling.
+
+No all-in-one cleanup or implicit apply command is authorized.  Generation
+deletion and store collection are intentionally separate irreversible
+operations.
+
+* Truth boundary and non-goals
+
+P4.2:
+
+- does not create or test a backup;
+- does not create a private Org remote;
+- does not copy or inspect Org-note or secret contents;
+- does not change the current retention script;
+- does not delete a generation or store path;
+- does not wipe, format, mount, partition, or declare the second SSD;
+- does not change the System/Home/Pull profiles or recovery pins;
+- does not build or activate Guix Home/System;
+- does not restart EXWM, Emacs, Shepherd, UDisks, or any other process; and
+- does not reboot.
+
+The future policies recorded here do not imply implementation authorization.
+
+* Roadmap synchronization
+
+The editable roadmap is copied only if its live SHA256 still equals the P4.1
+closure result:
+
+#+begin_example
+07b7cf9ca07449aca586779b2580306d5a5b10e36bc10289d2c6149db1dc7fd7
+#+end_example
+
+The staged P4.2 agenda output SHA256 is:
+
+#+begin_example
+350347ecd803909ceca9479dc6ddbc3f1e897c3ec5b730d3bab7265178de2be3
+#+end_example
+
+P4.2 closes the decision packet only.  Phase 4 returns to parked status without
+backup or restore acceptance.  Off-machine backup/restore implementation is
+parked as P4.3, private Org synchronization/history is backlogged separately as
+P4.O1, and filesystem/storage reorganization is parked as P5.S1.
+
+Phase 5 remains backlog: its estimator may be promoted without a backup, while
+every generation deletion and store collection requires its own explicit
+destructive authorization.
+
+* Validation evidence
+
+The exact documentation candidate must pass:
+
+- =git diff --check=;
+- =org-lint= for README, the P4.1 addendum, this audit, the machine TODO, and
+  the editable roadmap;
+- the existing generation-retention fixture and live =verify= plus
+  =rollback-drill= commands; and
+- proof that repository status, boot ID, generation counts, disk mounts, and
+  second-disk partition state did not change from the final pre-apply guard
+  through post-apply validation.
+
+No Home/System build is required because the slice changes no configuration,
+package, service, script, or generated target.
+
+* Closure and residual risk
+
+P4.2 is complete when the decision record, README, machine TODO, and editable
+roadmap agree and the documentation checkpoint is committed.  Completion
+means “deferred with accepted risk,” not “backup complete.”
+
+Residual risks intentionally remain:
+
+- local-only Org, private keys, browser state, Downloads, and other mutable
+  Home data can be lost with the primary filesystem or machine;
+- GitHub protects only committed and pushed repository state;
+- no restore time or recovery point is proven;
+- the second SSD is unused and has not received a fresh extended self-test;
+- root/store still uses the smaller current partition; and
+- future destructive maintenance can reduce rollback and reproducibility if
+  its exact estimator and authorization gates are bypassed.

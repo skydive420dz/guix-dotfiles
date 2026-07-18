@@ -443,8 +443,10 @@ CLOSED: [2026-07-16 Thu]
   boot-to-ready time as measurement hypotheses or unknowns, not tuning
   findings.
 - [X] Preserve the 44 unprotected older same-target generation-link candidates
-  as Phase 5 inventory only.  Backup/restore evidence remains a hard gate before
-  generation cleanup or store collection.
+  as Phase 5 inventory only.  At P2.S1a closure, backup/restore evidence remained
+  a hard gate before generation cleanup or store collection; P4.2 later
+  superseded that unconditional gate only for separately reviewed Guix
+  generation/store maintenance.
 - [X] Make no declaration, package, mount, service, governor, scheduler, swap,
   build-policy, generation, garbage-collection, activation, runtime, or reboot
   change.  P2.S1b/P2.S1c remain unpromoted.
@@ -762,11 +764,50 @@ CLOSED: [2026-07-18 Sat]
 - [X] Define the recovery dependency order and the exact data, destination,
   encryption, RPO/RTO, cadence, retention, and notification choices required
   before P4.2.
-- [X] Keep Phase 5 deletion, collection, quarantine, and Git cleanup blocked
-  until a representative off-machine restore succeeds.
+- [X] At the P4.1 closure boundary, keep Phase 5 deletion, collection,
+  quarantine, and Git cleanup blocked until a representative off-machine
+  restore succeeds.  The later P4.2 decision supersedes that unconditional
+  gate only for separately authorized Guix generation/store maintenance.
 - [X] Add no backup package/service, write no backup payload or secret, change
   no permission, activate no configuration, restart no process, and perform no
   reboot.  Temporary source/roadmap staging is not backup evidence.
+
+* DONE P4.2 recovery/storage deferral and maintenance-policy decision
+CLOSED: [2026-07-18 Sat]
+:PROPERTIES:
+:created: 2026-07-18
+:completed: 2026-07-18
+:END:
+
+- Evidence: [[file:../../../docs/audits/2026-07-18-p4.2-recovery-storage-deferral.org][2026-07-18 P4.2 recovery/storage deferral and maintenance-policy decision]].
+- [X] Accept no backup product, destination, schedule, retention, restore
+  drill, storage migration, or hardware purchase for now.  Preserve the
+  P4.1-recorded exposure of local-only mutable state as explicit residual risk.
+- [X] Perform no mutation of the added Samsung 860 EVO 250 GB SSD, serial
+  =S59WNZFN905509A=, and leave it unmounted and undeclared.  Record that an
+  earlier FAT/Btrfs observation changed outside this slice to one
+  filesystem-signature-free Linux partition at the final guard; prior contents
+  remain disposable, but no wipe is accepted or authorized.
+- [X] Record the current-layout, Home-migration/root-expansion,
+  separate-store, local-backup, and future-M.2 alternatives.  Prefer measured
+  generation/store maintenance first; park any partition migration behind a
+  separate offline and irreversible gate.
+- [X] Backlog a private remote Org repository as synchronization/history only.
+  Current Org remains local-only until provider, privacy, exclusions,
+  attachment, authentication, conflict, and clone/restore behavior are
+  reviewed.
+- [X] Adopt the inert future recovery floor as current, booted System when
+  different, five newest additional distinct closures, and all explicit pins.
+  Duplicate links do not consume distinct-closure slots.
+- [X] Keep a no-mutation estimator, generation-link deletion, and
+  unreachable-store collection as separate P5.1/P5.2/P5.3 gates.  Each
+  mutation requires exact candidates and explicit attended authorization;
+  =guix gc --list-dead= remains classified as mutating.
+- [X] Preserve separate recovery requirements for user-data deletion, secret
+  handling, Home quarantine deletion, and storage migration.  The owner risk
+  decision does not authorize those operations.
+- [X] Make no disk, mount, filesystem, package, service, backup, restore,
+  generation, GC, activation, process, or reboot change.
 
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:
