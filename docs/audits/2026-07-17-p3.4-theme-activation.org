@@ -1,6 +1,6 @@
 #+title: P3.4 theme activation: runtime stops and visual corrections
 #+date: 2026-07-17
-#+status: active; generation 46 corrected; attended startup and wider visual checks pending
+#+status: active; generation 47 startup correction accepted with qualification; wider visual checks pending
 
 * Outcome so far
 
@@ -58,8 +58,9 @@ published =191eff7= passes the complete source and pinned build gates as:
 
 That candidate-stage evidence preceded published correction =e6492cc= and
 generation 46.  The fresh structural frame, GTK 3/Blueman, and keybinding
-gates now pass; attended startup appearance and the wider visual surfaces
-remain open.
+gates pass.  A later mapped-opacity correction was published as =f24b7b5=,
+activated as generation 47, and received a strongly positive attended startup
+report; the wider visual surfaces remain open.
 
 * Published activation boundary
 
@@ -704,17 +705,69 @@ Source validation passes:
 | Controlled pixel mask plus four no-pause nested-X trials | PASS |
 | Isolated Home build | PASS, =/gnu/store/h0x2nwm4pkjqk2d4q9qhh4ar75mmyd4g-home= |
 
-That Home result embeds the disposable checkout path and is build evidence, not
-an activation candidate.  The actual checkout remains at published
-=a4f4488= and generation 46 remains active.  One early probe cleanup used a
-broad =pkill= and unintentionally stopped the live display's old Picom.  It was
-immediately restored through the current committed =sk/start-picom= path as PID
-2848, and the current =desktop-session-check= passed.  The old untracked child
-is PID 518 in zombie state under Emacs and will disappear at the next reboot;
-the final harness instead uses Picom's PID file and kills only its disposable
-display-95 process.  No candidate source was activated and the live repository
-and Home generation did not change.  Publication and a fresh attended reboot
-remain sequential gates.
+At this source-validation boundary, that Home result embedded the disposable
+checkout path and was build evidence rather than an activation result.  The
+actual checkout was still at published =a4f4488= and generation 46 remained
+active.  One early probe cleanup had used a broad =pkill= and unintentionally
+stopped the live display's old Picom.  It was immediately restored through the
+then-committed =sk/start-picom= path as PID 2848, and the desktop-session check
+passed.  The old untracked child was PID 518 in zombie state under Emacs; the
+final harness instead used Picom's PID file and killed only its disposable
+display-95 process.
+
+* Fourth correction publication, generation 47, and attended evidence
+
+Implementation =f24b7b5ec560a4d14d4656f8dc1961eba6c56bef= and documentation
+=5c579da353ee9120c4f50f33f8371ac1254da58d= were published and fetched into
+the clean actual checkout.  =HEAD= and =origin/main= matched =5c579da= at
+ahead/behind =0/0=.  The supported wrapper's entrypoint, channel-lock, and
+14-live-plus-one-retired preflights passed before guarded Home
+reconfiguration activated generation 47:
+
+#+begin_example
+/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home
+/gnu/store/2p4vnz9y2ndfsbary431rzlf41jhanrs-profile
+96 top-level records
+#+end_example
+
+Generation 46 at
+=/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home= is immediate rollback.
+The immutable Home checker and post-activation link preflight passed.
+
+The attended boot began at =2026-07-18T10:41:56-04:00= with ID
+=6c560dab-b745-41a5-9f45-8087580c8929=.  EXWM Emacs PID 481 and the sole
+Picom PID 513 started in that boot.  Picom is a daemon adopted by PID 1 with no
+stale or zombie predecessor and exact isolated argv:
+
+#+begin_example
+picom --config /dev/null --backend glx --vsync --detect-client-opacity \
+  --opacity-rule '85:class_g = "Emacs" && !_NET_WM_WINDOW_OPACITY && !_NET_WM_WINDOW_OPACITY@' \
+  --daemon
+#+end_example
+
+The live Emacs gate proves five =fullboth= frames at 3440x1440 and explicit
+alpha =0.849999999825377=.  The selected frame is =exwm-active=t= and the
+geometry predicate is true.  Release is complete; gate active, watchdog timer,
+release timer, deadline, environment token, and both frame-alist alpha owners
+are nil; the alpha floor is restored to 20.  The four inactive EXWM containers
+remain intentionally 1x1, not paint-capable geometry failures.
+
+The live and isolated Emacs checks pass, including 78/78 ERT, the
+fresh-process watchdog-registration failure fixture, and connected
+Geiser/Guile plus SLY/SBCL.  =desktop-session-check= passes with one exact
+Picom, the canonical session bus, active user services, physical audio, and
+reviewed volume bindings; the powered-off Bluetooth-speaker gate was
+explicitly skipped.  Emacs contains no startup-gate warning or timeout.
+Xorg's remaining raw-I/O, optional XF86 keysym, and ignored-axis warnings are
+known nonfatal startup diagnostics.  No installed tool directly queried the
+X compositor selection, so the single exact daemon, its live X connection, and
+successful 85-percent composition are the corroborating ownership evidence.
+
+Rafael attended the first-paint boundary and reported that startup was “SO
+much better!”  This is strong positive evidence that the correction materially
+improved the dashboard transition.  It is not silently rewritten as an
+absolute claim that every trace of a transition, blank interval, or stale
+paint is absent.  The wider visual and adjacent SSH/EXWM gates remain open.
 
 * Planning synchronization
 
@@ -832,19 +885,39 @@ repository Org files passed =org-lint=.  The final live SHA256 is:
 f78bb4f436ce09f6aedad36c1628fbe370bb96abf2dad054655601d9a8a9a073
 #+end_example
 
+The generation-47 activation and attended-result revision was copied only
+while the live agenda still matched that exact =f78bb4f4= input.  It records
+published =f24b7b5=/=5c579da=, guarded generation-47 activation, boot
+=6c560dab...=, exact Picom and five-frame gate state, the passing live and
+isolated checks, Rafael's qualified positive report, generation 46 rollback,
+and the remaining wider visual boundary.  The staged agenda and all changed
+repository Org files passed =org-lint=.  The final live SHA256 is:
+
+#+begin_example
+5cc02fb1659c4d5e8924c0240cfeddf9cb0c40ee03e0dad0df110f66ebd5d2ea
+#+end_example
+
+Independent documentation review then found two presentation defects: the
+Phase-0 verified-starting-point bullets could be mistaken for current
+generation-47 state, and a paraphrase had been presented as a normalized exact
+quotation.  The agenda now labels that section as the historical 2026-07-15
+baseline and quotes only Rafael's exact substring, “SO much better!”  The
+corrected staging copy and all changed repository Org files passed =org-lint=.
+It was copied only while the live agenda still matched the exact =5cc02fb1=
+input.  The corrected live SHA256 is:
+
+#+begin_example
+43059b8055f823c849fe6c6a0ec7272b0698db5dd947c4192c96752501e51661
+#+end_example
+
 * Remaining sequential gates
 
-1. Publish the mapped-opacity candidate and fetch it into the clean actual
-   checkout.
-2. Perform one attended reboot and reject any dashboard/frame takeover, blank
-   interval, stale first paint, final-opacity drift, or workspace-size
-   regression.
-3. Complete wallpaper, Picom, transparency, cursor, icon, font, contrast,
+1. Complete wallpaper, Picom, transparency, cursor, icon, font, contrast,
    ultrawide, and adjacent SSH/EXWM hand tests with Rafael.
 
 Generation 42 and its retained Kitty source remain the pre-theme rollback.
 Generation 43 is retained as exact evidence of the schema stop; generation 44
 is retained as exact evidence of the GStreamer stop; generation 45 is the
-immediate corrected-runtime rollback; generation 46 is active.  No Qt, forced
-DPI, global toolkit scale, opacity-gate activation, no-flash result, or
-complete visual acceptance is claimed.
+earlier corrected-runtime rollback; generation 46 is immediate rollback and
+generation 47 is active.  No Qt, forced DPI, global toolkit scale, absolute
+zero-transition result, or complete visual acceptance is claimed.

@@ -609,7 +609,7 @@ CLOSED: [2026-07-17 Fri]
 * TODO P3.4 activation and real-display visual acceptance
 :PROPERTIES:
 :created: 2026-07-17
-:NEXT_GATE: publish the startup reveal candidate and attend its reboot
+:NEXT_GATE: finish wider visual surfaces and adjacent SSH/EXWM acceptance
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-17-p3.4-theme-activation.org][2026-07-17 P3.4 GTK/GStreamer activation stops and corrections]].
@@ -714,9 +714,14 @@ CLOSED: [2026-07-17 Fri]
   watchdog-registration failure fixture, connected backends, the strict source
   gate, a controlled nested-X pixel proof, and four no-pause nested-X
   lifecycle trials.
-- [ ] Publish the candidate, fetch it into the clean actual checkout, and
-  attend a fresh reboot.  Reject any dashboard/frame takeover, blank desktop,
-  stale first paint, wrong final opacity, or workspace-size regression.
+- [X] Publish implementation =f24b7b5= and evidence =5c579da=, fetch them into
+  the clean actual checkout at upstream equality =0/0=, activate generation 47
+  at =/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home=, and attend boot
+  =6c560dab...=.  The exact Picom, five-frame geometry/opacity, gate-cleanup,
+  desktop-session, 78-test Emacs, and connected-backend checks pass.  Rafael
+  reported that startup was “SO much better!”; record that as strong positive
+  evidence without silently upgrading it to an absolute zero-transition
+  claim.
 - [ ] Inspect wallpaper/fit, Picom, opacity, cursor/icons, and the ultrawide
   result after the corrected reboot.
 - [ ] Complete real-display, contrast, and adjacent SSH/EXWM acceptance with

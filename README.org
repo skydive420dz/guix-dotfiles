@@ -48,8 +48,8 @@ dark.  The realized correction candidate is
 =/gnu/store/dkasc56ngxmyg4gq453xx71h5xzaka3m-home=.  It passes 298 theme
 checks, native parsers, 61 Emacs tests, connected Lisp backends,
 immutable-candidate failure controls, the strict source gate, and the complete
-pinned Home/System build gate.  Published correction =e6492cc= is
-upstream-equal and active as Home generation 46 at
+pinned Home/System build gate.  Published correction =e6492cc= was
+upstream-equal and activated as Home generation 46 at
 =/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home=; its profile remains the
 same 96 records.  A fresh boot passed the live five-frame EXWM/theme/font
 contract, all automated Emacs gates, and structural key/grab checks.  Rafael
@@ -66,8 +66,16 @@ source gate, a controlled nested-X pixel-mask probe, and four no-pause nested-X
 lifecycle trials.  It yields to EXWM's idle fullscreen work, waits
 nonblockingly for every selected/active frame to reach monitor geometry,
 pre-renders while transparent, and reveals inactive frames before the selected
-frame.  The candidate is not yet published or active; generation 46 remains
-current.
+frame.  Implementation =f24b7b5= and evidence =5c579da= are published,
+fetched, clean, and upstream-equal.  Guarded Home reconfiguration activated
+generation 47 at =/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home= with the
+same 96-record profile and generation 46 retained as immediate rollback.
+Attended boot =6c560dab-b745-41a5-9f45-8087580c8929= passes the exact
+single-Picom and live five-frame reveal-gate contracts.  Rafael reported that
+startup was “SO much better!”; this is strong positive evidence that the
+dashboard transition is materially corrected.  The wider visual and adjacent
+SSH/EXWM checks remain open; this report is not rewritten as an absolute
+zero-transition claim.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -116,12 +124,12 @@ candidate Home mappings and package outputs, Kitty ownership transition,
 realized build evidence, and the exact P3.4 activation/rollback handoff.  It
 records no P3.3 activation, consumer restart, GUI launch, or visual acceptance
 evidence.
-[[file:docs/audits/2026-07-17-p3.4-theme-activation.org][The P3.4 GTK/GStreamer activation record]] owns generations 43 through 46,
+[[file:docs/audits/2026-07-17-p3.4-theme-activation.org][The P3.4 GTK/GStreamer activation record]] owns generations 43 through 47,
 the live ownership and fresh-consumer evidence, both exact factory stops and
 root causes, the fresh-session GTK 4 result, the GTK 3 light-fallback and
 late-first-frame findings, the attended EXWM/dashboard reveal-order finding,
-and the isolated opacity-gate candidate.  It does not claim that this newest
-candidate is published, activated, or visually accepted.
+the isolated opacity-gate evidence, its publication and generation-47
+activation, and the qualified attended startup result.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -212,9 +220,18 @@ the selected/active workspace geometry, pre-renders, then releases all frames
 to the declared 85 percent.  A controlled nested-X probe proves wallpaper-only
 pixels during the hidden phase; four separate no-pause trials prove the
 selected/active frame is full-size before reveal and all gate owners are
-removed afterward.  This candidate is source/build verified but not published
-or active; remaining cursor/icon, contrast, ultrawide, and adjacent SSH/EXWM
-checks also remain open.
+removed afterward.  Published implementation =f24b7b5= and evidence
+=5c579da= are clean and upstream-equal.  Generation 47 at
+=/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home= retains the same 96-record
+profile; generation 46 is immediate rollback.  Fresh boot =6c560dab...= has
+one exact-policy Picom daemon, five 3440x1440 =fullboth= frames at explicit
+alpha 0.85, complete release, restored floor 20, and no surviving one-shot
+owner or startup-gate warning.  The live Emacs gate, 78/78 ERT tests,
+fresh-process failure fixture, connected backends, and desktop-session gate
+all pass.  Rafael reported that the attended startup was “SO much better!”
+That is strong positive evidence of a material correction, not an unqualified
+claim that every trace of a visual transition is absent.  Remaining
+cursor/icon, contrast, ultrawide, and adjacent SSH/EXWM checks remain open.
 
 P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
 parked.  Generation deletion and store collection remain Phase 5 work behind
@@ -222,12 +239,11 @@ the restore-tested-backup gate.
 
 ** Ready
 
-- [ ] P3.4: publish the mapped-opacity startup correction, reboot while
-  attended, and reject any dashboard/frame takeover.  Generation 46 already
-  passes its structural first-frame, GTK 3/Blueman, and keybinding gates; the
-  new candidate passes source, nested-X, and isolated build gates only.  Then
-  finish fonts, icons, cursor, Picom, wallpaper, transparency, contrast,
-  ultrawide, and adjacent SSH/EXWM hand tests.
+- [ ] P3.4: finish fonts, icons, cursor, Picom, wallpaper, transparency,
+  contrast, ultrawide, and adjacent SSH/EXWM hand tests.  Generation 47 has
+  passed publication, guarded activation, exact fresh-runtime checks, and a
+  strongly positive attended startup report; preserve the distinction between
+  that qualified evidence and an absolute zero-transition claim.
 
 ** Completed
 
@@ -425,8 +441,8 @@ the restore-tested-backup gate.
   off, the controller was already powered, non-discoverable, and non-pairable.
   Pressing only the speaker's power button connected it automatically, selected
   =bluez_output.04_52_C7_86_93_08.1= as the default sink, and passed finite
-  low-volume playback.  Home 42 and Pull 5 remain current.  All Slice 19
-  findings are closed; no Slice 20 is planned.
+  low-volume playback.  Home 42 and Pull 5 were current at that acceptance
+  boundary.  All Slice 19 findings are closed; no Slice 20 is planned.
 - [X] Accept follow-on Phase 1 P1.1.  Published checkpoint =6c408af= installs
   Kitty's separate =terminfo= output beside its default output.  System
   generation 87 is current and booted at
