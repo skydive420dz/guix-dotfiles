@@ -363,6 +363,42 @@ The accepted chronological phase partition, in seconds, is:
 the trace-complete mark observed =8.712893= seconds.  The latter marker is not
 a first-visible, first-client, or first-usable-input measurement.
 
+*** 2026-07-18 window-setup ordering correction
+
+P3.4's attended startup review exposed one boundary outside R1.  The observer
+appended =sk/startup-trace--window-setup-hook= during early init, when the
+window-setup hook had no later EXWM owner.  The command-line
+=--eval '(load-file "~/.exwm")'= subsequently called =exwm-wm-mode= while
+=frame-initial-frame= was still non-nil.  EXWM therefore registered
+=exwm--init= at the end of =window-setup-hook= and returned; it did not perform
+window-manager initialization inside the traced =exwm-wm-mode= span.
+
+The resulting order was:
+
+1. command-line EXWM module loading and registration;
+2. =initial-buffer-choice= dashboard construction;
+3. startup hooks;
+4. the observer's already-registered window-setup marker and trace seal; then
+5. EXWM's later-registered real initialization, workspace reparenting, deferred
+   fullscreen operations, post-init wait, and =exwm-init-hook=.
+
+Thus =window-setup-hook-tail= is an accurate historical event name only for the
+hook list that existed when the observer armed itself; it was not the final
+runtime hook after EXWM registered.  R1's =8.712893= seconds, the
+=0.655097=-second EXWM-config phase, and the =0.015712=-second
+=exwm-wm-mode= call do not include real EXWM initialization or its visible
+workspace takeover.  All recorded durations remain valid for their captured
+spans, but none may be used as a boot-to-EXWM-ready or no-flash measurement.
+
+A subsequent no-pause nested-X probe refined the final boundary.  EXWM's
+=exwm-workspace--fullscreen-frame-count= advances when
+=exwm-workspace--set-fullscreen= sends and flushes a resize request; it does not
+prove that Emacs has consumed the matching =ConfigureNotify=.  The candidate
+therefore yields back to EXWM's idle timers and checks selected/active frame
+pixel geometry before reveal.  This does not change any R1 timing; it explains
+why a hook immediately after =exwm--init= was still too early to serve as a
+visual-ready marker.
+
 Within the init file, the =use-package= boundary observed =0.039544= seconds;
 all 24 direct require boundaries summed to =6.869371= seconds; and the explicit
 init-file residual was =0.056798= seconds.  The 23-personal-module window was

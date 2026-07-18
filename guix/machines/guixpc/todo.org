@@ -27,9 +27,8 @@ Accepted baseline:
 - =shell/xinitrc= starts wallpaper and Picom before fullscreen Emacs/EXWM.
 - Emacs uses =-fs= and loads =~/.exwm= directly instead of using the Guix =exwm=
   wrapper's hardcoded =-mm= startup.
-- Picom is scoped to Emacs opacity:
-  =picom --config /dev/null --backend glx --vsync --opacity-rule
-  '85:class_g = "Emacs"'=.
+- Picom is scoped to Emacs opacity with =--detect-client-opacity=, both
+  frame/client opacity-property exclusions, and =--daemon= initialization.
 
 Rejected experiment:
 
@@ -610,7 +609,7 @@ CLOSED: [2026-07-17 Fri]
 * TODO P3.4 activation and real-display visual acceptance
 :PROPERTIES:
 :created: 2026-07-17
-:NEXT_GATE: attend one reboot, then finish the remaining visual surfaces
+:NEXT_GATE: publish the startup reveal candidate and attend its reboot
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-17-p3.4-theme-activation.org][2026-07-17 P3.4 GTK/GStreamer activation stops and corrections]].
@@ -701,9 +700,23 @@ CLOSED: [2026-07-17 Fri]
   fullscreen, undecorated, bar-free, and generated-theme/font configured;
   confirm the normal GTK 3 widget factory and Blueman are dark; confirm
   keybindings behave normally; and terminate both probes.
-- [ ] Observe an attended reboot and confirm no transient titlebar, scrollbar,
-  decoration, fullscreen, or theme construction appears.  The SSH-initiated
-  generation-46 reboot did not provide visual startup evidence.
+- [X] Attend boot =4832d067...=.  Confirm the original titlebar, scrollbar,
+  decoration, theme, and keybinding findings do not recur; stop no-flash
+  acceptance on the remaining dashboard small-frame-to-fullscreen takeover.
+- [X] Attribute that takeover to EXWM 0.35's real post-trace initialization,
+  1x1 mapped containers, and deferred fullscreen work.  Reject hidden frames:
+  four inactive workspaces remained 656x612 in the isolated X test.
+- [X] Build the mapped-opacity source candidate.  Start Picom synchronously,
+  keep all five startup frames mapped at zero opacity, yield to EXWM's deferred
+  fullscreen timers, poll selected/active geometry without blocking them,
+  pre-render while transparent, then reveal at 85 percent and remove the
+  one-shot owners.  Pass 299 theme checks, 78 Emacs tests, the fresh-process
+  watchdog-registration failure fixture, connected backends, the strict source
+  gate, a controlled nested-X pixel proof, and four no-pause nested-X
+  lifecycle trials.
+- [ ] Publish the candidate, fetch it into the clean actual checkout, and
+  attend a fresh reboot.  Reject any dashboard/frame takeover, blank desktop,
+  stale first paint, wrong final opacity, or workspace-size regression.
 - [ ] Inspect wallpaper/fit, Picom, opacity, cursor/icons, and the ultrawide
   result after the corrected reboot.
 - [ ] Complete real-display, contrast, and adjacent SSH/EXWM acceptance with

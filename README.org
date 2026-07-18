@@ -54,9 +54,20 @@ upstream-equal and active as Home generation 46 at
 same 96 records.  A fresh boot passed the live five-frame EXWM/theme/font
 contract, all automated Emacs gates, and structural key/grab checks.  Rafael
 confirmed the normal GTK 3 widget factory and Blueman are dark and that
-keybindings behave normally; both probes were removed.  Because the reboot
-was initiated over SSH, transient startup construction was not observed and
-is not claimed as visually accepted.
+keybindings behave normally; both probes were removed.  A later attended boot
+confirmed that the original bar, decoration, scrollbar, theme, and keyboard
+findings did not recur, but exposed one narrower transition: the dashboard was
+visible while EXWM carried its workspace from the initial small container to
+fullscreen.  Source review proved that real EXWM initialization runs after the
+earlier P2.2 trace seal and owns that deferred geometry.  A mapped transparent
+startup-gate candidate now passes 299 theme checks, 78 Emacs tests, a fresh-
+process watchdog-registration failure fixture, connected backends, the strict
+source gate, a controlled nested-X pixel-mask probe, and four no-pause nested-X
+lifecycle trials.  It yields to EXWM's idle fullscreen work, waits
+nonblockingly for every selected/active frame to reach monitor geometry,
+pre-renders while transparent, and reveals inactive frames before the selected
+frame.  The candidate is not yet published or active; generation 46 remains
+current.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -105,12 +116,12 @@ candidate Home mappings and package outputs, Kitty ownership transition,
 realized build evidence, and the exact P3.4 activation/rollback handoff.  It
 records no P3.3 activation, consumer restart, GUI launch, or visual acceptance
 evidence.
-[[file:docs/audits/2026-07-17-p3.4-theme-activation.org][The P3.4 GTK/GStreamer activation record]] owns generations 43 through 45,
+[[file:docs/audits/2026-07-17-p3.4-theme-activation.org][The P3.4 GTK/GStreamer activation record]] owns generations 43 through 46,
 the live ownership and fresh-consumer evidence, both exact factory stops and
 root causes, the fresh-session GTK 4 result, the GTK 3 light-fallback and
-late-first-frame findings, and their realized correction candidate.  It does
-not claim that this newest candidate is published, activated, or visually
-accepted.
+late-first-frame findings, the attended EXWM/dashboard reveal-order finding,
+and the isolated opacity-gate candidate.  It does not claim that this newest
+candidate is published, activated, or visually accepted.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -192,9 +203,18 @@ Home/System gate.  Its realized Home result is
 96-record profile.  Checkpoint =e6492cc= is published and active as generation
 46 at =/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home=.  The fresh reboot
 passes all five frame invariants, and Rafael accepted normal GTK 3
-widget-factory/Blueman darkness plus keybinding behavior.  An attended reboot
-is still required to judge transient construction; remaining wallpaper,
-Picom, opacity, cursor/icon, contrast, and ultrawide checks also remain open.
+widget-factory/Blueman darkness plus keybinding behavior.  A subsequent
+attended boot accepted the original early-frame correction but exposed the
+dashboard during EXWM's later 1x1-container/deferred-fullscreen transition.
+The new candidate starts Picom before Emacs, keeps all five startup frames
+mapped at zero opacity, yields to EXWM's deferred fullscreen work, waits for
+the selected/active workspace geometry, pre-renders, then releases all frames
+to the declared 85 percent.  A controlled nested-X probe proves wallpaper-only
+pixels during the hidden phase; four separate no-pause trials prove the
+selected/active frame is full-size before reveal and all gate owners are
+removed afterward.  This candidate is source/build verified but not published
+or active; remaining cursor/icon, contrast, ultrawide, and adjacent SSH/EXWM
+checks also remain open.
 
 P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
 parked.  Generation deletion and store collection remain Phase 5 work behind
@@ -202,11 +222,12 @@ the restore-tested-backup gate.
 
 ** Ready
 
-- [ ] P3.4: observe one attended startup and reject any transient titlebar,
-  scrollbar, decoration, or theme construction.  The published generation-46
-  correction already passes its five-frame, GTK 3/Blueman, and keybinding
-  gates.  Finish fonts, icons, cursor, Picom, wallpaper, transparency,
-  contrast, ultrawide, and adjacent SSH/EXWM hand tests.
+- [ ] P3.4: publish the mapped-opacity startup correction, reboot while
+  attended, and reject any dashboard/frame takeover.  Generation 46 already
+  passes its structural first-frame, GTK 3/Blueman, and keybinding gates; the
+  new candidate passes source, nested-X, and isolated build gates only.  Then
+  finish fonts, icons, cursor, Picom, wallpaper, transparency, contrast,
+  ultrawide, and adjacent SSH/EXWM hand tests.
 
 ** Completed
 
@@ -1226,20 +1247,29 @@ XF86AudioLowerVolume  lower default sink volume through wpctl
 Picom is intentionally scoped to Emacs frame transparency only:
 
 #+begin_src text
-picom --config /dev/null --backend glx --vsync --opacity-rule '85:class_g = "Emacs"'
+picom --config /dev/null --backend glx --vsync --detect-client-opacity \
+  --opacity-rule '85:class_g = "Emacs" && !_NET_WM_WINDOW_OPACITY && !_NET_WM_WINDOW_OPACITY@' \
+  --daemon
 #+end_src
 
 The X session starts the wallpaper and Picom before launching Emacs/EXWM so the
-compositor is already active when Emacs appears. It launches Emacs fullscreen
-directly instead of using the Guix =exwm= wrapper, whose hardcoded =-mm=
-maximized-frame startup can briefly draw a small pre-maximized frame.  Xinit is
-the only automatic wallpaper/Picom owner; EXWM startup and reload never repeat
-either operation.  =M-x sk/start-picom= and =M-x sk/set-wallpaper= remain
-explicit maintenance commands.  Browser and terminal transparency are not
-managed through global active/inactive opacity rules.  =/dev/null= deliberately
-excludes ambient Picom configuration.  The manual restart path stops only this
-user's Picom, waits boundedly for both the old process and compositor selection
-to clear, and fails closed rather than starting a second compositor.
+compositor is already active when Emacs appears.  It exports the one-shot
+startup opacity only after Picom daemon initialization succeeds; the
+frame/client property exclusions let mapped EXWM frames remain transparent
+until their final dashboard and geometry are ready.  It launches Emacs
+fullscreen directly instead of using the Guix =exwm= wrapper, whose hardcoded
+=-mm= maximized-frame startup can briefly draw a small pre-maximized frame.
+Xinit is the only automatic Picom starter and wallpaper owner; EXWM startup
+and reload never repeat either operation.  One explicit emergency exception
+may stop, but never start, this user's Picom after persistent alpha-write
+failure so raw X can become visible.  =M-x sk/start-picom= and
+=M-x sk/set-wallpaper= remain explicit maintenance commands.  Browser and
+terminal transparency are not managed through global active/inactive opacity
+rules.  =/dev/null= deliberately excludes ambient Picom configuration.  The
+manual restart path stops only this user's Picom, waits boundedly for both the
+old process and compositor selection to clear, initializes the replacement
+synchronously, and fails closed unless exactly one replacement owns the
+selection.
 
 ** Application placement and reload policy
 

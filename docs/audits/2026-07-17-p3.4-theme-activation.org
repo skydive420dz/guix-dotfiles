@@ -591,6 +591,131 @@ gates.  It does not close the human no-flash gate: Rafael initiated the reboot
 over SSH and could not observe the visible startup sequence.  No claim is made
 that transient construction is absent until an attended reboot confirms it.
 
+* Attended boot and fifth root cause: EXWM reveal order
+
+Rafael then attended boot
+=4832d067-ac5f-4bb5-9a60-1931ceeb12be=.  The fresh EXWM process is PID 501
+with =before-init-time= =2026-07-18T07:41:19-0400=.  The original bar,
+decoration, scrollbar, theme, and keyboard findings did not recur.  One narrow
+transition remained: the dashboard was visibly carried from a small frame into
+the final fullscreen workspace.
+
+The causal ranking is now exact:
+
+1. EXWM 0.35 owns the geometry transition.  During command-line processing,
+   =exwm-wm-mode= sees =frame-initial-frame= and only appends =exwm--init= to
+   =window-setup-hook=.  The later real initialization creates each workspace
+   container at 1x1, reparents and maps the Emacs outer window, and uses an idle
+   timer for =exwm-workspace--fullscreen-workspace=.  Its post-init stage waits
+   for those deferred fullscreen operations.
+2. Emacs invokes the =initial-buffer-choice= dashboard before that later EXWM
+   initialization, making the geometry transition visually recognizable.
+3. Dashboard rendering is not a geometry owner or material delay.  R1 measured
+   its construction at =0.024341= seconds, and its source changes no frame
+   parameter.
+
+P2.2's observer had appended its nominal window-setup tail during early init.
+EXWM appended its real initialization later, so R1 sealed before the actual
+reparent/fullscreen work.  The P2.2 audit now records that ordering correction;
+its earlier timings remain valid for their captured spans but are not
+boot-to-EXWM-ready measurements.
+
+An isolated visibility experiment was rejected.  Creating the initial and four
+additional workspaces with =visibility=nil= allowed the active frame to reach
+3440x1440, but left the four hidden workspaces at 656x612.  Revealing them
+preserved the wrong geometry and merely moved the flash to later workspace
+switches.
+
+The source candidate instead keeps every frame mapped and uses compositor
+opacity as a one-shot reveal gate:
+
+- Xinit starts Picom synchronously with =--daemon=, enables client-opacity
+  detection, and applies the normal 85-percent rule only when neither the frame
+  nor its reparented client has an explicit opacity property.
+- Only after Picom initializes does Xinit export the validated one-shot final
+  opacity.
+- Early init lowers Emacs' normal 20-percent alpha floor to zero, creates the
+  initial and default EXWM frames at =alpha=0=, installs a release scheduler,
+  then arms a best-effort 30-second fail-open watchdog after every alpha owner
+  exists.  The watchdog bypasses geometry polling and invokes the complete
+  release directly.  It runs only when Emacs next services timers and cannot
+  preempt a synchronous Lisp or native-code hang; failure to register it
+  immediately invokes the same complete fail-open cleanup.
+- =sk/exwm-start= reorders the scheduler after EXWM's real window-setup
+  initializer.  The scheduler then returns to the command loop and queues the
+  reveal as an idle timer, so it does not block EXWM's own deferred fullscreen
+  timers.  Failure to register either this idle timer or a later geometry retry
+  also invokes the complete release immediately.
+- The reveal checks the pixel geometry of every selected or EXWM-active frame.
+  If a paint-capable frame has not reached its monitor geometry, a 50-ms timer
+  retries without blocking X events, up to a two-second fail-open deadline;
+  the independent watchdog remains a visibility bound if the wall clock moves
+  backward.
+  EXWM intentionally keeps inactive workspace containers at 1x1 and may leave
+  an inactive outer frame's cached size unchanged until that workspace is
+  activated; those frames cannot paint during startup and do not block reveal.
+- Once ready, =redraw-display= clears and redraws every visible frame while
+  opacity is still zero.  The release restores inactive frames first and the
+  selected frame last to 85 percent, removes both frame-alist alpha defaults,
+  restores the 20-percent floor, clears the token/deadline, and cancels both
+  release and watchdog timers.
+- If Picom cannot initialize, Xinit exports no token and Emacs starts visibly
+  through the ordinary path.  If an 85-percent alpha write fails, the release
+  tries 100 percent.  If every normal and forced opacity write fails, early
+  init makes one last best-effort attempt to stop only this user's Picom so raw
+  X can become visible; the missing compositor then makes runtime acceptance
+  fail.  Xinit remains the only automatic Picom starter.
+
+The exact mechanism was exercised under a disposable 3440x1440 Xvfb display
+with EXWM 0.35, Picom 13's GLX backend, five workspaces, and the production
+wallpaper.  A controlled masking probe paused only to capture the pre-release
+root image.  Its wallpaper baseline and alpha-zero startup capture were
+byte-identical:
+
+#+begin_example
+65be1cc2ea34a7d4102881b4c94797e7a78c2e3b816268077abb372e4d9cb291
+#+end_example
+
+That controlled pause proves compositor masking, not real-time reveal order.
+The event-order ERT proves =geometry-ready -> redraw-display -> inactive
+opacity -> selected opacity=.  Four separate final-candidate trials therefore
+used no pause before the release scheduler.  In each, the selected/EXWM-active
+frame was already =fullboth= at 3440x1440 and =alpha=0.0= before reveal; the
+release needed one geometry check.  Afterward all frames were
+=alpha=0.849999999825377=, the floor was 20, the gate was complete, both alpha
+defaults were absent, the token/deadline and both timers were nil, and the
+selected/active frame remained 3440x1440.  The final corrected-source trial
+also caught two inactive outer frames retaining 660x612; earlier stress trials
+caught the same valid cached state while their EXWM containers were
+intentionally inactive.  Those workspaces could not paint during startup.
+This established the narrower active-frame predicate instead of concealing
+the result behind a two-second blocking wait.
+
+Source validation passes:
+
+| Gate | Result |
+|------+--------|
+| Theme schema/render/native parsers | PASS, 299 checks |
+| Emacs isolated ERT | PASS, 78/78 |
+| Fresh-process watchdog-registration failure fixture | PASS |
+| Connected Geiser/Guile and SLY/SBCL | PASS |
+| Desktop/Picom ownership check | PASS |
+| Strict repository gate | PASS |
+| Controlled pixel mask plus four no-pause nested-X trials | PASS |
+| Isolated Home build | PASS, =/gnu/store/h0x2nwm4pkjqk2d4q9qhh4ar75mmyd4g-home= |
+
+That Home result embeds the disposable checkout path and is build evidence, not
+an activation candidate.  The actual checkout remains at published
+=a4f4488= and generation 46 remains active.  One early probe cleanup used a
+broad =pkill= and unintentionally stopped the live display's old Picom.  It was
+immediately restored through the current committed =sk/start-picom= path as PID
+2848, and the current =desktop-session-check= passed.  The old untracked child
+is PID 518 in zombie state under Emacs and will disappear at the next reboot;
+the final harness instead uses Picom's PID file and kills only its disposable
+display-95 process.  No candidate source was activated and the live repository
+and Home generation did not change.  Publication and a fresh attended reboot
+remain sequential gates.
+
 * Planning synchronization
 
 The editable agenda at
@@ -681,17 +806,45 @@ hash-guarded copy.  The final live SHA256 is:
 8ad9c2922c3ba59578d8740d7118faf4e7e72e836ca053b3391c04a6c465c26b
 #+end_example
 
+The attended-dashboard attribution and mapped-opacity candidate revision was
+copied only while the live agenda still matched that exact =8ad9c292= input.
+It records boot =4832d067...=, decision D-28, the EXWM
+request-versus-=ConfigureNotify= boundary, rejected hidden-frame construction,
+the idle scheduler and active-geometry predicate, fail-open qualifications, 299
+theme checks, 73/73 Emacs tests, the controlled pixel mask, three no-pause
+nested-X trials, the isolated =h0x2n...-home= build, and publication plus an
+attended reboot as the next gate.  The staged agenda and all changed repository
+Org files passed =org-lint=.  Its final live SHA256 is:
+
+#+begin_example
+634d8de8b623cb3e4b6365524751447630735475a99a3147b5ede5ec79e4a484
+#+end_example
+
+The final fail-open hardening revision was copied only while the live agenda
+still matched that exact =634d8de8= input.  It records the unconditional
+watchdog release, immediate cleanup on watchdog/idle/retry registration
+failure, owner-before-watchdog ordering, 78/78 ERT tests, the fresh-process
+watchdog-registration failure fixture, and the fourth no-pause trial including
+its valid inactive 660x612 cached frames.  The staged agenda and all changed
+repository Org files passed =org-lint=.  The final live SHA256 is:
+
+#+begin_example
+f78bb4f436ce09f6aedad36c1628fbe370bb96abf2dad054655601d9a8a9a073
+#+end_example
+
 * Remaining sequential gates
 
-1. Perform one attended reboot and hand-check that no transient titlebar,
-   scrollbar, decoration, fullscreen, or theme construction is visible.
-2. Complete wallpaper, Picom, transparency, cursor, icon, font, contrast, and
-   ultrawide hand tests.
-3. Complete adjacent SSH/EXWM acceptance with Rafael.
+1. Publish the mapped-opacity candidate and fetch it into the clean actual
+   checkout.
+2. Perform one attended reboot and reject any dashboard/frame takeover, blank
+   interval, stale first paint, final-opacity drift, or workspace-size
+   regression.
+3. Complete wallpaper, Picom, transparency, cursor, icon, font, contrast,
+   ultrawide, and adjacent SSH/EXWM hand tests with Rafael.
 
 Generation 42 and its retained Kitty source remain the pre-theme rollback.
 Generation 43 is retained as exact evidence of the schema stop; generation 44
 is retained as exact evidence of the GStreamer stop; generation 45 is the
 immediate corrected-runtime rollback; generation 46 is active.  No Qt, forced
-DPI, global toolkit scale, no-flash result, or complete visual acceptance is
-claimed.
+DPI, global toolkit scale, opacity-gate activation, no-flash result, or
+complete visual acceptance is claimed.
