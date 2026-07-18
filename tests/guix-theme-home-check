@@ -36,6 +36,10 @@ gtk_out_store=$store/44444444444444444444444444444444-gtk-4.22.1
 gtk_bin_store=$store/55555555555555555555555555555555-gtk-4.22.1-bin
 wrong_gtk_out_store=$store/66666666666666666666666666666666-gtk-4.22.1
 wrong_gtk_bin_store=$store/77777777777777777777777777777777-gtk-4.22.1-bin
+gst_base_store=$store/88888888888888888888888888888888-gst-plugins-base-1.28.1
+wrong_gst_base_store=$store/99999999999999999999999999999999-gst-plugins-base-1.28.1
+gst_good_store=$store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-gst-plugins-good-1.28.1
+wrong_gst_good_store=$store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-gst-plugins-good-1.28.1
 commands=$tmp/commands
 records=$tmp/home-packages
 
@@ -55,6 +59,10 @@ mkdir -p \
     "$gtk_bin_store/bin" \
     "$wrong_gtk_out_store/share/glib-2.0/schemas" \
     "$wrong_gtk_bin_store/bin" \
+    "$gst_base_store/lib/gstreamer-1.0" \
+    "$wrong_gst_base_store/lib/gstreamer-1.0" \
+    "$gst_good_store/lib/gstreamer-1.0" \
+    "$wrong_gst_good_store/lib/gstreamer-1.0" \
     "$home_result/files/.config/emacs" \
     "$home_result/files/.config/fish" \
     "$home_result/files/.config/fontconfig" \
@@ -64,6 +72,8 @@ mkdir -p \
     "$home_result/files/.config/sk-theme" \
     "$home_result/files/.local/share/sk-theme/assets/wallpapers" \
     "$home_result/profile/bin" \
+    "$home_result/profile/etc" \
+    "$home_result/profile/lib/gstreamer-1.0" \
     "$home_result/profile/share/glib-2.0/schemas" \
     "$home_result/profile/share/icons/Papirus-Dark" \
     "$home_result/profile/share/icons/Bibata-Modern-Ice" \
@@ -150,6 +160,72 @@ ln -s \
 printf '%s\n' \
     org.gtk.gtk4.Settings.ColorChooser custom-colors selected-color \
     >"$home_result/profile/share/glib-2.0/schemas/gschemas.compiled"
+printf '%s\n' 'fake GStreamer playback plugin' \
+    >"$gst_base_store/lib/gstreamer-1.0/libgstplayback.so"
+cp "$gst_base_store/lib/gstreamer-1.0/libgstplayback.so" \
+    "$wrong_gst_base_store/lib/gstreamer-1.0/libgstplayback.so"
+ln -s "$gst_base_store/lib/gstreamer-1.0/libgstplayback.so" \
+    "$home_result/profile/lib/gstreamer-1.0/libgstplayback.so"
+for plugin in \
+    libgstmatroska.so libgstvpx.so libgstaudiofx.so libgstautodetect.so; do
+    printf '%s\n' "fake GStreamer good plugin: $plugin" \
+        >"$gst_good_store/lib/gstreamer-1.0/$plugin"
+    cp "$gst_good_store/lib/gstreamer-1.0/$plugin" \
+        "$wrong_gst_good_store/lib/gstreamer-1.0/$plugin"
+    ln -s "$gst_good_store/lib/gstreamer-1.0/$plugin" \
+        "$home_result/profile/lib/gstreamer-1.0/$plugin"
+done
+cat >"$home_result/profile/etc/profile" <<'EOF'
+export GST_PLUGIN_SYSTEM_PATH="${GUIX_PROFILE:-/fake-profile}/lib/gstreamer-1.0${GST_PLUGIN_SYSTEM_PATH:+:}$GST_PLUGIN_SYSTEM_PATH"
+EOF
+cat >"$home_result/profile/bin/gst-inspect-1.0" <<'EOF'
+#!/bin/sh
+set -eu
+[ "$#" -eq 1 ]
+element=$1
+[ "${GST_PLUGIN_PATH+x}" = x ]
+[ -z "$GST_PLUGIN_PATH" ]
+[ "${GST_PLUGIN_PATH_1_0+x}" = x ]
+[ -z "$GST_PLUGIN_PATH_1_0" ]
+[ "$GST_PLUGIN_SYSTEM_PATH" = "$SK_FAKE_GST_PLUGIN_DIR" ]
+[ "$GST_PLUGIN_SYSTEM_PATH_1_0" = "$SK_FAKE_GST_PLUGIN_DIR" ]
+[ "$GST_REGISTRY" = "$GST_REGISTRY_1_0" ]
+case $GST_REGISTRY in
+    */gst-registry.bin) ;;
+    *) exit 66 ;;
+esac
+gst_tmp=${GST_REGISTRY%/gst-registry.bin}
+[ "$HOME" = "$gst_tmp/gst-home" ]
+[ "$XDG_CACHE_HOME" = "$gst_tmp/gst-cache" ]
+[ "$GST_REGISTRY_FORK" = no ]
+[ "$GST_REGISTRY_UPDATE" = yes ]
+if [ "$element" = playbin3 ]; then
+    [ ! -e "$GST_REGISTRY" ]
+    : >"$GST_REGISTRY"
+else
+    [ -e "$GST_REGISTRY" ]
+fi
+if [ "${SK_FAKE_GST_BREAK:-}" = "$element" ]; then
+    printf 'No such element or plugin %s\n' "$element"
+    exit 255
+else
+    case $element in
+        playbin3) plugin=libgstplayback.so ;;
+        matroskademux) plugin=libgstmatroska.so ;;
+        vp9dec) plugin=libgstvpx.so ;;
+        scaletempo) plugin=libgstaudiofx.so ;;
+        autoaudiosink | autovideosink) plugin=libgstautodetect.so ;;
+        *) exit 65 ;;
+    esac
+    plugin_dir=$SK_FAKE_GST_PLUGIN_DIR
+    if [ "${SK_FAKE_GST_WRONG_ELEMENT:-}" = "$element" ]; then
+        plugin_dir=$SK_FAKE_GST_WRONG_PLUGIN_DIR
+    fi
+    printf 'Filename                 %s/%s\n' \
+        "$plugin_dir" "$plugin"
+fi
+EOF
+chmod +x "$home_result/profile/bin/gst-inspect-1.0"
 for index in \
     "$home_result/profile/share/icons/Papirus-Dark/index.theme" \
     "$home_result/profile/share/icons/Bibata-Modern-Ice/index.theme" \
@@ -233,6 +309,14 @@ hicolor-icon-theme 0.18 out
 font-awesome 4.7.0 out
 font-google-material-design-icons 4.0.0 out
 EOF
+    if [ "$mode" != no-gst-base ]; then
+        printf 'gst-plugins-base 1.28.1 out %s\n' \
+            "$gst_base_store" >>"$records"
+    fi
+    if [ "$mode" != no-gst-good ]; then
+        printf 'gst-plugins-good 1.28.1 out %s\n' \
+            "$gst_good_store" >>"$records"
+    fi
     if [ "$mode" != no-out ]; then
         printf 'gtk 4.22.1 out %s\n' "$gtk_out_store" >>"$records"
     fi
@@ -243,6 +327,14 @@ EOF
 write_package_records
 
 run_check() {
+    GST_PLUGIN_PATH=/ambient/plugins \
+    GST_PLUGIN_PATH_1_0=/ambient/versioned/plugins \
+    GST_PLUGIN_SYSTEM_PATH=/ambient/system-plugins \
+    GST_PLUGIN_SYSTEM_PATH_1_0=/ambient/versioned/system-plugins \
+    GST_REGISTRY=/ambient/registry.bin \
+    GST_REGISTRY_1_0=/ambient/versioned-registry.bin \
+    GST_REGISTRY_FORK=yes \
+    GST_REGISTRY_UPDATE=no \
     SK_THEME_HOME_STORE_PREFIX=$store \
     SK_THEME_HOME_GUIX=$commands/guix \
     SK_THEME_HOME_FISH=$commands/fish \
@@ -252,6 +344,10 @@ run_check() {
     SK_FAKE_HOME_PROFILE=$home_result/profile \
     SK_FAKE_PACKAGE_RECORDS=$records \
     SK_FAKE_FONT_BREAK=${SK_FAKE_FONT_BREAK:-0} \
+    SK_FAKE_GST_BREAK=${SK_FAKE_GST_BREAK:-} \
+    SK_FAKE_GST_WRONG_ELEMENT=${SK_FAKE_GST_WRONG_ELEMENT:-} \
+    SK_FAKE_GST_PLUGIN_DIR=$home_result/profile/lib/gstreamer-1.0 \
+    SK_FAKE_GST_WRONG_PLUGIN_DIR=$tmp/wrong-gstreamer-plugins \
         "$checker" "$home_result" "$fake_repo"
 }
 
@@ -360,6 +456,63 @@ expect_failure \
     "candidate GSettings cache lacks GTK 4 schema term: selected-color"
 cp "$tmp/good-gschemas.compiled" \
     "$home_result/profile/share/glib-2.0/schemas/gschemas.compiled"
+
+write_package_records no-gst-base
+expect_failure \
+    "GTK 4 runtime without gst-plugins-base ownership is rejected" \
+    "candidate profile lacks gst-plugins-base 1.28.1:out"
+write_package_records no-gst-good
+expect_failure \
+    "GTK 4 runtime without gst-plugins-good ownership is rejected" \
+    "candidate profile lacks gst-plugins-good 1.28.1:out"
+write_package_records
+
+ln -sf "$wrong_gst_base_store/lib/gstreamer-1.0/libgstplayback.so" \
+    "$home_result/profile/lib/gstreamer-1.0/libgstplayback.so"
+expect_failure \
+    "GStreamer playback plugin from undeclared provenance is rejected" \
+    "GStreamer plugin has wrong provenance: libgstplayback.so"
+ln -sf "$gst_base_store/lib/gstreamer-1.0/libgstplayback.so" \
+    "$home_result/profile/lib/gstreamer-1.0/libgstplayback.so"
+
+ln -sf "$wrong_gst_good_store/lib/gstreamer-1.0/libgstvpx.so" \
+    "$home_result/profile/lib/gstreamer-1.0/libgstvpx.so"
+expect_failure \
+    "GStreamer VP9 plugin from undeclared provenance is rejected" \
+    "GStreamer plugin has wrong provenance: libgstvpx.so"
+ln -sf "$gst_good_store/lib/gstreamer-1.0/libgstvpx.so" \
+    "$home_result/profile/lib/gstreamer-1.0/libgstvpx.so"
+
+mv "$home_result/profile/etc/profile" "$tmp/good-profile-environment"
+expect_failure \
+    "profile without its GStreamer search-path environment is rejected" \
+    "candidate profile lacks its environment setup"
+cp "$tmp/good-profile-environment" "$home_result/profile/etc/profile"
+
+cat >"$home_result/profile/etc/profile" <<'EOF'
+export GST_PLUGIN_SYSTEM_PATH=/wrong
+# /lib/gstreamer-1.0
+EOF
+expect_failure \
+    "malformed GStreamer search-path export is rejected" \
+    "candidate profile GStreamer search path is not exact"
+cp "$tmp/good-profile-environment" "$home_result/profile/etc/profile"
+
+SK_FAKE_GST_BREAK=playbin3
+expect_failure \
+    "GStreamer registry without playbin3 is rejected" \
+    "candidate GStreamer registry lacks element: playbin3"
+SK_FAKE_GST_BREAK=vp9dec
+expect_failure \
+    "GStreamer registry without VP9 decoding is rejected" \
+    "candidate GStreamer registry lacks element: vp9dec"
+unset SK_FAKE_GST_BREAK
+
+SK_FAKE_GST_WRONG_ELEMENT=vp9dec
+expect_failure \
+    "registry result from the wrong plugin path is rejected" \
+    "GStreamer element loaded from the wrong plugin: vp9dec"
+unset SK_FAKE_GST_WRONG_ELEMENT
 
 SK_FAKE_FONT_BREAK=1
 expect_failure \

@@ -767,7 +767,8 @@ validate_realized_package_ownership() {
         fi
     done
     for package in font-awesome font-google-material-design-icons \
-        papirus-icon-theme bibata-cursor-theme hicolor-icon-theme; do
+        papirus-icon-theme bibata-cursor-theme hicolor-icon-theme \
+        gst-plugins-base gst-plugins-good; do
         if ! profile_has_package_output "$home_records" "$package" out; then
             printf 'guix-build-gate: Home profile lacks declared package output: %s:out\n' \
                 "$package" >&2

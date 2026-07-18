@@ -18,6 +18,7 @@ fish=${SK_THEME_HOME_FISH:-$(command -v fish || true)}
 kitty=${SK_THEME_HOME_KITTY:-$(command -v kitty || true)}
 emacs=${SK_THEME_HOME_EMACS:-$profile/bin/emacs}
 fc_match=${SK_THEME_HOME_FC_MATCH:-$(command -v fc-match || true)}
+gst_inspect=${SK_THEME_HOME_GST_INSPECT:-$profile/bin/gst-inspect-1.0}
 
 fail() {
     printf 'guix-theme-home-check: %s\n' "$1" >&2
@@ -37,7 +38,8 @@ case $home_result in
     *) fail "Home result is not an immutable store item: $home_result" ;;
 esac
 
-for command_path in "$guix" "$fish" "$kitty" "$emacs" "$fc_match"; do
+for command_path in \
+    "$guix" "$fish" "$kitty" "$emacs" "$fc_match" "$gst_inspect"; do
     [ -x "$command_path" ] || \
         fail "required candidate command is unavailable: $command_path"
 done
@@ -225,6 +227,8 @@ record_store() {
 
 require_record gtk 4.22.1 out
 require_record gtk 4.22.1 bin
+require_record gst-plugins-base 1.28.1 out
+require_record gst-plugins-good 1.28.1 out
 require_record papirus-icon-theme 20250501 out
 require_record bibata-cursor-theme 2.0.3 out
 require_record hicolor-icon-theme 0.18 out
@@ -235,6 +239,10 @@ gtk_out_store=$(record_store gtk 4.22.1 out) || \
     fail "candidate profile does not have exactly one gtk 4.22.1:out store"
 gtk_bin_store=$(record_store gtk 4.22.1 bin) || \
     fail "candidate profile does not have exactly one gtk 4.22.1:bin store"
+gst_base_store=$(record_store gst-plugins-base 1.28.1 out) || \
+    fail "candidate profile does not have exactly one gst-plugins-base 1.28.1:out store"
+gst_good_store=$(record_store gst-plugins-good 1.28.1 out) || \
+    fail "candidate profile does not have exactly one gst-plugins-good 1.28.1:out store"
 
 gtk_factory=$profile/bin/gtk4-widget-factory
 [ -x "$gtk_factory" ] || fail "candidate profile lacks gtk4-widget-factory"
@@ -257,6 +265,68 @@ for schema_term in \
     LC_ALL=C grep -aFq "$schema_term" "$gtk_schema_cache" || \
         fail "candidate GSettings cache lacks GTK 4 schema term: $schema_term"
 done
+
+gst_plugin_dir=$profile/lib/gstreamer-1.0
+check_gst_plugin() {
+    filename=$1
+    owner=$2
+    plugin=$gst_plugin_dir/$filename
+    expected=$owner/lib/gstreamer-1.0/$filename
+    [ -r "$plugin" ] || \
+        fail "candidate profile lacks GStreamer plugin: $filename"
+    [ "$(readlink -f "$plugin")" = "$expected" ] || \
+        fail "GStreamer plugin has wrong provenance: $filename"
+}
+
+check_gst_plugin libgstplayback.so "$gst_base_store"
+for plugin in \
+    libgstmatroska.so libgstvpx.so libgstaudiofx.so libgstautodetect.so; do
+    check_gst_plugin "$plugin" "$gst_good_store"
+done
+profile_setup=$profile/etc/profile
+[ -r "$profile_setup" ] || \
+    fail "candidate profile lacks its environment setup"
+profile_gst_plugin_dir=$(
+    set +u
+    unset GST_PLUGIN_SYSTEM_PATH GST_PLUGIN_SYSTEM_PATH_1_0
+    GUIX_PROFILE=$profile
+    export GUIX_PROFILE
+    # shellcheck disable=SC1090
+    . "$profile_setup"
+    printf '%s\n' "${GST_PLUGIN_SYSTEM_PATH-}"
+)
+[ "$profile_gst_plugin_dir" = "$gst_plugin_dir" ] || \
+    fail "candidate profile GStreamer search path is not exact"
+
+mkdir -p "$tmp/gst-home" "$tmp/gst-cache"
+check_gst_element() {
+    element=$1
+    plugin=$2
+    record=$tmp/gst-$element
+    if ! HOME="$tmp/gst-home" \
+        XDG_CACHE_HOME="$tmp/gst-cache" \
+        GST_PLUGIN_PATH='' \
+        GST_PLUGIN_PATH_1_0='' \
+        GST_PLUGIN_SYSTEM_PATH="$gst_plugin_dir" \
+        GST_PLUGIN_SYSTEM_PATH_1_0="$gst_plugin_dir" \
+        GST_REGISTRY="$tmp/gst-registry.bin" \
+        GST_REGISTRY_1_0="$tmp/gst-registry.bin" \
+        GST_REGISTRY_FORK=no \
+        GST_REGISTRY_UPDATE=yes \
+        "$gst_inspect" "$element" >"$record" 2>&1; then
+        cat "$record" >&2
+        fail "candidate GStreamer registry lacks element: $element"
+    fi
+    grep -Fq "$gst_plugin_dir/$plugin" "$record" || \
+        fail "GStreamer element loaded from the wrong plugin: $element"
+}
+
+check_gst_element playbin3 libgstplayback.so
+check_gst_element matroskademux libgstmatroska.so
+check_gst_element vp9dec libgstvpx.so
+check_gst_element scaletempo libgstaudiofx.so
+check_gst_element autoaudiosink libgstautodetect.so
+check_gst_element autovideosink libgstautodetect.so
 
 for icon_index in \
     "$profile/share/icons/Papirus-Dark/index.theme" \

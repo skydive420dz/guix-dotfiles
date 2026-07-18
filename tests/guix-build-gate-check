@@ -287,6 +287,8 @@ require_record() {
 
 require_record gtk 4.22.1 out
 require_record gtk 4.22.1 bin
+require_record gst-plugins-base 1.28.1 out
+require_record gst-plugins-good 1.28.1 out
 require_record font-awesome 4.7.0 out
 require_record font-google-material-design-icons 4.0.0 out
 require_record papirus-icon-theme 20250501 out
@@ -471,7 +473,8 @@ printf '%s\n' fish-foreign-env emacs emacs-desktop-environment emacs-geiser \
     emacs-package-lint emacs-clojure-mode emacs-fennel-mode \
     emacs-racket-mode cljfmt clj-kondo \
     font-awesome font-google-material-design-icons papirus-icon-theme \
-    bibata-cursor-theme hicolor-icon-theme gtk \
+    bibata-cursor-theme hicolor-icon-theme gst-plugins-base \
+    gst-plugins-good gtk \
     guile sbcl lua-language-server python-lsp-server \
     ungoogled-chromium ranger shellcheck >"$fake_home_names"
 
@@ -508,6 +511,8 @@ reset_fake_home_manifest() {
         'papirus-icon-theme	20250501	out	/gnu/store/fake-papirus-icon-theme' \
         'bibata-cursor-theme	2.0.3	out	/gnu/store/fake-bibata-cursor-theme' \
         'hicolor-icon-theme	0.18	out	/gnu/store/fake-hicolor-icon-theme' \
+        'gst-plugins-base	1.28.1	out	/gnu/store/fake-gst-plugins-base' \
+        'gst-plugins-good	1.28.1	out	/gnu/store/fake-gst-plugins-good' \
         'gtk	4.22.1	out	/gnu/store/fake-gtk-out' \
         'gtk	4.22.1	bin	/gnu/store/fake-gtk-bin' \
         >>"$fake_home_manifest"
@@ -1139,7 +1144,8 @@ contains "$output" 'Home profile lacks declared package output: gtk:bin'
 reset_fake_home_manifest
 
 for package in font-awesome font-google-material-design-icons \
-    papirus-icon-theme bibata-cursor-theme hicolor-icon-theme; do
+    papirus-icon-theme bibata-cursor-theme hicolor-icon-theme \
+    gst-plugins-base gst-plugins-good; do
     replace_fake_manifest_output "$fake_home_manifest" "$package" doc
     if output=$(run_gate 2>&1); then
         fail "Home manifest with $package:doc instead of $package:out passed the gate"

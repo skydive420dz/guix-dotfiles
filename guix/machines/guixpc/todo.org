@@ -605,10 +605,10 @@ CLOSED: [2026-07-17 Fri]
 * TODO P3.4 activation and real-display visual acceptance
 :PROPERTIES:
 :created: 2026-07-17
-:NEXT_GATE: GTK correction checkpoint published and equal to upstream
+:NEXT_GATE: GStreamer base-plus-good correction published and upstream-equal
 :END:
 
-- Evidence: [[file:../../../docs/audits/2026-07-17-p3.4-theme-activation.org][2026-07-17 P3.4 activation, GTK schema stop, and correction]].
+- Evidence: [[file:../../../docs/audits/2026-07-17-p3.4-theme-activation.org][2026-07-17 P3.4 GTK/GStreamer activation stops and corrections]].
 - [X] Capture the exact P3.3 source checkpoint, clean upstream equality,
   generation 42/result, retained Kitty source, and rollback/retention plan.
 - [X] Run the read-only 14-live-plus-one-retired link preflight, then run =ghr=
@@ -629,15 +629,40 @@ CLOSED: [2026-07-17 Fri]
   controls; pass the complete source gate, pinned Home dry-run, a Home build
   whose profile has 94 top-level records, and the immutable candidate check at
   =yr959z61...-home=.
-- [ ] Publish the correction checkpoint, fetch it, and prove clean
+- [X] Publish GTK correction =1358cb2=, fetch it, and prove clean
   =HEAD=/=origin/main= equality at ahead/behind =0/0=.
-- [ ] Re-run the preflight, activate the corrected Home result, and prove the
-  active profile exposes both GTK outputs and the ColorChooser schema/cache.
-- [ ] Launch the exact active-profile =gtk4-widget-factory= through the real
-  EXWM environment without schema/data-directory overrides; require it to stay
-  alive without GLib schema errors and obtain Rafael's visible-window check.
-- [ ] Restart the X/EXWM session or reboot only after consumer checks, then
-  inspect wallpaper/fit, Picom, opacity, cursor/icons, and the ultrawide result.
+- [X] Re-run the preflight and activate Home generation 44 at
+  =gb9kvfwn...-home=.  Prove its 94-record profile exposes both GTK outputs,
+  the ColorChooser XML/cache, and exact declared provenance.
+- [X] Stop again when the generation-44 exact-profile factory removes the
+  schema error but aborts with status 133 on missing GStreamer =playbin3=.
+  Perform no session restart, reboot, or visible-acceptance claim.
+- [X] Trace the second false positive: GTK's closure references GStreamer, but
+  generation 44 has no base/good records, plugin links, or Home
+  =GST_PLUGIN_SYSTEM_PATH=.  Treat the running EXWM environment as stale until
+  the session is restarted.
+- [X] Directly own =gst-plugins-base= and =gst-plugins-good=.  Retain 89
+  ordinary specifications, two exact GTK output selections, one explicit
+  package, 92 total selections, and 91 unique names.
+- [X] Strengthen plugin provenance, exact generated search-path, versioned and
+  unversioned hostile-environment isolation, fresh-registry element, and
+  negative-control gates.  Pass the complete source gate and the 96-record
+  immutable candidate at =99xy9a0...-home=.
+- [ ] Publish the GStreamer correction checkpoint, fetch it, and prove clean
+  =HEAD=/=origin/main= equality at ahead/behind =0/0=.
+- [ ] Re-run the preflight, activate the corrected Home result, and prove its
+  active 96-record profile exposes both GTK outputs, both GStreamer owners,
+  exact plugin links, the generated plugin search path, and all six required
+  GStreamer elements with an isolated registry.
+- [ ] From a fresh profile-sourced login shell, launch the exact active-profile
+  =gtk4-widget-factory= with an isolated registry and without manual schema,
+  data, or plugin-directory overrides.  Require it to remain alive without
+  GLib or GStreamer fatal errors.
+- [ ] Restart the X/EXWM session or reboot, prove the new Emacs inherited the
+  active Home =GST_PLUGIN_SYSTEM_PATH=, and repeat the exact factory launch
+  with Rafael's visible-window check.
+- [ ] Inspect wallpaper/fit, Picom, opacity, cursor/icons, and the ultrawide
+  result.
 - [ ] Complete real-display, contrast, and adjacent SSH/EXWM acceptance with
   Rafael; stop and roll back on ownership drift, parser/load regression,
   session instability, or unacceptable appearance.

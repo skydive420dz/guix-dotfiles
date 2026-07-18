@@ -17,11 +17,14 @@ checkpoint =8933827=.  Emacs, Kitty, Fish, Xinit, Picom, and wallpaper have
 traceable live owners.  At that baseline GTK 3/4, icons, and the cursor had no
 declared GuixPC policy.  P3.2 records their accepted offline production policy,
 and P3.3 supplies immutable candidate owners.  P3.4 activated those owners as
-Home generation 43, passed exact fresh Fish/Emacs assertions, and kept fresh
-Kitty and GTK 3 startup probes alive for five seconds.  It then stopped when
-the GTK 4 factory exposed a missing profile schema.  The live Emacs background
-matched Kitty's declared =#0d0e1c= canvas, but its palette and opacity
-mechanism are not one contract with Kitty.
+Home generation 43, then correctly stopped when the GTK 4 factory exposed a
+missing profile schema.  The published GTK output correction activated as
+generation 44 and removed that schema error; the exact-profile factory then
+found the independent missing =playbin3= GStreamer plugin.  Exact fresh
+Fish/Emacs assertions passed, while fresh Kitty and GTK 3 startup probes
+remained alive for five seconds.  The live Emacs background matched Kitty's
+declared =#0d0e1c= canvas, but its palette and opacity mechanism are not one
+contract with Kitty.
 
 Rafael accepted the recommended Phase 3 visual bundle, including the global
 JetBrainsMono Nerd Font roles, retained wallpaper, and 11 pt UI size.  P3.2's
@@ -30,10 +33,12 @@ published schema-v2 checkpoint =b74a98d= adds the inert production token datum,
 freezes the exact reviewed Modus 4.4.0 role/ANSI mapping and source provenance,
 and extends offline validation/rendering without wiring a live target.  P3.3
 then renders one complete Kitty config rather than a forbidden include, keeps
-Qt out of scope, and builds the immutable Home candidate.  P3.4's correction
-explicitly owns both =gtk:out= and =gtk:bin=; its isolated Home candidate has
-94 top-level profile records and passes the strengthened schema/provenance gate
-but is not yet published or active.
+Qt out of scope, and builds the immutable Home candidate.  P3.4's first
+correction explicitly owns both =gtk:out= and =gtk:bin= and is active as
+generation 44.  The second correction explicitly owns =gst-plugins-base= and
+=gst-plugins-good=; its isolated Home candidate has 96 top-level profile
+records and passes the strengthened schema, plugin-provenance, environment,
+and fresh-registry gates, but is not yet published or active.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -82,10 +87,10 @@ candidate Home mappings and package outputs, Kitty ownership transition,
 realized build evidence, and the exact P3.4 activation/rollback handoff.  It
 records no P3.3 activation, consumer restart, GUI launch, or visual acceptance
 evidence.
-[[file:docs/audits/2026-07-17-p3.4-theme-activation.org][The P3.4 activation and GTK schema record]] owns generation 43 activation,
-the live ownership and fresh-consumer evidence, the GTK 4 stop/root cause, and
-the corrected isolated candidate.  It contains no session restart, reboot, or
-complete visual acceptance.
+[[file:docs/audits/2026-07-17-p3.4-theme-activation.org][The P3.4 GTK/GStreamer activation record]] owns generations 43 and 44,
+the live ownership and fresh-consumer evidence, both exact factory stops and
+root causes, and the second corrected isolated candidate.  It contains no
+session restart, reboot, or complete visual acceptance.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -124,18 +129,23 @@ and evidence checkpoint =00bf260d614ce4e5e4d023a7fba09826da48ae80=
 are published; fetched =HEAD= and =origin/main= equal =00bf260= at
 ahead/behind =0/0=.
 
-P3.4 is active.  Published closure =eeedb461= was clean and upstream-equal
-before activation.  Home generation 43 at
-=/gnu/store/1slsnsfv8avdqzi3fsf0xhigyv6vfmal-home= owns the generated theme
-files.  Exact fresh Fish/Emacs assertions pass, while fresh Kitty and GTK 3
-startup probes remained alive for five seconds.  The GTK 4 factory correctly
-stopped acceptance because P3.3 selected only =gtk:bin=: the referenced
-=gtk:out= schema remained outside the profile.  The corrected isolated
-candidate =/gnu/store/yr959z61ml5wzvxc2ad3vm93nmrm7kd9-home= owns both
-outputs, has 94 top-level profile records, and passes the strengthened complete
-source and immutable-candidate gates.  It is not published or active.  No
-session restart, reboot, or visual acceptance has occurred.  Source, build,
-publication, activation, live, and visual acceptance remain different gates.
+P3.4 is active.  Generation 43 at
+=/gnu/store/1slsnsfv8avdqzi3fsf0xhigyv6vfmal-home= records the first factory
+stop: =gtk:bin= exposed the executable while =gtk:out= remained outside the
+profile.  GTK correction =1358cb2= is published and upstream-equal; generation
+44 at =/gnu/store/gb9kvfwniwwasga61lia7b1dagfa2a4r-home= has both GTK outputs,
+passes the exact schema/cache gate, and removes that failure.  Its factory
+launch then stopped on missing GStreamer =playbin3=, before any session restart
+or visible acceptance.
+
+The second isolated candidate
+=/gnu/store/99xy9a0xdj1mra9if3v7ir4x588902sz-home= directly owns
+=gst-plugins-base= and =gst-plugins-good=.  Its 96-record profile passes exact
+plugin provenance, generated search-path, hostile-ambient-environment, and
+fresh-registry discovery for playback, WebM/VP9, tempo, and automatic sinks.
+It is build evidence only: publication, activation, fresh-login smoke, session
+restart, EXWM verification, and visual acceptance remain separate pending
+gates.
 
 P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
 parked.  Generation deletion and store collection remain Phase 5 work behind
@@ -143,12 +153,13 @@ the restore-tested-backup gate.
 
 ** Ready
 
-- [ ] P3.4: publish the GTK output/schema correction, verify clean upstream
-  equality, re-run the 14-live-plus-one-retired preflight, and activate the
-  corrected Home result.  Re-test the exact active-profile GTK 4 factory from
-  the real EXWM environment before any session restart.  Then hand-test fonts,
-  icons, cursor, Picom, wallpaper, transparency, contrast, and the real
-  ultrawide display.
+- [ ] P3.4: publish the GStreamer base-plus-good correction, verify clean
+  upstream equality, re-run the 14-live-plus-one-retired preflight, and
+  activate the corrected Home result.  Smoke-test the exact factory from a
+  fresh profile-sourced login shell with an isolated registry.  Then restart
+  the session, prove EXWM inherited the active Home plugin search path, repeat
+  the exact factory/visible-window test, and hand-test fonts, icons, cursor,
+  Picom, wallpaper, transparency, contrast, and the real ultrawide display.
 
 ** Completed
 

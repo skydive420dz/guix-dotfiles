@@ -1,7 +1,7 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; P3.4 corrects the reviewed Home user/editor base to 90 package/output
-;; selections with 89 unique package names.  The seven visual selections
+;; P3.4 corrects the reviewed Home user/editor base to 92 package/output
+;; selections with 91 unique package names.  The nine visual/runtime selections
 ;; explicitly own the accepted global dependencies instead of relying on
 ;; unrelated propagated package edges.
 ;; Package-lint keeps the tracked Emacs Lisp project independent of mutable
@@ -64,7 +64,9 @@
     "font-google-material-design-icons"
     "papirus-icon-theme"
     "bibata-cursor-theme"
-    "hicolor-icon-theme"))
+    "hicolor-icon-theme"
+    "gst-plugins-base"
+    "gst-plugins-good"))
 
 (define %guixpc-home-emacs-package-specifications
   '("emacs"

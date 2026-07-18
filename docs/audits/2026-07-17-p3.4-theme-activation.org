@@ -1,6 +1,6 @@
-#+title: P3.4 theme activation, GTK schema stop, and correction
+#+title: P3.4 theme activation: GTK schema and GStreamer stops
 #+date: 2026-07-17
-#+status: active; correction built, publication/reactivation pending
+#+status: active; second correction built, publication/reactivation pending
 
 * Outcome so far
 
@@ -16,17 +16,26 @@ real-display acceptance claim.  It also found a specific false positive in the
 P3.3 package gate: owning =gtk:bin= proves the factory binary exists, but does
 not expose the GTK =out= output's schemas to the profile.
 
-The correction explicitly selects both =gtk:out= and =gtk:bin=.  An isolated
-Home candidate whose profile has 94 top-level records now builds and passes
-strengthened output, provenance, schema, cache, adapter, parser, font, icon,
-cursor, and activation-order gates:
+The first correction explicitly selected both =gtk:out= and =gtk:bin=.  It was
+published as =1358cb2=, activated as Home generation 44, and proved the
+ColorChooser schema/cache was now exposed.  The same exact-profile factory test
+then found a second independent stop:
 
 #+begin_example
-/gnu/store/yr959z61ml5wzvxc2ad3vm93nmrm7kd9-home
+GStreamer-Play-ERROR: GstPlay: 'playbin3' element not found
 #+end_example
 
-This corrected result is build evidence only.  At this checkpoint it has not
-been published, activated, or GUI-tested.
+The second correction directly owns =gst-plugins-base= and
+=gst-plugins-good=.  Its isolated Home candidate has 96 top-level records and
+passes strengthened ownership, provenance, environment, and fresh-registry
+element gates:
+
+#+begin_example
+/gnu/store/99xy9a0xdj1mra9if3v7ir4x588902sz-home
+#+end_example
+
+This second corrected result is build evidence only.  At this checkpoint it
+has not been published, activated, or accepted on the real display.
 
 * Published activation boundary
 
@@ -74,6 +83,27 @@ GTK 4, X-session, token, and wallpaper owners.  The post-activation
 passed.  Existing Emacs, Picom, and Kitty process IDs did not change during
 activation.
 
+The first correction checkpoint was then published and fetched at:
+
+#+begin_example
+1358cb2cefafcd795144dc58e461590edd3c3155
+ahead/behind 0/0
+#+end_example
+
+After another 14-live-plus-one-retired preflight, Home reconfiguration
+succeeded and selected generation 44:
+
+#+begin_example
+/gnu/store/gb9kvfwniwwasga61lia7b1dagfa2a4r-home
+/gnu/store/10gkvxhlkaibvbldq9yz5wil60gvp26z-profile
+#+end_example
+
+Its 94-record profile has both exact GTK outputs.  The ColorChooser XML
+resolves to the declared =gtk:out= store item, and the profile-generated cache
+contains the schema ID, =custom-colors=, and =selected-color=.  The complete
+immutable Home checker and the post-activation link preflight passed.  Emacs,
+Picom, and Kitty process IDs again remained unchanged.
+
 * Fresh-consumer evidence
 
 The fresh non-session tests produced:
@@ -84,7 +114,8 @@ The fresh non-session tests produced:
 | Emacs | fresh batch process loads the generated adapter and passes theme/font assertions |
 | Kitty | fresh five-second process remains alive |
 | Blueman / GTK 3 | fresh five-second process remains alive and reads existing BlueZ/Pulse state |
-| GTK 4 widget factory | aborts with status 133 before visual acceptance |
+| GTK 4 widget factory, generation 43 | aborts with status 133 on missing ColorChooser schema |
+| GTK 4 widget factory, generation 44 | schema stop is gone; aborts with status 133 on missing =playbin3= |
 
 Kitty reported missing systemd and desktop-notification/portal services, but
 remained alive.  Those are non-blocking existing environment gaps, not the GTK
@@ -105,15 +136,15 @@ Before launching the factory, a live GTK 4 settings query reported:
 This proves the settings policy reached GTK 4.  It does not compensate for the
 separate missing private schema or prove acceptable appearance.
 
-The GTK 4 failure was:
+The generation 43 GTK 4 failure was:
 
 #+begin_example
 GLib-GIO-ERROR: Settings schema 'org.gtk.gtk4.Settings.ColorChooser' is not installed
 #+end_example
 
-No session restart or reboot followed this stop.
+No session restart or reboot followed either stop.
 
-* Root cause
+* First root cause: GTK output exposure
 
 Generation 43 reports only:
 
@@ -137,19 +168,51 @@ The correction is package ownership, not a GTK patch or environment override.
 It does not add =glib:bin=, copy schema files manually, or globally set
 =GSETTINGS_SCHEMA_DIR=.
 
+* Second root cause: GStreamer plugin exposure
+
+Generation 44 proves the schema correction, but its exact-profile factory
+launch aborts with status 133, signal 5:
+
+#+begin_example
+GStreamer-Play-ERROR: GstPlay: 'playbin3' element not found
+#+end_example
+
+The active Home profile has no top-level =gst-plugins-base= or
+=gst-plugins-good= record and no corresponding playback plugin links.  The
+running EXWM Emacs inherited an obsolete =GST_PLUGIN_PATH= naming a nonexistent
+=~/.guix-profile/lib/gstreamer-1.0= directory and has no
+=GST_PLUGIN_SYSTEM_PATH=.  GTK's closure references keep GStreamer store items
+alive, but do not expose their plugins through the Home profile or its search
+path.
+
+The factory embeds a VP9-in-WebM video.  =gst-plugins-base= supplies
+=playbin3= through =libgstplayback.so=; =gst-plugins-good= supplies the
+Matroska/WebM demuxer, VP9 decoder, =scaletempo=, and automatic audio/video
+sinks.  A process-local base-only diagnostic kept the factory alive but still
+emitted GStreamer errors.  A disposable base-plus-good profile kept it alive
+without GStreamer errors; only GTK layout warnings remained because EXWM tiled
+the deliberately oversized factory into 896 pixels while it requested at
+least 1445.  Those override-based diagnostics prove the package set but are
+not active-profile or visual acceptance.
+
+The second correction directly selects both normal default-output packages.
+It does not hard-code =GST_PLUGIN_PATH=, =GST_PLUGIN_SYSTEM_PATH=, or a user
+registry.
+
 * Corrected ownership contract
 
 The Home declaration now has:
 
-- 87 ordinary package specifications;
+- 89 ordinary package specifications;
 - exact =gtk:out= and =gtk:bin= selections;
 - one explicit runtime-detached Racket Mode package;
-- 90 total package/output selections; and
-- 89 unique logical package names.
+- 92 total package/output selections; and
+- 91 unique logical package names.
 
 The unique-name projection still contains =gtk= once.  Package-name overlap
 and presence checks consume that projection; output-specific gates separately
-require both exact GTK records.
+require both exact GTK records.  =gst-plugins-base= and =gst-plugins-good= are
+ordinary default-output selections and each appears once.
 
 The immutable candidate checker now binds:
 
@@ -157,42 +220,76 @@ The immutable candidate checker now binds:
 2. =org.gtk.gtk4.Settings.ColorChooser.gschema.xml= to the exact store path
    recorded for =gtk:out=; and
 3. the profile-generated =gschemas.compiled= to the exact schema ID and its
-   =custom-colors= and =selected-color= keys.
+   =custom-colors= and =selected-color= keys;
+4. =playbin3= to =gst-plugins-base='s =libgstplayback.so=; and
+5. =matroskademux=, =vp9dec=, =scaletempo=, =autoaudiosink=, and
+   =autovideosink= to the reviewed =gst-plugins-good= libraries.
 
 Its failure-control fixture independently rejects missing =out=, missing
 =bin=, wrong factory provenance, absent schema XML, wrong schema provenance,
-missing compiled cache, and incomplete compiled cache.  The integrated build
-fixture removes each GTK output independently so it cannot pass for the wrong
-duplicate-output reason.
+missing compiled cache, and incomplete compiled cache.  It also rejects either
+missing GStreamer owner, wrong playback or VP9 provenance, absent profile
+search-path setup, and isolated registries without =playbin3= or VP9 decoding.
+The integrated build fixture removes each GTK output and each GStreamer owner
+independently so it cannot pass for the wrong duplicate-output reason.
 
 * Corrected candidate evidence
 
-The isolated correction checkout is based on published =eeedb461=.  It passed:
+The first corrected candidate remains historical build evidence:
+
+#+begin_example
+/gnu/store/yr959z61ml5wzvxc2ad3vm93nmrm7kd9-home
+94 top-level records
+#+end_example
+
+The second isolated correction checkout is based on published =1358cb2=.  It
+passed:
 
 - direct ShellCheck and =git diff --check=;
 - the 281-test theme gate and pinned native parsers;
 - the complete strict repository =scripts/shell-check=;
-- package ownership at 13 recovery names and 89 unique Home names, including
+- package ownership at 13 recovery names and 91 unique Home names, including
   exactly one explicit package object;
 - the strengthened immutable-candidate failure controls;
 - the integrated build-gate fixture;
 - pinned Home dry-run; and
 - the realized Home build and immutable Home checker.
 
-The realized profile contains 94 top-level records and exactly:
+The realized Home and profile are:
+
+#+begin_example
+/gnu/store/99xy9a0xdj1mra9if3v7ir4x588902sz-home
+/gnu/store/2p4vnz9y2ndfsbary431rzlf41jhanrs-profile
+96 top-level records
+#+end_example
+
+They contain exactly:
 
 #+begin_example
 gtk 4.22.1 bin /gnu/store/hnf5in75v83zmhcqxpbflvizdbcp8a2n-gtk-4.22.1-bin
 gtk 4.22.1 out /gnu/store/qk4czza15lsr1d1ir6xni5613knqqz49-gtk-4.22.1
+gst-plugins-base 1.28.1 out /gnu/store/p9clvry9l42xi1pakmwjd8hkh8yjxxmv-gst-plugins-base-1.28.1
+gst-plugins-good 1.28.1 out /gnu/store/4hcb385wzlhczqjn9vqvx7gq7lly633b-gst-plugins-good-1.28.1
 #+end_example
 
 Its profile ColorChooser XML resolves to the declared GTK =out= item, and the
-profile-generated cache contains the schema ID and required keys.
+profile-generated cache contains the schema ID and required keys.  Its
+generated =etc/profile= exports the profile GStreamer plugin directory.
+=libgstplayback.so= resolves to the exact base store, while
+=libgstmatroska.so=, =libgstvpx.so=, =libgstaudiofx.so=, and
+=libgstautodetect.so= resolve to the exact good store.
 
-The build prints the broad profile's existing file-collision warnings and new
-GTK =out= collisions for generated GdkPixbuf and MIME caches.  Guix selects its
-profile hooks and the build succeeds.  Runtime testing remains required; build
-success does not turn those warnings into a visual claim.
+With an isolated fresh registry, empty =GST_PLUGIN_PATH=, and only the candidate
+profile's plugin directory as =GST_PLUGIN_SYSTEM_PATH=, all six required
+elements resolve from those exact profile links: =playbin3=,
+=matroskademux=, =vp9dec=, =scaletempo=, =autoaudiosink=, and
+=autovideosink=.  This is semantic build evidence, not a GUI launch.
+
+The build prints the broad profile's existing file-collision warnings, GTK
+=out= collisions for generated GdkPixbuf and MIME caches, and a
+=gst-plugins-good= loader-cache collision.  Guix selects its profile hooks and
+the build succeeds.  Runtime testing remains required; build success does not
+turn those warnings into a visual claim.
 
 * Planning synchronization
 
@@ -220,23 +317,40 @@ intermediate hash.  The final live SHA256 is:
 dcc23c66db7372fed8feec05d76292e975883392c16bd079cd94900e061169e0
 #+end_example
 
-It records P3.4 as active, not complete, and keeps publication, corrected
-activation, GTK 4 runtime, session restart, and visual acceptance as separate
-pending gates.
+The second-correction agenda revision passed =org-lint= and was copied only
+while the live file still matched that exact =dcc23c66= input.  Its final live
+SHA256 is:
+
+#+begin_example
+f11e58808acf8c71a179c60d00f433cd889c7c31a499265aa2ecd37e326c3265
+#+end_example
+
+It records generation 44, the GStreamer stop, the 96-record candidate, D-26,
+and the corrected sequential gates.  P3.4 remains active, not complete;
+publication, corrected activation, a fresh login-shell smoke test, session
+restart, EXWM runtime, and visual acceptance remain separate gates.
 
 * Remaining sequential gates
 
-1. Commit, push, fetch, and prove clean =HEAD=/=origin/main= equality.
+1. Commit, push, fetch, and prove clean =HEAD=/=origin/main= equality for the
+   GStreamer correction.
 2. Re-run the 14-live-plus-one-retired preflight.
-3. Activate the corrected Home result as a new generation and re-run the
-   immutable Home checker against the active result.
-4. From the real EXWM environment, launch the exact active-profile
-   =gtk4-widget-factory= without =GSETTINGS_SCHEMA_DIR= or =XDG_DATA_DIRS=
-   overrides.  Require it to remain alive and emit no GLib schema error.
-5. Obtain Rafael's visible-window confirmation and terminate the probe.
-6. Only then restart the X/EXWM session or reboot for wallpaper, Picom,
-   transparency, cursor, icon, font, contrast, and ultrawide hand tests.
+3. Activate the corrected Home result as a new generation.  Require 96
+   top-level records, exact GTK and GStreamer owners, plugin provenance,
+   profile search-path export, and the complete immutable Home checker.
+4. From a fresh profile-sourced login shell, use a new isolated registry and
+   launch the exact active-profile factory without manual schema, data, or
+   plugin-directory overrides.  Require it to remain alive without GLib or
+   GStreamer fatal errors.
+5. Restart the X/EXWM session or reboot.  Prove the new Emacs environment
+   inherited the active Home =GST_PLUGIN_SYSTEM_PATH=.
+6. Through that fresh EXWM environment, launch the exact active-profile
+   factory with only an isolated registry, obtain Rafael's visible-window
+   confirmation, and terminate the probe.
+7. Complete wallpaper, Picom, transparency, cursor, icon, font, contrast, and
+   ultrawide hand tests.
 
 Generation 42 and its retained Kitty source remain the pre-theme rollback.
-Generation 43 is also retained as exact evidence of the schema stop.  No Qt,
-forced DPI, global toolkit scale, or complete visual acceptance is claimed.
+Generation 43 is retained as exact evidence of the schema stop; generation 44
+is retained as exact evidence of the GStreamer stop.  No Qt, forced DPI,
+global toolkit scale, or complete visual acceptance is claimed.

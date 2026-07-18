@@ -42,21 +42,21 @@
            "ripgrep" "vim" "xset" "xwallpaper" "picom" "xrandr"))
  "reviewed 13-package recovery floor changed")
 
-(assert (= (length home-specifications) 87)
-        "reviewed Home specification list must contain exactly 87 packages")
+(assert (= (length home-specifications) 89)
+        "reviewed Home specification list must contain exactly 89 packages")
 (assert (equal? home-output-specifications '("gtk:out" "gtk:bin"))
         "reviewed Home output specifications changed")
 (assert (equal? home-output-names '("gtk"))
         "reviewed Home output package names changed")
 (assert (equal? home-explicit '("emacs-racket-mode"))
         "reviewed explicit Home package names changed")
-(assert (= (length home) 89)
-        "reviewed Home ownership must contain exactly 89 unique package names")
+(assert (= (length home) 91)
+        "reviewed Home ownership must contain exactly 91 unique package names")
 (assert (= (+ (length home-specifications)
               (length home-output-specifications)
               (length home-explicit))
-           90)
-        "reviewed Home declaration must contain exactly 90 selections")
+           92)
+        "reviewed Home declaration must contain exactly 92 selections")
 (assert
  (equal? home
          (append home-specifications home-output-names home-explicit))
@@ -74,7 +74,7 @@
    "ungoogled-chromium" "ranger" "shellcheck"
    "font-awesome" "font-google-material-design-icons"
    "papirus-icon-theme" "bibata-cursor-theme" "hicolor-icon-theme"
-   "gtk"))
+   "gst-plugins-base" "gst-plugins-good" "gtk"))
 
 (for-each
  (lambda (specification)
