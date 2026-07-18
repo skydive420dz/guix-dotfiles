@@ -605,7 +605,7 @@ CLOSED: [2026-07-17 Fri]
 * TODO P3.4 activation and real-display visual acceptance
 :PROPERTIES:
 :created: 2026-07-17
-:NEXT_GATE: GStreamer base-plus-good correction published and upstream-equal
+:NEXT_GATE: session restart and EXWM inherited-environment visual acceptance
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-17-p3.4-theme-activation.org][2026-07-17 P3.4 GTK/GStreamer activation stops and corrections]].
@@ -648,16 +648,19 @@ CLOSED: [2026-07-17 Fri]
   unversioned hostile-environment isolation, fresh-registry element, and
   negative-control gates.  Pass the complete source gate and the 96-record
   immutable candidate at =99xy9a0...-home=.
-- [ ] Publish the GStreamer correction checkpoint, fetch it, and prove clean
+- [X] Publish GStreamer correction =d83feb8=, fetch it, and prove clean
   =HEAD=/=origin/main= equality at ahead/behind =0/0=.
-- [ ] Re-run the preflight, activate the corrected Home result, and prove its
-  active 96-record profile exposes both GTK outputs, both GStreamer owners,
-  exact plugin links, the generated plugin search path, and all six required
-  GStreamer elements with an isolated registry.
-- [ ] From a fresh profile-sourced login shell, launch the exact active-profile
+- [X] Re-run the preflight and activate generation 45 at =9rmcgpl4...-home=.
+  Prove its active 96-record profile exposes both GTK outputs, both GStreamer
+  owners, exact plugin links, the generated plugin search path, and all six
+  required GStreamer elements with an isolated registry.  Preserve EXWM Emacs
+  PID 6631, Picom PID 6647, and Kitty PID 9010 through activation.
+- [X] From a clean =env -i= shell that sources =~/.profile=, launch the exact
+  active-profile
   =gtk4-widget-factory= with an isolated registry and without manual schema,
-  data, or plugin-directory overrides.  Require it to remain alive without
-  GLib or GStreamer fatal errors.
+  data, or plugin-directory overrides.  It remains alive for five seconds with
+  no fatal GLib or GStreamer diagnostic.  The only log output is the known
+  nonfatal 896-versus-1445 EXWM allocation warning.
 - [ ] Restart the X/EXWM session or reboot, prove the new Emacs inherited the
   active Home =GST_PLUGIN_SYSTEM_PATH=, and repeat the exact factory launch
   with Rafael's visible-window check.

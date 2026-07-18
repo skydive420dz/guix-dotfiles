@@ -1,6 +1,6 @@
 #+title: P3.4 theme activation: GTK schema and GStreamer stops
 #+date: 2026-07-17
-#+status: active; second correction built, publication/reactivation pending
+#+status: active; generation 45 and pre-restart runtime gate passed
 
 * Outcome so far
 
@@ -26,16 +26,19 @@ GStreamer-Play-ERROR: GstPlay: 'playbin3' element not found
 #+end_example
 
 The second correction directly owns =gst-plugins-base= and
-=gst-plugins-good=.  Its isolated Home candidate has 96 top-level records and
-passes strengthened ownership, provenance, environment, and fresh-registry
-element gates:
+=gst-plugins-good=.  Its isolated 96-record candidate passed strengthened
+ownership, provenance, environment, and fresh-registry element gates:
 
 #+begin_example
 /gnu/store/99xy9a0xdj1mra9if3v7ir4x588902sz-home
 #+end_example
 
-This second corrected result is build evidence only.  At this checkpoint it
-has not been published, activated, or accepted on the real display.
+That correction was then published as =d83feb8= and activated as Home
+generation 45.  The active immutable profile passes the same 96-record gate.
+A factory launched from a clean shell that sourced the generated Home profile
+remained alive for five seconds with no fatal GLib or GStreamer diagnostic.
+The X/EXWM session has not yet restarted, and no visible-result acceptance is
+claimed.
 
 * Published activation boundary
 
@@ -288,8 +291,59 @@ elements resolve from those exact profile links: =playbin3=,
 The build prints the broad profile's existing file-collision warnings, GTK
 =out= collisions for generated GdkPixbuf and MIME caches, and a
 =gst-plugins-good= loader-cache collision.  Guix selects its profile hooks and
-the build succeeds.  Runtime testing remains required; build success does not
-turn those warnings into a visual claim.
+the build succeeds.  This subsection remains build evidence; the separately
+recorded active runtime gate does not turn those warnings into a visual claim.
+
+* Second correction publication and active pre-restart evidence
+
+Before activation, the actual checkout was clean and upstream-equal at:
+
+#+begin_example
+d83feb86b3faa7d63a838caf29c45806e0237496
+ahead/behind 0/0
+#+end_example
+
+The 14-live-plus-one-retired preflight passed.  Home reconfiguration then
+succeeded and selected generation 45:
+
+#+begin_example
+/gnu/store/9rmcgpl41riggidbkjz7ah3fj7a9wfky-home
+/gnu/store/2p4vnz9y2ndfsbary431rzlf41jhanrs-profile
+96 top-level records
+#+end_example
+
+The active profile has both exact GTK outputs and both exact GStreamer
+records.  Its schema/cache, plugin links, generated search path, isolated
+registry elements, adapters, fonts, icons, cursor, and activation ordering all
+pass the complete immutable Home checker.  The post-activation link preflight
+also passes.
+
+The activation did not restart the live consumers:
+
+| Consumer | PID before | PID after |
+|----------+------------+-----------|
+| EXWM Emacs | 6631 | 6631 |
+| Picom | 6647 | 6647 |
+| Kitty | 9010 | 9010 |
+
+A separate =env -i= shell received only the real display/session coordinates,
+sourced =~/.profile=, and naturally resolved:
+
+#+begin_example
+gtk4-widget-factory=/home/skydive420dz/.guix-home/profile/bin/gtk4-widget-factory
+GST_PLUGIN_SYSTEM_PATH=/home/skydive420dz/.guix-home/profile/lib/gstreamer-1.0
+#+end_example
+
+With only a fresh isolated registry added, and with no manual
+=GSETTINGS_SCHEMA_DIR=, =XDG_DATA_DIRS=, =GST_PLUGIN_PATH=, or plugin-system
+path override, the exact active-profile factory remained alive for five
+seconds.  Its log contained no fatal GLib or GStreamer diagnostic.  It emitted
+only the already-attributed nonfatal GTK allocation warnings because EXWM
+tiled the factory at 896 pixels while the test surface requires at least 1445.
+
+This proves active pre-restart runtime sufficiency.  It does not prove that a
+new EXWM process inherits the Home search path or that the visible theme is
+acceptable.  No session restart or reboot occurred.
 
 * Planning synchronization
 
@@ -326,31 +380,31 @@ f11e58808acf8c71a179c60d00f433cd889c7c31a499265aa2ecd37e326c3265
 #+end_example
 
 It records generation 44, the GStreamer stop, the 96-record candidate, D-26,
-and the corrected sequential gates.  P3.4 remains active, not complete;
-publication, corrected activation, a fresh login-shell smoke test, session
-restart, EXWM runtime, and visual acceptance remain separate gates.
+and the corrected sequential gates.
+
+The generation-45 agenda revision also passed =org-lint= and was copied only
+while the live file still matched the exact =f11e5880= input.  Its final live
+SHA256 is:
+
+#+begin_example
+cb26789bc9cd55ffb0de0cdb3d77469bcb41f894096278e154e0e22d2a73eb72
+#+end_example
+
+It records the active result, unchanged consumer PIDs, clean-shell factory
+smoke, and session restart as the next gate.
 
 * Remaining sequential gates
 
-1. Commit, push, fetch, and prove clean =HEAD=/=origin/main= equality for the
-   GStreamer correction.
-2. Re-run the 14-live-plus-one-retired preflight.
-3. Activate the corrected Home result as a new generation.  Require 96
-   top-level records, exact GTK and GStreamer owners, plugin provenance,
-   profile search-path export, and the complete immutable Home checker.
-4. From a fresh profile-sourced login shell, use a new isolated registry and
-   launch the exact active-profile factory without manual schema, data, or
-   plugin-directory overrides.  Require it to remain alive without GLib or
-   GStreamer fatal errors.
-5. Restart the X/EXWM session or reboot.  Prove the new Emacs environment
+1. Restart the X/EXWM session or reboot.  Prove the new Emacs environment
    inherited the active Home =GST_PLUGIN_SYSTEM_PATH=.
-6. Through that fresh EXWM environment, launch the exact active-profile
+2. Through that fresh EXWM environment, launch the exact active-profile
    factory with only an isolated registry, obtain Rafael's visible-window
    confirmation, and terminate the probe.
-7. Complete wallpaper, Picom, transparency, cursor, icon, font, contrast, and
+3. Complete wallpaper, Picom, transparency, cursor, icon, font, contrast, and
    ultrawide hand tests.
 
 Generation 42 and its retained Kitty source remain the pre-theme rollback.
 Generation 43 is retained as exact evidence of the schema stop; generation 44
-is retained as exact evidence of the GStreamer stop.  No Qt, forced DPI,
-global toolkit scale, or complete visual acceptance is claimed.
+is retained as exact evidence of the GStreamer stop; generation 45 is the
+active pre-restart evidence.  No Qt, forced DPI, global toolkit scale, or
+complete visual acceptance is claimed.

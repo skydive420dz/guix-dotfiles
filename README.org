@@ -36,9 +36,10 @@ then renders one complete Kitty config rather than a forbidden include, keeps
 Qt out of scope, and builds the immutable Home candidate.  P3.4's first
 correction explicitly owns both =gtk:out= and =gtk:bin= and is active as
 generation 44.  The second correction explicitly owns =gst-plugins-base= and
-=gst-plugins-good=; its isolated Home candidate has 96 top-level profile
-records and passes the strengthened schema, plugin-provenance, environment,
-and fresh-registry gates, but is not yet published or active.
+=gst-plugins-good=.  Published checkpoint =d83feb8= is active as Home
+generation 45; its 96-record profile and clean profile-sourced five-second
+factory probe pass.  Session restart, EXWM inherited-environment verification,
+and visible acceptance remain pending.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -87,10 +88,10 @@ candidate Home mappings and package outputs, Kitty ownership transition,
 realized build evidence, and the exact P3.4 activation/rollback handoff.  It
 records no P3.3 activation, consumer restart, GUI launch, or visual acceptance
 evidence.
-[[file:docs/audits/2026-07-17-p3.4-theme-activation.org][The P3.4 GTK/GStreamer activation record]] owns generations 43 and 44,
+[[file:docs/audits/2026-07-17-p3.4-theme-activation.org][The P3.4 GTK/GStreamer activation record]] owns generations 43 through 45,
 the live ownership and fresh-consumer evidence, both exact factory stops and
-root causes, and the second corrected isolated candidate.  It contains no
-session restart, reboot, or complete visual acceptance.
+root causes, the second corrected candidate, and its active pre-restart runtime
+gate.  It contains no session restart, reboot, or complete visual acceptance.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -138,14 +139,20 @@ passes the exact schema/cache gate, and removes that failure.  Its factory
 launch then stopped on missing GStreamer =playbin3=, before any session restart
 or visible acceptance.
 
-The second isolated candidate
-=/gnu/store/99xy9a0xdj1mra9if3v7ir4x588902sz-home= directly owns
-=gst-plugins-base= and =gst-plugins-good=.  Its 96-record profile passes exact
-plugin provenance, generated search-path, hostile-ambient-environment, and
-fresh-registry discovery for playback, WebM/VP9, tempo, and automatic sinks.
-It is build evidence only: publication, activation, fresh-login smoke, session
-restart, EXWM verification, and visual acceptance remain separate pending
-gates.
+GStreamer correction =d83feb8= is published and upstream-equal.  Home
+generation 45 at =/gnu/store/9rmcgpl41riggidbkjz7ah3fj7a9wfky-home= directly
+owns =gst-plugins-base= and =gst-plugins-good=.  Its 96-record profile passes
+exact plugin provenance, generated search-path, hostile-ambient-environment,
+and fresh-registry discovery for playback, WebM/VP9, tempo, and automatic
+sinks.  A clean shell sourced =~/.profile= and launched the exact active
+factory with only an isolated registry; it remained alive for five seconds
+with no fatal GLib or GStreamer diagnostic.  The known nonfatal allocation
+warnings remain attributable to EXWM tiling the 1445-pixel test surface at 896
+pixels.
+
+The X/EXWM session has not restarted.  New-Emacs inherited-environment
+verification, the final factory/visible-window check, and visual acceptance
+remain separate pending gates.
 
 P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
 parked.  Generation deletion and store collection remain Phase 5 work behind
@@ -153,13 +160,10 @@ the restore-tested-backup gate.
 
 ** Ready
 
-- [ ] P3.4: publish the GStreamer base-plus-good correction, verify clean
-  upstream equality, re-run the 14-live-plus-one-retired preflight, and
-  activate the corrected Home result.  Smoke-test the exact factory from a
-  fresh profile-sourced login shell with an isolated registry.  Then restart
-  the session, prove EXWM inherited the active Home plugin search path, repeat
-  the exact factory/visible-window test, and hand-test fonts, icons, cursor,
-  Picom, wallpaper, transparency, contrast, and the real ultrawide display.
+- [ ] P3.4: restart the session or reboot.  Prove the new EXWM Emacs inherited
+  the active Home plugin search path, repeat the exact isolated-registry
+  factory/visible-window test, and hand-test fonts, icons, cursor, Picom,
+  wallpaper, transparency, contrast, and the real ultrawide display.
 
 ** Completed
 
