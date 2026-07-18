@@ -34,10 +34,10 @@ freezes the exact reviewed Modus 4.4.0 role/ANSI mapping and source provenance,
 and extends offline validation/rendering without wiring a live target.  P3.3
 then renders one complete Kitty config rather than a forbidden include, keeps
 Qt out of scope, and builds the immutable Home candidate.  P3.4's first
-correction explicitly owns both =gtk:out= and =gtk:bin= and is active as
+correction explicitly owns both =gtk:out= and =gtk:bin= and was activated as
 generation 44.  The second correction explicitly owns =gst-plugins-base= and
-=gst-plugins-good=.  Published checkpoint =d83feb8= is active as Home
-generation 45; its 96-record profile passes.  Two fresh boots proved the new
+=gst-plugins-good=.  Published checkpoint =d83feb8= was activated as Home
+generation 45; its 96-record profile passed.  Two fresh boots proved the new
 EXWM Emacs inherited the Home GStreamer path, and the exact GTK 4 factory
 remained healthy and passed Rafael's visible check.  The wider visual pass then
 found two narrower blockers: GTK 3's accepted =Adwaita-dark= string rendered a
@@ -48,8 +48,15 @@ dark.  The realized correction candidate is
 =/gnu/store/dkasc56ngxmyg4gq453xx71h5xzaka3m-home=.  It passes 298 theme
 checks, native parsers, 61 Emacs tests, connected Lisp backends,
 immutable-candidate failure controls, the strict source gate, and the complete
-pinned Home/System build gate.  It is not yet published, activated, or
-reboot-tested.
+pinned Home/System build gate.  Published correction =e6492cc= is
+upstream-equal and active as Home generation 46 at
+=/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home=; its profile remains the
+same 96 records.  A fresh boot passed the live five-frame EXWM/theme/font
+contract, all automated Emacs gates, and structural key/grab checks.  Rafael
+confirmed the normal GTK 3 widget factory and Blueman are dark and that
+keybindings behave normally; both probes were removed.  Because the reboot
+was initiated over SSH, transient startup construction was not observed and
+is not claimed as visually accepted.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -163,9 +170,9 @@ warnings remain attributable to EXWM tiling the 1445-pixel test surface at 896
 pixels.
 
 The X/EXWM session subsequently restarted twice.  The fresh Emacs inherited
-the active Home GStreamer path, all 30 reviewed EXWM global bindings remained
-installed and grabbed, and the exact factory passed both its runtime and
-visible-window checks.  The broader hand test did not close P3.4: GTK 3
+the then-active Home GStreamer path, all 30 reviewed EXWM global bindings
+remained installed and grabbed, and the exact factory passed both its runtime
+and visible-window checks.  The broader hand test did not close P3.4: GTK 3
 reported =Adwaita-dark= but rendered both its widget factory and Blueman light,
 while Emacs visibly added bars, decoration, fullscreen, and theme state after
 frame creation.  Isolated GTK 3 tests proved the corrected base is =Adwaita=
@@ -182,8 +189,12 @@ and native parsers, all 61 Emacs tests and connected backends, immutable Home
 failure controls, the strict repository gate, and the complete pinned
 Home/System gate.  Its realized Home result is
 =/gnu/store/dkasc56ngxmyg4gq453xx71h5xzaka3m-home= with the unchanged
-96-record profile.  Checkpoint publication, activation, fresh reboot, and
-Rafael's no-flash/GTK 3 visual check remain separate gates.
+96-record profile.  Checkpoint =e6492cc= is published and active as generation
+46 at =/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home=.  The fresh reboot
+passes all five frame invariants, and Rafael accepted normal GTK 3
+widget-factory/Blueman darkness plus keybinding behavior.  An attended reboot
+is still required to judge transient construction; remaining wallpaper,
+Picom, opacity, cursor/icon, contrast, and ultrawide checks also remain open.
 
 P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
 parked.  Generation deletion and store collection remain Phase 5 work behind
@@ -191,12 +202,11 @@ the restore-tested-backup gate.
 
 ** Ready
 
-- [ ] P3.4: publish the validated visual-correction checkpoint, fetch it into
-  the actual clean checkout, activate it through the guarded Home workflow,
-  then reboot.  Confirm all five EXWM frames begin fullscreen and undecorated
-  without visible bar/theme construction; confirm GTK 3 and Blueman are dark;
-  then finish fonts, icons, cursor, Picom, wallpaper, transparency, contrast,
-  and ultrawide hand tests.
+- [ ] P3.4: observe one attended startup and reject any transient titlebar,
+  scrollbar, decoration, or theme construction.  The published generation-46
+  correction already passes its five-frame, GTK 3/Blueman, and keybinding
+  gates.  Finish fonts, icons, cursor, Picom, wallpaper, transparency,
+  contrast, ultrawide, and adjacent SSH/EXWM hand tests.
 
 ** Completed
 

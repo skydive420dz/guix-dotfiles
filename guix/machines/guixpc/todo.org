@@ -610,7 +610,7 @@ CLOSED: [2026-07-17 Fri]
 * TODO P3.4 activation and real-display visual acceptance
 :PROPERTIES:
 :created: 2026-07-17
-:NEXT_GATE: publish the realized visual correction candidate
+:NEXT_GATE: attend one reboot, then finish the remaining visual surfaces
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-17-p3.4-theme-activation.org][2026-07-17 P3.4 GTK/GStreamer activation stops and corrections]].
@@ -694,11 +694,16 @@ CLOSED: [2026-07-17 Fri]
   96-record profile, corrected GTK 3 adapter, generated per-frame Emacs helper,
   complete immutable checker, five-frame fontset behavior test, and pinned
   Home/System gate pass.
-- [ ] Publish the checkpoint, fetch it into the actual clean checkout, run the
-  guarded Home activation, and retain generation 45 as rollback.
-- [ ] Reboot the activated correction.  Confirm all five EXWM frames are
-  fullscreen, undecorated, bar-free, generated-theme/font configured, and free
-  of visible construction; confirm GTK 3 widget factory and Blueman are dark.
+- [X] Publish correction =e6492cc=, fetch it into the actual clean checkout,
+  prove upstream equality, run guarded Home activation as generation 46 at
+  =mf9jzh...-home=, and retain generation 45 as rollback.
+- [X] Reboot the activated correction.  Confirm all five EXWM frames are
+  fullscreen, undecorated, bar-free, and generated-theme/font configured;
+  confirm the normal GTK 3 widget factory and Blueman are dark; confirm
+  keybindings behave normally; and terminate both probes.
+- [ ] Observe an attended reboot and confirm no transient titlebar, scrollbar,
+  decoration, fullscreen, or theme construction appears.  The SSH-initiated
+  generation-46 reboot did not provide visual startup evidence.
 - [ ] Inspect wallpaper/fit, Picom, opacity, cursor/icons, and the ultrawide
   result after the corrected reboot.
 - [ ] Complete real-display, contrast, and adjacent SSH/EXWM acceptance with

@@ -1,6 +1,6 @@
 #+title: P3.4 theme activation: runtime stops and visual corrections
 #+date: 2026-07-17
-#+status: active; generation 45 restarted; visual correction candidate built
+#+status: active; generation 46 corrected; attended startup and wider visual checks pending
 
 * Outcome so far
 
@@ -34,7 +34,8 @@ ownership, provenance, environment, and fresh-registry element gates:
 #+end_example
 
 That correction was then published as =d83feb8= and activated as Home
-generation 45.  The active immutable profile passes the same 96-record gate.
+generation 45.  That generation's immutable profile passed the same 96-record
+gate.
 A factory launched from a clean shell that sourced the generated Home profile
 remained alive for five seconds with no fatal GLib or GStreamer diagnostic.
 The X/EXWM session later restarted twice.  A fresh EXWM-launched exact-profile
@@ -55,8 +56,10 @@ published =191eff7= passes the complete source and pinned build gates as:
 /gnu/store/dkasc56ngxmyg4gq453xx71h5xzaka3m-home
 #+end_example
 
-It has not been published, activated, or reboot-tested.  Generation 45 remains
-the active rollback.
+That candidate-stage evidence preceded published correction =e6492cc= and
+generation 46.  The fresh structural frame, GTK 3/Blueman, and keybinding
+gates now pass; attended startup appearance and the wider visual surfaces
+remain open.
 
 * Published activation boundary
 
@@ -533,9 +536,60 @@ where expected: GTK 3 uses =Adwaita=, and the Emacs adapter contains the
 per-frame symbol-font path.  The broad profile's previously documented
 collision/import warnings remain nonfatal and unchanged.
 
-These are source, fixture, and build results.  No publication checkpoint, Home
-activation, process restart, reboot, or corrected visible result follows from
-them.
+These are source, fixture, and build results.  At this evidence boundary no
+publication checkpoint, Home activation, process restart, reboot, or corrected
+visible result follows from them.
+
+* Third correction publication, generation 46, and fresh-boot evidence
+
+Correction =e6492cc= was published and fetched into the actual clean checkout.
+Local =HEAD=, =origin/main=, and the live remote branch were equal at =0/0=.
+The 14-live-plus-one-retired preflight passed, and the guarded =ghr= path
+activated Home generation 46:
+
+#+begin_example
+/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home
+/gnu/store/2p4vnz9y2ndfsbary431rzlf41jhanrs-profile
+96 top-level records
+#+end_example
+
+Generation 45 remains available at
+=/gnu/store/9rmcgpl41riggidbkjz7ah3fj7a9wfky-home=.  The active immutable Home
+checker passes.  The active result differs from isolated
+=dkasc56...-home= only in the activation entry's embedded repository path:
+the isolated worktree path becomes the actual
+=/home/skydive420dz/Projects/guix-dotfiles= path.  Every other Home entry and
+the package profile are identical, so this is expected realization rather
+than configuration drift.
+
+The subsequent boot has ID
+=f32dfe9d-38d1-47f3-bf2d-4d10c16c9cbb= and began at
+=2026-07-18T06:54:14-04:00=.  Fresh Xinit, EXWM Emacs, and Picom processes
+started as PIDs 417, 478, and 509.  The live Emacs gate proves all five EXWM
+frames have:
+
+- =fullscreen= =fullboth= and =undecorated=t=;
+- zero menu/tool bars, nil vertical/horizontal scrollbars, and 10-pixel
+  fringes;
+- the generated Modus theme and expected font roles; and
+- the per-frame symbol-font marker.
+
+The complete live-plus-batch Emacs gate passes 61/61 ERT tests and connected
+Geiser/Guile and SLY/SBCL checks.  All 30 reviewed EXWM bindings, commands, and
+private grabs match; there is no =BadAccess= or grab error.  Rafael reported
+that keybindings behave normally.
+
+The exact matching GTK 3.24.51 widget factory was launched normally through
+fresh EXWM with no =GTK_THEME= or process-local configuration override.
+Rafael confirmed it is dark.  It was terminated before Blueman was launched
+normally from the active Home profile; Rafael confirmed Blueman is also dark.
+Both processes remained healthy with empty logs and were terminated, together
+with their hidden Emacs buffers.
+
+This closes the structural first-frame, GTK 3 identity, Blueman, and keybinding
+gates.  It does not close the human no-flash gate: Rafael initiated the reboot
+over SSH and could not observe the visible startup sequence.  No claim is made
+that transient construction is absent until an attended reboot confirms it.
 
 * Planning synchronization
 
@@ -616,21 +670,28 @@ still matched the exact =82cb3908= input.  That staged revision also passed
 31e4c43cbac076ebb055015b4eb3e255cd9e375d846189c526c99be16fac7e85
 #+end_example
 
+The generation-46 acceptance revision was staged only while the live agenda
+still matched that exact =31e4c43c= input.  It records publication, guarded
+activation, the fresh five-frame result, GTK 3/Blueman darkness, normal
+keybinding behavior, probe cleanup, and the unobserved startup boundary.  The
+agenda and all changed repository Org files passed =org-lint= before the
+hash-guarded copy.  The final live SHA256 is:
+
+#+begin_example
+8ad9c2922c3ba59578d8740d7118faf4e7e72e836ca053b3391c04a6c465c26b
+#+end_example
+
 * Remaining sequential gates
 
-1. Publish the source/evidence checkpoint, fetch it into the actual clean
-   checkout, and prove upstream equality.
-2. Run the guarded Home activation while retaining generation 45 as rollback.
-3. Reboot.  Prove all five EXWM frames are generated-theme/font configured,
-   fullscreen, undecorated, and bar-free, then hand-check that no transient
-   construction is visible.
-4. Launch exact-profile GTK 3 widget factory and Blueman normally; obtain
-   Rafael's dark-theme confirmation and terminate the probes.
-5. Complete wallpaper, Picom, transparency, cursor, icon, font, contrast, and
+1. Perform one attended reboot and hand-check that no transient titlebar,
+   scrollbar, decoration, fullscreen, or theme construction is visible.
+2. Complete wallpaper, Picom, transparency, cursor, icon, font, contrast, and
    ultrawide hand tests.
+3. Complete adjacent SSH/EXWM acceptance with Rafael.
 
 Generation 42 and its retained Kitty source remain the pre-theme rollback.
 Generation 43 is retained as exact evidence of the schema stop; generation 44
 is retained as exact evidence of the GStreamer stop; generation 45 is the
-active corrected-runtime but visually incomplete rollback.  No Qt, forced DPI,
-global toolkit scale, or complete visual acceptance is claimed.
+immediate corrected-runtime rollback; generation 46 is active.  No Qt, forced
+DPI, global toolkit scale, no-flash result, or complete visual acceptance is
+claimed.
