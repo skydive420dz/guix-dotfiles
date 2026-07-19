@@ -882,26 +882,60 @@ CLOSED: [2026-07-18 Sat]
 * BACKLOG P5.2b System generation deletion and custom-GRUB boundary
 :PROPERTIES:
 :created: 2026-07-18
-:blocked_by: separately reviewed fixture-tested exact-link or configuration-aware bootloader design
+:blocked_by: configuration-aware retained-only bootcfg generator, recovery transaction, fresh live manifest, publication, and manifest-specific authorization
 :END:
 
+- Evidence: [[file:../../../docs/audits/2026-07-18-p5.2b-custom-grub-safe-system-pruning-design.org][2026-07-18 P5.2b custom-GRUB-safe System-pruning design]].
 - Hold all 78 System candidates.
 - Do not run the installed supported System deletion command: after removing
   links it reconstructs GRUB from default bootloader configuration rather than
   GuixPC's declared EFI target, ultrawide theme/gfxmode, and keyboard layout.
-- Design and review a custom-GRUB-safe boundary separately.  P5.2a does not
-  authorize this stage.
+- Do not perform exact-link-only deletion: the 78 candidates account for 156
+  current GRUB path occurrences, and the current =bootcfg= does not root every
+  old System closure.
+- P5.2a and P5.2b-D1 do not authorize this live stage.
+
+** DONE P5.2b-D1 source and synthetic-fixture pruning primitive
+CLOSED: [2026-07-18 Sat]
+:PROPERTIES:
+:created: 2026-07-18
+:END:
+
+- [X] Review pinned Guix deletion/reinstall order and record the lost custom
+  bootloader fields, sequential-link failure boundary, and rejected generic
+  package-profile path.
+- [X] Add a SHA-bound =FIXTURE-ONLY= exact-tuple verifier and rollback
+  primitive that requires a sentinel, refuses root =/=, exposes no live
+  =apply=, and carries =authorization state NOT-GRANTED=.
+- [X] Pass staged apply/rollback, partial recovery, occupied-path, drift,
+  injected-failure, and signal-interruption fixtures without changing
+  synthetic Home/Pull, GRUB, =bootcfg=, pins, or store names.
+- [X] Correct =scripts/guix-generation-retention plan= so it keeps System
+  candidates visible but emits no System deletion command.
+- [X] Keep all live System generation links, GRUB, =bootcfg=, store objects,
+  profiles, EFI state, and boot state unchanged.
+- [ ] Build and fixture-test a retained-only bootcfg from GuixPC's real
+  bootloader declaration, accepted current generation boot parameters, and
+  exactly the seven retained old generations.
+- [ ] Add persistent recovery roots, durable phase journaling, profile
+  exclusion, and rollback fixtures for every link/GRUB/=bootcfg= phase.
+- [ ] Produce and publish a fresh immutable live manifest only after all
+  source/build/semantic gates pass, then obtain authorization naming its exact
+  hash.
 
 * BACKLOG P5.3 reviewed unreachable-store collection
 :PROPERTIES:
 :created: 2026-07-18
-:blocked_by: accepted post-P5.2 non-mutating estimate and separate explicit collection authorization
+:blocked_by: installed GRUB aligned with retained System links, accepted post-P5.2 non-mutating estimate, and separate explicit collection authorization
 :END:
 
 - Treat generation-link deletion and store-object collection as different
   destructive operations.
 - P5.2a ran no GC or dead/live query, removed no top-level store object, and
   reclaimed zero material store space.
+- P5.2b-D1 ran no deletion or collection.  Its read-only forward-reference
+  review shows that the current =bootcfg= is not recovery coverage for every
+  old System closure.
 - Review the exact post-deletion liveness boundary before separately
   authorizing any query with side effects or any collection.
 

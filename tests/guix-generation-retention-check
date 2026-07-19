@@ -264,8 +264,13 @@ plan_output=$(run_tool plan)
 printf '%s\n' "$plan_output" | grep -q '^System duplicate candidates: 1,6$'
 printf '%s\n' "$plan_output" | grep -q '^Home duplicate candidates: 3,7$'
 printf '%s\n' "$plan_output" | grep -q '^Pull duplicate candidates: none$'
-printf '%s\n' "$plan_output" | grep -q 'system delete-generations 1,6$'
+printf '%s\n' "$plan_output" |
+    grep -q '^System deletion held: candidates 1,6 require a configuration-aware GRUB design; no command emitted$'
 printf '%s\n' "$plan_output" | grep -q 'home delete-generations 3,7$'
+if printf '%s\n' "$plan_output" |
+    grep -Eq 'system[[:space:]]+delete-generations'; then
+    fail_check 'plan emitted an unsafe System deletion command'
+fi
 if printf '%s\n' "$plan_output" | grep -Eq 'delete-generations[[:space:]]*$|delete-generations[ =][0-9]+[dwm]'; then
     fail_check 'plan emitted a bare or duration-based deletion selector'
 fi

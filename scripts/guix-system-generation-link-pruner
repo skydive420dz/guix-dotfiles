@@ -1,0 +1,614 @@
+#!/bin/sh
+set -eu
+
+program=${0##*/}
+
+usage() {
+    printf 'usage: %s verify-manifest|fixture-apply|fixture-rollback MANIFEST FIXTURE-ROOT\n' \
+        "$program" >&2
+    exit 64
+}
+
+fail() {
+    printf '%s: FAIL: %s\n' "$program" "$*" >&2
+    exit 1
+}
+
+[ "$#" -eq 3 ] || usage
+action=$1
+manifest=$2
+root=$3
+case $action in
+    verify-manifest | fixture-apply | fixture-rollback) ;;
+    *) usage ;;
+esac
+
+case $root in
+    /*) ;;
+    *) fail "fixture root must be absolute: $root" ;;
+esac
+[ -d "$root" ] || fail "fixture root is not a directory: $root"
+root=$(CDPATH='' cd "$root" && pwd -P) ||
+    fail "cannot canonicalize fixture root: $root"
+[ "$root" != / ] || fail "live root is forbidden in this design checkpoint"
+[ -f "$root/.p52b-system-prune-fixture" ] ||
+    fail "fixture sentinel is missing"
+[ "$(sed -n '1p' "$root/.p52b-system-prune-fixture")" = \
+    "p5.2b-system-prune-fixture/v1" ] ||
+    fail "fixture sentinel is invalid"
+[ -r "$manifest" ] || fail "manifest is not readable: $manifest"
+
+hash_file() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | awk '{ print $1 }'
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | awk '{ print $1 }'
+    else
+        fail "sha256sum or shasum is required"
+    fi
+}
+
+manifest_sha=${P52B_MANIFEST_SHA:-}
+[ -n "$manifest_sha" ] ||
+    fail "P52B_MANIFEST_SHA must bind the synthetic fixture manifest"
+[ "$(hash_file "$manifest")" = "$manifest_sha" ] ||
+    fail "manifest SHA256 mismatch"
+
+work=$(mktemp -d "${TMPDIR:-/tmp}/p52b-system-pruner.XXXXXX")
+restore_on_exit=0
+quarantine=
+
+cleanup() {
+    cleanup_status=$?
+    trap - 0 HUP INT TERM
+    if [ "$restore_on_exit" -eq 1 ]; then
+        if ! restore_selected; then
+            cleanup_status=1
+        fi
+    fi
+    rm -rf -- "$work"
+    exit "$cleanup_status"
+}
+trap cleanup 0
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+tab=$(printf '\t')
+retain_rows=$work/retain.tsv
+delete_rows=$work/delete.tsv
+expected_pre=$work/expected-pre.tsv
+expected_post=$work/expected-post.tsv
+actual=$work/actual.tsv
+store_names=$work/store-names.txt
+
+if ! awk -F "$tab" '
+    BEGIN { valid = 1 }
+    $1 == "schema" && NF == 2 {
+        schemas++
+        valid = valid && ($2 == "p5.2b-system-link-pruner/v1")
+        next
+    }
+    $1 == "mode" && NF == 2 {
+        modes++
+        valid = valid && ($2 == "fixture-only")
+        next
+    }
+    $1 == "profile" && NF == 6 {
+        profiles++
+        valid = valid && ($2 == "system" &&
+                          $3 ~ /^[0-9]+$/ && $4 ~ /^[0-9]+$/ &&
+                          $5 ~ /^[0-9]+$/ && $6 ~ /^[0-9]+$/)
+        next
+    }
+    $1 == "pointer" && NF == 5 {
+        pointers[$2]++
+        valid = valid && ($2 == "system-profile" ||
+                          $2 == "runtime-current" ||
+                          $2 == "runtime-booted")
+        next
+    }
+    $1 == "grub" && NF == 6 {
+        grubs++
+        valid = valid && ($3 ~ /^[0-9a-f]{64}$/ &&
+                          $4 ~ /^[0-9]+$/ && $5 ~ /^[0-9]+$/ &&
+                          $6 ~ /^[0-9]+$/)
+        next
+    }
+    $1 == "bootcfg" && NF == 4 { bootcfgs++; next }
+    $1 == "pins" && NF == 3 {
+        pins++
+        valid = valid && ($3 ~ /^[0-9a-f]{64}$/)
+        next
+    }
+    $1 == "store-names" && NF == 3 {
+        stores++
+        valid = valid && ($2 ~ /^[0-9]+$/ && $3 ~ /^[0-9a-f]{64}$/)
+        next
+    }
+    ($1 == "retain" || $1 == "delete") && NF == 9 {
+        tuples++
+        valid = valid && ($2 == "system" && $3 ~ /^[0-9]+$/ &&
+                          $8 ~ /^[0-9]+$/ && $9 != "")
+        next
+    }
+    $1 == "authorization" && NF == 3 {
+        authorizations++
+        valid = valid && ($2 == "state" && $3 == "NOT-GRANTED")
+        next
+    }
+    $1 == "status" && NF == 2 {
+        statuses++
+        valid = valid && ($2 == "FIXTURE-ONLY")
+        next
+    }
+    { valid = 0 }
+    END {
+        exit !(valid && schemas == 1 && modes == 1 && profiles == 1 &&
+               pointers["system-profile"] == 1 &&
+               pointers["runtime-current"] == 1 &&
+               pointers["runtime-booted"] == 1 &&
+               grubs == 1 && bootcfgs == 1 && pins == 1 && stores == 1 &&
+               tuples > 1 && authorizations == 1 && statuses == 1)
+    }
+' "$manifest"; then
+    fail "manifest schema, row shape, or hard boundary is invalid"
+fi
+
+awk -F "$tab" '$1 == "retain" { print }' "$manifest" >"$retain_rows"
+awk -F "$tab" '$1 == "delete" { print }' "$manifest" >"$delete_rows"
+
+before=$(awk -F "$tab" '$1 == "profile" { print $3 }' "$manifest")
+selected=$(awk -F "$tab" '$1 == "profile" { print $4 }' "$manifest")
+retained=$(awk -F "$tab" '$1 == "profile" { print $5 }' "$manifest")
+after=$(awk -F "$tab" '$1 == "profile" { print $6 }' "$manifest")
+[ "$before" -eq "$((selected + retained))" ] ||
+    fail "profile before count does not equal selected plus retained"
+[ "$after" -eq "$retained" ] ||
+    fail "profile after count does not equal retained"
+[ "$(wc -l <"$delete_rows" | tr -d ' ')" -eq "$selected" ] ||
+    fail "selected tuple count mismatch"
+[ "$(wc -l <"$retain_rows" | tr -d ' ')" -eq "$retained" ] ||
+    fail "retained tuple count mismatch"
+
+if ! awk -F "$tab" '
+    {
+        key = $2 FS $3
+        if (seen[key]++) bad = 1
+        if ($1 == previous && ($3 + 0) <= previous_generation) bad = 1
+        previous = $1
+        previous_generation = $3 + 0
+    }
+    END { exit bad }
+' "$retain_rows" "$delete_rows"; then
+    fail "tuple generations are duplicated or not strictly ordered"
+fi
+
+logical_path() {
+    lp_path=$1
+    case $lp_path in
+        /*) ;;
+        *) fail "manifest path is not absolute: $lp_path" ;;
+    esac
+    case /${lp_path#/}/ in
+        *//* | */./* | */../*)
+            fail "manifest path is not normalized: $lp_path"
+            ;;
+    esac
+    printf '%s%s\n' "$root" "$lp_path"
+}
+
+canonical_logical() {
+    cl_path=$1
+    [ -e "$cl_path" ] || return 1
+    if command -v realpath >/dev/null 2>&1; then
+        cl_resolved=$(realpath "$cl_path") || return 1
+    else
+        cl_resolved=$(readlink -f "$cl_path") || return 1
+    fi
+    case $cl_resolved in
+        "$root"/*) printf '/%s\n' "${cl_resolved#"$root"/}" ;;
+        *) return 1 ;;
+    esac
+}
+
+validate_store_target() {
+    vst_target=$1
+    case $vst_target in
+        /gnu/store/*-system | /gnu/store/*-grub.cfg) ;;
+        *) fail "unexpected store target: $vst_target" ;;
+    esac
+    vst_name=${vst_target#/gnu/store/}
+    case $vst_name in
+        */* | '') fail "invalid store target: $vst_target" ;;
+    esac
+    vst_hash=${vst_name%%-*}
+    case $vst_hash in
+        *[!0-9a-z]*) fail "invalid store hash: $vst_target" ;;
+    esac
+    [ "${#vst_hash}" -eq 32 ] ||
+        fail "invalid store hash length: $vst_target"
+}
+
+validate_tuple_manifest() {
+    vtm_seen=$work/tuple-seen.tsv
+    : >"$vtm_seen"
+    while IFS="$tab" read -r vtm_record vtm_kind vtm_generation \
+        vtm_link vtm_raw vtm_canonical vtm_class vtm_grub vtm_reason; do
+        : "$vtm_record" "$vtm_kind" "$vtm_raw" "$vtm_class" "$vtm_grub" \
+            "$vtm_reason"
+        [ "$vtm_link" = \
+            "/var/guix/profiles/system-$vtm_generation-link" ] ||
+            fail "tuple path/generation mismatch: $vtm_link"
+        validate_store_target "$vtm_canonical"
+        case $vtm_canonical in
+            /gnu/store/*-system) ;;
+            *) fail "unexpected System tuple target: $vtm_canonical" ;;
+        esac
+        printf '%s\t%s\n' "$vtm_generation" "$vtm_link" >>"$vtm_seen"
+    done <"$retain_rows"
+    while IFS="$tab" read -r vtm_record vtm_kind vtm_generation \
+        vtm_link vtm_raw vtm_canonical vtm_class vtm_grub vtm_reason; do
+        : "$vtm_record" "$vtm_kind" "$vtm_raw" "$vtm_class" "$vtm_grub" \
+            "$vtm_reason"
+        [ "$vtm_link" = \
+            "/var/guix/profiles/system-$vtm_generation-link" ] ||
+            fail "tuple path/generation mismatch: $vtm_link"
+        validate_store_target "$vtm_canonical"
+        case $vtm_canonical in
+            /gnu/store/*-system) ;;
+            *) fail "unexpected System tuple target: $vtm_canonical" ;;
+        esac
+        printf '%s\t%s\n' "$vtm_generation" "$vtm_link" >>"$vtm_seen"
+    done <"$delete_rows"
+    if ! awk -F "$tab" 'seen[$1 FS $2]++ { exit 1 }' "$vtm_seen"; then
+        fail "retain/delete tuples overlap"
+    fi
+}
+validate_tuple_manifest
+
+if ! awk -F "$tab" '
+    $1 == "retain" {
+        retained[$6] = 1
+        next
+    }
+    $1 == "delete" {
+        generation[NR] = $3
+        target[NR] = $6
+        class[NR] = $7
+        delete_row[NR] = 1
+    }
+    END {
+        for (row in delete_row) {
+            if (class[row] == "duplicate-retained-closure") {
+                if (!retained[target[row]]) bad = 1
+            } else if (class[row] == "unretained-closure") {
+                if (retained[target[row]]) bad = 1
+            } else {
+                bad = 1
+            }
+        }
+        exit bad
+    }
+' "$manifest"; then
+    fail "delete tuple closure classification is inconsistent"
+fi
+
+profile_dir=$(logical_path /var/guix/profiles)
+[ -d "$profile_dir" ] || fail "fixture System profile directory is missing"
+profile_dir_resolved=$(CDPATH='' cd "$profile_dir" && pwd -P) ||
+    fail "cannot canonicalize fixture System profile directory"
+[ "$profile_dir_resolved" = "$profile_dir" ] ||
+    fail "fixture System profile directory uses a symlinked or escaped ancestor"
+quarantine_path=$profile_dir/.p52b-quarantine.$manifest_sha
+
+snapshot_inventory() {
+    si_output=$1
+    si_unsorted=$work/inventory-unsorted.tsv
+    : >"$si_unsorted"
+    for si_link in "$profile_dir"/system-[0-9]*-link; do
+        [ -L "$si_link" ] || continue
+        si_name=${si_link##*/}
+        si_generation=${si_name#system-}
+        si_generation=${si_generation%-link}
+        case $si_generation in
+            '' | *[!0-9]*) fail "invalid System generation link: $si_link" ;;
+        esac
+        si_raw=$(readlink "$si_link") ||
+            fail "cannot read System generation $si_generation"
+        si_canonical=$(canonical_logical "$si_link") ||
+            fail "dangling or out-of-fixture System generation $si_generation"
+        printf '%s\t%s\t%s\t%s\n' \
+            "$si_generation" \
+            "/var/guix/profiles/$si_name" \
+            "$si_raw" "$si_canonical" >>"$si_unsorted"
+    done
+    sort -t "$tab" -k1,1n "$si_unsorted" >"$si_output"
+}
+
+{
+    awk -F "$tab" '{ print $3 "\t" $4 "\t" $5 "\t" $6 }' "$retain_rows"
+    awk -F "$tab" '{ print $3 "\t" $4 "\t" $5 "\t" $6 }' "$delete_rows"
+} | sort -t "$tab" -k1,1n >"$expected_pre"
+awk -F "$tab" '{ print $3 "\t" $4 "\t" $5 "\t" $6 }' \
+    "$retain_rows" | sort -t "$tab" -k1,1n >"$expected_post"
+
+validate_pointer() {
+    vp_name=$1
+    vp_row=$(awk -F "$tab" -v name="$vp_name" '
+        $1 == "pointer" && $2 == name { print $3 "\t" $4 "\t" $5 }
+    ' "$manifest")
+    IFS="$tab" read -r vp_logical vp_expected_raw vp_expected_canonical <<EOF
+$vp_row
+EOF
+    vp_path=$(logical_path "$vp_logical")
+    [ -L "$vp_path" ] || fail "pointer is missing: $vp_logical"
+    vp_raw=$(readlink "$vp_path") || fail "cannot read pointer: $vp_logical"
+    [ "$vp_raw" = "$vp_expected_raw" ] ||
+        fail "pointer raw target drift: $vp_logical"
+    vp_canonical=$(canonical_logical "$vp_path") ||
+        fail "pointer is dangling or out of fixture: $vp_logical"
+    [ "$vp_canonical" = "$vp_expected_canonical" ] ||
+        fail "pointer canonical target drift: $vp_logical"
+}
+
+count_occurrences() {
+    co_file=$1
+    co_needle=$2
+    awk -v needle="$co_needle" '
+        {
+            rest = $0
+            while ((position = index(rest, needle)) > 0) {
+                count++
+                rest = substr(rest, position + length(needle))
+            }
+        }
+        END { print count + 0 }
+    ' "$co_file"
+}
+
+validate_fixed_state() {
+    validate_pointer system-profile
+    validate_pointer runtime-current
+    validate_pointer runtime-booted
+
+    vfs_system_target=$(awk -F "$tab" '
+        $1 == "pointer" && $2 == "system-profile" { print $5 }
+    ' "$manifest")
+    vfs_runtime_target=$(awk -F "$tab" '
+        $1 == "pointer" && $2 == "runtime-current" { print $5 }
+    ' "$manifest")
+    [ "$vfs_system_target" = "$vfs_runtime_target" ] ||
+        fail "System profile and runtime-current targets differ"
+    awk -F "$tab" -v target="$vfs_system_target" '
+        $1 == "retain" && $6 == target { found = 1 }
+        END { exit !found }
+    ' "$manifest" || fail "current System target has no retained tuple"
+    vfs_booted_target=$(awk -F "$tab" '
+        $1 == "pointer" && $2 == "runtime-booted" { print $5 }
+    ' "$manifest")
+    awk -F "$tab" -v target="$vfs_booted_target" '
+        $1 == "retain" && $6 == target { found = 1 }
+        END { exit !found }
+    ' "$manifest" || fail "booted System target has no retained tuple"
+
+    vfs_grub_logical=$(awk -F "$tab" '$1 == "grub" { print $2 }' "$manifest")
+    vfs_grub=$(logical_path "$vfs_grub_logical")
+    vfs_grub_sha=$(awk -F "$tab" '$1 == "grub" { print $3 }' "$manifest")
+    [ "$(hash_file "$vfs_grub")" = "$vfs_grub_sha" ] ||
+        fail "GRUB hash drift"
+    vfs_expected_total=$(awk -F "$tab" '$1 == "grub" { print $4 }' "$manifest")
+    vfs_expected_selected=$(awk -F "$tab" '$1 == "grub" { print $5 }' "$manifest")
+    vfs_expected_retained=$(awk -F "$tab" '$1 == "grub" { print $6 }' "$manifest")
+    vfs_selected=0
+    while IFS="$tab" read -r vfs_record vfs_kind vfs_generation \
+        vfs_link vfs_raw vfs_canonical vfs_class vfs_expected_link_count \
+        vfs_reason; do
+        : "$vfs_record" "$vfs_kind" "$vfs_generation" "$vfs_raw" \
+            "$vfs_canonical" "$vfs_class" "$vfs_reason"
+        vfs_count=$(count_occurrences "$vfs_grub" "$vfs_link")
+        [ "$vfs_count" -eq "$vfs_expected_link_count" ] ||
+            fail "selected generation $vfs_generation GRUB-reference count drift"
+        vfs_selected=$((vfs_selected + vfs_count))
+    done <"$delete_rows"
+    vfs_retained=0
+    while IFS="$tab" read -r vfs_record vfs_kind vfs_generation \
+        vfs_link vfs_raw vfs_canonical vfs_class vfs_expected_link_count \
+        vfs_reason; do
+        : "$vfs_record" "$vfs_kind" "$vfs_generation" "$vfs_raw" \
+            "$vfs_canonical" "$vfs_class" "$vfs_reason"
+        vfs_count=$(count_occurrences "$vfs_grub" "$vfs_link")
+        [ "$vfs_count" -eq "$vfs_expected_link_count" ] ||
+            fail "retained generation $vfs_generation GRUB-reference count drift"
+        vfs_retained=$((vfs_retained + vfs_count))
+    done <"$retain_rows"
+    [ "$vfs_selected" -eq "$vfs_expected_selected" ] ||
+        fail "selected GRUB-reference count drift"
+    [ "$vfs_retained" -eq "$vfs_expected_retained" ] ||
+        fail "retained GRUB-reference count drift"
+    [ "$((vfs_selected + vfs_retained))" -eq "$vfs_expected_total" ] ||
+        fail "total GRUB-reference count drift"
+
+    vfs_bootcfg_row=$(awk -F "$tab" '$1 == "bootcfg" {
+        print $2 "\t" $3 "\t" $4
+    }' "$manifest")
+    IFS="$tab" read -r vfs_bootcfg_logical vfs_bootcfg_raw \
+        vfs_bootcfg_canonical <<EOF
+$vfs_bootcfg_row
+EOF
+    vfs_bootcfg=$(logical_path "$vfs_bootcfg_logical")
+    [ -L "$vfs_bootcfg" ] || fail "bootcfg root is missing"
+    [ "$(readlink "$vfs_bootcfg")" = "$vfs_bootcfg_raw" ] ||
+        fail "bootcfg raw target drift"
+    validate_store_target "$vfs_bootcfg_canonical"
+    case $vfs_bootcfg_canonical in
+        /gnu/store/*-grub.cfg) ;;
+        *) fail "unexpected bootcfg store target: $vfs_bootcfg_canonical" ;;
+    esac
+    [ "$(canonical_logical "$vfs_bootcfg")" = "$vfs_bootcfg_canonical" ] ||
+        fail "bootcfg canonical target drift"
+
+    vfs_pins_logical=$(awk -F "$tab" '$1 == "pins" { print $2 }' "$manifest")
+    vfs_pins_sha=$(awk -F "$tab" '$1 == "pins" { print $3 }' "$manifest")
+    [ "$(hash_file "$(logical_path "$vfs_pins_logical")")" = "$vfs_pins_sha" ] ||
+        fail "pin-manifest hash drift"
+
+    find "$(logical_path /gnu/store)" -mindepth 1 -maxdepth 1 \
+        -exec basename {} \; | LC_ALL=C sort >"$store_names"
+    vfs_store_count=$(awk 'END { print NR + 0 }' "$store_names")
+    vfs_expected_store_count=$(awk -F "$tab" '
+        $1 == "store-names" { print $2 }
+    ' "$manifest")
+    [ "$vfs_store_count" -eq "$vfs_expected_store_count" ] ||
+        fail "top-level store-name count drift"
+    vfs_store_sha=$(awk -F "$tab" '$1 == "store-names" { print $3 }' "$manifest")
+    [ "$(hash_file "$store_names")" = "$vfs_store_sha" ] ||
+        fail "top-level store-name hash drift"
+}
+
+classify_inventory() {
+    snapshot_inventory "$actual"
+    if cmp -s "$actual" "$expected_pre"; then
+        printf '%s\n' PREPARED
+    elif cmp -s "$actual" "$expected_post"; then
+        printf '%s\n' APPLIED
+    else
+        printf '%s\n' PARTIAL
+    fi
+}
+
+classify_state() {
+    cs_inventory=$(classify_inventory)
+    if [ -e "$quarantine_path" ] || [ -L "$quarantine_path" ]; then
+        if [ ! -d "$quarantine_path" ] || [ -L "$quarantine_path" ]; then
+            fail "fixture quarantine is not a real directory"
+        fi
+        printf '%s\n' RECOVERY_REQUIRED
+    else
+        printf '%s\n' "$cs_inventory"
+    fi
+}
+
+validate_tuple_now() {
+    vtn_link=$1
+    vtn_raw=$2
+    vtn_canonical=$3
+    vtn_path=$(logical_path "$vtn_link")
+    [ -L "$vtn_path" ] || fail "selected tuple is absent: $vtn_link"
+    [ "$(readlink "$vtn_path")" = "$vtn_raw" ] ||
+        fail "selected tuple raw target drift: $vtn_link"
+    [ "$(canonical_logical "$vtn_path")" = "$vtn_canonical" ] ||
+        fail "selected tuple canonical target drift: $vtn_link"
+}
+
+restore_selected() {
+    rs_failed=0
+    while IFS="$tab" read -r rs_record rs_kind rs_generation \
+        rs_link rs_raw rs_canonical rs_class rs_grub rs_reason; do
+        : "$rs_record" "$rs_kind" "$rs_generation" "$rs_class" "$rs_grub" \
+            "$rs_reason"
+        rs_live=$(logical_path "$rs_link")
+        rs_saved=$quarantine/${rs_live##*/}
+        if [ -e "$rs_live" ] || [ -L "$rs_live" ]; then
+            if [ ! -L "$rs_live" ] ||
+                [ "$(readlink "$rs_live")" != "$rs_raw" ]; then
+                printf '%s: FAIL: rollback path is occupied: %s\n' \
+                    "$program" "$rs_link" >&2
+                rs_failed=1
+            fi
+        elif [ -L "$rs_saved" ]; then
+            if [ "$(readlink "$rs_saved")" != "$rs_raw" ]; then
+                printf '%s: FAIL: quarantined tuple raw target drift: %s\n' \
+                    "$program" "$rs_link" >&2
+                rs_failed=1
+            elif [ ! -e "$(logical_path "$rs_canonical")" ]; then
+                printf '%s: FAIL: rollback target is missing: %s\n' \
+                    "$program" "$rs_canonical" >&2
+                rs_failed=1
+            else
+                mv "$rs_saved" "$rs_live" || rs_failed=1
+            fi
+        elif [ -e "$(logical_path "$rs_canonical")" ]; then
+            ln -s "$rs_raw" "$rs_live" || rs_failed=1
+        else
+            printf '%s: FAIL: rollback target is missing: %s\n' \
+                "$program" "$rs_canonical" >&2
+            rs_failed=1
+        fi
+    done <"$delete_rows"
+    if [ -n "$quarantine" ] && [ -d "$quarantine" ]; then
+        rmdir "$quarantine" 2>/dev/null || rs_failed=1
+    fi
+    [ "$rs_failed" -eq 0 ] || return 1
+    validate_fixed_state || return 1
+    [ "$(classify_state)" = PREPARED ] || return 1
+}
+
+validate_fixed_state
+state=$(classify_state)
+
+case $action in
+    verify-manifest)
+        printf '%s: PASS: manifest=%s state=%s mode=fixture-only\n' \
+            "$program" "$manifest_sha" "$state"
+        ;;
+    fixture-apply)
+        [ "$state" = PREPARED ] ||
+            fail "fixture apply requires PREPARED state, observed $state"
+        quarantine=$quarantine_path
+        if [ -e "$quarantine" ] || [ -L "$quarantine" ]; then
+            fail "fixture quarantine already exists"
+        fi
+        mkdir "$quarantine"
+        restore_on_exit=1
+        move_count=0
+        while IFS="$tab" read -r fa_record fa_kind fa_generation \
+            fa_link fa_raw fa_canonical fa_class fa_grub fa_reason; do
+            : "$fa_record" "$fa_kind" "$fa_generation" "$fa_class" "$fa_grub" \
+                "$fa_reason"
+            validate_tuple_now "$fa_link" "$fa_raw" "$fa_canonical"
+            fa_live=$(logical_path "$fa_link")
+            mv "$fa_live" "$quarantine/${fa_live##*/}"
+            move_count=$((move_count + 1))
+            if [ "${P52B_FIXTURE_SIGNAL_AFTER_MOVE:-0}" -eq "$move_count" ]; then
+                kill -TERM "$$"
+            fi
+            if [ "${P52B_FIXTURE_FAIL_AFTER_MOVE:-0}" -eq "$move_count" ]; then
+                fail "injected failure after move $move_count"
+            fi
+        done <"$delete_rows"
+        validate_fixed_state
+        [ "$(classify_inventory)" = APPLIED ] ||
+            fail "fixture did not reach APPLIED state after staging"
+        delete_count=0
+        for fa_saved in "$quarantine"/system-[0-9]*-link; do
+            [ -L "$fa_saved" ] || continue
+            unlink "$fa_saved"
+            delete_count=$((delete_count + 1))
+            if [ "${P52B_FIXTURE_SIGNAL_AFTER_DELETE:-0}" -eq "$delete_count" ]; then
+                kill -TERM "$$"
+            fi
+            if [ "${P52B_FIXTURE_FAIL_AFTER_DELETE:-0}" -eq "$delete_count" ]; then
+                fail "injected failure after delete $delete_count"
+            fi
+        done
+        rmdir "$quarantine"
+        restore_on_exit=0
+        quarantine=
+        validate_fixed_state
+        [ "$(classify_state)" = APPLIED ] ||
+            fail "fixture did not remain APPLIED after commit"
+        printf '%s: PASS: selected=%s retained=%s before=%s after=%s mode=fixture-only\n' \
+            "$program" "$selected" "$retained" "$before" "$after"
+        ;;
+    fixture-rollback)
+        [ "$state" != PREPARED ] ||
+            fail "fixture rollback refuses already PREPARED state"
+        quarantine=$quarantine_path
+        restore_selected ||
+            fail "fixture rollback could not restore exact selected tuples"
+        quarantine=
+        printf '%s: PASS: restored=%s state=PREPARED mode=fixture-only\n' \
+            "$program" "$selected"
+        ;;
+esac

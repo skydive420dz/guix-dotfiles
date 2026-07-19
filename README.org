@@ -130,7 +130,20 @@ generation 47.  System/Home/Pull now have =86/17/5= links and =78/0/0=
 candidates.  All retained tuples, all 78 held System candidates, GRUB,
 =bootcfg=, pins, current/booted pointers, and top-level store names remain
 exact.  No GC or dead/live query ran, no store object was removed, and material
-reclaim is zero.  P5.2b and P5.3 remain separately held.
+reclaim is zero.
+
+P5.2b-D1 now completes only the source and synthetic-fixture design boundary.
+Pinned-source review proves the supported System action deletes links before
+rebuilding GRUB from default bootloader configuration.  Exact-link-only
+deletion is also insufficient: all 78 candidates appear in the current menu,
+twice each, so it would leave 156 stale occurrences; the current =bootcfg= does
+not root every old System closure.  The new exact-tuple/rollback primitive
+hard-refuses root =/=, exposes no live =apply=, and carries
+=authorization state NOT-GRANTED=.  The retention planner no longer prints a
+System deletion command.  Live P5.2b remains held until a configuration-aware
+retained-only GRUB configuration can be built from the real GuixPC bootloader
+declaration and the accepted generation-87 boot parameters.  P5.3 remains
+separately held.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -205,6 +218,11 @@ publication/authorization/postflight boundaries.  It records no deletion.
 [[file:docs/audits/2026-07-18-p5.2a-home-generation-deletion.org][The P5.2a Home generation-deletion record]] owns the later manifest-scoped
 authorization, exact =47 -> 17= link transition, immutable postflight estimate,
 unchanged GRUB/store boundaries, and explicit P5.2b/P5.3 stop.
+[[file:docs/audits/2026-07-18-p5.2b-custom-grub-safe-system-pruning-design.org][The P5.2b custom-GRUB-safe System-pruning design]] owns the pinned Guix
+semantics, 156-occurrence stale-menu finding, root-refusing synthetic
+exact-tuple/rollback primitive, planner correction, rejected paths, and the
+configuration-aware retained-only GRUB transaction required before live
+authorization.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -322,19 +340,35 @@ decision.  P5.1 is complete at published checkpoint =93619e9=.  Phase 5 is
 back in =BACKLOG= after the completed P5.2a Home canary.  The canary removed
 exactly its 30 reviewed Home links and passed the full =86/17/5= postflight
 without GC, store-object removal, activation, or reboot.  P5.2 remains
-=BACKLOG= because P5.2b System deletion is held behind a separate design: the
-supported command rewrites GRUB from defaults.  P5.3 collection remains
-separate and unpromoted; no further cleanup is authorized.
+=BACKLOG= because live P5.2b System deletion remains held.  P5.2b-D1 completes
+only a root-refusing source/fixture primitive and records why neither the
+supported command nor exact-link-only deletion is acceptable.  A later
+configuration-aware retained-only GRUB stage, recovery transaction, fresh live
+manifest, publication, and manifest-specific authorization are still required.
+P5.3 collection remains separate and unpromoted; no further cleanup is
+authorized.
 
 ** Ready
 
 No slice is currently ready for unattended implementation.  P5.2a is
-complete.  P5.2b is not ready until its System/GRUB boundary is designed.
+complete.  P5.2b-D1 is complete at the source and synthetic-fixture boundary;
+live P5.2b is not ready until its configuration-aware bootcfg generator and
+recovery transaction pass their own review gates.
 P4.O1 private Org sync/history remains a selectable non-destructive successor.
 P5.3 is not ready, P5.S1 storage reorganization remains parked, and
 backup/restore implementation is parked as P4.3.
 
 ** Completed
+
+- [X] P5.2b-D1: custom-GRUB-safe System-pruning design primitive
+  Pinned-source review proves the supported action deletes first and rebuilds
+  GRUB from defaults.  The current menu contains every held candidate twice,
+  so link-only deletion would leave 156 stale occurrences, while the current
+  =bootcfg= does not root every old closure.  A SHA-bound synthetic manifest,
+  root-refusing exact-tuple verifier, staged rollback primitive, and failure/
+  signal/partial-state fixture pass; =plan= emits no System deletion command.
+  No live manifest or =apply= exists, no live state changed, and all 78 System
+  candidates remain held.
 
 - [X] P5.2a: reviewed Home generation-deletion canary
   Published plan checkpoint =450f396= and manifest-scoped authorization bound
@@ -2197,9 +2231,24 @@ result is
 was removed, and material reclaim is zero.  The official System deletion
 action remains held because its post-deletion
 =reinstall-bootloader= path reconstructs default bootloader configuration
-instead of consuming GuixPC's declared EFI/ultrawide/keymap fields.  No
-deletion command is exposed as an unattended action; P5.2b and P5.3 require
-separate review and authorization.
+instead of consuming GuixPC's declared EFI/ultrawide/keymap fields.
+
+P5.2b-D1 removes that unsafe command from =plan= and adds
+=scripts/guix-system-generation-link-pruner=.  The primitive verifies exact
+tuples and rollback only beneath a sentinel-marked synthetic root; it
+hard-refuses root =/=, has no live =apply=, and requires a SHA-bound
+=FIXTURE-ONLY= manifest whose authorization is =NOT-GRANTED=.  Its focused
+fixture covers staged apply, exact rollback, partial recovery, occupied paths,
+drift, injected failure, and signal interruption.
+
+The live menu contains all 78 candidates twice, so deleting links without a
+new menu would leave 156 stale path occurrences.  The current =bootcfg= has
+only six direct forward references and does not retain every old System
+closure.  Live P5.2b therefore still requires a prebuilt retained-only GRUB
+configuration using GuixPC's real bootloader declaration and accepted
+generation-87 boot parameters, persistent recovery roots, a durable journal,
+full fixtures, a fresh immutable live manifest, publication, and
+manifest-specific attended authorization.  P5.3 remains separate and held.
 
 * Live symlinks
 

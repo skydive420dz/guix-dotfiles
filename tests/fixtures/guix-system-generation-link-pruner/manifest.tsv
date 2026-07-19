@@ -1,0 +1,16 @@
+schema	p5.2b-system-link-pruner/v1
+mode	fixture-only
+profile	system	4	2	2	2
+pointer	system-profile	/var/guix/profiles/system	system-4-link	/gnu/store/dddddddddddddddddddddddddddddddd-system
+pointer	runtime-current	/run/current-system	../gnu/store/dddddddddddddddddddddddddddddddd-system	/gnu/store/dddddddddddddddddddddddddddddddd-system
+pointer	runtime-booted	/run/booted-system	../gnu/store/dddddddddddddddddddddddddddddddd-system	/gnu/store/dddddddddddddddddddddddddddddddd-system
+grub	/boot/grub/grub.cfg	f709c697fcabe191796777a49ad16ef91b2b1eac4c61f207234f408745ea66a0	6	4	2
+bootcfg	/var/guix/gcroots/bootcfg	../../../gnu/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-grub.cfg	/gnu/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-grub.cfg
+pins	/repo/generation-pins.tsv	73a4dd35cc4640a7a2e31cf5af2bf2417b11e7debcf7794db49fb697035ba3c3
+store-names	7	2ed48168921b4fbd07ed0598c0f35e186676c061ed7d348128b713ece83d43c9
+retain	system	3	/var/guix/profiles/system-3-link	../../../gnu/store/cccccccccccccccccccccccccccccccc-system	/gnu/store/cccccccccccccccccccccccccccccccc-system	pin-preferred-rollback	2	fixture-retained
+retain	system	4	/var/guix/profiles/system-4-link	../../../gnu/store/dddddddddddddddddddddddddddddddd-system	/gnu/store/dddddddddddddddddddddddddddddddd-system	current,booted	0	fixture-retained
+delete	system	1	/var/guix/profiles/system-1-link	../../../gnu/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-system	/gnu/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-system	unretained-closure	2	fixture-selected
+delete	system	2	/var/guix/profiles/system-2-link	../../../gnu/store/cccccccccccccccccccccccccccccccc-system	/gnu/store/cccccccccccccccccccccccccccccccc-system	duplicate-retained-closure	2	fixture-selected
+authorization	state	NOT-GRANTED
+status	FIXTURE-ONLY

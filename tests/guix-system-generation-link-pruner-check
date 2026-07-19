@@ -1,0 +1,409 @@
+#!/bin/sh
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+pruner=$repo/scripts/guix-system-generation-link-pruner
+fixture_manifest=$repo/tests/fixtures/guix-system-generation-link-pruner/manifest.tsv
+sandbox=$(mktemp -d "${TMPDIR:-/tmp}/p52b-system-pruner-check.XXXXXX")
+trap 'rm -rf -- "$sandbox"' 0 HUP INT TERM
+
+fail() {
+    printf 'guix-system-generation-link-pruner-check: FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+trace() {
+    [ "${P52B_CHECK_TRACE:-0}" -eq 0 ] ||
+        printf 'guix-system-generation-link-pruner-check: TRACE: %s\n' "$*" >&2
+}
+
+hash_file() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | awk '{ print $1 }'
+    else
+        shasum -a 256 "$1" | awk '{ print $1 }'
+    fi
+}
+
+manifest_sha=$(hash_file "$fixture_manifest")
+[ "$manifest_sha" = \
+    d5decca993c190f0242272f34ca0228f973ca0ae5bbddcfc2a0dccb5eb2e9bae ] ||
+    fail "synthetic manifest hash mismatch"
+
+root=$sandbox/root
+profile=$root/var/guix/profiles
+user_profile=$profile/per-user/fixture
+store=$root/gnu/store
+grub=$root/boot/grub/grub.cfg
+pins=$root/repo/generation-pins.tsv
+quarantine=$profile/.p52b-quarantine.$manifest_sha
+
+system_a=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-system
+system_b=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-system
+system_c=cccccccccccccccccccccccccccccccc-system
+system_d=dddddddddddddddddddddddddddddddd-system
+bootcfg_name=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-grub.cfg
+home_name=ffffffffffffffffffffffffffffffff-home
+pull_name=gggggggggggggggggggggggggggggggg-profile
+
+make_fixture() {
+    rm -rf -- "$root"
+    mkdir -p "$profile" "$user_profile" "$store" "$root/run" \
+        "$root/boot/grub" "$root/var/guix/gcroots" "$root/repo" \
+        "$root/home/.config/guix"
+    printf '%s\n' p5.2b-system-prune-fixture/v1 \
+        >"$root/.p52b-system-prune-fixture"
+
+    mkdir -p "$store/$system_a" "$store/$system_b" "$store/$system_c" \
+        "$store/$system_d" "$store/$home_name" "$store/$pull_name"
+    printf '%s\n' '# synthetic bootcfg fixture' >"$store/$bootcfg_name"
+
+    ln -s "../../../gnu/store/$system_a" "$profile/system-1-link"
+    ln -s "../../../gnu/store/$system_c" "$profile/system-2-link"
+    ln -s "../../../gnu/store/$system_c" "$profile/system-3-link"
+    ln -s "../../../gnu/store/$system_d" "$profile/system-4-link"
+    ln -s system-4-link "$profile/system"
+    ln -s "../gnu/store/$system_d" "$root/run/current-system"
+    ln -s "../gnu/store/$system_d" "$root/run/booted-system"
+    ln -s "../../../gnu/store/$bootcfg_name" "$root/var/guix/gcroots/bootcfg"
+
+    ln -s "../../../../../gnu/store/$home_name" \
+        "$user_profile/guix-home-1-link"
+    ln -s guix-home-1-link "$user_profile/guix-home"
+    ln -s "../../../../../gnu/store/$pull_name" \
+        "$user_profile/current-guix-1-link"
+    ln -s current-guix-1-link "$user_profile/current-guix"
+    ln -s "../../../var/guix/profiles/per-user/fixture/current-guix" \
+        "$root/home/.config/guix/current"
+
+    printf '%b\n' \
+        '# synthetic P5.2b pins' \
+        "system\t3\t/gnu/store/$system_c\tpreferred-rollback\tfixture retained fallback" \
+        "system\t4\t/gnu/store/$system_d\tpromotion-rollback\tfixture current" \
+        >"$pins"
+
+    printf '%s\n' \
+        '# synthetic P5.2b GRUB fixture' \
+        "menuentry current { set system=/gnu/store/$system_d; }" \
+        'menuentry old-1-a { set system=/var/guix/profiles/system-1-link; }' \
+        'menuentry old-1-b { set load=/var/guix/profiles/system-1-link/boot; }' \
+        'menuentry old-2-a { set system=/var/guix/profiles/system-2-link; }' \
+        'menuentry old-2-b { set load=/var/guix/profiles/system-2-link/boot; }' \
+        'menuentry old-3-a { set system=/var/guix/profiles/system-3-link; }' \
+        'menuentry old-3-b { set load=/var/guix/profiles/system-3-link/boot; }' \
+        >"$grub"
+
+    [ "$(hash_file "$pins")" = \
+        73a4dd35cc4640a7a2e31cf5af2bf2417b11e7debcf7794db49fb697035ba3c3 ] ||
+        fail "synthetic pin bytes do not match manifest"
+    [ "$(hash_file "$grub")" = \
+        f709c697fcabe191796777a49ad16ef91b2b1eac4c61f207234f408745ea66a0 ] ||
+        fail "synthetic GRUB bytes do not match manifest"
+}
+
+run_pruner() {
+    P52B_MANIFEST_SHA=$manifest_sha \
+        "$pruner" "$@" "$fixture_manifest" "$root"
+}
+
+assert_prepared() {
+    for generation in 1 2 3 4; do
+        [ -L "$profile/system-$generation-link" ] ||
+            fail "generation $generation is not restored"
+    done
+    if [ -e "$quarantine" ] || [ -L "$quarantine" ]; then
+        fail "fixture quarantine remained after rollback"
+    fi
+    run_pruner verify-manifest | grep -q 'state=PREPARED'
+}
+
+assert_applied() {
+    [ ! -e "$profile/system-1-link" ] ||
+        fail "selected generation 1 remains"
+    [ ! -e "$profile/system-2-link" ] ||
+        fail "selected generation 2 remains"
+    [ -L "$profile/system-3-link" ] ||
+        fail "retained generation 3 is absent"
+    [ -L "$profile/system-4-link" ] ||
+        fail "retained generation 4 is absent"
+    if [ -e "$quarantine" ] || [ -L "$quarantine" ]; then
+        fail "fixture quarantine remained after commit"
+    fi
+    run_pruner verify-manifest | grep -q 'state=APPLIED'
+}
+
+foreign_state() {
+    {
+        find "$user_profile" -type l -print |
+            while IFS= read -r link; do
+                printf '%s\t%s\n' "${link#"$root"}" "$(readlink "$link")"
+            done
+        printf 'user-current\t%s\n' \
+            "$(readlink "$root/home/.config/guix/current")"
+        printf 'grub\t%s\n' "$(hash_file "$grub")"
+        printf 'pins\t%s\n' "$(hash_file "$pins")"
+        printf 'bootcfg\t%s\n' "$(readlink "$root/var/guix/gcroots/bootcfg")"
+        find "$store" -mindepth 1 -maxdepth 1 -exec basename {} \; |
+            LC_ALL=C sort
+    } | hash_file /dev/stdin
+}
+
+make_fixture
+before_foreign=$(foreign_state)
+trace baseline
+run_pruner verify-manifest | grep -q 'state=PREPARED'
+run_pruner fixture-apply | grep -q 'selected=2 retained=2 before=4 after=2'
+assert_applied
+[ "$(foreign_state)" = "$before_foreign" ] ||
+    fail "fixture apply changed a forbidden surface"
+run_pruner fixture-rollback | grep -q 'restored=2 state=PREPARED'
+assert_prepared
+trace round-trip
+
+if run_pruner fixture-rollback >"$sandbox/already-prepared.out" 2>&1; then
+    fail "rollback unexpectedly accepted PREPARED state"
+fi
+grep -q 'refuses already PREPARED state' "$sandbox/already-prepared.out"
+
+if (P52B_FIXTURE_FAIL_AFTER_MOVE=1 run_pruner fixture-apply) \
+    >"$sandbox/fail-move.out" 2>&1; then
+    fail "injected staging failure unexpectedly passed"
+fi
+grep -q 'injected failure after move 1' "$sandbox/fail-move.out"
+assert_prepared
+trace fail-after-move
+
+if (P52B_FIXTURE_FAIL_AFTER_DELETE=1 run_pruner fixture-apply) \
+    >"$sandbox/fail-delete.out" 2>&1; then
+    fail "injected commit failure unexpectedly passed"
+fi
+if ! grep -q 'injected failure after delete 1' "$sandbox/fail-delete.out"; then
+    cat "$sandbox/fail-delete.out" >&2
+    fail "injected commit failure did not report its checkpoint"
+fi
+assert_prepared
+trace fail-after-delete
+
+set +e
+(P52B_FIXTURE_SIGNAL_AFTER_MOVE=1 run_pruner fixture-apply) \
+    >"$sandbox/signal-move.out" 2>&1
+signal_move_status=$?
+set -e
+[ "$signal_move_status" -eq 143 ] ||
+    fail "staging signal returned $signal_move_status instead of 143"
+assert_prepared
+trace signal-after-move
+
+set +e
+(P52B_FIXTURE_SIGNAL_AFTER_DELETE=1 run_pruner fixture-apply) \
+    >"$sandbox/signal-delete.out" 2>&1
+signal_delete_status=$?
+set -e
+[ "$signal_delete_status" -eq 143 ] ||
+    fail "commit signal returned $signal_delete_status instead of 143"
+assert_prepared
+trace signal-after-delete
+
+unlink "$profile/system-1-link"
+run_pruner verify-manifest | grep -q 'state=PARTIAL'
+run_pruner fixture-rollback | grep -q 'restored=2 state=PREPARED'
+assert_prepared
+trace partial-recovery
+
+mkdir "$quarantine"
+mv "$profile/system-1-link" "$profile/system-2-link" "$quarantine/"
+run_pruner verify-manifest | grep -q 'state=RECOVERY_REQUIRED'
+run_pruner fixture-rollback | grep -q 'restored=2 state=PREPARED'
+assert_prepared
+trace populated-quarantine-recovery
+
+mkdir "$quarantine"
+mv "$profile/system-1-link" "$profile/system-2-link" "$quarantine/"
+unlink "$quarantine/system-1-link"
+ln -s "../../../gnu/store/$system_b" "$quarantine/system-1-link"
+if run_pruner fixture-rollback >"$sandbox/quarantine-drift.out" 2>&1; then
+    fail "retargeted quarantined tuple unexpectedly passed"
+fi
+grep -q 'quarantined tuple raw target drift' \
+    "$sandbox/quarantine-drift.out"
+[ ! -e "$profile/system-1-link" ] ||
+    fail "retargeted quarantined tuple entered the live fixture profile"
+unlink "$quarantine/system-1-link"
+ln -s "../../../gnu/store/$system_a" "$quarantine/system-1-link"
+run_pruner fixture-rollback | grep -q 'restored=2 state=PREPARED'
+assert_prepared
+trace quarantine-drift-recovery
+
+mkdir "$quarantine"
+run_pruner verify-manifest | grep -q 'state=RECOVERY_REQUIRED'
+run_pruner fixture-rollback | grep -q 'restored=2 state=PREPARED'
+assert_prepared
+trace empty-quarantine-recovery
+
+unlink "$profile/system-1-link"
+printf '%s\n' preserve >"$profile/system-1-link"
+if run_pruner fixture-rollback >"$sandbox/occupied.out" 2>&1; then
+    fail "rollback overwrote an occupied path"
+fi
+grep -q 'rollback path is occupied' "$sandbox/occupied.out"
+[ "$(sed -n '1p' "$profile/system-1-link")" = preserve ] ||
+    fail "occupied rollback path was changed"
+rm "$profile/system-1-link"
+run_pruner fixture-rollback >/dev/null
+assert_prepared
+
+if P52B_MANIFEST_SHA=0000000000000000000000000000000000000000000000000000000000000000 \
+    "$pruner" verify-manifest "$fixture_manifest" "$root" \
+    >"$sandbox/wrong-hash.out" 2>&1; then
+    fail "wrong manifest hash unexpectedly passed"
+fi
+grep -q 'manifest SHA256 mismatch' "$sandbox/wrong-hash.out"
+
+bad_manifest=$sandbox/bad-manifest.tsv
+cp "$fixture_manifest" "$bad_manifest"
+printf '%s\n' 'unknown	row' >>"$bad_manifest"
+bad_manifest_sha=$(hash_file "$bad_manifest")
+if P52B_MANIFEST_SHA=$bad_manifest_sha \
+    "$pruner" verify-manifest "$bad_manifest" "$root" \
+    >"$sandbox/bad-manifest.out" 2>&1; then
+    fail "unknown manifest row unexpectedly passed"
+fi
+grep -q 'manifest schema, row shape, or hard boundary is invalid' \
+    "$sandbox/bad-manifest.out"
+
+bad_class_manifest=$sandbox/bad-class-manifest.tsv
+sed 's/duplicate-retained-closure/unretained-closure/' \
+    "$fixture_manifest" >"$bad_class_manifest"
+bad_class_manifest_sha=$(hash_file "$bad_class_manifest")
+if P52B_MANIFEST_SHA=$bad_class_manifest_sha \
+    "$pruner" verify-manifest "$bad_class_manifest" "$root" \
+    >"$sandbox/bad-class-manifest.out" 2>&1; then
+    fail "inconsistent closure classification unexpectedly passed"
+fi
+grep -q 'delete tuple closure classification is inconsistent' \
+    "$sandbox/bad-class-manifest.out"
+
+bad_path_manifest=$sandbox/bad-path-manifest.tsv
+sed 's#	/repo/generation-pins.tsv	#	/repo/../repo/generation-pins.tsv	#' \
+    "$fixture_manifest" >"$bad_path_manifest"
+bad_path_manifest_sha=$(hash_file "$bad_path_manifest")
+if P52B_MANIFEST_SHA=$bad_path_manifest_sha \
+    "$pruner" verify-manifest "$bad_path_manifest" "$root" \
+    >"$sandbox/bad-path-manifest.out" 2>&1; then
+    fail "non-normalized logical path unexpectedly passed"
+fi
+grep -q 'manifest path is not normalized' "$sandbox/bad-path-manifest.out"
+
+bad_system_target_manifest=$sandbox/bad-system-target-manifest.tsv
+awk -F '	' -v OFS='	' -v target="/gnu/store/$bootcfg_name" '
+    $1 == "delete" && $3 == "1" { $6 = target }
+    { print }
+' "$fixture_manifest" >"$bad_system_target_manifest"
+bad_system_target_sha=$(hash_file "$bad_system_target_manifest")
+if P52B_MANIFEST_SHA=$bad_system_target_sha \
+    "$pruner" verify-manifest "$bad_system_target_manifest" "$root" \
+    >"$sandbox/bad-system-target.out" 2>&1; then
+    fail "non-System generation target unexpectedly passed"
+fi
+grep -q 'unexpected System tuple target' "$sandbox/bad-system-target.out"
+
+bad_bootcfg_target_manifest=$sandbox/bad-bootcfg-target-manifest.tsv
+awk -F '	' -v OFS='	' -v target="/gnu/store/$system_d" '
+    $1 == "bootcfg" { $4 = target }
+    { print }
+' "$fixture_manifest" >"$bad_bootcfg_target_manifest"
+bad_bootcfg_target_sha=$(hash_file "$bad_bootcfg_target_manifest")
+if P52B_MANIFEST_SHA=$bad_bootcfg_target_sha \
+    "$pruner" verify-manifest "$bad_bootcfg_target_manifest" "$root" \
+    >"$sandbox/bad-bootcfg-target.out" 2>&1; then
+    fail "non-GRUB bootcfg target unexpectedly passed"
+fi
+grep -q 'unexpected bootcfg store target' "$sandbox/bad-bootcfg-target.out"
+
+bad_grub_count_manifest=$sandbox/bad-grub-count-manifest.tsv
+awk -F '	' -v OFS='	' '
+    $1 == "delete" && $3 == "1" { $8 = 1 }
+    { print }
+' "$fixture_manifest" >"$bad_grub_count_manifest"
+bad_grub_count_sha=$(hash_file "$bad_grub_count_manifest")
+if P52B_MANIFEST_SHA=$bad_grub_count_sha \
+    "$pruner" verify-manifest "$bad_grub_count_manifest" "$root" \
+    >"$sandbox/bad-grub-count.out" 2>&1; then
+    fail "incorrect per-generation GRUB count unexpectedly passed"
+fi
+grep -q 'selected generation 1 GRUB-reference count drift' \
+    "$sandbox/bad-grub-count.out"
+
+unlink "$profile/system-1-link"
+ln -s "../../../gnu/store/$system_b" "$profile/system-1-link"
+if run_pruner fixture-apply >"$sandbox/retargeted.out" 2>&1; then
+    fail "retargeted selected link unexpectedly passed"
+fi
+grep -q 'requires PREPARED state, observed PARTIAL' "$sandbox/retargeted.out"
+unlink "$profile/system-1-link"
+ln -s "../../../gnu/store/$system_a" "$profile/system-1-link"
+assert_prepared
+
+ln -s "../../../gnu/store/$system_a" "$profile/system-5-link"
+if run_pruner fixture-apply >"$sandbox/extra.out" 2>&1; then
+    fail "extra generation unexpectedly passed"
+fi
+grep -q 'requires PREPARED state, observed PARTIAL' "$sandbox/extra.out"
+unlink "$profile/system-5-link"
+assert_prepared
+
+cp "$grub" "$sandbox/grub.saved"
+printf '%s\n' '# drift' >>"$grub"
+if run_pruner fixture-apply >"$sandbox/grub-drift.out" 2>&1; then
+    fail "GRUB drift unexpectedly passed"
+fi
+grep -q 'GRUB hash drift' "$sandbox/grub-drift.out"
+cp "$sandbox/grub.saved" "$grub"
+assert_prepared
+
+set +e
+P52B_MANIFEST_SHA=$manifest_sha \
+    "$pruner" apply "$fixture_manifest" "$root" \
+    >"$sandbox/live-apply.out" 2>&1
+apply_status=$?
+set -e
+[ "$apply_status" -eq 64 ] ||
+    fail "unsupported live apply returned $apply_status instead of 64"
+
+if P52B_MANIFEST_SHA=$manifest_sha \
+    "$pruner" verify-manifest "$fixture_manifest" / \
+    >"$sandbox/live-root.out" 2>&1; then
+    fail "live root unexpectedly passed"
+fi
+grep -q 'live root is forbidden' "$sandbox/live-root.out"
+
+mv "$profile" "$sandbox/outside-profiles"
+ln -s "$sandbox/outside-profiles" "$profile"
+if run_pruner verify-manifest >"$sandbox/profile-escape.out" 2>&1; then
+    fail "symlinked fixture profile ancestor unexpectedly passed"
+fi
+grep -q 'profile directory uses a symlinked or escaped ancestor' \
+    "$sandbox/profile-escape.out"
+unlink "$profile"
+mv "$sandbox/outside-profiles" "$profile"
+assert_prepared
+
+run_pruner fixture-apply >/dev/null
+if run_pruner fixture-apply >"$sandbox/repeated.out" 2>&1; then
+    fail "repeated fixture apply unexpectedly passed"
+fi
+grep -q 'requires PREPARED state, observed APPLIED' "$sandbox/repeated.out"
+run_pruner fixture-rollback >/dev/null
+assert_prepared
+
+if grep -En \
+    'guix[[:space:]]+system[[:space:]]+delete-generations|guix[[:space:]]+gc|grub-install|system[[:space:]]+reconfigure|/run/setuid-programs/sudo' \
+    "$pruner" >"$sandbox/forbidden-source.out"; then
+    cat "$sandbox/forbidden-source.out" >&2
+    fail "fixture-only pruner contains a forbidden live command"
+fi
+
+[ "$(foreign_state)" = "$before_foreign" ] ||
+    fail "test suite changed a forbidden fixture surface"
+
+printf '%s\n' 'guix-system-generation-link-pruner-check: PASS'

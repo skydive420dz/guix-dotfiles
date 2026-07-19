@@ -697,8 +697,8 @@ print_plan_command() {
     [ -n "$ppc_generations" ] || return 0
     case $ppc_kind in
         system)
-            printf 'Would run locally after review: /run/setuid-programs/sudo %s system delete-generations %s\n' \
-                "$retention_home/.config/guix/current/bin/guix" "$ppc_generations"
+            printf 'System deletion held: candidates %s require a configuration-aware GRUB design; no command emitted\n' \
+                "$ppc_generations"
             ;;
         home)
             printf 'Would run locally after review: %s home delete-generations %s\n' \
