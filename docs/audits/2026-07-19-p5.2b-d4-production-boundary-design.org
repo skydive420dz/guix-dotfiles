@@ -1,0 +1,619 @@
+#+title: P5.2b-D4 production-boundary safety decomposition
+#+date: 2026-07-19
+#+startup: overview
+#+category: guixpc
+#+filetags: :guixpc:guix:scheme:grub:recovery:design:
+#+status: accepted design checkpoint; D4a implementation not started
+
+* Outcome
+
+Accepted decision D-41 decomposes the former monolithic P5.2b-D4 boundary
+into independently published, fail-closed checkpoints:
+
+| Checkpoint | Scope | Required stop |
+|------------+-------+---------------|
+| D4a | conservative reconciliation plus fused-program source and synthetic fixtures | no store build and no live action |
+| D4b | clean-published synthetic fused-program build and evidence | no live manifest or live-target program |
+| D4c.1 | fresh live-state review manifest and publication | authorization remains =NOT-GRANTED= |
+| D4c.2 | exact live manifest-specific fused-program build, evidence, and publication | no live transaction mutation |
+| D4c.3 | unchanged-state revalidation and exact attended execution-packet acceptance | execution remains =NOT-GRANTED=; stop |
+| D5 | separate exact execution grant, attended transaction, and exact postflight | stop without GC or P5.3 |
+
+The split makes source review, immutable realization, live-state review,
+authorization, and execution distinct gates.  Neither an implementation
+commit nor an immutable artifact can authorize the next gate.
+
+This document changes roadmap ownership only.  It implements no transaction
+source, builds no new store output, creates no recovery root, and changes no
+live System surface.
+
+* Exact predecessor boundary
+
+D3a.1 is published at:
+
+#+begin_example
+0601b9d8537afb36b9e3589c6227e8cf652336e1
+#+end_example
+
+D3b is published at:
+
+#+begin_example
+b1d6ecb38c495089ab22e4e648a1fce9cd48bc1b
+#+end_example
+
+D3b proves warning-free compilation, all =54 + 44 = 98= declared
+post-operation restart boundaries, the strict repository gate, and equality
+of its selected 129-record live-surface snapshot.  It deliberately does not
+prove:
+
+- pre-=BEGIN=, partial-backup, or orphaned-journal-temporary reconciliation;
+- one immutable identity for every project byte loaded by Guile;
+- production recovery-root registration or daemon liveness;
+- exclusion of arbitrary =guix system= processes;
+- a fresh live deletion manifest or authorization;
+- arbitrary-instruction, mid-system-call, or power-loss recovery; or
+- any live transaction or P5.3 collection.
+
+D-41 preserves those historical nonclaims.  A later checkpoint may close one
+of them for its own narrower scope without retroactively enlarging D3.
+
+* Why D4 must remain divided
+
+The former D4 checklist mixed five materially different facts:
+
+1. source logic exists;
+2. published source can produce an immutable executable;
+3. a fresh live state has been reviewed;
+4. an exact program/state execution packet has been accepted for later
+   authorization; and
+5. live mutation has occurred successfully.
+
+Combining them would permit source review to blur into realization, or
+authorization to blur into execution.  It also created a temporal
+contradiction: the old wording required recovery roots to be registered and
+live before any mutation, while creating those roots is itself a mutation.
+
+The corrected rule is:
+
+#+begin_quote
+Temporary- and durable-root creation/removal are explicit D5 effects covered
+by the exact execution grant.  Adding the program temporary root is the first
+authorized transaction mutation; creating the direct program-root symlink
+beneath the already-existing GC-root directory is the first persistent
+filesystem mutation and the first durable GC root.  The program must prove
+every required root exact, daemon-visible, and live before any GRUB, bootcfg,
+or generation-link mutation.
+#+end_quote
+
+* D4a: reconciliation and fused-program source/fixtures
+
+** Conservative reconciliation contract
+
+D3a starts its durable journal only after creating the transaction directory
+and quarantine.  Its direct backup is also written before =BACKUP-DONE= is
+journaled.  An interruption within those operations can therefore leave
+states outside D3a's declared post-operation matrix.
+
+D4a must add one closed reconciliation classifier.  It may change a synthetic
+fixture only when every protected prestate surface is exact and the remaining
+filesystem state is one uniquely recognized construction state:
+
+| State | Minimum proof | Permitted synthetic result |
+|-------+---------------+----------------------------|
+| transaction directory only | exact owner/type/mode, no foreign child, exact prestate, no roots | remove the known empty directory durably |
+| transaction directory plus empty quarantine | exact directories, no journal/temp/backup/root, exact prestate | remove only the known empty directories durably |
+| atomic initial-journal temporary | exactly one safe regular temporary whose bytes are a strict prefix of, or equal to, the one canonical initial journal through =BEGIN=; exact prestate | deterministically finish or discard that exact temporary, or return review-required |
+| durable =BEGIN= plus absent backup | exact journal and untouched mutation surfaces | recreate the backup from exact installed old GRUB |
+| durable =BEGIN= plus partial backup | safe regular single-link file whose bytes are an exact prefix of old GRUB and whose size does not exceed it | remove/recreate only that manifest-keyed backup |
+| durable =BEGIN= plus complete backup but no =BACKUP-DONE= | exact hash, size, and mode | validate it and append the exact next journal event |
+| known journal/GRUB/bootcfg temporary | unique safe path and exact predecessor/successor bytes or tuple, consistent with journal and live surfaces | deterministically finish or discard the one known temporary |
+| manifest-keyed root/lock bootstrap before =BEGIN= | exact direct program root; then a prefix of the declared transaction-base/lock-file, candidate/bootcfg-root namespace/root, transaction-directory, quarantine, and initial-journal construction order; every present tuple and protected surface matches the one accepted packet | after exact packet validation and a fresh attended recovery grant, reacquire the exact persistent lock inodes and resume only the next declared prefix operation; do not unlink production lock files or program root before a durable terminal event |
+
+The first three no-root rows are legacy synthetic fixtures for the D3a gaps.
+Outside an exact terminal =COMPLETE= or =ROLLED-BACK= state, the closed
+production validator must never accept a persistent transaction directory,
+lock, quarantine, journal temporary, or backup without the exact direct
+program root.  Its pre-=BEGIN= classifier must enumerate and interrupt every
+persistent prefix in this exact order:
+
+#+begin_example
+direct program root
+transaction-base directory
+transaction.lock file
+system.lock file
+candidate/bootcfg root namespace and ordered direct roots
+manifest transaction directory
+quarantine directory
+initial-journal temporary or durable BEGIN
+old-GRUB backup
+#+end_example
+
+The two persistent lock files are created/opened and acquired without waiting
+in transaction-then-System order.  Lock ownership itself vanishes on process
+exit, so recovery must reacquire both exact inodes and repeat protected-state
+and quiescence checks under the locks before it continues.  D5 never unlinks
+those persistent lock files: deleting a locked pathname would allow a second
+process to create and lock a different inode.  Exact terminal postflight
+therefore retains the transaction-base and both lock inodes after the direct
+program root is safely removed.  Fixtures must stop after every listed
+persistent operation and every lock acquisition.
+
+Any extra entry, multiple candidate temporary, unknown byte, non-prefix
+backup, unsafe type, wrong owner, shared inode, wrong mode, invalid or
+non-unique journal successor, protected-surface drift, foreign recovery root,
+or ambiguous live/quarantine state must return =REVIEW-REQUIRED= without
+cleanup.
+
+Reconciliation must be idempotent.  Every removal, rename, or journal update
+must retain the existing synchronized-write and parent-directory-=fsync=
+contract.  The fixture matrix must interrupt reconciliation at every newly
+declared post-operation boundary and prove a deterministic second invocation.
+This remains a declared-boundary process-restart result, not a power-loss
+claim.
+
+Before interpreting a hash-valid journal, D4a must also validate its complete
+event history against one closed automaton.  The history must be a prefix of
+exactly one legal forward, rollback/restart, or post-commit-cleanup trace.  It
+must reject duplicate =COMMITTED= or terminal events, skipped or reordered
+events, rollback after commit, forward mutation after rollback begins, and any
+suffix after =COMPLETE= or =ROLLED-BACK=.  Fixtures must include illegal event
+orders with internally valid sequence numbers and recomputed hash chains.
+
+** One fused store-resident Scheme program
+
+D4a must replace the mutable runtime chain
+
+#+begin_example
+shell launcher -> repository driver -> repository module -> external manifest
+#+end_example
+
+with source for one generated Scheme program.  The generated program must:
+
+- contain the reviewed transaction implementation and the exact manifest
+  bytes in one store-resident executable input;
+- accept no repository path or alternate manifest at runtime;
+- load no project Scheme source or compiled cache from the checkout;
+- sanitize inherited Guile load and extension paths;
+- invoke the pinned Guile/Guix runtime by absolute store identity;
+- reject a mutable copy or a noncanonical/non-store program location;
+- bind and report the embedded manifest SHA256; and
+- retain the fixture-only sentinel, root =/= refusal, and
+  =authorization NOT-GRANTED= policy in D4a and D4b.
+
+The program may import Guix modules from the pinned Guix closure.  “No runtime
+reads” refers to project-owned launcher, driver, module, registry, manifest,
+or retained-GRUB inputs: all such bytes must already be fused into the one
+program.
+
+** Manifest/program identity cycle
+
+A live manifest cannot contain the final fused-program store path when that
+same program embeds the manifest: changing the path would change the manifest,
+which would change the program output again.
+
+D-41 resolves the cycle with two independently published identities:
+
+1. D4c.1 publishes the exact live-state manifest.  It binds the program-source
+   checkpoint and every semantic/runtime input, but does not claim its own
+   future program output path.
+2. D4c.2 builds a program embedding those exact published manifest bytes.  Its
+   evidence binds the tuple:
+
+   #+begin_example
+   manifest SHA256
+   fused-program store path
+   fused-program file SHA256 and size
+   pinned Guix/Guile identities
+   #+end_example
+
+D4c.3's accepted execution packet must name both the manifest SHA256 and the exact
+fused-program identity.  The program discovers and validates its canonical
+store location and embedded manifest hash; it does not embed a
+self-referential expected output path or accept a mutable external manifest.
+The D4c.2/D4c.3 external gate, not an embedded constant, compares the actual
+canonical program path, whole-file hash, and size with the published tuple.
+
+** Pre-phase revalidation and observed quiescence
+
+The cooperative transaction and System-profile locks remain mandatory, but
+pinned =guix system= commands do not honor them.  D4a must therefore define
+one central pre-phase gate and invoke it before every side-effecting forward
+or rollback phase, including each root, GRUB, bootcfg, link, journal-terminal,
+and cleanup operation.
+
+The gate must revalidate the exact manifest-protected surfaces, journal/state
+relationship, appropriate recovery-root state, and an attended quiescence
+observation.  Fixtures must inject drift immediately before every phase and
+prove that no later phase starts.
+
+Attended quiescence is an operational observation, not global exclusion.
+D4a, D4b, D4c, and D5 must continue to state that another arbitrary
+=guix system= process could start after an observation.
+
+** Synthetic production-root backend contract
+
+D4a must define a dependency-injected backend for one store connection,
+temporary roots, direct durable roots, daemon registration, target validity,
+and liveness.  D4a fixtures use only an in-memory/synthetic backend; they must
+cover missing or retargeted registration, invalid/non-live targets, liveness
+loss between phases, store-session failure, partial root bootstrap, recovery,
+and exact remaining-root validation before each cleanup removal.
+
+The source contract reserves a direct program-root name and a separate
+manifest-keyed candidate/bootcfg namespace:
+
+#+begin_example
+/var/guix/gcroots/p52b-system-prune-program-MANIFEST-SHA256
+/var/guix/gcroots/p52b-system-prune/MANIFEST-SHA256/...
+#+end_example
+
+The first direct-root path is externally completed only after D4c.2 publishes
+the program identity.  D4a and D4b use inert fixture roots and create neither
+path on the live host.
+
+** D4a completion gate
+
+D4a may close only when:
+
+- its reconciler implements the complete accepted-state table above;
+- all unknown or ambiguous states fail without cleanup;
+- the fused-program generator accepts only a closed fixture manifest;
+- the generated policy remains =FIXTURE-ONLY= / =NOT-GRANTED= and refuses
+  root =/=;
+- pre-phase drift fixtures cover every side-effecting forward and rollback
+  phase;
+- hash-valid but illegal journal histories fail before mutation;
+- synthetic root-backend failures and partial-bootstrap states fail closed or
+  reconcile only through the one accepted deterministic path;
+- the existing 98-point D3 matrix remains a regression gate;
+- direct =guild compile -W3= is silent;
+- =sh -n=, ShellCheck, strict repository checks, whitespace checks, and Org
+  lint pass;
+- selected live surfaces remain identical before and after the source/fixture
+  gates; and
+- an independent adversarial review has no blocker or high-severity finding.
+
+D4a must stop without a Guix store build, live manifest, live program, live
+recovery root, transaction directory, GRUB or bootcfg write, generation-link
+change, authorization, GC, activation, reconfiguration, or reboot.
+
+* D4b: clean-published synthetic fused-program evidence
+
+D4b begins only after D4a is published and fetched into a clean
+=HEAD == origin/main == GitHub main= checkout.  It may perform one
+unprivileged Guix realization of a synthetic fixture-policy fused program.
+
+The evidence must prove:
+
+- the output is one canonical store-resident Scheme program;
+- its embedded manifest, implementation, registry, and retained-GRUB fixture
+  hashes equal the published D4a inputs;
+- it runs with the source checkout renamed or unavailable;
+- poisoned inherited Guile paths cannot replace project code;
+- it rejects an alternate manifest, copied-out program, wrong embedded hash,
+  and unsupported live action; the external gate rejects an unrecorded
+  alternate store output;
+- the full D4a and legacy 98-point matrices pass through that exact program;
+- raw channels, closed result, derivation/output identities, program hash and
+  size, and loaded-byte provenance are frozen; and
+- selected live transaction surfaces remain unchanged.
+
+Realization may add immutable store objects and build metadata.  D4b must
+record that bounded effect and must not claim whole-store or whole-machine
+identity.
+
+D4b is not a live manifest, live-target program, production-root liveness
+proof, authorization, installation, activation, reconfiguration, collection,
+or reboot.
+
+* D4c.1: fresh live-state review manifest publication
+
+D4c.1 begins only from published, clean D4b equality.  It must use reviewed
+non-mutating discovery only; it must not assume that the historical
+=86/17/5= link counts or 78 System candidates remain current.
+
+The closed manifest must freeze at least:
+
+- source/evidence checkpoints, pinned Guix/Guile identities, and fused-program
+  source inputs;
+- boot ID and exact System/Home/Pull raw and canonical link/pointer tuples;
+- exact retained and selected System partitions plus expected postflight
+  counts;
+- current and booted System, installed GRUB hash/size/mode/ownership, old and
+  new bootcfg tuples, retained-only GRUB bytes, pins, and protected EFI
+  surfaces;
+- transaction, lock, temporary, direct program-root path, and
+  candidate/bootcfg root-namespace prestates;
+- one durable recovery-root record for every selected System target and the
+  old/new bootcfg targets, plus the future direct program-root name formula and
+  source-input policy but not its unknowable final target/path tuple;
+- exact expected postflight and terminal journal/root state;
+- the proposed action/arguments independent of the future program path, plus
+  explicit mutation prohibitions; and
+- =authorization NOT-GRANTED=.
+
+“Fresh” describes the capture time.  Publication makes the manifest bytes
+immutable; it does not freeze the live machine.  Any protected drift makes
+the manifest stale and requires regeneration, publication, and review.
+
+D4c.1 stops after publication and clean upstream equality.  It creates no
+root, program, authorization, or transaction mutation.
+
+* D4c.2: exact live fused-program build and evidence
+
+D4c.2 builds one fused program from the exact published D4c.1 manifest.  It
+must freeze and publish the non-circular manifest/program identity tuple,
+recheck the D4b loader-isolation gates, and run only its read-only live
+verification action.
+
+The live verification must prove the manifest still describes the selected
+surfaces exactly, but it cannot claim roots that do not yet exist are
+registered or live.  D4c.2 stops without invoking any apply or recovery action
+and without creating a persistent or temporary production root.
+
+* D4c.3: unchanged-state execution-packet acceptance and stop
+
+Immediately before requesting packet acceptance, D4c.3 must re-establish:
+
+- clean repository, local-origin, and GitHub equality;
+- exact D4c.1 manifest and D4c.2 fused-program identities;
+- unchanged boot ID and every protected manifest surface;
+- absent transaction, lock, direct program-root, and candidate/bootcfg
+  root-namespace state;
+- the exact proposed selector and expected postflight; and
+- an attended quiescence observation.
+
+Any drift invalidates the packet before acceptance.
+
+The attended execution packet must name:
+
+- the future =P5.2b-D5= action while explicitly retaining
+  =execution NOT-GRANTED=;
+- the full manifest SHA256;
+- the exact fused-program store path, file SHA256, and size;
+- the exact selected/retained partition and expected count transition;
+- old/new GRUB hashes and bootcfg targets;
+- the exact manifest-keyed durable-root set, including the program root;
+- the complete ordered bootstrap-effect set, persistent-lock inode/retention
+  policy, and terminal lock state;
+- the exact one-store-connection temporary-root and liveness operations
+  proposed for the later grant;
+- the exact transaction/root, GRUB, bootcfg, and selected-link phases proposed
+  for the later grant;
+  and
+- explicit exclusion of GC, collection, activation, reconfiguration,
+  bootloader installation, EFI mutation, reboot, and every unlisted action.
+
+The manifest's historical =NOT-GRANTED= row remains unchanged.  The owner may
+accept this exact packet as the only eligible future D5 scope, but that
+acceptance is not an execution grant.  D4c.3 stops with
+=execution NOT-GRANTED=.  Any later drift invalidates the packet.  Only D5,
+after repeating the complete preflight, may request a separate exact grant to
+execute the unchanged packet.
+
+* Production Guix store-root contract
+
+The pinned frontend is:
+
+#+begin_example
+/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+#+end_example
+
+Its Guix revision is:
+
+#+begin_example
+a8391f2d7451c2463ba253ffa9872fa6f27485d7
+#+end_example
+
+Pinned API review established:
+
+- =(guix store roots)= exports =gc-roots=;
+- =(find-roots store)= reports root/target pairs and excludes entries that do
+  not point to store items;
+- =add-indirect-root= registers an arbitrary absolute symlink;
+- =add-temp-root= pins a store path for the lifetime of one store connection;
+  and
+- =valid-path?= can validate each exact target.
+
+One read-only design probe of =(find-roots store)= returned 150 root/target
+pairs, including =/run/booted-system=, =/run/current-system=, and
+=/var/guix/gcroots/bootcfg=.  No =guix gc --list-live= or =live-paths= query
+was run during this design checkpoint.
+
+D5 must use one store connection for the whole transaction.  After the
+read-only final preflight and separate exact execution grant, it must first
+call =add-temp-root= for the exact fused program.  This is the first authorized
+transaction mutation.  It must then create the direct durable program-root
+symlink atomically, synchronize =/var/guix/gcroots=, and prove the result at:
+
+#+begin_example
+/var/guix/gcroots/p52b-system-prune-program-MANIFEST-SHA256
+#+end_example
+
+Because =/var/guix/gcroots= already exists, that one symlink is the first
+persistent filesystem mutation and first durable GC root.  A crash before the
+atomic symlink leaves no persistent D5 state; a crash after it leaves the
+recovery program durably rooted.  No transaction directory, lock, or other
+persistent transaction surface may precede it.
+
+After proving the program root, D5 must create or validate the exact
+transaction-base directory, create/open and acquire =transaction.lock= and
+=system.lock= without waiting, and repeat protected-state and quiescence checks
+under both locks.  Only then may the same open connection add temporary roots
+for:
+
+- every selected candidate System target; and
+- the old and new bootcfg targets.
+
+It must then create direct, manifest-keyed symlinks beneath
+=/var/guix/gcroots/p52b-system-prune/MANIFEST-SHA256/= for those same targets.
+Because these are direct GC roots, D5 must not also call =add-indirect-root= on
+them.
+
+The complete authorized bootstrap-effect set before any GRUB, bootcfg, or link
+phase is closed: program temporary root; direct durable program root;
+transaction-base and the two persistent lock files/acquisitions; remaining
+temporary and durable roots; manifest transaction directory; quarantine;
+initial journal; and old-GRUB backup.  The D4c.3 packet and D5 grant must name
+that entire ordered set.  Before GRUB, bootcfg, or link mutation, the program
+must verify exact symlink tuples, =valid-path?= for every target, exact
+=find-roots= membership, and the explicitly authorized =live-paths= result.
+It must repeat the applicable checks before each later phase and fail closed
+on a missing, retargeted, foreign, or non-live root.
+
+The fused-program durable root is a recovery prerequisite, not merely another
+candidate root.  It must remain after candidate and bootcfg recovery roots are
+safe to remove, and may be removed only after the applicable exact terminal
+=COMPLETE= or =ROLLED-BACK= event and terminal postflight are durable.  Its
+=add-temp-root= protection remains until the one store connection closes on
+clean process exit.  Therefore:
+
+- an interrupted nonterminal transaction retains the exact recovery program;
+- an interruption after durable =COMPLETE= or =ROLLED-BACK= needs no
+  state-changing transaction recovery, although it may leave an exact safe
+  program root for idempotent post-terminal cleanup;
+  and
+- the program never creates a window in which its durable root is gone before
+  terminal state is recorded.
+
+* D5: separately authorized attended transaction
+
+D5 owns the first live production action.  It must consume only the exact
+D4c.1 manifest and D4c.2 fused program named by the accepted D4c.3 packet.
+
+** Initial-apply entry
+
+Initial apply is eligible only when the complete D4c.3 absent
+transaction/root/lock prestate remains exact.  It repeats repository and
+program identity, protected-surface, boot-ID, selector/postflight, and attended
+quiescence checks, then obtains a separate exact D5 execution grant naming the
+unchanged packet.
+
+After that grant it:
+
+1. opens one store connection and temp-pins the exact program;
+2. creates and proves the direct durable program root as the first persistent
+   mutation;
+3. creates/validates the transaction-base and persistent lock files, acquires
+   transaction then System lock without waiting, and revalidates protected
+   state plus attended quiescence under both;
+4. temp-pins every remaining declared target, creates the exact ordered
+   candidate/bootcfg durable roots, and proves all required roots exact,
+   registered, valid, and live;
+5. creates the manifest transaction directory, quarantine, initial journal,
+   and backup only through the closed prefix classifier; and
+6. runs the shared transaction phases below.
+
+** Reconcile/recovery entry
+
+Reconcile/recover must not require the absent D4c.3 prestate.  It is eligible
+only when read-only classification proves exactly one manifest-declared
+transitional state, the direct program root and program bytes equal the
+accepted packet, the journal (when present) passes the closed automaton, and
+every protected surface equals the one phase-specific expected state.
+
+Before any recovery effect, the operator must provide a fresh attended
+recovery attestation and a separate exact D5 recovery-continuation grant naming
+the packet, program identity, boot ID, observed prefix or journal head,
+required direction, and proposed next phase.  The program then opens one store
+connection, temp-pins itself, requires or reconciles only the exact next
+program-root-first bootstrap prefix, reacquires both persistent locks, and
+repeats the transitional-state/quiescence checks under them.  It temp-pins all
+still-required declared targets before resuming.  Any unlisted state, missing
+root outside its one journal-declared bootstrap/cleanup prefix, illegal journal
+history, or drift remains =REVIEW-REQUIRED= without cleanup.
+
+** Shared forward/rollback phases
+
+After either accepted entry:
+
+1. revalidate before every GRUB, bootcfg, link, journal, root, and cleanup
+   phase;
+2. execute or recover only the manifest-declared transaction;
+3. on the forward branch, verify exact pre-commit link/GRUB/bootcfg state,
+   durably record =COMMITTED=, perform safe candidate/bootcfg-root cleanup,
+   record =COMPLETE=, verify terminal postflight, then remove the program
+   durable root last;
+4. on the rollback branch, restore and verify every declared surface, safely
+   clean the candidate/bootcfg roots, record =ROLLED-BACK=, verify terminal
+   postflight, then remove the program durable root last; and
+5. freeze exact retained links, GRUB, bootcfg, protected surfaces, terminal
+   journal/root/lock state—including retained exact transaction/System lock
+   inodes—and expected postflight, then stop.
+
+D5 must not run GC, =guix gc --list-dead=, =guix gc --list-live=, an
+unreviewed liveness query, collection, activation, reconfiguration, bootloader
+installation, EFI mutation, profile switching, or reboot.  The one explicitly
+authorized =(live-paths store)= call may be used only to test membership of the
+closed declared targets; its broader returned set is not a manifest identity
+or evidence claim.
+
+P5.3 remains a later, separately reviewed and separately authorized operation.
+
+* Validation and selected live nonmutation
+
+This design checkpoint began from clean published predecessor
+=b1d6ecb38c495089ab22e4e648a1fce9cd48bc1b=.  The five repository Org files
+and staged agenda pass =org-lint= in the live GuixPC repository context;
+=git diff --check= passes locally.
+
+A deterministic 19-record =p5.2b-d4-design-live-surfaces/v2= snapshot was
+captured immediately before and after the first synchronized document pass.
+Both files are byte-identical at:
+
+#+begin_example
+5809940849d06e136a925e8e3063ecd60040190cf0222f45537bd434f0bc7aed
+#+end_example
+
+The live agenda installation was input-hash guarded from:
+
+#+begin_example
+9c31abaed1fae59e9772366218ec8ef04d0d59a9079c88f7455306333512ac8b
+#+end_example
+
+Its final SHA256 is:
+
+#+begin_example
+d4f3fbe1c6731452b72aa2609117aee91a7f11f3566ad9a540ab0ed9130d3e3e
+#+end_example
+
+The packet records boot ID, exact =86/17/5= generation counts, System/Home/Pull
+and current/booted/=bootcfg= pointers, installed-GRUB identity, and absence of:
+
+- the transaction base;
+- candidate/bootcfg recovery-root base;
+- the obsolete program-root directory design;
+- every direct =p52b-system-prune-program-*= root;
+- the System-profile lock; and
+- fixed GRUB/=bootcfg= temporaries.
+
+This is selected-surface nonmutation evidence, not whole-store or whole-machine
+identity.  The same 19-record hash was reproduced after the final
+evidence-bearing document sync.  The design probe ran no =live-paths=,
+=guix gc --list-live=, =guix gc --list-dead=, GC, transaction, root creation,
+activation, reconfiguration, or reboot.
+
+* Completion and documentation boundary
+
+This D-41 checkpoint is complete when repository documentation:
+
+- records D3a.1 publication at =0601b9d8537afb36b9e3589c6227e8cf652336e1=;
+- records D3b publication at =b1d6ecb38c495089ab22e4e648a1fce9cd48bc1b=;
+- replaces the monolithic D4 work item with D4a, D4b, D4c.1, D4c.2, D4c.3,
+  and D5;
+- corrects the recovery-root temporal contradiction;
+- records the fused-program identity-cycle resolution and program-root
+  lifecycle; and
+- retains every live-mutation and P5.3 nonclaim.
+
+The live agenda is intentionally outside this source-only documentation edit.
+It must be synchronized separately with its normal input-hash guard and Org
+lint before it can claim D-41.
+
+* Handoff
+
+Publish this design checkpoint and stop.  After clean upstream equality, D4a
+may implement only the reconciliation, fused-program source, root-contract
+abstraction, pre-phase revalidation, and synthetic fixtures described here.
+
+No later D4 or D5 gate is implicitly authorized.

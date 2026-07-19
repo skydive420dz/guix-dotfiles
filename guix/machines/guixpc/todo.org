@@ -882,10 +882,11 @@ CLOSED: [2026-07-18 Sat]
 * BACKLOG P5.2b System generation deletion and custom-GRUB boundary
 :PROPERTIES:
 :created: 2026-07-18
-:blocked_by: published D3b evidence; D4 reconciliation, immutable loading, attended quiescence/revalidation, production GC-root liveness, fresh manifest, and exact authorization
+:blocked_by: D4a/D4b fused-program gates; D4c.1/D4c.2 live manifest/program publication; D4c.3 packet acceptance; separate D5 execution grant
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-18-p5.2b-custom-grub-safe-system-pruning-design.org][2026-07-18 P5.2b custom-GRUB-safe System-pruning design]].
+- Production-boundary design: [[file:../../../docs/audits/2026-07-19-p5.2b-d4-production-boundary-design.org][2026-07-19 P5.2b-D4 production-boundary safety decomposition]].
 - Hold all 78 System candidates.
 - Do not run the installed supported System deletion command: after removing
   links it reconstructs GRUB from default bootloader configuration rather than
@@ -1001,7 +1002,7 @@ CLOSED: [2026-07-19 Sun]
 :PROPERTIES:
 :created: 2026-07-19
 :source_published: 0601b9d8537afb36b9e3589c6227e8cf652336e1
-:evidence_publication: PENDING
+:evidence_publication: b1d6ecb38c495089ab22e4e648a1fce9cd48bc1b
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-19-p5.2b-d3b-clean-published-recovery-evidence.org][2026-07-19 P5.2b-D3b clean-published recovery evidence]].
@@ -1017,34 +1018,149 @@ CLOSED: [2026-07-19 Sun]
 - [X] Stop without exercising any live transaction surface or granting D4
   authorization.
 
-** BACKLOG P5.2b-D4 fresh live manifest and attended authorization
+** TODO P5.2b-D4a reconciliation and fused-program source/fixtures
 :PROPERTIES:
-:created: 2026-07-18
-:blocked_by: published D3b evidence; D4 reconciliation, immutable loading, attended quiescence/revalidation, production GC-root liveness, fresh manifest, and exact authorization
+:created: 2026-07-19
+:blocked_by: none; source/fixture work only
 :END:
 
-- [ ] Produce and publish a fresh immutable live manifest, then obtain
-  attended authorization naming its exact hash before any generation-link,
-  GRUB, =bootcfg=, or recovery-root transaction mutation.
-- [ ] Before live promotion, implement and fixture-test conservative
-  reconciliation for a pre-=BEGIN= transaction directory, partial backup, and
-  known atomic temporaries; D3a deliberately leaves those states for manual
-  review.
-- [ ] Package the production driver, module, and exact manifest as one
-  immutable loaded-byte input; D3a proves source hash preflight, not resistance
-  to hostile same-UID replacement between preflight and Guile loading.
+- Design: [[file:../../../docs/audits/2026-07-19-p5.2b-d4-production-boundary-design.org][2026-07-19 P5.2b-D4 production-boundary safety decomposition]].
+- [ ] Implement the closed, fail-closed reconciliation table for exact
+  pre-=BEGIN= directory states, absent/complete/provable-prefix partial backup,
+  the complete direct-program-root-first root/transaction-base/lock/
+  candidate-root/transaction-directory/quarantine/journal bootstrap prefix,
+  and unique known journal/GRUB/=bootcfg= temporaries.  Unknown or ambiguous
+  state must remain =REVIEW-REQUIRED= without cleanup.  Production recovery
+  resumes the exact prefix and never reverse-unlinks persistent lock files or
+  the program root before a durable terminal event.
+- [ ] Reject every hash-valid but illegal journal history with one closed
+  forward/rollback/post-commit automaton, including duplicates, skipped or
+  reordered transitions, and any suffix after a terminal event.
+- [ ] Implement the deterministic constructor/render source for one fused
+  Scheme file containing the exact transaction implementation and fixture
+  manifest bytes.  Validate emitted bytes without realizing a store output;
+  D4b owns the first =computed-file= realization and store-location tests.
 - [ ] Retain the cooperative transaction and System-profile locks, require an
-  attended quiescent window, and fail closed unless every protected surface is
-  revalidated exactly before each transaction phase.  This does not claim
-  exclusion of arbitrary =guix system= commands.
-- [ ] Before any mutation, prove that production recovery roots for every
-  selected candidate and the old/new =bootcfg= targets are registered and
-  live; keep them registered and live until safe cleanup completes.
+  attended quiescence observation, fixture-test transaction-then-System
+  no-wait acquisition after the durable program root, and run one exact
+  protected-surface/root/journal revalidation gate under both locks before
+  every side-effecting forward and rollback phase.  Do not claim exclusion of
+  arbitrary =guix system= commands.  Retain both exact lock inodes as terminal
+  infrastructure; D5 never unlinks a persistent lock pathname.
+- [ ] Add the one-store-connection root abstraction and synthetic tests for
+  temporary roots plus direct manifest-keyed roots for the fused program,
+  every selected target, and old/new =bootcfg=.  Cover missing/retargeted/
+  invalid/non-live roots, liveness loss, session failure, partial bootstrap,
+  and cleanup.  D4a proves no production registration or liveness.
+- [ ] Keep D4a =FIXTURE-ONLY= / =NOT-GRANTED=, hard-refuse root =/=, pass the
+  legacy 98-point matrix plus reconciliation/pre-phase/root negatives, strict
+  source gates, and selected-live-surface nonmutation, then stop without a
+  store build or live action.
+
+** BACKLOG P5.2b-D4b clean-published synthetic fused-program evidence
+:PROPERTIES:
+:created: 2026-07-19
+:blocked_by: published D4a source checkpoint
+:END:
+
+- [ ] Fetch exact published D4a into a clean upstream-equal checkout and build
+  one unprivileged synthetic fixture-policy fused Scheme program.
+- [ ] Prove the exact program runs with the checkout unavailable, ignores
+  poisoned Guile paths after realization, embeds the reviewed bytes, rejects a
+  mutable copy and every live action, and passes the full D4a plus 98-point
+  matrices.  The external evidence gate rejects an unrecorded alternate store
+  output; the program does not embed its self-referential final path/hash.
+- [ ] Freeze derivation/output identity, program hash/size, loaded-byte
+  provenance, raw results, bounded realization effects, and unchanged selected
+  live transaction surfaces; publish and stop.
+
+** BACKLOG P5.2b-D4c.1 fresh live-state manifest publication
+:PROPERTIES:
+:created: 2026-07-19
+:blocked_by: published D4b evidence
+:END:
+
+- [ ] Recompute every candidate, retained, protected, GRUB/=bootcfg=/EFI,
+  transaction-prestate, expected-poststate, candidate/bootcfg root tuple, and
+  direct program-root name formula without assuming the historical
+  =86/17/5= or 78-candidate snapshot remains current.
+- [ ] Publish the closed live-state review manifest with
+  =authorization NOT-GRANTED=.  It binds fused-program source inputs but does
+  not contain a self-referential future program path/hash or exact
+  program-root target tuple.
+- [ ] Re-establish clean upstream equality and stop without a program build,
+  root, authorization, or transaction mutation.
+
+** BACKLOG P5.2b-D4c.2 exact live fused-program build/evidence
+:PROPERTIES:
+:created: 2026-07-19
+:blocked_by: published D4c.1 manifest
+:END:
+
+- [ ] Build one fused program embedding the exact published D4c.1 manifest and
+  freeze the non-circular tuple of manifest SHA256, canonical program store
+  path, program SHA256/size, and pinned Guix/Guile identities.
+- [ ] Repass loader-isolation gates and the read-only live verifier, publish
+  the exact evidence, and stop without production roots or a live action.
+
+** BACKLOG P5.2b-D4c.3 unchanged-state execution-packet acceptance
+:PROPERTIES:
+:created: 2026-07-19
+:blocked_by: published D4c.2 evidence and unchanged protected live state
+:END:
+
+- [ ] Revalidate repository/GitHub equality, manifest/program identities, boot
+  ID, every protected surface, absent transaction/roots, exact selector and
+  postflight, and attended quiescence.
+- [ ] Accept one exact future-execution packet naming =P5.2b-D5=, the full
+  manifest hash, exact program path/hash/size, selector/count transition,
+  GRUB/=bootcfg= identities, durable program/candidate/bootcfg roots,
+  one-connection temporary roots, the complete ordered bootstrap/lock-retention
+  contract, the liveness checks and transaction phases proposed for the later
+  grant, and every prohibition.
+- [ ] Stop with =execution NOT-GRANTED=.  Packet acceptance is not an execution
+  grant, and any later drift invalidates it.
+
+** BACKLOG P5.2b-D5 attended System transaction and postflight
+:PROPERTIES:
+:created: 2026-07-19
+:blocked_by: accepted D4c.3 packet; initial apply requires unchanged final preflight/grant; recovery requires one accepted transition and fresh continuation grant
+:END:
+
+- [ ] Initial apply: require the exact absent D4c.3 transaction/root/lock
+  prestate, repeat the full identity/protected-state/quiescence preflight, and
+  obtain a separate exact D5 execution grant before any effect.
+- [ ] After that grant, open one store connection, temp-pin the exact fused
+  program as the first daemon mutation, then atomically create and prove
+  =/var/guix/gcroots/p52b-system-prune-program-MANIFEST-SHA256= as the first
+  persistent mutation and durable GC root.
+- [ ] Only after the program root is proven, create/validate transaction-base
+  and persistent lock files, acquire transaction then System lock without
+  waiting, revalidate under both, then temp-pin and create the ordered
+  candidate/bootcfg roots and remaining declared bootstrap prefixes.
+- [ ] Reconcile/recover: instead of requiring absent prestate, require one
+  exact program-root-first manifest-declared transitional state, legal journal
+  head when present, exact phase-specific protected state, fresh attended
+  re-attestation, and a separate continuation grant naming that state and next
+  phase.  Reacquire both locks and revalidate under them before continuing.
+- [ ] Prove exact =valid-path?=, =find-roots=, and authorized =live-paths=
+  results before any GRUB, =bootcfg=, or generation-link mutation; do not call
+  =add-indirect-root= for direct roots.  Use =live-paths= only for closed
+  target-membership checks; do not treat its broader returned set as evidence.
+- [ ] Keep the fused-program durable root through durable =COMPLETE= or
+  =ROLLED-BACK= plus terminal postflight, and remove it last while its temporary
+  root remains live; revalidate before every forward, rollback, and cleanup
+  phase.  Retain the exact transaction/System lock inodes in terminal
+  postflight; never unlink their persistent pathnames.
+- [ ] Freeze exact postflight and stop without GC, collection, activation,
+  reconfiguration, bootloader installation, EFI mutation, reboot,
+  =guix gc --list-live=, =guix gc --list-dead=, or any unreviewed liveness
+  query.
 
 * BACKLOG P5.3 reviewed unreachable-store collection
 :PROPERTIES:
 :created: 2026-07-18
-:blocked_by: installed GRUB aligned with retained System links, accepted post-P5.2 non-mutating estimate, and separate explicit collection authorization
+:blocked_by: completed D5 with installed GRUB aligned to retained System links, accepted post-P5.2 non-mutating estimate, and separate explicit collection authorization
 :END:
 
 - Treat generation-link deletion and store-object collection as different

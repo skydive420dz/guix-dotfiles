@@ -3,7 +3,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:recovery:testing:
-#+status: source correction complete; publication pending
+#+status: source correction complete; published at 0601b9d8537afb36b9e3589c6227e8cf652336e1
 
 * Outcome
 
@@ -107,13 +107,21 @@ No live transaction action, generation-link change, recovery-root creation,
 GRUB/=bootcfg= write, GC, dead/live query, activation, reconfiguration, or
 reboot occurred.
 
-* Handoff
+* Publication and handoff
 
-Publish this compile-gate correction first.  D3b must fetch the exact corrected
-commit into a clean, upstream-equal checkout and rerun the full compile,
-98-point matrix, strict, exact-output, and live-snapshot gates.  This candidate
-validation is not substituted for that clean-published evidence.
+This correction was published exactly at:
 
-D4 remains separately blocked on bootstrap/temporary reconciliation, immutable
-loaded-byte packaging, attended quiescence, a fresh published live manifest,
-and manifest-specific attended authorization.  P5.3 remains separate and held.
+#+begin_example
+0601b9d8537afb36b9e3589c6227e8cf652336e1
+#+end_example
+
+D3b subsequently fetched those bytes into a clean upstream-equal checkout,
+reran the full compile, 98-point matrix, strict, exact-output, and
+live-snapshot gates, and published that evidence separately at
+=b1d6ecb38c495089ab22e4e648a1fce9cd48bc1b=.  The later evidence does not
+retroactively expand this correction's scope.
+
+Accepted decision D-41 keeps D4 divided into source/fixture, clean-published
+synthetic fused-program evidence, fresh live-manifest publication, exact live
+fused-program evidence, unchanged-state execution-packet acceptance, and a
+separately granted attended transaction.  P5.3 remains separate and held.

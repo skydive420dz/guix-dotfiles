@@ -3,7 +3,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:testing:
-#+status: evidence complete; publication pending
+#+status: evidence complete; published at b1d6ecb38c495089ab22e4e648a1fce9cd48bc1b
 
 * Outcome
 
@@ -34,6 +34,15 @@ scope and does not authorize D4 or live System pruning.
 
 The evidence run began at =2026-07-19T16:42:09Z= and completed by
 =2026-07-19T16:54:02Z=.
+
+The closed evidence packet was subsequently published exactly at:
+
+#+begin_example
+b1d6ecb38c495089ab22e4e648a1fce9cd48bc1b
+#+end_example
+
+That publication changes only the roadmap prerequisite.  It does not turn the
+fixture engine into a live program or grant authorization.
 
 * Published corrected source gate
 
@@ -236,12 +245,13 @@ D3b does not claim:
 * Roadmap synchronization
 
 The repository README and GuixPC TODO close D3b only at this evidence
-boundary.  D4 remains separately blocked on conservative bootstrap/temporary
-reconciliation, immutable loaded-byte packaging, attended quiescence with
-exact phase-by-phase protected-surface revalidation, production recovery-root
-registration and liveness through safe cleanup, a fresh published live
-manifest, and manifest-specific attended authorization.  Its cooperative
-locks still do not claim exclusion of arbitrary =guix system= commands.
+boundary.  Accepted decision D-41 later decomposed the remaining work into
+D4a source/fixtures, D4b clean-published synthetic fused-program evidence,
+D4c.1 live-manifest publication, D4c.2 exact live-program evidence, D4c.3
+unchanged-state execution-packet acceptance, and a separately granted D5
+transaction.  Attended quiescence plus exact pre-phase revalidation remains
+mandatory; the cooperative locks still do not claim exclusion of arbitrary
+=guix system= commands.
 
 The live agenda was staged from SHA256:
 
@@ -258,16 +268,30 @@ after the live input hash was rechecked.  Its final SHA256 is:
 
 * Handoff
 
-Publish this D3b evidence checkpoint and stop.  Only after clean upstream
-equality may D4 source design begin.  D4 must first implement and fixture-test
-bootstrap/known-temporary reconciliation and immutable loaded-byte packaging.
-It must retain cooperative locking without claiming exclusion of arbitrary
-=guix system= commands, establish attended quiescence, and revalidate every
-protected surface exactly before each phase.  It must also prove before any
-mutation that production recovery roots for every selected candidate and the
-old/new =bootcfg= targets are registered and live, and keep them so through
-safe cleanup.  Only then may it publish a fresh live manifest and obtain
-attended authorization naming that exact hash before any generation-link,
-GRUB, =bootcfg=, or recovery-root mutation.
+D3b is published at
+=b1d6ecb38c495089ab22e4e648a1fce9cd48bc1b=.  Accepted decision D-41 now
+permits only D4a source-and-fixture work.  D4a must implement conservative
+bootstrap/known-temporary reconciliation and the source for one fused
+store-resident Scheme program without adding a live action.
+
+D4b must reproduce that source from clean publication and build only a
+synthetic fused-program artifact.  D4c.1 must then publish a fresh live-state
+review manifest; D4c.2 must build and freeze the exact manifest-specific live
+program; and D4c.3 must revalidate unchanged state, accept the exact eligible
+execution packet while retaining =execution NOT-GRANTED=, and stop.  Only D5,
+after a final unchanged-state preflight and separate exact execution grant, may
+begin initial apply.  Reconcile/recover instead requires one exact
+manifest-declared transitional state and a fresh state-specific continuation
+grant.
+
+D5 must temp-pin the program first, then create its direct symlink beneath the
+already-existing GC-root directory as the first persistent mutation.  It
+creates/acquires transaction then System lock before the remaining roots and
+must prove every required root's exact daemon-visible validity/liveness before
+any GRUB, =bootcfg=, or generation-link mutation.  The fused program root
+remains until =COMPLETE= or =ROLLED-BACK= and terminal postflight are durable.
+The exact persistent lock inodes remain as terminal infrastructure; D5 never
+unlinks a locked pathname.  Cooperative locks and attended quiescence still do
+not claim exclusion of arbitrary =guix system= commands.
 
 P5.3 collection remains a separate held operation.
