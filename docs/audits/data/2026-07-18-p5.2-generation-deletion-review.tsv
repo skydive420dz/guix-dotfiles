@@ -1,0 +1,172 @@
+schema	p5.2-generation-deletion-review/v1
+mode	review-only-no-mutation
+scope	home-canary-only
+source	published-p5.1	docs/audits/data/2026-07-18-p5.1-retention-estimate.tsv	1fe7ab18d7fb4e7d3c6ed0e3fd148f796d36d1122a80f1aa903165dd7eee8e11	ef037f5ca38d06a918eb7a08276d5e979a317e6c18f06ea98a18151c06e431ca
+source	fresh-p5.2	docs/audits/data/2026-07-18-p5.2-preflight-estimate.tsv	1fe7ab18d7fb4e7d3c6ed0e3fd148f796d36d1122a80f1aa903165dd7eee8e11	ef037f5ca38d06a918eb7a08276d5e979a317e6c18f06ea98a18151c06e431ca
+drift	full-estimate	identical	0	0	0
+subset	policy	b07d9eb992f82cfbf8b22ae826195b16b9e7609c8976e90bdd4acc41bd3c0d1f
+subset	accounting-and-roots	62a47bd9b5b0335463229f6be6bdb36a06627a65adcc61c3ed8a5127b34715b0
+state	repository	de4355d05d7aa97475ec968ed5e052f0ff6a9b3d	clean-upstream-equal
+state	boot-id	64140768-9522-4cad-8021-9db54e070e8a
+state	current-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+state	booted-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+state	pin-manifest	49c811d35ddaa940afdbe450f08cd67a2fc73ae3d860610c121b7b32caec1ca0
+state	grub-config	/boot/grub/grub.cfg	6e7fe604ee58723c7e321c3a07a645a2017cfcf49bac62b3ecb0c0559ca30671
+state	bootcfg-root	/gnu/store/hdwc6z0wdhgqimxqg1gzkznp9irbkwhl-grub.cfg	/gnu/store/hdwc6z0wdhgqimxqg1gzkznp9irbkwhl-grub.cfg
+state	store-top-level-names	32599	9e8e7696d847a56eeb9acea719bcf58e412d12fc170a0c0fa3912567dc3c761d
+profile	system	86	78	0	78	86	87	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+profile	home	47	30	30	0	17	47	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home
+profile	pull	5	0	0	0	5	5	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+retain	home	29	/var/guix/profiles/per-user/skydive420dz/guix-home-29-link	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	pin-last-known-good,closure-survivor	pin
+retain	home	32	/var/guix/profiles/per-user/skydive420dz/guix-home-32-link	/gnu/store/5l5rn2alj38qclkj93cybla70jhyx6ls-home	/gnu/store/5l5rn2alj38qclkj93cybla70jhyx6ls-home	pin-last-known-good,closure-survivor	pin
+retain	home	33	/var/guix/profiles/per-user/skydive420dz/guix-home-33-link	/gnu/store/dbmnwmi0jypvpi5kb0xn29wjpdhnjr6z-home	/gnu/store/dbmnwmi0jypvpi5kb0xn29wjpdhnjr6z-home	pin-last-known-good,closure-survivor	pin
+retain	home	34	/var/guix/profiles/per-user/skydive420dz/guix-home-34-link	/gnu/store/xzhsfha3cbbzgs3gddi47iq1fk89fmiq-home	/gnu/store/xzhsfha3cbbzgs3gddi47iq1fk89fmiq-home	pin-last-known-good,closure-survivor	pin
+retain	home	35	/var/guix/profiles/per-user/skydive420dz/guix-home-35-link	/gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home	/gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home	pin-last-known-good,closure-survivor	pin
+retain	home	36	/var/guix/profiles/per-user/skydive420dz/guix-home-36-link	/gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home	/gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home	pin-last-known-good,closure-survivor	pin
+retain	home	37	/var/guix/profiles/per-user/skydive420dz/guix-home-37-link	/gnu/store/693n0j3q7ikb8v0bzj76swqg82b6z219-home	/gnu/store/693n0j3q7ikb8v0bzj76swqg82b6z219-home	pin-last-known-good,closure-survivor	pin
+retain	home	38	/var/guix/profiles/per-user/skydive420dz/guix-home-38-link	/gnu/store/aghqh0si8x2pr0cmfyir7mgaks217yb6-home	/gnu/store/aghqh0si8x2pr0cmfyir7mgaks217yb6-home	pin-last-known-good,closure-survivor	pin
+retain	home	39	/var/guix/profiles/per-user/skydive420dz/guix-home-39-link	/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home	/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home	pin-last-known-good,closure-survivor	pin
+retain	home	40	/var/guix/profiles/per-user/skydive420dz/guix-home-40-link	/gnu/store/by5c2mcdhmxf456q7imb6j56kv2y9s4w-home	/gnu/store/by5c2mcdhmxf456q7imb6j56kv2y9s4w-home	pin-last-known-good,closure-survivor	pin
+retain	home	41	/var/guix/profiles/per-user/skydive420dz/guix-home-41-link	/gnu/store/ci9szqljcz4jjvwcrp76865j8q8ihl3d-home	/gnu/store/ci9szqljcz4jjvwcrp76865j8q8ihl3d-home	pin-last-known-good,closure-survivor	pin
+retain	home	42	/var/guix/profiles/per-user/skydive420dz/guix-home-42-link	/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home	/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home	pin-last-known-good,closure-survivor	newest-additional,pin
+retain	home	43	/var/guix/profiles/per-user/skydive420dz/guix-home-43-link	/gnu/store/1slsnsfv8avdqzi3fsf0xhigyv6vfmal-home	/gnu/store/1slsnsfv8avdqzi3fsf0xhigyv6vfmal-home	closure-survivor	newest-additional
+retain	home	44	/var/guix/profiles/per-user/skydive420dz/guix-home-44-link	/gnu/store/gb9kvfwniwwasga61lia7b1dagfa2a4r-home	/gnu/store/gb9kvfwniwwasga61lia7b1dagfa2a4r-home	closure-survivor	newest-additional
+retain	home	45	/var/guix/profiles/per-user/skydive420dz/guix-home-45-link	/gnu/store/9rmcgpl41riggidbkjz7ah3fj7a9wfky-home	/gnu/store/9rmcgpl41riggidbkjz7ah3fj7a9wfky-home	closure-survivor	newest-additional
+retain	home	46	/var/guix/profiles/per-user/skydive420dz/guix-home-46-link	/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home	/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home	pin-preferred-rollback,closure-survivor	newest-additional,pin
+retain	home	47	/var/guix/profiles/per-user/skydive420dz/guix-home-47-link	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home	current,pin-promotion-rollback,closure-survivor	current,pin
+retain	pull	1	/var/guix/profiles/per-user/skydive420dz/current-guix-1-link	/gnu/store/01fsgyxi06ahv5ca4j7djlqwqy0vb3nx-profile	/gnu/store/01fsgyxi06ahv5ca4j7djlqwqy0vb3nx-profile	closure-survivor	newest-additional
+retain	pull	2	/var/guix/profiles/per-user/skydive420dz/current-guix-2-link	/gnu/store/fyjqkz8rl6q459pshbn2r9nihfw9x3xw-profile	/gnu/store/fyjqkz8rl6q459pshbn2r9nihfw9x3xw-profile	pin-last-known-good,closure-survivor	newest-additional,pin
+retain	pull	3	/var/guix/profiles/per-user/skydive420dz/current-guix-3-link	/gnu/store/x9mc2silb9pdszck8yfbvh4plysxkmw2-profile	/gnu/store/x9mc2silb9pdszck8yfbvh4plysxkmw2-profile	pin-last-known-good,closure-survivor	newest-additional,pin
+retain	pull	4	/var/guix/profiles/per-user/skydive420dz/current-guix-4-link	/gnu/store/irs2nbihzakvv0jjs0vzvjyxz2lkiym7-profile	/gnu/store/irs2nbihzakvv0jjs0vzvjyxz2lkiym7-profile	pin-preferred-rollback,closure-survivor	newest-additional,pin
+retain	pull	5	/var/guix/profiles/per-user/skydive420dz/current-guix-5-link	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile	current,pin-promotion-rollback,closure-survivor	current,pin
+retain	system	75	/var/guix/profiles/system-75-link	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	pin-last-known-good,closure-survivor	pin
+retain	system	80	/var/guix/profiles/system-80-link	/gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system	/gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system	pin-emergency-rollback,closure-survivor	pin
+retain	system	81	/var/guix/profiles/system-81-link	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system	pin-last-known-good,closure-survivor	newest-additional,pin
+retain	system	83	/var/guix/profiles/system-83-link	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	pin-last-known-good,closure-survivor	newest-additional,pin
+retain	system	84	/var/guix/profiles/system-84-link	/gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system	/gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system	pin-last-known-good,closure-survivor	newest-additional,pin
+retain	system	85	/var/guix/profiles/system-85-link	/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system	/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system	pin-last-known-good,closure-survivor	newest-additional,pin
+retain	system	86	/var/guix/profiles/system-86-link	/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system	/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system	pin-preferred-rollback,closure-survivor	newest-additional,pin
+retain	system	87	/var/guix/profiles/system-87-link	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	current,pin-promotion-rollback,closure-survivor	current,pin
+delete	home	1	/var/guix/profiles/per-user/skydive420dz/guix-home-1-link	/gnu/store/g8gsq4wr8s8sin031c8vpmarlzg00i8v-home	/gnu/store/g8gsq4wr8s8sin031c8vpmarlzg00i8v-home	unretained-closure
+delete	home	2	/var/guix/profiles/per-user/skydive420dz/guix-home-2-link	/gnu/store/bssmpkbgba30dnl7pknqfk5hqcf75gqk-home	/gnu/store/bssmpkbgba30dnl7pknqfk5hqcf75gqk-home	unretained-closure
+delete	home	3	/var/guix/profiles/per-user/skydive420dz/guix-home-3-link	/gnu/store/bssmpkbgba30dnl7pknqfk5hqcf75gqk-home	/gnu/store/bssmpkbgba30dnl7pknqfk5hqcf75gqk-home	unretained-closure
+delete	home	4	/var/guix/profiles/per-user/skydive420dz/guix-home-4-link	/gnu/store/bssmpkbgba30dnl7pknqfk5hqcf75gqk-home	/gnu/store/bssmpkbgba30dnl7pknqfk5hqcf75gqk-home	unretained-closure
+delete	home	5	/var/guix/profiles/per-user/skydive420dz/guix-home-5-link	/gnu/store/bssmpkbgba30dnl7pknqfk5hqcf75gqk-home	/gnu/store/bssmpkbgba30dnl7pknqfk5hqcf75gqk-home	unretained-closure
+delete	home	6	/var/guix/profiles/per-user/skydive420dz/guix-home-6-link	/gnu/store/x32s30qkw8ivydqd5dqap9w9cs7qhjz6-home	/gnu/store/x32s30qkw8ivydqd5dqap9w9cs7qhjz6-home	unretained-closure
+delete	home	7	/var/guix/profiles/per-user/skydive420dz/guix-home-7-link	/gnu/store/czls489xd5gxarg1mvsa667zr6jjbshz-home	/gnu/store/czls489xd5gxarg1mvsa667zr6jjbshz-home	unretained-closure
+delete	home	8	/var/guix/profiles/per-user/skydive420dz/guix-home-8-link	/gnu/store/b82xcdnl6v2hgd0y35vp1n7nnazbry7b-home	/gnu/store/b82xcdnl6v2hgd0y35vp1n7nnazbry7b-home	unretained-closure
+delete	home	9	/var/guix/profiles/per-user/skydive420dz/guix-home-9-link	/gnu/store/b82xcdnl6v2hgd0y35vp1n7nnazbry7b-home	/gnu/store/b82xcdnl6v2hgd0y35vp1n7nnazbry7b-home	unretained-closure
+delete	home	10	/var/guix/profiles/per-user/skydive420dz/guix-home-10-link	/gnu/store/1fmwhf6916s2wsnfwk3r7i8v4iryzfva-home	/gnu/store/1fmwhf6916s2wsnfwk3r7i8v4iryzfva-home	unretained-closure
+delete	home	11	/var/guix/profiles/per-user/skydive420dz/guix-home-11-link	/gnu/store/hbhzgn5s4gqy8ka3182ikdfkd2b945j1-home	/gnu/store/hbhzgn5s4gqy8ka3182ikdfkd2b945j1-home	unretained-closure
+delete	home	12	/var/guix/profiles/per-user/skydive420dz/guix-home-12-link	/gnu/store/48ykwcknhf6kd9kvir7yi5zfiy41b6l7-home	/gnu/store/48ykwcknhf6kd9kvir7yi5zfiy41b6l7-home	unretained-closure
+delete	home	13	/var/guix/profiles/per-user/skydive420dz/guix-home-13-link	/gnu/store/20km0cgkqwww24y8jcms23i37kh3walg-home	/gnu/store/20km0cgkqwww24y8jcms23i37kh3walg-home	unretained-closure
+delete	home	14	/var/guix/profiles/per-user/skydive420dz/guix-home-14-link	/gnu/store/20km0cgkqwww24y8jcms23i37kh3walg-home	/gnu/store/20km0cgkqwww24y8jcms23i37kh3walg-home	unretained-closure
+delete	home	15	/var/guix/profiles/per-user/skydive420dz/guix-home-15-link	/gnu/store/l148k0d4ad5q2lrf73gyylimjwpbwnjf-home	/gnu/store/l148k0d4ad5q2lrf73gyylimjwpbwnjf-home	unretained-closure
+delete	home	16	/var/guix/profiles/per-user/skydive420dz/guix-home-16-link	/gnu/store/l148k0d4ad5q2lrf73gyylimjwpbwnjf-home	/gnu/store/l148k0d4ad5q2lrf73gyylimjwpbwnjf-home	unretained-closure
+delete	home	17	/var/guix/profiles/per-user/skydive420dz/guix-home-17-link	/gnu/store/l148k0d4ad5q2lrf73gyylimjwpbwnjf-home	/gnu/store/l148k0d4ad5q2lrf73gyylimjwpbwnjf-home	unretained-closure
+delete	home	18	/var/guix/profiles/per-user/skydive420dz/guix-home-18-link	/gnu/store/h7dpsb35s6yx75hgcchvz86sl9jlxqp3-home	/gnu/store/h7dpsb35s6yx75hgcchvz86sl9jlxqp3-home	unretained-closure
+delete	home	19	/var/guix/profiles/per-user/skydive420dz/guix-home-19-link	/gnu/store/h7dpsb35s6yx75hgcchvz86sl9jlxqp3-home	/gnu/store/h7dpsb35s6yx75hgcchvz86sl9jlxqp3-home	unretained-closure
+delete	home	20	/var/guix/profiles/per-user/skydive420dz/guix-home-20-link	/gnu/store/pqpwfjmp9sd7xjj1s0rlfdg8abv5ji4x-home	/gnu/store/pqpwfjmp9sd7xjj1s0rlfdg8abv5ji4x-home	unretained-closure
+delete	home	21	/var/guix/profiles/per-user/skydive420dz/guix-home-21-link	/gnu/store/pqpwfjmp9sd7xjj1s0rlfdg8abv5ji4x-home	/gnu/store/pqpwfjmp9sd7xjj1s0rlfdg8abv5ji4x-home	unretained-closure
+delete	home	22	/var/guix/profiles/per-user/skydive420dz/guix-home-22-link	/gnu/store/pqpwfjmp9sd7xjj1s0rlfdg8abv5ji4x-home	/gnu/store/pqpwfjmp9sd7xjj1s0rlfdg8abv5ji4x-home	unretained-closure
+delete	home	23	/var/guix/profiles/per-user/skydive420dz/guix-home-23-link	/gnu/store/pqpwfjmp9sd7xjj1s0rlfdg8abv5ji4x-home	/gnu/store/pqpwfjmp9sd7xjj1s0rlfdg8abv5ji4x-home	unretained-closure
+delete	home	24	/var/guix/profiles/per-user/skydive420dz/guix-home-24-link	/gnu/store/pqpwfjmp9sd7xjj1s0rlfdg8abv5ji4x-home	/gnu/store/pqpwfjmp9sd7xjj1s0rlfdg8abv5ji4x-home	unretained-closure
+delete	home	25	/var/guix/profiles/per-user/skydive420dz/guix-home-25-link	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	duplicate-retained-closure
+delete	home	26	/var/guix/profiles/per-user/skydive420dz/guix-home-26-link	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	duplicate-retained-closure
+delete	home	27	/var/guix/profiles/per-user/skydive420dz/guix-home-27-link	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	duplicate-retained-closure
+delete	home	28	/var/guix/profiles/per-user/skydive420dz/guix-home-28-link	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	duplicate-retained-closure
+delete	home	30	/var/guix/profiles/per-user/skydive420dz/guix-home-30-link	/gnu/store/fg22z7rkd2aiwq3803ra2924f97fcgb4-home	/gnu/store/fg22z7rkd2aiwq3803ra2924f97fcgb4-home	unretained-closure
+delete	home	31	/var/guix/profiles/per-user/skydive420dz/guix-home-31-link	/gnu/store/5l5rn2alj38qclkj93cybla70jhyx6ls-home	/gnu/store/5l5rn2alj38qclkj93cybla70jhyx6ls-home	duplicate-retained-closure
+hold	system	1	/var/guix/profiles/system-1-link	/gnu/store/pxf9kdcvaiy0n0jvack6f5q4bq0hc0lc-system	/gnu/store/pxf9kdcvaiy0n0jvack6f5q4bq0hc0lc-system	unretained-closure	custom-grub-boundary
+hold	system	2	/var/guix/profiles/system-2-link	/gnu/store/6kdv0x2pcwl4daqwwxyka55b270f9998-system	/gnu/store/6kdv0x2pcwl4daqwwxyka55b270f9998-system	unretained-closure	custom-grub-boundary
+hold	system	3	/var/guix/profiles/system-3-link	/gnu/store/v8v9rc43z8m6zjsmckah6hjafk10z74n-system	/gnu/store/v8v9rc43z8m6zjsmckah6hjafk10z74n-system	unretained-closure	custom-grub-boundary
+hold	system	4	/var/guix/profiles/system-4-link	/gnu/store/day53inbwmfd8qca6f2464xx4hq8rdaj-system	/gnu/store/day53inbwmfd8qca6f2464xx4hq8rdaj-system	unretained-closure	custom-grub-boundary
+hold	system	5	/var/guix/profiles/system-5-link	/gnu/store/g31hicydvcfb9m1akwhgnykzdscrk5pz-system	/gnu/store/g31hicydvcfb9m1akwhgnykzdscrk5pz-system	unretained-closure	custom-grub-boundary
+hold	system	6	/var/guix/profiles/system-6-link	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system	unretained-closure	custom-grub-boundary
+hold	system	7	/var/guix/profiles/system-7-link	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system	unretained-closure	custom-grub-boundary
+hold	system	8	/var/guix/profiles/system-8-link	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system	unretained-closure	custom-grub-boundary
+hold	system	9	/var/guix/profiles/system-9-link	/gnu/store/4kayh6h8rb42zn5mvq7pddfkfdb68q8n-system	/gnu/store/4kayh6h8rb42zn5mvq7pddfkfdb68q8n-system	unretained-closure	custom-grub-boundary
+hold	system	11	/var/guix/profiles/system-11-link	/gnu/store/1g6dgr5zcnsj9x41p14j783ghxb8lwca-system	/gnu/store/1g6dgr5zcnsj9x41p14j783ghxb8lwca-system	unretained-closure	custom-grub-boundary
+hold	system	12	/var/guix/profiles/system-12-link	/gnu/store/bvg30i38b7jngf1154s7p17dfbcl0269-system	/gnu/store/bvg30i38b7jngf1154s7p17dfbcl0269-system	unretained-closure	custom-grub-boundary
+hold	system	13	/var/guix/profiles/system-13-link	/gnu/store/2rgc4g9xh07wkbfwyl9b08jpxcspfa17-system	/gnu/store/2rgc4g9xh07wkbfwyl9b08jpxcspfa17-system	unretained-closure	custom-grub-boundary
+hold	system	14	/var/guix/profiles/system-14-link	/gnu/store/ik0krc8bhss1540ff8pq3d8jkpxzs1y2-system	/gnu/store/ik0krc8bhss1540ff8pq3d8jkpxzs1y2-system	unretained-closure	custom-grub-boundary
+hold	system	15	/var/guix/profiles/system-15-link	/gnu/store/ik0krc8bhss1540ff8pq3d8jkpxzs1y2-system	/gnu/store/ik0krc8bhss1540ff8pq3d8jkpxzs1y2-system	unretained-closure	custom-grub-boundary
+hold	system	16	/var/guix/profiles/system-16-link	/gnu/store/k80j2nz1cvbck5y40y9xdqk56s51k274-system	/gnu/store/k80j2nz1cvbck5y40y9xdqk56s51k274-system	unretained-closure	custom-grub-boundary
+hold	system	17	/var/guix/profiles/system-17-link	/gnu/store/k80j2nz1cvbck5y40y9xdqk56s51k274-system	/gnu/store/k80j2nz1cvbck5y40y9xdqk56s51k274-system	unretained-closure	custom-grub-boundary
+hold	system	18	/var/guix/profiles/system-18-link	/gnu/store/9mwzsqs47ddfdb1qj2m3k8lm0a8xnd9q-system	/gnu/store/9mwzsqs47ddfdb1qj2m3k8lm0a8xnd9q-system	unretained-closure	custom-grub-boundary
+hold	system	19	/var/guix/profiles/system-19-link	/gnu/store/rm3hn7r7padary5jsv2828j644qfv998-system	/gnu/store/rm3hn7r7padary5jsv2828j644qfv998-system	unretained-closure	custom-grub-boundary
+hold	system	20	/var/guix/profiles/system-20-link	/gnu/store/y89hi7p4lh7ps8z2nr0dk0dljvnjdaf8-system	/gnu/store/y89hi7p4lh7ps8z2nr0dk0dljvnjdaf8-system	unretained-closure	custom-grub-boundary
+hold	system	21	/var/guix/profiles/system-21-link	/gnu/store/pxj1ndm9p14qbil5hs5sz9046mmdrk33-system	/gnu/store/pxj1ndm9p14qbil5hs5sz9046mmdrk33-system	unretained-closure	custom-grub-boundary
+hold	system	22	/var/guix/profiles/system-22-link	/gnu/store/06kpdfxg30dm3jfrxidwz9rzzc68hzh2-system	/gnu/store/06kpdfxg30dm3jfrxidwz9rzzc68hzh2-system	unretained-closure	custom-grub-boundary
+hold	system	23	/var/guix/profiles/system-23-link	/gnu/store/k6xlrbxsx93vzmh1bdfqifjylhqi9iwa-system	/gnu/store/k6xlrbxsx93vzmh1bdfqifjylhqi9iwa-system	unretained-closure	custom-grub-boundary
+hold	system	24	/var/guix/profiles/system-24-link	/gnu/store/9s599qwp7ldr70y474klnk4yqcfm68d2-system	/gnu/store/9s599qwp7ldr70y474klnk4yqcfm68d2-system	unretained-closure	custom-grub-boundary
+hold	system	25	/var/guix/profiles/system-25-link	/gnu/store/k6xlrbxsx93vzmh1bdfqifjylhqi9iwa-system	/gnu/store/k6xlrbxsx93vzmh1bdfqifjylhqi9iwa-system	unretained-closure	custom-grub-boundary
+hold	system	26	/var/guix/profiles/system-26-link	/gnu/store/64v93rf8gqs2ip6sr4lxjs6iq1jqpfdm-system	/gnu/store/64v93rf8gqs2ip6sr4lxjs6iq1jqpfdm-system	unretained-closure	custom-grub-boundary
+hold	system	27	/var/guix/profiles/system-27-link	/gnu/store/bzid5896syg3dsznw5pnjcd972qa8l7q-system	/gnu/store/bzid5896syg3dsznw5pnjcd972qa8l7q-system	unretained-closure	custom-grub-boundary
+hold	system	28	/var/guix/profiles/system-28-link	/gnu/store/85w3kb9q7rd60c95vndh1f5nrc98d1lr-system	/gnu/store/85w3kb9q7rd60c95vndh1f5nrc98d1lr-system	unretained-closure	custom-grub-boundary
+hold	system	29	/var/guix/profiles/system-29-link	/gnu/store/5q0h468lka59qm9ymh9bd2gw9hf7z08g-system	/gnu/store/5q0h468lka59qm9ymh9bd2gw9hf7z08g-system	unretained-closure	custom-grub-boundary
+hold	system	30	/var/guix/profiles/system-30-link	/gnu/store/5q0h468lka59qm9ymh9bd2gw9hf7z08g-system	/gnu/store/5q0h468lka59qm9ymh9bd2gw9hf7z08g-system	unretained-closure	custom-grub-boundary
+hold	system	31	/var/guix/profiles/system-31-link	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system	unretained-closure	custom-grub-boundary
+hold	system	32	/var/guix/profiles/system-32-link	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system	unretained-closure	custom-grub-boundary
+hold	system	33	/var/guix/profiles/system-33-link	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system	unretained-closure	custom-grub-boundary
+hold	system	34	/var/guix/profiles/system-34-link	/gnu/store/a24g3cjwi3ipdmch596rv4y6z3h2bv1n-system	/gnu/store/a24g3cjwi3ipdmch596rv4y6z3h2bv1n-system	unretained-closure	custom-grub-boundary
+hold	system	35	/var/guix/profiles/system-35-link	/gnu/store/f344fd0mhz4l5z6hr9q3dbdac9vwy4j7-system	/gnu/store/f344fd0mhz4l5z6hr9q3dbdac9vwy4j7-system	unretained-closure	custom-grub-boundary
+hold	system	36	/var/guix/profiles/system-36-link	/gnu/store/f344fd0mhz4l5z6hr9q3dbdac9vwy4j7-system	/gnu/store/f344fd0mhz4l5z6hr9q3dbdac9vwy4j7-system	unretained-closure	custom-grub-boundary
+hold	system	37	/var/guix/profiles/system-37-link	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system	unretained-closure	custom-grub-boundary
+hold	system	38	/var/guix/profiles/system-38-link	/gnu/store/qwqs1bnx0jd3zvii5x5nq9kwgppb9xqi-system	/gnu/store/qwqs1bnx0jd3zvii5x5nq9kwgppb9xqi-system	unretained-closure	custom-grub-boundary
+hold	system	39	/var/guix/profiles/system-39-link	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system	unretained-closure	custom-grub-boundary
+hold	system	40	/var/guix/profiles/system-40-link	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system	unretained-closure	custom-grub-boundary
+hold	system	41	/var/guix/profiles/system-41-link	/gnu/store/azi8kacji2192hdiirnn7cx920xab8im-system	/gnu/store/azi8kacji2192hdiirnn7cx920xab8im-system	unretained-closure	custom-grub-boundary
+hold	system	42	/var/guix/profiles/system-42-link	/gnu/store/8c5cg42nqas33hfknfmc1m26kv3gqydz-system	/gnu/store/8c5cg42nqas33hfknfmc1m26kv3gqydz-system	unretained-closure	custom-grub-boundary
+hold	system	43	/var/guix/profiles/system-43-link	/gnu/store/8c5cg42nqas33hfknfmc1m26kv3gqydz-system	/gnu/store/8c5cg42nqas33hfknfmc1m26kv3gqydz-system	unretained-closure	custom-grub-boundary
+hold	system	44	/var/guix/profiles/system-44-link	/gnu/store/gn6vaf99knnfb6i9p4hzlz344xqy9miy-system	/gnu/store/gn6vaf99knnfb6i9p4hzlz344xqy9miy-system	unretained-closure	custom-grub-boundary
+hold	system	45	/var/guix/profiles/system-45-link	/gnu/store/gn6vaf99knnfb6i9p4hzlz344xqy9miy-system	/gnu/store/gn6vaf99knnfb6i9p4hzlz344xqy9miy-system	unretained-closure	custom-grub-boundary
+hold	system	46	/var/guix/profiles/system-46-link	/gnu/store/399al9m29qhk5cspam22m6r041cjfyax-system	/gnu/store/399al9m29qhk5cspam22m6r041cjfyax-system	unretained-closure	custom-grub-boundary
+hold	system	47	/var/guix/profiles/system-47-link	/gnu/store/sw3mv9fc90nwlc3mazyrkqvbf6s1nghq-system	/gnu/store/sw3mv9fc90nwlc3mazyrkqvbf6s1nghq-system	unretained-closure	custom-grub-boundary
+hold	system	48	/var/guix/profiles/system-48-link	/gnu/store/ia9z3b7jqi17bc9y7cr2wks9spyy24cy-system	/gnu/store/ia9z3b7jqi17bc9y7cr2wks9spyy24cy-system	unretained-closure	custom-grub-boundary
+hold	system	49	/var/guix/profiles/system-49-link	/gnu/store/ia9z3b7jqi17bc9y7cr2wks9spyy24cy-system	/gnu/store/ia9z3b7jqi17bc9y7cr2wks9spyy24cy-system	unretained-closure	custom-grub-boundary
+hold	system	50	/var/guix/profiles/system-50-link	/gnu/store/xi7jjf360ic0nv9b5lvig86y9a8npfzz-system	/gnu/store/xi7jjf360ic0nv9b5lvig86y9a8npfzz-system	unretained-closure	custom-grub-boundary
+hold	system	51	/var/guix/profiles/system-51-link	/gnu/store/28mkvq5wmg4lw9rlv3q76pmz2v8q335j-system	/gnu/store/28mkvq5wmg4lw9rlv3q76pmz2v8q335j-system	unretained-closure	custom-grub-boundary
+hold	system	52	/var/guix/profiles/system-52-link	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system	unretained-closure	custom-grub-boundary
+hold	system	53	/var/guix/profiles/system-53-link	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system	unretained-closure	custom-grub-boundary
+hold	system	54	/var/guix/profiles/system-54-link	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system	unretained-closure	custom-grub-boundary
+hold	system	55	/var/guix/profiles/system-55-link	/gnu/store/c4pzvhfrdwy3rpn79k4wli0hsq2kwknq-system	/gnu/store/c4pzvhfrdwy3rpn79k4wli0hsq2kwknq-system	unretained-closure	custom-grub-boundary
+hold	system	56	/var/guix/profiles/system-56-link	/gnu/store/6wdgy6lgx21m7szc4aalrri7klw81xv5-system	/gnu/store/6wdgy6lgx21m7szc4aalrri7klw81xv5-system	unretained-closure	custom-grub-boundary
+hold	system	57	/var/guix/profiles/system-57-link	/gnu/store/wm9g49p8kbbyxlzmc55alydl77c3y9il-system	/gnu/store/wm9g49p8kbbyxlzmc55alydl77c3y9il-system	unretained-closure	custom-grub-boundary
+hold	system	58	/var/guix/profiles/system-58-link	/gnu/store/s33vqbfh7rhs0mkvv4i5xaxas5pskrgq-system	/gnu/store/s33vqbfh7rhs0mkvv4i5xaxas5pskrgq-system	unretained-closure	custom-grub-boundary
+hold	system	59	/var/guix/profiles/system-59-link	/gnu/store/s33vqbfh7rhs0mkvv4i5xaxas5pskrgq-system	/gnu/store/s33vqbfh7rhs0mkvv4i5xaxas5pskrgq-system	unretained-closure	custom-grub-boundary
+hold	system	60	/var/guix/profiles/system-60-link	/gnu/store/gqwbnc3jijhn7as2kw4ld5z5b1zazb91-system	/gnu/store/gqwbnc3jijhn7as2kw4ld5z5b1zazb91-system	unretained-closure	custom-grub-boundary
+hold	system	61	/var/guix/profiles/system-61-link	/gnu/store/gqwbnc3jijhn7as2kw4ld5z5b1zazb91-system	/gnu/store/gqwbnc3jijhn7as2kw4ld5z5b1zazb91-system	unretained-closure	custom-grub-boundary
+hold	system	62	/var/guix/profiles/system-62-link	/gnu/store/2a0jh25wvxf5d4knw3aykrjfwsj70zp5-system	/gnu/store/2a0jh25wvxf5d4knw3aykrjfwsj70zp5-system	unretained-closure	custom-grub-boundary
+hold	system	63	/var/guix/profiles/system-63-link	/gnu/store/5kczpfmnp3igb9mkhs8wypc0mmy2gmdm-system	/gnu/store/5kczpfmnp3igb9mkhs8wypc0mmy2gmdm-system	unretained-closure	custom-grub-boundary
+hold	system	64	/var/guix/profiles/system-64-link	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system	unretained-closure	custom-grub-boundary
+hold	system	65	/var/guix/profiles/system-65-link	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system	unretained-closure	custom-grub-boundary
+hold	system	66	/var/guix/profiles/system-66-link	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system	unretained-closure	custom-grub-boundary
+hold	system	67	/var/guix/profiles/system-67-link	/gnu/store/xh6p1d8yb8s4kx8r0lxcsd5ah5p5i6s0-system	/gnu/store/xh6p1d8yb8s4kx8r0lxcsd5ah5p5i6s0-system	unretained-closure	custom-grub-boundary
+hold	system	68	/var/guix/profiles/system-68-link	/gnu/store/xh6p1d8yb8s4kx8r0lxcsd5ah5p5i6s0-system	/gnu/store/xh6p1d8yb8s4kx8r0lxcsd5ah5p5i6s0-system	unretained-closure	custom-grub-boundary
+hold	system	69	/var/guix/profiles/system-69-link	/gnu/store/ahw8zgrmwv4y086bp69p8iw139x2wiab-system	/gnu/store/ahw8zgrmwv4y086bp69p8iw139x2wiab-system	unretained-closure	custom-grub-boundary
+hold	system	70	/var/guix/profiles/system-70-link	/gnu/store/35rdg3394f41m865a7fk4qbdixb5xdgi-system	/gnu/store/35rdg3394f41m865a7fk4qbdixb5xdgi-system	unretained-closure	custom-grub-boundary
+hold	system	71	/var/guix/profiles/system-71-link	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	duplicate-retained-closure	custom-grub-boundary
+hold	system	72	/var/guix/profiles/system-72-link	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	duplicate-retained-closure	custom-grub-boundary
+hold	system	73	/var/guix/profiles/system-73-link	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	duplicate-retained-closure	custom-grub-boundary
+hold	system	74	/var/guix/profiles/system-74-link	/gnu/store/82ya3h1jjzws2rs4yq2j7cmywmm2xyn0-system	/gnu/store/82ya3h1jjzws2rs4yq2j7cmywmm2xyn0-system	unretained-closure	custom-grub-boundary
+hold	system	76	/var/guix/profiles/system-76-link	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system	unretained-closure	custom-grub-boundary
+hold	system	77	/var/guix/profiles/system-77-link	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system	unretained-closure	custom-grub-boundary
+hold	system	78	/var/guix/profiles/system-78-link	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system	unretained-closure	custom-grub-boundary
+hold	system	79	/var/guix/profiles/system-79-link	/gnu/store/h4w9z5ljnn31s2zaqs78jv2ynm3fcqdz-system	/gnu/store/h4w9z5ljnn31s2zaqs78jv2ynm3fcqdz-system	unretained-closure	custom-grub-boundary
+hold	system	82	/var/guix/profiles/system-82-link	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	duplicate-retained-closure	custom-grub-boundary
+command	1	home	user	-	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile/bin/guix	home	delete-generations	1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,30,31	47	17	link-only
+boundary	fresh-estimate	must-match-reviewed-full-sha-and-fingerprint
+boundary	candidate-set	exact-home-rows-only
+boundary	stage-order	home-command-then-full-stop-and-verification
+boundary	system-generations	forbidden-in-this-authorization
+boundary	system-bootloader-config	must-remain-byte-identical
+boundary	bootcfg-root	must-remain-byte-identical
+boundary	store-path-deletion	forbidden
+boundary	expected-material-store-reclaim	zero
+boundary	guix-gc-and-dead-live-query	forbidden
+boundary	profile-switch-and-pin-edit	forbidden
+boundary	reconfigure-activation-and-reboot	forbidden
+boundary	p5.3	forbidden
+authorization	state	NOT-GRANTED
+status	REVIEW-REQUIRED

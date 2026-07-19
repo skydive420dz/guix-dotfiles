@@ -1,0 +1,87 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
+repo=$(CDPATH='' cd "$script_dir/.." && pwd -P)
+fresh=$repo/docs/audits/data/2026-07-18-p5.2-preflight-estimate.tsv
+review=$repo/docs/audits/data/2026-07-18-p5.2-generation-deletion-review.tsv
+expected_estimate=1fe7ab18d7fb4e7d3c6ed0e3fd148f796d36d1122a80f1aa903165dd7eee8e11
+expected_review=75c8e4a40d7cacb32ab8324d50001b09d2450972a57eb142112cf8ae07edbb2d
+tab=$(printf '\t')
+work=$(mktemp -d "${TMPDIR:-/tmp}/p52-review-check.XXXXXX")
+trap 'rm -rf -- "$work"' EXIT HUP INT TERM
+
+fail() {
+    printf 'guix-generation-retention-p52-review-check: FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+hash_file() {
+    sha256sum "$1" | awk '{print $1}'
+}
+
+[ "$(hash_file "$fresh")" = "$expected_estimate" ] ||
+    fail "fresh estimate hash mismatch"
+[ "$(hash_file "$review")" = "$expected_review" ] ||
+    fail "review manifest hash mismatch"
+[ "$(wc -l <"$fresh" | tr -d ' ')" -eq 329 ] ||
+    fail "fresh estimate row count mismatch"
+[ "$(wc -l <"$review" | tr -d ' ')" -eq 172 ] ||
+    fail "review manifest row count mismatch"
+
+awk -F "$tab" '$1 == "candidate" && $2 == "home" {
+    print $3 "\t" $4 "\t" $5
+}' "$fresh" >"$work/expected-home"
+awk -F "$tab" '$1 == "delete" && $2 == "home" {
+    print $3 "\t" $6 "\t" $7
+}' "$review" >"$work/review-home"
+cmp -s "$work/expected-home" "$work/review-home" ||
+    fail "selected Home rows do not equal fresh candidates"
+
+awk -F "$tab" '$1 == "candidate" && $2 == "system" {
+    print $3 "\t" $4 "\t" $5
+}' "$fresh" >"$work/expected-system"
+awk -F "$tab" '$1 == "hold" && $2 == "system" {
+    print $3 "\t" $6 "\t" $7
+}' "$review" >"$work/review-system"
+cmp -s "$work/expected-system" "$work/review-system" ||
+    fail "held System rows do not equal fresh candidates"
+
+awk -F "$tab" '$1 == "retain" {
+    print $2 "\t" $3 "\t" $4 "\t" $5
+}' "$fresh" >"$work/expected-retain"
+awk -F "$tab" '$1 == "retain" {
+    print $2 "\t" $3 "\t" $6 "\t" $7
+}' "$review" >"$work/review-retain"
+cmp -s "$work/expected-retain" "$work/review-retain" ||
+    fail "retained rows do not equal fresh estimate"
+
+selector=$(awk -F "$tab" '$1 == "delete" && $2 == "home" { print $3 }' \
+    "$review" | sort -n | paste -sd, -)
+command_selector=$(awk -F "$tab" '$1 == "command" { print $9 }' "$review")
+[ "$selector" = "$command_selector" ] ||
+    fail "command selector differs from selected Home rows"
+
+awk -F "$tab" '
+    $1 == "profile" && $2 == "system" &&
+        $3 == 86 && $4 == 78 && $5 == 0 && $6 == 78 && $7 == 86 {
+            system_rows++
+        }
+    $1 == "profile" && $2 == "home" &&
+        $3 == 47 && $4 == 30 && $5 == 30 && $6 == 0 && $7 == 17 { home++ }
+    $1 == "profile" && $2 == "pull" &&
+        $3 == 5 && $4 == 0 && $5 == 0 && $6 == 0 && $7 == 5 { pull++ }
+    $1 == "delete" && $2 == "home" { deletes++ }
+    $1 == "hold" && $2 == "system" { holds++ }
+    $1 == "retain" { retains++ }
+    $1 == "authorization" &&
+        $2 == "state" && $3 == "NOT-GRANTED" { auth++ }
+    $1 == "status" && $2 == "REVIEW-REQUIRED" { status++ }
+    END {
+        exit !(system_rows == 1 && home == 1 && pull == 1 &&
+               deletes == 30 && holds == 78 && retains == 30 &&
+               auth == 1 && status == 1)
+    }
+' "$review" || fail "review manifest cardinality or boundary mismatch"
+
+printf 'guix-generation-retention-p52-review-check: PASS\n'

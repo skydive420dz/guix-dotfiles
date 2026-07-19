@@ -1,0 +1,292 @@
+#+title: P5.2 reviewed generation-deletion preflight
+#+date: 2026-07-18
+#+status: read-only Home-canary plan complete; publication and destructive authorization pending
+
+* Outcome
+
+P5.2 remains unexecuted.  A fresh estimator run on =guixpc= is byte-identical
+to the published P5.1 observation, so the exact live candidate set has not
+drifted:
+
+| Profile | Links before | Policy candidates | Selected now | Held | Expected after selected stage |
+|---------+--------------+-------------------+--------------+------+-------------------------------|
+| System | 86 | 78 | 0 | 78 | 86 |
+| Home | 47 | 30 | 30 | 0 | 17 |
+| Pull | 5 | 0 | 0 | 0 | 5 |
+
+This preflight selects only the 30 Home candidates as a lower-impact first
+manual cycle.  It holds every System candidate and changes no Pull generation.
+No generation link, store object, bootloader file, profile pointer, pin,
+package, configuration, activation, disk, backup, boot state, or existing
+persistent process/session/service state changed during this preflight.
+
+The plan is not self-authorizing.  Publication, fresh byte-identical
+revalidation, and explicit external authorization of the exact Home selector
+are still required immediately before deletion.
+
+* Source and live identity
+
+The read-only preflight began from:
+
+| Item | Value |
+|------+-------|
+| Host / user | =guixpc= / =skydive420dz= |
+| Repository | =~/Projects/guix-dotfiles= |
+| Source baseline | =de4355d05d7aa97475ec968ed5e052f0ff6a9b3d= |
+| Baseline state | clean; =HEAD= = =origin/main=; ahead/behind =0/0= |
+| Boot ID | =64140768-9522-4cad-8021-9db54e070e8a= |
+| Current and booted System | generation 87; =/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system= |
+| Current Home | generation 47; =/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home= |
+| Current Pull | generation 5; =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile= |
+| Guix revision | =a8391f2d7451c2463ba253ffa9872fa6f27485d7= |
+
+The proposed command resolves Guix through the reviewed Pull generation 5
+profile, not through a mutable current-profile pointer:
+
+#+begin_example
+/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile/bin/guix
+  -> /gnu/store/0hzhxis25c15rag5412rhm2md38chi6x-guix-command
+#+end_example
+
+* Fresh estimator and immutable review data
+
+The same no-mutation protocol used by P5.1 passed against the actual clean
+checkout:
+
+#+begin_example
+live-no-mutation-gate: PASS
+state records:                 32,831
+before/after state SHA256:     2f782e6c2f052512175216be714b1677acb1bfc85c7e358bd902f894bfe0bfb4
+fresh estimator records:       329
+fresh estimator SHA256:        1fe7ab18d7fb4e7d3c6ed0e3fd148f796d36d1122a80f1aa903165dd7eee8e11
+internal fingerprint:          ef037f5ca38d06a918eb7a08276d5e979a317e6c18f06ea98a18151c06e431ca
+published P5.1 byte identity:   PASS
+pre/post verify:               PASS
+pre/post rollback drill:       PASS
+#+end_example
+
+Evidence:
+
+- [[file:data/2026-07-18-p5.2-preflight-estimate.tsv][fresh 329-row P5.2 estimator output]];
+- [[file:data/2026-07-18-p5.2-generation-deletion-review.tsv][exact P5.2 Home-canary review manifest]]; and
+- [[file:2026-07-18-p5.1-read-only-retention-estimator.org][the P5.1 estimator contract and coverage limits]].
+
+The fresh estimate is intentionally preserved under a new name even though
+its bytes equal P5.1.  The review manifest has SHA256:
+
+#+begin_example
+75c8e4a40d7cacb32ab8324d50001b09d2450972a57eb142112cf8ae07edbb2d
+#+end_example
+
+Its 172 rows contain the two estimator identities, policy and accounting/root
+subset hashes, current repository/boot/profile/pin/store/GRUB state, all 30
+retained link tuples with link and closure reasons, 30 selected Home deletion
+tuples, 78 held System tuples, the one exact command, expected counts, hard
+boundaries, and =authorization NOT-GRANTED=.
+
+The candidate-closure NAR rows remain forward-reference footprints rather than
+reclaim predictions.  Home generation-link deletion collects no store object,
+so expected material store-space recovery in this stage is exactly zero.
+
+* Scope decision
+
+The accepted D-34 floor is current, booted System when different, five newest
+additional distinct closures, and every explicit pin.  The older =plan=
+reporter lists only 44 same-target duplicate links; it is not a P5.2 command
+source.  The estimator lists all 108 links outside the accepted floor.
+
+This review divides those candidates by profile:
+
+1. P5.2a selects all 30 Home candidates and then stops for full verification.
+2. P5.2b holds all 78 System candidates until its deletion and bootloader
+   boundary is designed and fixture-tested separately.
+3. Pull has no candidate.
+
+This division makes the first manual cycle unprivileged and link-only, gives
+the postflight a small exact state transition, and prevents an unrelated
+bootloader rewrite from hiding inside generation maintenance.
+
+* System-command defect discovered during preflight
+
+The installed Guix =system delete-generations= action is not link-only.  At
+revision =a8391f2=, =(guix scripts system)= calls
+=delete-matching-generations= first and then =reinstall-bootloader=.  The
+latter lowers and builds a boot-configuration derivation and installs its
+configuration.  Failure can therefore occur after links have already been
+deleted.
+
+More importantly, =reinstall-bootloader= reconstructs only a default
+=bootloader-configuration= around the detected bootloader.  This machine's
+declared configuration is not default:
+
+- =grub-efi-bootloader= targets =/boot/efi=;
+- its theme resolution is =3440x1440=;
+- its ordered gfx modes are =3440x1440=, =2560x1440=, =1920x1080=, and
+  =auto=; and
+- it carries the accepted =us= keyboard layout with =caps:escape=.
+
+The live =/boot/grub/grub.cfg= contains the corresponding ultrawide gfx mode
+and generated keymap.  Its reviewed SHA256 is:
+
+#+begin_example
+6e7fe604ee58723c7e321c3a07a645a2017cfcf49bac62b3ecb0c0559ca30671
+#+end_example
+
+The live =/var/guix/gcroots/bootcfg= target is:
+
+#+begin_example
+/gnu/store/hdwc6z0wdhgqimxqg1gzkznp9irbkwhl-grub.cfg
+#+end_example
+
+Running the official System command would exceed P5.2's reviewed link-only
+boundary and could silently discard declared boot presentation/input settings.
+Using =--dry-run= is not a safe preview: the installed delete-action branches
+do not gate generation deletion on that option.  Raw System unlinking is also
+not promoted here because it needs a fixture-tested exact-tuple guard and a
+decision about temporarily stale GRUB menu entries.
+
+P5.2b must therefore choose one of two separately reviewed designs:
+
+1. a narrow exact-link executor that proves every candidate tuple, retains
+   every recovery tuple, and leaves GRUB plus =bootcfg= byte-identical while
+   recording stale non-retained menu entries; or
+2. a configuration-aware bootloader regeneration path that consumes the real
+   repository configuration rather than Guix's default reconstruction.
+
+* Exact P5.2a Home plan
+
+Retain Home generations:
+
+#+begin_example
+29,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47
+#+end_example
+
+Delete only Home generations:
+
+#+begin_example
+1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,
+25,26,27,28,30,31
+#+end_example
+
+Exact proposed command:
+
+#+begin_src sh
+/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile/bin/guix \
+  home delete-generations \
+  1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,30,31
+#+end_src
+
+This code block is a reviewed proposal, not authorization and not an
+instruction to run it unattended.
+
+* Immediate preconditions and invalidation
+
+External authorization is valid only if all of the following pass immediately
+before execution:
+
+1. the P5.2 plan checkpoint is published, fetched, clean, and upstream-equal;
+2. two fresh estimates are byte-identical to the reviewed full SHA256 and
+   internal fingerprint;
+3. every selected and retained Home link still has the review manifest's exact
+   raw and canonical targets;
+4. current/booted System, current Home/Pull, the pin-manifest hash, boot ID,
+   GRUB hash, =bootcfg= target, and top-level store-name set still match;
+5. =verify= and =rollback-drill= pass;
+6. no Guix client, temporary root, reconfigure, Pull, Home reconfigure, or
+   automatic GC owner is active; and
+7. authorization names the review-manifest SHA, the one exact Home selector,
+   before/after Home counts =47 -> 17=, and the explicit prohibition on
+   System/Pull/GRUB/store/GC changes.
+
+Any drift invalidates authorization.  Regenerate and review the packet; never
+silently widen, narrow, or reinterpret the selector.
+
+* Execution and postflight stop
+
+When separately authorized, run exactly one Home command.  Do not continue
+after an error or unexpected line.  Then require:
+
+| Check | Expected result |
+|-------+-----------------|
+| System/Home/Pull link counts | =86/17/5= |
+| System/Home/Pull current generations | =87/47/5= |
+| Current and booted System target | unchanged |
+| Retained Home links | exactly =29,32..47= with recorded targets |
+| Estimator candidate links | System/Home/Pull =78/0/0= |
+| Retained closures and links | System/Home/Pull =8/17/5= |
+| Pin manifest | byte-identical |
+| Top-level store-path names | byte-identical; no path removed |
+| GRUB configuration and =bootcfg= root | byte-identical |
+| =verify= and =rollback-drill= | PASS |
+| GC, dead/live query, collection | not run |
+| Reconfigure, activation, profile switch, reboot | not run |
+
+Stop after this evidence.  P5.2a does not authorize P5.2b, P5.3, an automatic
+schedule, or any expectation of freed disk space.
+
+Because P5.2a removes only Home generation symlinks and forbids collection,
+the review manifest preserves the raw targets needed to reconstruct an
+accidentally removed link before any later store collection.  Restoration
+would itself be an attended mutation and must stop for review.
+
+* Validation
+
+=tests/guix-generation-retention-p52-review-check= proves:
+
+- fresh-estimate and review-manifest hashes and row counts;
+- exact equality between the 30 fresh Home candidates and 30 =delete= rows;
+- exact equality between the 78 fresh System candidates and 78 =hold= rows;
+- exact equality between all 30 estimator-retained links and review =retain=
+  rows;
+- exact equality between the Home =delete= rows and command selector;
+- profile before/selected/held/after cardinalities; and
+- one =NOT-GRANTED= authorization plus one =REVIEW-REQUIRED= status.
+
+It passes on macOS and on GuixPC with:
+
+#+begin_src sh
+tests/guix-generation-retention-p52-review-check
+#+end_src
+
+=sh -n= and ShellCheck pass for the tracked checker.  =git diff --check=
+passes.  Org lint passes for the README, machine TODO, this audit, and the
+editable agenda against a temporary tree containing the new targets.
+
+No =guix home delete-generations=, =guix system delete-generations=,
+=guix gc=, =guix gc --list-dead=, reconfigure, activation, profile switch,
+bootloader command, or reboot was run.
+
+* Roadmap synchronization
+
+The editable agenda lives outside the repository at:
+
+#+begin_example
+~/Documents/OrgFiles/Topics/2026/2026-07-14-guix-polishing-and-development.org
+#+end_example
+
+Its guarded synchronization requires:
+
+#+begin_example
+before:  cf278df8c091bc3ea6d39db7cba062ecc93133e38e55828629b10060e020b4ab
+after:   1e57fe6f3ff2250371578285a6a85ae0cd86e5b479365a7c5b4efdc4e3564fdf
+#+end_example
+
+The candidate marks Phase 5 active only at the read-only planning boundary,
+P5.2a next but blocked on publication and exact external authorization, P5.2b
+blocked on a custom-GRUB-safe design, and P5.3 unpromoted.  This same-disk
+agenda update is planning continuity, not backup coverage.
+
+* Publication boundary
+
+This source checkpoint may publish only:
+
+- this preflight record;
+- the fresh immutable estimator output;
+- the exact review manifest;
+- the read-only review-manifest checker;
+- roadmap/README/TODO synchronization; and
+- no executable deletion path.
+
+After publication and clean upstream equality, present the review-manifest
+hash and exact Home selector again.  Do not infer destructive authorization
+from approval to publish documentation.

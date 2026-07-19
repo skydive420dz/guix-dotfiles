@@ -837,11 +837,42 @@ CLOSED: [2026-07-18 Sat]
   and a 32,831-record before/after no-mutation snapshot.
 - [X] Published checkpoint =93619e9= is fetched into the actual checkout with
   =HEAD= equal to =origin/main=, a clean tree, and ahead/behind =0/0=.
-- [X] Keep P5.2 generation deletion and P5.3 store collection in backlog.
-  Neither exact estimator output nor publication authorizes mutation.
+- [X] At P5.1 closure, kept P5.2 generation deletion and P5.3 store collection
+  in backlog.  Neither exact estimator output nor publication authorized
+  mutation.
 - [X] Change no generation link, store object, profile, pin, package,
   configuration, activation, backup, disk, boot state, or persistent process
   state.
+
+* NEXT P5.2a reviewed Home generation deletion
+:PROPERTIES:
+:created: 2026-07-18
+:blocked_by: published review checkpoint and explicit authorization of the exact artifact and Home selector
+:END:
+
+- Evidence: [[file:../../../docs/audits/2026-07-18-p5.2-reviewed-generation-deletion.org][2026-07-18 P5.2 reviewed generation-deletion preflight]].
+- Fresh estimate: [[file:../../../docs/audits/data/2026-07-18-p5.2-preflight-estimate.tsv][329-row P5.2 estimator snapshot]].
+- Review manifest: [[file:../../../docs/audits/data/2026-07-18-p5.2-generation-deletion-review.tsv][exact Home-canary review manifest]].
+- [X] Reproduce the complete P5.1 estimate byte-for-byte at SHA256
+  =1fe7ab18d7fb4e7d3c6ed0e3fd148f796d36d1122a80f1aa903165dd7eee8e11=
+  and pass the 32,831-record no-mutation gate.
+- [X] Select only Home generations =1..28,30,31= for the first manual
+  cycle.  Retain =29,32..47= and expect Home links =47 -> 17=.
+- [X] Record every retained, selected, and held raw/canonical link tuple in
+  review manifest
+  =75c8e4a40d7cacb32ab8324d50001b09d2450972a57eb142112cf8ae07edbb2d=.
+- [X] Hold all 78 System candidates.  The supported System command also
+  rebuilds GRUB from a default bootloader configuration that omits GuixPC's
+  declared EFI target, ultrawide theme/gfxmode, and keyboard layout.
+- [ ] Publish and fetch the review checkpoint with clean upstream equality.
+- [ ] Obtain explicit external authorization naming the review-manifest hash,
+  exact Home selector, expected =47 -> 17= transition, and prohibition on
+  System/Pull/GRUB/store/GC changes.
+- [ ] Run the one reviewed Home command, prove exact link/pointer/pin/store/
+  GRUB state plus =verify= and =rollback-drill=, and stop.
+- [X] During preflight, change no generation, store object, profile, pin,
+  package, configuration, activation, disk, bootloader, backup, boot state, or
+  existing persistent process/session/service state.
 
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:
