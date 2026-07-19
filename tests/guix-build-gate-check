@@ -98,6 +98,8 @@ cp "$repo/guix/modules/sk/theme.scm" \
     "$sandbox_repo/guix/modules/sk/theme.scm"
 cp "$repo/guix/modules/sk/theme-home.scm" \
     "$sandbox_repo/guix/modules/sk/theme-home.scm"
+cp "$repo/guix/modules/sk/system-retained-bootcfg.scm" \
+    "$sandbox_repo/guix/modules/sk/system-retained-bootcfg.scm"
 cp "$repo/guix/home/repo-links.scm" \
     "$sandbox_repo/guix/home/repo-links.scm"
 cp "$repo/guix/home/repo-links-manifest.scm" \

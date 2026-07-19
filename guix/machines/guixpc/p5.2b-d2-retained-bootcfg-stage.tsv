@@ -1,0 +1,47 @@
+schema	p5.2b-retained-bootcfg-stage/v1
+mode	STAGE-ONLY
+authorization	NOT-GRANTED
+status	REVIEW-ONLY
+timezone	America/New_York
+guix-revision	a8391f2d7451c2463ba253ffa9872fa6f27485d7
+base-checkpoint	83cb700e8f0b6f6594363f5a90ba6b18bb5dba3b
+implementation-module	guix/modules/sk/system-retained-bootcfg.scm	7cfb52eee21bcbb36ac7b70b71b33ed3f7ff4c50fd039cc6170ca8f94dfed655
+implementation-driver	scripts/guix-system-retained-bootcfg.scm	27000fa46b5838379ba8467ee83969234e110d7ffbe654167df98f08ce1e85ef
+implementation-launcher	scripts/guix-system-retained-bootcfg	27da8fcebd884dfd0f20807ed9db9c9f86599b5da875c8ba88eaba44fb1276d5
+evaluation-input	guix/package-ownership.scm	8f6ba789739d2880c84005883da76bc84c0e0c822d44b06d3ee3544792768721
+channels	guix/channels.scm	d0204e7819bf0ea9a895f93e05cd26dc819ab8acefe5e76b2dd4b610bfe43bfd
+review-input	docs/audits/data/2026-07-18-p5.2a-home-deletion-postflight-estimate.tsv	41a668d38b8a1d3121415db9c00641a8de592bf7142dbb5631621dda97baf6ee
+os-source	guix/systems/guixpc.scm	34398678c3fe52e31f7f0cbf623b9f6f6e5796b132d3e9ce25dd30aeac1ed887
+profile	/var/guix/profiles/system
+current	87	/var/guix/profiles/system-87-link	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	ce3692449e19d2c2f0d2044dfb54092189015aa680fd05563b81eac33609cb62	1784151403
+booted	/run/current-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+home-profile	/var/guix/profiles/per-user/skydive420dz/guix-home	47	/var/guix/profiles/per-user/skydive420dz/guix-home-47-link	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home	17
+pull-profile	/var/guix/profiles/per-user/skydive420dz/current-guix	5	/var/guix/profiles/per-user/skydive420dz/current-guix-5-link	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile	5
+retained	86	/var/guix/profiles/system-86-link	/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system	ce3692449e19d2c2f0d2044dfb54092189015aa680fd05563b81eac33609cb62	1784070650
+retained	85	/var/guix/profiles/system-85-link	/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system	ce3692449e19d2c2f0d2044dfb54092189015aa680fd05563b81eac33609cb62	1783911102
+retained	84	/var/guix/profiles/system-84-link	/gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system	ce3692449e19d2c2f0d2044dfb54092189015aa680fd05563b81eac33609cb62	1783904352
+retained	83	/var/guix/profiles/system-83-link	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	ce3692449e19d2c2f0d2044dfb54092189015aa680fd05563b81eac33609cb62	1783896549
+retained	81	/var/guix/profiles/system-81-link	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system	ce3692449e19d2c2f0d2044dfb54092189015aa680fd05563b81eac33609cb62	1783882187
+retained	80	/var/guix/profiles/system-80-link	/gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system	ce3692449e19d2c2f0d2044dfb54092189015aa680fd05563b81eac33609cb62	1783876591
+retained	75	/var/guix/profiles/system-75-link	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	ce3692449e19d2c2f0d2044dfb54092189015aa680fd05563b81eac33609cb62	1783820865
+candidate-generations	1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,76,77,78,79,82
+system-link-count	86
+pins	guix/machines/guixpc/generation-pins.tsv	49c811d35ddaa940afdbe450f08cd67a2fc73ae3d860610c121b7b32caec1ca0
+installed-grub	/boot/grub/grub.cfg	6e7fe604ee58723c7e321c3a07a645a2017cfcf49bac62b3ecb0c0559ca30671
+bootcfg	/var/guix/gcroots/bootcfg	/gnu/store/hdwc6z0wdhgqimxqg1gzkznp9irbkwhl-grub.cfg
+bootloader	grub-efi
+targets	/boot/efi
+default-entry	0
+timeout	5
+resolution	3440	1440
+gfxmodes	3440x1440	2560x1440	1920x1080	auto
+keyboard	us	-	-	caps:escape
+theme-image	PRESENT
+theme-color-normal	light-gray	black
+theme-color-highlight	yellow	black
+terminal-outputs	gfxterm
+terminal-inputs	-
+serial	-	-
+device-tree-support	TRUE
+extra-initrd	-
+static-menu-count	0

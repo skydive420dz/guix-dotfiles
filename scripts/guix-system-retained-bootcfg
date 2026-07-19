@@ -1,0 +1,208 @@
+#!/bin/sh
+set -eu
+
+program='guix-system-retained-bootcfg'
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+module_dir=$repo/guix/modules
+scheme=$repo/scripts/guix-system-retained-bootcfg.scm
+test_scheme=$repo/tests/guix-system-retained-bootcfg-check.scm
+default_spec_relative=guix/machines/guixpc/p5.2b-d2-retained-bootcfg-stage.tsv
+default_spec=$repo/$default_spec_relative
+frontend=${SK_GUIX_FRONTEND_PROFILE:-${HOME:?}/.config/guix/current}
+
+usage() {
+    printf 'usage: %s fixture-check | stage [ABSOLUTE-SPEC]\n' "$program" >&2
+    exit 64
+}
+
+fail() {
+    printf '%s: FAIL: %s\n' "$program" "$*" >&2
+    exit 1
+}
+
+sha256_file() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | awk '{ print $1 }'
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | awk '{ print $1 }'
+    else
+        fail "no SHA256 command is available"
+    fi
+}
+
+check_fixed_input() {
+    key=$1
+    relative=$2
+    expected=$(
+        awk -F '\t' -v key="$key" -v relative="$relative" '
+            $1 == key {
+                count++
+                if (NF != 3 || $2 != relative) invalid = 1
+                digest = $3
+            }
+            END {
+                if (count != 1 || invalid) exit 1
+                print digest
+            }
+        ' "$spec"
+    ) || fail "invalid $key record"
+    if [ ! -f "$repo/$relative" ] || [ -L "$repo/$relative" ]; then
+        fail "$key is not a repository-owned regular file"
+    fi
+    actual=$(sha256_file "$repo/$relative") ||
+        fail "cannot hash $relative"
+    [ "$actual" = "$expected" ] ||
+        fail "$key SHA256 differs from the stage specification"
+}
+
+case $# in
+    1)
+        action=$1
+        spec=$default_spec
+        ;;
+    2)
+        action=$1
+        spec=$2
+        ;;
+    *)
+        usage
+        ;;
+esac
+
+case $action in
+    fixture-check)
+        [ "$#" -eq 1 ] || usage
+        ;;
+    stage)
+        case $spec in
+            /*) ;;
+            *) fail "stage specification must be absolute: $spec" ;;
+        esac
+        [ "$(id -u)" -ne 0 ] || fail "stage action refuses uid 0"
+        ;;
+    *)
+        usage
+        ;;
+esac
+
+frontend_resolved=$(readlink -f "$frontend") ||
+    fail "cannot resolve Guix frontend profile: $frontend"
+guix=$frontend_resolved/bin/guix
+[ -x "$guix" ] || fail "pinned Guix is unavailable: $guix"
+[ -d "$module_dir" ] || fail "Guix module directory is unavailable"
+[ -r "$scheme" ] || fail "Scheme stage builder is unavailable"
+[ -r "$test_scheme" ] || fail "Scheme fixture checker is unavailable"
+[ -r "$default_spec" ] ||
+    fail "reviewed stage specification is unreadable: $default_spec"
+
+expected_frontend=$(
+    awk -F '\t' '
+        $1 == "pull-profile" && NF == 6 {
+            count++
+            target = $5
+        }
+        END {
+            if (count != 1) exit 1
+            print target
+        }
+    ' "$default_spec"
+) || fail "cannot read one Pull-profile target from the stage specification"
+[ "$frontend_resolved" = "$expected_frontend" ] ||
+    fail "running Guix profile differs from the reviewed Pull-profile target"
+
+expected_revision=$(
+    awk -F '\t' '
+        $1 == "guix-revision" && NF == 2 {
+            count++
+            revision = $2
+        }
+        END {
+            if (count != 1) exit 1
+            print revision
+        }
+    ' "$default_spec"
+) || fail "cannot read one pinned Guix revision from the stage specification"
+
+actual_revision=$(
+    "$guix" describe --format=recutils |
+        awk '
+            $1 == "name:" { name = $2 }
+            name == "guix" && $1 == "commit:" {
+                print $2
+                exit
+            }
+        '
+) || fail "cannot identify the running Guix revision"
+
+[ "$actual_revision" = "$expected_revision" ] ||
+    fail "running Guix revision differs from the stage specification"
+
+check_fixed_input \
+    implementation-module \
+    guix/modules/sk/system-retained-bootcfg.scm
+check_fixed_input \
+    implementation-driver \
+    scripts/guix-system-retained-bootcfg.scm
+check_fixed_input \
+    implementation-launcher \
+    scripts/guix-system-retained-bootcfg
+check_fixed_input \
+    evaluation-input \
+    guix/package-ownership.scm
+
+if [ "$action" = fixture-check ]; then
+    exec env -u GUILE_LOAD_PATH \
+        -u GUILE_LOAD_COMPILED_PATH \
+        -u GUILE_EXTENSIONS_PATH \
+        GUILE_AUTO_COMPILE=0 \
+        "$guix" repl -L "$module_dir" -q -- "$test_scheme" "$repo"
+fi
+
+[ -r "$spec" ] || fail "stage specification is unreadable: $spec"
+spec_resolved=$(readlink -f "$spec") ||
+    fail "cannot resolve stage specification: $spec"
+default_spec_resolved=$(readlink -f "$default_spec") ||
+    fail "cannot resolve reviewed stage specification: $default_spec"
+[ "$spec_resolved" = "$default_spec_resolved" ] ||
+    fail "stage requires the repository's reviewed specification"
+spec=$default_spec_resolved
+[ -d "$repo/.git" ] || fail "repository metadata is unavailable"
+[ -z "$(git -C "$repo" status --porcelain)" ] ||
+    fail "repository must be clean"
+head=$(git -C "$repo" rev-parse HEAD)
+upstream=$(git -C "$repo" rev-parse refs/remotes/origin/main)
+[ "$head" = "$upstream" ] ||
+    fail "HEAD must equal the fetched origin/main checkpoint"
+source_checkpoint=$(
+    git -C "$repo" log --diff-filter=A --format=%H -1 -- \
+        "$default_spec_relative"
+) || fail "cannot identify the D2a source checkpoint"
+[ -n "$source_checkpoint" ] ||
+    fail "the D2a source checkpoint is not committed"
+[ "$head" = "$source_checkpoint" ] ||
+    fail "HEAD must be the exact commit that introduced the D2a specification"
+
+base_checkpoint=$(
+    awk -F '\t' '
+        $1 == "base-checkpoint" && NF == 2 {
+            count++
+            checkpoint = $2
+        }
+        END {
+            if (count != 1) exit 1
+            print checkpoint
+        }
+    ' "$spec"
+) || fail "cannot read one base checkpoint from the stage specification"
+git -C "$repo" merge-base --is-ancestor "$base_checkpoint" "$head" ||
+    fail "reviewed base checkpoint is not an ancestor of HEAD"
+
+exec env -u GUILE_LOAD_PATH \
+    -u GUILE_LOAD_COMPILED_PATH \
+    -u GUILE_EXTENSIONS_PATH \
+    GUILE_AUTO_COMPILE=0 \
+    SK_D2A_SOURCE_CHECKPOINT="$source_checkpoint" \
+    SK_GUIX_REVISION="$actual_revision" \
+    TZ=America/New_York \
+    "$guix" repl -L "$module_dir" -q -- \
+    "$scheme" stage "$spec" "$repo"

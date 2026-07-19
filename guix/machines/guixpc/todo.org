@@ -882,7 +882,7 @@ CLOSED: [2026-07-18 Sat]
 * BACKLOG P5.2b System generation deletion and custom-GRUB boundary
 :PROPERTIES:
 :created: 2026-07-18
-:blocked_by: configuration-aware retained-only bootcfg generator, recovery transaction, fresh live manifest, publication, and manifest-specific authorization
+:blocked_by: published retained-only bootcfg artifact, recovery transaction, fresh live manifest, publication, and manifest-specific authorization
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-18-p5.2b-custom-grub-safe-system-pruning-design.org][2026-07-18 P5.2b custom-GRUB-safe System-pruning design]].
@@ -914,14 +914,64 @@ CLOSED: [2026-07-18 Sat]
   candidates visible but emits no System deletion command.
 - [X] Keep all live System generation links, GRUB, =bootcfg=, store objects,
   profiles, EFI state, and boot state unchanged.
-- [ ] Build and fixture-test a retained-only bootcfg from GuixPC's real
-  bootloader declaration, accepted current generation boot parameters, and
-  exactly the seven retained old generations.
-- [ ] Add persistent recovery roots, durable phase journaling, profile
-  exclusion, and rollback fixtures for every link/GRUB/=bootcfg= phase.
-- [ ] Produce and publish a fresh immutable live manifest only after all
-  source/build/semantic gates pass, then obtain authorization naming its exact
-  hash.
+
+** DONE P5.2b-D2a retained-only bootcfg source and fixtures
+CLOSED: [2026-07-18 Sat]
+:PROPERTIES:
+:created: 2026-07-18
+:END:
+
+- Evidence: [[file:../../../docs/audits/2026-07-18-p5.2b-d2a-retained-only-bootcfg-source.org][2026-07-18 P5.2b-D2a retained-only bootcfg source checkpoint]].
+- [X] Load GuixPC's real bootloader declaration, require its exact
+  EFI/ultrawide/keymap contract, and reject prospective-System construction.
+- [X] Use accepted generation 87's canonical System for the direct-store main
+  entry and exactly old links =86,85,84,83,81,80,75=.
+- [X] Add the closed =STAGE-ONLY= / =NOT-GRANTED= / =REVIEW-ONLY= input
+  specification, configuration and semantic validators, and exact accepted-
+  GRUB byte projector.
+- [X] Bind the exact implementation/evaluation bytes, Pull-profile store item,
+  canonical specification, sanitized Guile search path, and D2a-introduction
+  Git checkpoint.
+- [X] Pass positive/negative native Scheme fixtures, warning-free
+  =guild compile -W3=, ShellCheck, and the read-only 5,163-byte live
+  projection.
+- [X] Expose only =fixture-check= and unprivileged =stage=; add no bootloader
+  installation, link deletion, GC, root promotion, reconfiguration,
+  activation, or reboot action.
+
+** BACKLOG P5.2b-D2b uninstalled retained-only bootcfg artifact
+:PROPERTIES:
+:created: 2026-07-18
+:blocked_by: published and fetched clean/upstream-equal D2a source checkpoint
+:END:
+
+- [ ] From clean =HEAD == origin/main=, run only the unprivileged immutable
+  store build and require byte equality with the accepted-GRUB projection.
+- [ ] Freeze the exact generated =grub.cfg= bytes, SHA256, size, source
+  configuration tuple, semantic result, and reviewed pre/post surfaces in the
+  repository.
+- [ ] Report immutable store realization explicitly; do not claim whole-store
+  or whole-machine byte identity and do not make the result active.
+
+** BACKLOG P5.2b-D3 recovery transaction and rollback fixtures
+:PROPERTIES:
+:created: 2026-07-18
+:blocked_by: published D2b artifact
+:END:
+
+- [ ] Implement and fixture-test recovery-root creation/removal, durable phase
+  journaling, profile exclusion, and rollback for every link/GRUB/=bootcfg=
+  phase; create no live recovery root in D3.
+
+** BACKLOG P5.2b-D4 fresh live manifest and attended authorization
+:PROPERTIES:
+:created: 2026-07-18
+:blocked_by: published D3 recovery transaction and all source/build/semantic gates
+:END:
+
+- [ ] Produce and publish a fresh immutable live manifest, then obtain
+  attended authorization naming its exact hash before any generation-link,
+  GRUB, =bootcfg=, or recovery-root transaction mutation.
 
 * BACKLOG P5.3 reviewed unreachable-store collection
 :PROPERTIES:

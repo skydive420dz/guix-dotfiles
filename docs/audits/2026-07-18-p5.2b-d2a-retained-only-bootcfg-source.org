@@ -1,0 +1,270 @@
+#+title: P5.2b-D2a retained-only bootcfg source checkpoint
+#+date: 2026-07-18
+#+startup: overview
+#+category: guixpc
+#+filetags: :guixpc:guix:grub:maintenance:
+
+* Outcome
+
+P5.2b-D2a implements and fixture-tests the configuration-aware, stage-only
+GRUB construction path required by D-36.  It is a source checkpoint, not the
+staged boot configuration and not a System-deletion checkpoint.
+
+The implementation:
+
+- evaluates GuixPC's real operating-system declaration only after binding the
+  launcher, driver, module, directly loaded repository input, and complete
+  Guix channel profile to reviewed bytes;
+- extracts the complete bootloader object and validates the reviewed
+  EFI/theme/gfxmode/terminal/keymap/menu contract;
+- reads the accepted current System from generation 87's canonical store
+  target, preserving a direct-store main entry;
+- reads old boot parameters only through retained generation links
+  =86,85,84,83,81,80,75=;
+- provides a D2b stage action that invokes only the bootloader's
+  configuration-file generator, Guix lowering, and immutable build
+  realization;
+- projects the accepted installed GRUB bytes down to those seven retained
+  stanzas as an independent byte oracle; and
+- exposes only =fixture-check= and an unprivileged =stage= action.
+
+There is no installation, deletion, profile switch, GC-root promotion,
+reconfiguration, activation, collection, or reboot action.
+
+P5.2b-D2 is deliberately split into two publication checkpoints:
+
+1. D2a is the publication checkpoint for this source, stage-only input
+   specification, and fixtures.
+2. D2b may run =stage= only after D2a is fetched clean, equal to
+   =origin/main=, and still at the exact commit that first introduced the
+   reviewed stage specification.  D2b will freeze the generated GRUB bytes and
+   semantic result in the repository without making them active.
+
+Live P5.2b remains =BACKLOG=.  Recovery roots, durable transaction journaling,
+profile exclusion, link rollback, a fresh live deletion manifest, publication,
+and manifest-specific attended authorization remain future gates.  P5.3
+remains separate and =BACKLOG=.
+
+* Reviewed starting state
+
+| Surface | Exact reviewed value |
+|---------+----------------------|
+| Host / user | =guixpc= / =skydive420dz= |
+| Repository parent | =83cb700e8f0b6f6594363f5a90ba6b18bb5dba3b= |
+| Pinned Guix | =a8391f2d7451c2463ba253ffa9872fa6f27485d7= |
+| System/Home/Pull links | =86/17/5= |
+| Current/booted System | =/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system= |
+| Current System generation | =87= |
+| Retained old generations | =86,85,84,83,81,80,75= |
+| Held candidate generations | =1..9,11..74,76..79,82=; 78 links |
+| Installed GRUB SHA256 | =6e7fe604ee58723c7e321c3a07a645a2017cfcf49bac62b3ecb0c0559ca30671= |
+| Live =bootcfg= | =/gnu/store/hdwc6z0wdhgqimxqg1gzkznp9irbkwhl-grub.cfg= |
+| Pin-manifest SHA256 | =49c811d35ddaa940afdbe450f08cd67a2fc73ae3d860610c121b7b32caec1ca0= |
+| OS source SHA256 | =34398678c3fe52e31f7f0cbf623b9f6f6e5796b132d3e9ce25dd30aeac1ed887= |
+| Generation-87 parameters SHA256 | =ce3692449e19d2c2f0d2044dfb54092189015aa680fd05563b81eac33609cb62= |
+
+The source work began from a clean actual checkout whose =HEAD=,
+=origin/main=, and GitHub =main= all named =83cb700=.  Volatile state is
+revalidated by the D2b stage action; this table alone is not a future
+authorization.
+
+* Pinned-Guix source decision
+
+Pinned source review rejects =operating-system-bootcfg= for this task.  That
+procedure synthesizes the main boot parameters from the source operating
+system and can therefore make a prospective, unaccepted System output the
+default entry.
+
+The accepted path uses public APIs:
+
+- =read-operating-system= and =profile-boot-parameters= from
+  =(guix scripts system)=;
+- =operating-system-bootloader=, =read-boot-parameters-file=, and
+  =boot-parameters->menu-entry= from =(gnu system)=;
+- =bootloader-configuration-file-generator= from =(gnu bootloader)=; and
+- =lower-object= plus =built-derivations= for the uninstalled store build.
+
+The current parameters are read from the canonical generation-87 System store
+item.  Consequently, the main =gnu.system= and =gnu.load= arguments name that
+direct store item.  Retained old parameters are read through their generation
+links in normal newest-first order, so their entries continue to name the
+reviewed rollback links.
+
+The GRUB generator appends
+=bootloader-configuration-menu-entries= itself.  D2a therefore passes only the
+current main entry and fails closed unless the accepted-current and real-source
+static menu-entry lists serialize equally.  The live probe proved both lists
+are empty.
+
+* Exact configuration contract
+
+The real source object, not textual guesses from =grub.cfg=, must satisfy:
+
+| Field | Required value |
+|-------+----------------|
+| Bootloader identity / name | exported =grub-efi-bootloader= / =grub-efi= |
+| Target | =("/boot/efi")= |
+| Default / timeout | =0= / =5= seconds |
+| Terminal output / input | =(gfxterm)= / =()= |
+| Serial unit / speed | disabled / disabled |
+| Device-tree support / extra initrd | enabled / none |
+| Static menu entries | zero |
+| Theme image | present |
+| Theme resolution | =(3440 . 1440)= |
+| Theme gfxmodes | =3440x1440,2560x1440,1920x1080,auto= |
+| Theme normal / highlight colors | =light-gray/black= / =yellow/black= |
+| Keyboard | =us=; no variant/model; =caps:escape= |
+
+This distinction matters.  The EFI target is consumed by a later bootloader
+operation and is not encoded in =grub.cfg=.  Theme resolution and keyboard
+options also influence derived assets rather than appearing literally in full.
+The source tuple validates those fields; the byte oracle validates their
+rendered consequences.
+
+* Stage-only input specification
+
+The tracked input is:
+
+[[file:../../guix/machines/guixpc/p5.2b-d2-retained-bootcfg-stage.tsv][=guix/machines/guixpc/p5.2b-d2-retained-bootcfg-stage.tsv=]]
+
+Its closed schema requires:
+
+#+begin_example
+mode             STAGE-ONLY
+authorization    NOT-GRANTED
+status           REVIEW-ONLY
+#+end_example
+
+It binds the pinned Guix revision, reviewed parent checkpoint, exact
+launcher/driver/module hashes, the directly evaluated
+=guix/package-ownership.scm= hash, channel lock, P5.2a postflight input, OS
+source, exact current/booted/Home/Pull tuples, every retained old
+link/target/parameter hash/timestamp, the complete held candidate generation
+set, pins, installed GRUB, live =bootcfg=, and the configuration contract
+above.  The launcher must resolve to the exact reviewed Pull-profile store
+item, which binds the Guix, Nonguix, and =sk-guix= channel module set.
+
+The stage launcher accepts only the repository's canonical specification and
+requires =HEAD= to equal the commit that added that file.  It removes inherited
+=GUILE_LOAD_PATH=, =GUILE_LOAD_COMPILED_PATH=, and
+=GUILE_EXTENSIONS_PATH= before invoking the exact reviewed Guix frontend, so a
+stale Home or System module cannot shadow the hash-bound implementation.
+
+It is not a deletion manifest.  It cannot grant authorization, select a link
+mutation, promote a GC root, or name an active replacement.
+
+* Independent byte oracle
+
+The byte oracle parses the SHA-bound accepted installed GRUB into:
+
+1. the exact prefix through the old-configurations submenu opener;
+2. the existing per-generation old-entry stanzas; and
+3. the exact suffix beginning at the submenu close.
+
+It preserves old stanzas =86,85,84,83,81,80,75= in that order and removes
+every other old stanza.  A read-only live projection passed semantic
+validation:
+
+| Property | Result |
+|----------+--------|
+| Direct current System occurrences | exactly 2 |
+| Retained old-link occurrences | exactly 14; 2 per link |
+| Old-entry order | =86,85,84,83,81,80,75= |
+| Candidate/unknown old links | zero |
+| Projection byte size | 5,163 bytes |
+
+D2b must require the independently Guix-generated bytes to equal this
+projection byte-for-byte.  That proves the prefix, main entry, theme/gfxmode,
+keymap, default/timeout, submenu framing, and firmware suffix are unchanged
+while only non-retained old entries disappear.
+
+* Source and fixtures
+
+| Path | Role |
+|------|------|
+| =guix/modules/sk/system-retained-bootcfg.scm= | strict spec, source-object validation, inert generator, lowering/build helper, byte projection, semantic validator |
+| =scripts/guix-system-retained-bootcfg.scm= | exact live pre/post reader and stage-only driver |
+| =scripts/guix-system-retained-bootcfg= | clean/upstream-equal, pinned-Guix, non-root launcher |
+| =tests/guix-system-retained-bootcfg-check.scm= | positive and negative native Scheme fixtures |
+| =tests/fixtures/guix-system-retained-bootcfg/= | accepted installed and retained byte fixtures |
+| =tests/guix-system-retained-bootcfg-check= | static safety and native-fixture entry point |
+
+The fixtures cover schema/mode/authorization/status drift, fixed-input path and
+digest drift, missing and unknown records, duplicate selectors, exact
+generation-link identity even when two links share one store target,
+bootloader target/default/timeout/terminal/serial/device-tree/extra-initrd/
+theme/gfxmode/color/keyboard/static-menu drift, accepted/source menu mismatch,
+exact byte projection, retained order and submenu confinement, candidate
+reference, link-based current entry, duplicate label, and missing retained
+entry.
+
+The static gate rejects subprocess and live-mutation APIs in the Scheme
+implementation and rejects external System/GC/bootloader mutation commands.
+The launcher rejects unsupported actions and refuses UID 0 for =stage=.
+
+* D2b stage gate
+
+After this source checkpoint is published and fetched cleanly, D2b may run:
+
+#+begin_src sh
+cd ~/Projects/guix-dotfiles
+git fetch origin
+scripts/guix-system-retained-bootcfg stage \
+  "$PWD/guix/machines/guixpc/p5.2b-d2-retained-bootcfg-stage.tsv"
+#+end_src
+
+The action must:
+
+1. require clean =HEAD == refs/remotes/origin/main=, the reviewed parent as an
+   ancestor, and =HEAD= equal to the exact commit that introduced the canonical
+   D2a specification;
+2. refuse root;
+3. validate every bound source and live input before lowering;
+4. build only an immutable =grub.cfg= store output;
+5. require semantic success and byte equality with the projection;
+6. revalidate System/Home/Pull links and pointers, current/booted System,
+   source/channel/pin inputs, installed GRUB, and live =bootcfg= afterward;
+7. write its result only to standard output; and
+8. stop.
+
+Realization can add immutable store objects and daemon build metadata.  D2b
+must report that permitted store effect and must not claim whole-machine or
+whole-store byte identity.  It creates no result GC root; the later tracked
+artifact preserves the reviewed bytes if the unrooted store output is
+collected.
+
+* Validation at this checkpoint
+
+| Gate | Result |
+|------|--------|
+| Native pinned-Guix fixture check | PASS; seven production retained generations |
+| =guild compile -W3= module | PASS; no warnings |
+| =guild compile -W3= driver | PASS; no warnings |
+| =guild compile -W3= native fixture | PASS; no warnings |
+| Read-only projection of accepted live GRUB | PASS; 5,163 bytes |
+| ShellCheck for new launcher/checker | PASS |
+| GuixPC =scripts/shell-check --strict= | PASS |
+| Git whitespace check | PASS |
+
+The immutable GRUB build is intentionally deferred until the D2a checkpoint
+is published and clean/upstream-equal.
+
+* No-mutation statement
+
+D2a created source, tests, documentation, and a stage-only specification.  Its
+live probes read the operating-system declaration, boot parameters, generation
+links, and installed GRUB.  They did not build the staged store object.
+
+No live generation link, profile pointer, installed GRUB byte, =bootcfg= root,
+pin, EFI file or variable, package/profile, operating-system declaration,
+activation state, boot state, or store object was removed or promoted.  No
+dead/live GC query, collection, reconfiguration, activation, bootloader
+operation, or reboot ran.
+
+* Handoff
+
+Publish D2a first.  D2b then performs the unprivileged immutable build from the
+clean published source, captures the exact generated bytes and result report,
+and stops again.  Recovery transaction work follows as a separate successor;
+live deletion remains blocked until that work, a fresh manifest, publication,
+and manifest-specific authorization all exist.

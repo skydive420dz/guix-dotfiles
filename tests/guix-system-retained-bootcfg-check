@@ -1,0 +1,129 @@
+#!/bin/sh
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+launcher=$repo/scripts/guix-system-retained-bootcfg
+module=$repo/guix/modules/sk/system-retained-bootcfg.scm
+driver=$repo/scripts/guix-system-retained-bootcfg.scm
+spec=$repo/guix/machines/guixpc/p5.2b-d2-retained-bootcfg-stage.tsv
+
+case $# in
+    0) strict=0 ;;
+    1)
+        [ "$1" = --strict ] || {
+            printf 'usage: %s [--strict]\n' "$0" >&2
+            exit 64
+        }
+        strict=1
+        ;;
+    *)
+        printf 'usage: %s [--strict]\n' "$0" >&2
+        exit 64
+        ;;
+esac
+
+[ -x "$launcher" ]
+[ -r "$module" ]
+[ -r "$driver" ]
+[ -r "$spec" ]
+
+sha256_file() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | awk '{ print $1 }'
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | awk '{ print $1 }'
+    else
+        printf '%s\n' \
+            'guix-system-retained-bootcfg-check: no SHA256 command' >&2
+        exit 127
+    fi
+}
+
+check_fixed_input() {
+    key=$1
+    relative=$2
+    expected=$(
+        awk -F '\t' -v key="$key" -v relative="$relative" '
+            $1 == key {
+                count++
+                if (NF != 3 || $2 != relative) invalid = 1
+                digest = $3
+            }
+            END {
+                if (count != 1 || invalid) exit 1
+                print digest
+            }
+        ' "$spec"
+    ) || {
+        printf 'guix-system-retained-bootcfg-check: invalid %s record\n' \
+            "$key" >&2
+        exit 1
+    }
+    if [ ! -f "$repo/$relative" ] || [ -L "$repo/$relative" ]; then
+        printf 'guix-system-retained-bootcfg-check: non-regular %s\n' \
+            "$key" >&2
+        exit 1
+    fi
+    actual=$(sha256_file "$repo/$relative")
+    [ "$actual" = "$expected" ] || {
+        printf 'guix-system-retained-bootcfg-check: stale %s SHA256\n' \
+            "$key" >&2
+        exit 1
+    }
+}
+
+grep -q '^mode	STAGE-ONLY$' "$spec"
+grep -q '^authorization	NOT-GRANTED$' "$spec"
+grep -q '^status	REVIEW-ONLY$' "$spec"
+[ "$(grep -c '^retained	' "$spec")" -eq 7 ]
+check_fixed_input \
+    implementation-module \
+    guix/modules/sk/system-retained-bootcfg.scm
+check_fixed_input \
+    implementation-driver \
+    scripts/guix-system-retained-bootcfg.scm
+check_fixed_input \
+    implementation-launcher \
+    scripts/guix-system-retained-bootcfg
+check_fixed_input \
+    evaluation-input \
+    guix/package-ownership.scm
+
+if rg -n \
+    '\((install-bootloader|reinstall-bootloader|delete-generations|switch-to-generation|add-indirect-root|add-permanent-root|call-with-output-file|with-output-to-file|open-output-file|rename-file|delete-file|copy-file|symlink|link[[:space:]]|mkdir|rmdir|chmod|chown|truncate-file|primitive-fork|primitive-load|dynamic-link|open-pipe|system\*?[[:space:]])' \
+    "$module" "$driver"; then
+    printf '%s\n' \
+        'guix-system-retained-bootcfg-check: forbidden mutation or subprocess API' >&2
+    exit 1
+fi
+
+if rg -n \
+    'guix[[:space:]]+(system|gc|package)|grub-install|/run/setuid-programs/sudo|[[:space:]]sudo[[:space:]]' \
+    "$launcher" "$module" "$driver"; then
+    printf '%s\n' \
+        'guix-system-retained-bootcfg-check: forbidden external mutation command' >&2
+    exit 1
+fi
+
+unsupported=$(mktemp "${TMPDIR:-/tmp}/p52b-d2-unsupported.XXXXXX")
+trap 'rm -f "$unsupported"' EXIT HUP INT TERM
+if "$launcher" apply >"$unsupported" 2>&1; then
+    printf '%s\n' \
+        'guix-system-retained-bootcfg-check: unsupported apply action succeeded' >&2
+    exit 1
+fi
+
+frontend=${SK_GUIX_FRONTEND_PROFILE:-${HOME:?}/.config/guix/current}
+guix=$(readlink -f "$frontend" 2>/dev/null || true)/bin/guix
+if [ ! -x "$guix" ]; then
+    if [ "$strict" -eq 1 ]; then
+        printf '%s\n' \
+            'guix-system-retained-bootcfg-check: strict mode requires pinned Guix' >&2
+        exit 127
+    fi
+    printf '%s\n' \
+        'SKIP: retained bootcfg native fixtures (pinned Guix unavailable)'
+    exit 0
+fi
+
+SK_GUIX_FRONTEND_PROFILE=$frontend "$launcher" fixture-check

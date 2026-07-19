@@ -52,6 +52,7 @@ for file in "$channels" "$home_config" "$system_config" \
     "$module_dir/sk/emacs.scm" \
     "$module_dir/sk/theme.scm" \
     "$module_dir/sk/theme-home.scm" \
+    "$module_dir/sk/system-retained-bootcfg.scm" \
     "$repo/theme/tokens.scm" \
     "$repo/assets/wallpapers/waifu-cyberpunk.png" \
     "$repo/fixtures/theme/expected-production/emacs.el" \

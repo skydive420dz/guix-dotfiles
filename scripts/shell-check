@@ -38,6 +38,7 @@ shellcheck \
     "$repo/scripts/guix-entrypoints" \
     "$repo/scripts/guix-generation-retention" \
     "$repo/scripts/guix-system-generation-link-pruner" \
+    "$repo/scripts/guix-system-retained-bootcfg" \
     "$repo/scripts/guix-disk-health" \
     "$repo/scripts/guix-lisp-shell" \
     "$repo/scripts/guix-theme-home-check" \
@@ -59,6 +60,7 @@ shellcheck \
     "$repo/tests/guix-entrypoints-check" \
     "$repo/tests/guix-generation-retention-check" \
     "$repo/tests/guix-system-generation-link-pruner-check" \
+    "$repo/tests/guix-system-retained-bootcfg-check" \
     "$repo/tests/guix-disk-health-check" \
     "$repo/tests/guix-lisp-shell-check" \
     "$repo/tests/guix-theme-home-check" \
@@ -80,6 +82,11 @@ shellcheck \
 "$repo/tests/guix-entrypoints-check"
 "$repo/tests/guix-generation-retention-check"
 "$repo/tests/guix-system-generation-link-pruner-check"
+if [ "$strict" -eq 1 ]; then
+    "$repo/tests/guix-system-retained-bootcfg-check" --strict
+else
+    "$repo/tests/guix-system-retained-bootcfg-check"
+fi
 if command -v guile >/dev/null 2>&1 && \
     command -v guild >/dev/null 2>&1; then
     "$repo/tests/guix-disk-health-check"
