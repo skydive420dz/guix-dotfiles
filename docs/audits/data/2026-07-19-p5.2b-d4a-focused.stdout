@@ -1,0 +1,8 @@
+guix-system-pruning-boundary-check: PASS
+guix-system-pruning-root-backend-check: PASS
+guix-system-pruning-orchestrator-check: PASS (313 checks)
+guix-system-pruning-reconciliation-check: PASS (128 checks)
+guix-system-pruning-phase-engine-check: PASS (3172 checks phases=78 rollback-prefixes=14 rollback-restarts=204 cleanup-prefixes=8)
+guix-system-pruning-fixture-runtime-check: PASS (297 checks forward-effects=71 recovery-effects=47 illegal-chains=5)
+guix-system-pruning-fused-source-check: PASS
+guix-system-pruning-d4a-check: PASS (suites=7)

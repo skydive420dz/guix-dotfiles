@@ -1,0 +1,320 @@
+#+title: P5.2b-D4a reconciliation and fused-program source checkpoint
+#+date: 2026-07-19
+#+startup: overview
+#+category: guixpc
+#+filetags: :guixpc:guix:scheme:grub:recovery:testing:
+#+status: source/fixture checkpoint complete; D4b realization not started
+
+* Outcome
+
+P5.2b-D4a implements the conservative source-and-fixture boundary accepted by
+decision D-41.  The candidate adds:
+
+- one closed hash-chained journal codec and legal-history automaton;
+- a dependency-injected root backend and central orchestration/pre-phase gate;
+- deterministic synthetic reconciliation for the accepted pre-=BEGIN= and
+  known-temporary states;
+- one phase engine plus an in-memory fixture runtime;
+- a pure renderer for one closed fused Scheme program; and
+- warning-fatal, adversarial, restart, strict, and selected-live-surface gates.
+
+The source remains =FIXTURE-ONLY= and =authorization NOT-GRANTED=.  It
+hard-refuses root =/= and performs no production root registration, Guix store
+realization, live System transaction, generation-link deletion, GRUB or
+=bootcfg= mutation, GC, activation, reconfiguration, or reboot.
+
+The complete D4a harness passes seven suites.  The legacy transaction harness
+also retains all =54 + 44 = 98= declared restart boundaries, and the strict
+repository gate independently reruns both.  A fresh 19-record selected-live-
+surface snapshot is byte-identical before and after the final gates.
+
+This closes only the D4a source/fixture checkpoint.  D4b remains the first
+eligible immutable realization and positive fused-loader runtime boundary, and
+it may begin only after this checkpoint is published and fetched cleanly.
+
+* Exact predecessor and source boundary
+
+The candidate is based on exact live predecessor:
+
+#+begin_example
+0a5f020f29fa2d21cc0b2c163984a4913d0067ed
+#+end_example
+
+All implementation and validation work ran in fresh =/tmp= clones.  The live
+checkout at =~/Projects/guix-dotfiles= remained untouched and clean during
+development and final gates.
+
+The candidate changes 21 implementation/test inputs before this evidence
+document: 10,453 insertions and 87 deletions.  That size and the exhaustive
+state matrices explain the elapsed development and validation cost; they do
+not describe boot or interactive runtime cost.
+
+The pinned runtime identities remain:
+
+| Identity | Exact value |
+|----------+-------------|
+| Guix frontend | =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile= |
+| Guix revision | =a8391f2d7451c2463ba253ffa9872fa6f27485d7= |
+| Guile / Guild | =/gnu/store/8vwbdsni9znrlxvcwqi4n02f23ysc1fa-guile-3.0.11= / =3.0.11= |
+| Guile wrapper | =/gnu/store/f75z9sgss74ndiy1jnr02fippk1fjwkj-guile-wrapper/bin/guile= |
+
+* Implemented architecture
+
+** Journal boundary and legal automaton
+
+=(sk system-pruning-boundary)= owns canonical event encoding, sequence and
+previous-hash validation, hash-chain verification, legal successors, terminal
+exclusion, and the closed forward/rollback/post-commit history automaton.
+Hash-valid histories with duplicate, skipped, reordered, direction-changing,
+or post-terminal events fail before a phase can start.  Public trace data is
+detached from the private dynamic cache, and fixtures prove mutation
+isolation.
+
+** Root backend and orchestrator
+
+=(sk system-pruning-root-backend)= defines the one-session temporary/direct-
+root, registration, validity, and liveness contract.  D4a supplies only a
+synthetic backend.  =(sk system-pruning-orchestrator)= validates exact root
+tuples and cleanup order and funnels every side-effecting fixture phase through
+one central pre-phase gate.
+
+The gate requires the expected journal/root/protected-surface state, attended
+quiescence observation, no overlapping phase, and zero active effect before it
+allows a fixture thunk.  This retains the cooperative transaction-then-System
+lock order without claiming exclusion of arbitrary =guix system= processes.
+
+** Reconciliation
+
+=(sk system-pruning-reconciliation)= classifies only the closed accepted
+synthetic filesystem states.  Exact absent, complete, provable-prefix backup,
+known temporary, and bootstrap-prefix states have deterministic successors.
+Foreign, multiple, mistyped, retargeted, incomplete, or ambiguous states
+return =REVIEW-REQUIRED= without cleanup.
+
+** Phase engine and in-memory runtime
+
+=(sk system-pruning-phase-engine)= derives the closed forward, rollback,
+restart, and terminal-cleanup phase registry from the validated manifest and
+root tuples.  =(sk system-pruning-fixture-runtime)= executes that registry
+against an in-memory model while counting every effect, phase, session, root,
+journal, and protected-surface invariant.
+
+The fused driver keeps three action families distinct:
+
+- =fixture-points= / =fixture-verify= / =fixture-apply= /
+  =fixture-recover=: the D4a in-memory phase runtime;
+- =fixture-reconcile=: the synthetic filesystem reconciler; and
+- explicit =legacy-fixture-*= actions: the retained D3 transaction oracle.
+
+The D4a runtime reports
+=adapter=IN-MEMORY root-role=READ-ONLY-ELIGIBILITY
+supplied-root-transaction-mutations=0=.
+
+** Fused renderer and loader
+
+=(sk system-pruning-fused-source)= is a pure deterministic renderer.  It
+accepts a closed association list, verifies every manifest-bound input, and
+emits one Scheme source containing ten ordered packets:
+
+1. root backend;
+2. boundary;
+3. orchestrator;
+4. reconciliation;
+5. embedded context;
+6. transaction core;
+7. phase engine;
+8. fixture runtime;
+9. generated embedded inputs; and
+10. inert fused driver.
+
+Each packet contains its label, exact module name, SHA256, UTF-8 size, and
+source string.  At program startup, inherited Guile paths are replaced with
+the pinned immutable closure, auto-compilation is disabled in the shebang, and
+the canonical root-owned unwritable =/gnu/store= program location is proved
+before any project form is parsed or evaluated.
+
+One preflight validates all ten packet shapes, order, hashes, sizes, exact
+module declarations, complete reader consumption, and absence of same-name
+modules.  Only after every packet passes does one evaluator create each module
+in dependency order, prove exact registry identity, evaluate remaining forms
+in that explicit module, and restore the caller module.  The inert driver
+exports =sk:main=; the rendered tail invokes it exactly once and last.
+
+No runtime path loads or opens project source, the checkout manifest, crash
+registry, retained GRUB, or legacy fixture inputs.  Those exact bytes are
+already data inside the rendered source.
+
+* Closed manifest and source identities
+
+The fixture manifest contains 15 =implementation-input= records.  All 15
+digests equal the current source bytes.  The final manifest identity is:
+
+| Item | Bytes | SHA256 |
+|------+-------+--------|
+| closed fixture manifest | 6,828 | =0bf2ce08c06ec4b27053a2f7af3fd5d20c3c37bda2e739a00d0a6c68e6d9ce61= |
+| fused driver | - | =4167d51d06abead3871e99f2e8cf9b7c87df297dad717adf7901eb0eb63c1343= |
+
+The transaction harness is the only active hardcoded manifest consumer and
+names that exact digest.  No stale pre-correction digest remains.  Historical
+D3 manifest identities remain unchanged in their evidence records.
+
+The pure renderer and its validation harness are deliberately outside the
+embedded runtime manifest.  D4a freezes them separately:
+
+| Input | Bytes | SHA256 |
+|-------+-------+--------|
+| fused-source renderer | 32,667 | =c2b96decd5a85a9764c3c66bb0a72a517599f1b101969f240027a54758f3cb57= |
+| fused-source test | 21,724 | =9bea3203a5dc9a8473f45d3b8de7af17e069514ee0accce8db5ca00c25018ccb= |
+| complete D4a harness | 11,866 | =d3820d68c81a40d937022782cdbde8f8997ae654abb8fcde5ac3eaa71c6082a6= |
+| strict-gate script | - | =20ed645896d61d11c694db99f6b4ddf19251d04eec0313bf4e1099fc52cd174d= |
+
+* Loader integration correction
+
+The first exact rendered-source compile exposed a real integration defect.
+The renderer had concatenated ten independent =define-module= sources into one
+compiler lexical unit.  Guile then correctly emitted warning-fatal shadowing
+and wrong-arity diagnostics even though every source compiled independently.
+
+The correction preserves each reviewed source as data and loads it into its
+own explicit module only after the all-packet preflight.  This removed the
+lexical collision without weakening packet identity, compile policy, or
+runtime repository isolation.  A second focused probe also showed that a
+hostile =GUILE_AUTO_COMPILE=1= can compile the outer script before in-source
+sanitization; the exact immutable shebang now supplies =--no-auto-compile= so
+that pre-startup cache write cannot occur.
+
+The corrected exact rendered source compiles with =guild compile -W3= and
+zero diagnostics.  A mutable executable copy with hostile source, compiled,
+extension, and auto-compile settings refuses at the canonical store-location
+guard before a project module or poison sentinel can run.
+
+* Validation and timings
+
+The final static gate passed =git diff --check=, =sh -n=, and focused
+ShellCheck in one second with empty stderr.
+
+| Gate | Result | Seconds |
+|------+--------+---------|
+| boundary | PASS | included below |
+| root backend | PASS | included below |
+| orchestrator | PASS; 313 checks | included below |
+| reconciliation | PASS; 128 checks | included below |
+| phase engine | PASS; 3,172 checks | dominant |
+| fixture runtime | PASS; 297 checks | included below |
+| fused source / exact rendered =-W3= / hostile-copy gate | PASS | included below |
+| complete standalone D4a harness | PASS; seven suites | 168 |
+| standalone legacy restart matrix | PASS; =54 + 44 = 98= | 162 |
+| complete strict repository gate | PASS; reruns legacy and D4a | 445 |
+
+The fresh raw channels are tracked exactly:
+
+| Evidence | Bytes | SHA256 |
+|----------+-------+--------|
+| [[file:data/2026-07-19-p5.2b-d4a-focused.stdout][D4a stdout]] | 544 | =25b5a5a93676e03760a2dedba72c07df30cedd82617a22ce7502347e13067a4b= |
+| D4a stderr | 0 | =e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855= |
+| [[file:data/2026-07-19-p5.2b-d4a-legacy.stdout][legacy stdout]] | 78 | =1c7db5ee57ecc38d9ccd0cbc17f436c83db62ba81e74d3e29a51578d7ae36ca1= |
+| [[file:data/2026-07-19-p5.2b-d4a-legacy.stderr][legacy stderr]] | 285 | =33d66c28864bd2258e0007902d230d397f45a6588f9012864c4a1ed77af5e363= |
+| [[file:data/2026-07-19-p5.2b-d4a-strict.stdout][strict stdout]] | 2,874 | =f3bed9aa45d18722a5dbd7c1135626a214b33df8571faa946bd38acd4475deae= |
+| [[file:data/2026-07-19-p5.2b-d4a-strict.stderr][strict stderr]] | 322 | =1d6e5ed228ede62f104415d9d00a0eb3619631775421980d1529716231f1779d= |
+
+Both stderr channels contain only the deliberate =TERM=/=KILL= restart
+notices from the legacy interruption matrix.  No Scheme compiler warning,
+unexpected diagnostic, or failed gate appears.
+
+The principal costs are ranked:
+
+1. the exhaustive phase-engine history/restart matrix;
+2. the legacy 98-subprocess restart matrix;
+3. the strict gate, because it deliberately reruns both matrices;
+4. 17 warning-fatal source/test compiles plus exact-render compilation; and
+5. the orchestrator/reconciliation suites.
+
+The initial phase implementation reconstructed the legal automaton repeatedly
+and took about nine minutes.  Caching the immutable legal-trace set reduced the
+same 3,172-case phase gate to about 112 seconds without dropping coverage.
+These are validation costs.  They do not add a service, boot phase, recurring
+daemon, or interactive runtime path.
+
+* Selected live nonmutation
+
+The final pre/post helper has identity:
+
+| Item | Bytes | SHA256 |
+|------+-------+--------|
+| D4a selected-live helper | 3,244 | =df7f199f8bc9e61c4c4c7d60c049aea47bba7ec2e611d5b9b3c45e2fc5f6b83b= |
+| [[file:data/2026-07-19-p5.2b-d4a-live-surfaces.tsv][canonical pre/post snapshot]] | 1,455 | =44a31120baabf015556e42a387903153ce6b54f02624b12ab7dbc21bc80dfc11= |
+
+Both snapshots contain exactly 19 records and are byte-identical.  They retain
+System/Home/Pull link counts =86/17/5=, the same six profile/runtime/=bootcfg=
+symlink tuples, installed-GRUB digest and metadata, boot ID, and absent:
+
+- transaction base;
+- recovery-root base;
+- obsolete program-root directory;
+- every direct =p52b-system-prune-program-*= root;
+- System lock;
+- GRUB temporary; and
+- =bootcfg= temporary.
+
+The candidate repository status and full binary diff are also byte-identical
+before and after the gates.  This is selected-surface and candidate-source
+nonmutation evidence, not whole-store or whole-machine identity.
+
+* Independent adversarial review
+
+The final independent review reported:
+
+| Severity | Count |
+|----------+-------|
+| blocker | 0 |
+| high | 0 |
+| medium | 1 |
+
+The one medium is intentionally deferred to D4b: D4a proves loader structure,
+packet bytes/order, parse-before-evaluation, registry-absence checks, explicit
+module evaluation, exact-once dispatch structure, warning-fatal compilation,
+and mutable/poison refusal, but cannot positively execute the exact rendered
+program.  A valid location must be canonical and store-resident, while D4a
+forbids the first realization.
+
+D4b must add an exact-code behavioral loader proof and then run the realized
+program.  Its negative cases must prove that a malformed final packet and a
+preexisting expected module cause no initializer.  Its success case must prove
+canonical module order, registry identity, caller-module restoration, checkout
+independence, poisoned-path isolation, and one final =sk:main= dispatch.
+
+* Exact nonclaims
+
+D4a does not claim:
+
+- a realized or executable canonical store program;
+- positive fused-loader runtime behavior;
+- a live-state deletion manifest or exact live-target program;
+- production temporary/direct root registration, validity, or liveness;
+- global exclusion of arbitrary =guix system= commands;
+- arbitrary-instruction, mid-system-call, or power-loss recovery;
+- installation of the retained-only GRUB artifact;
+- permission to create a root, transaction directory, lock, quarantine,
+  journal, backup, GRUB temporary, =bootcfg= temporary, or generation-link
+  mutation;
+- whole-store or whole-machine byte identity;
+- GC, dead/live enumeration, collection, deletion, activation,
+  reconfiguration, bootloader installation, EFI mutation, or reboot; or
+- D4c, D5, or P5.3 readiness or authorization.
+
+* D4b handoff
+
+After this checkpoint is committed, pushed, fetched, and proven clean at
+=HEAD == origin/main == GitHub main=, D4b may:
+
+1. construct the first unprivileged =computed-file= from the exact published
+   renderer and manifest;
+2. freeze derivation/output path, program hash/size, and bounded store effect;
+3. run the behavioral loader proof above through that exact program;
+4. prove execution with the checkout unavailable and inherited Guile paths
+   poisoned;
+5. rerun the D4a and legacy matrices through the realized artifact; and
+6. recapture selected live surfaces and stop.
+
+D4b must not publish a live deletion manifest, create production roots, run a
+live action, authorize D5, or begin P5.3.

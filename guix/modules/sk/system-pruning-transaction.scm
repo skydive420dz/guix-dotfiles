@@ -7,14 +7,16 @@
   #:use-module (guix utils)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 match)
-  #:use-module (ice-9 rdelim)
   #:use-module (ice-9 textual-ports)
   #:use-module (rnrs bytevectors)
+  #:use-module ((sk system-pruning-embedded-context) #:prefix embedded:)
   #:use-module (srfi srfi-1)
   #:use-module (system foreign)
   #:export (sk:assert-transaction-manifest
             sk:file-sha256
             sk:read-tsv
+            sk:read-tsv-string
+            sk:run-embedded-fixture-transaction
             sk:run-fixture-transaction))
 
 (define %error-key 'sk-system-pruning-transaction)
@@ -57,7 +59,23 @@
   '("store-names" "13"
     "5d4b1e49bd8090b41d5fb50129695b005aa2af554e6d0c38bc33737efbc2450f"))
 (define %expected-implementation-inputs
-  '(("module" "guix/modules/sk/system-pruning-transaction.scm")
+  '(("root-backend"
+     "guix/modules/sk/system-pruning-root-backend.scm")
+    ("boundary"
+     "guix/modules/sk/system-pruning-boundary.scm")
+    ("orchestrator"
+     "guix/modules/sk/system-pruning-orchestrator.scm")
+    ("reconciliation"
+     "guix/modules/sk/system-pruning-reconciliation.scm")
+    ("embedded-context"
+     "guix/modules/sk/system-pruning-embedded-context.scm")
+    ("module" "guix/modules/sk/system-pruning-transaction.scm")
+    ("phase-engine"
+     "guix/modules/sk/system-pruning-phase-engine.scm")
+    ("fixture-runtime"
+     "guix/modules/sk/system-pruning-fixture-runtime.scm")
+    ("fused-driver"
+     "scripts/guix-system-pruning-fused-driver.scm")
     ("driver" "scripts/guix-system-pruning-transaction.scm")
     ("launcher" "scripts/guix-system-pruning-transaction")
     ("profile-lock-holder"
@@ -214,19 +232,9 @@
 (define (sk:read-tsv file)
   (call-with-input-file file
     (lambda (port)
-      (let loop ((line-number 1)
-                 (result '()))
-        (let ((line (read-line port)))
-          (if (eof-object? line)
-              (reverse result)
-              (begin
-                (ensure (not (string-null? line))
-                        "blank TSV row at ~a:~a" file line-number)
-                (ensure (not (string-index line #\return))
-                        "carriage return in TSV row at ~a:~a"
-                        file line-number)
-                (loop (+ line-number 1)
-                      (cons (string-split line #\tab) result)))))))))
+      (embedded:read-tsv-string (get-string-all port)))))
+
+(define sk:read-tsv-string embedded:read-tsv-string)
 
 (define (records-with-key records key)
   (filter (lambda (record)
@@ -707,67 +715,55 @@
 (define (manifest-records context key fields)
   (multi-records (context-ref context 'records) key fields))
 
-(define (make-context manifest root repository)
-  (let* ((canonical-root (canonical-directory root "fixture root"))
-         (canonical-repository
-          (canonical-directory repository "repository"))
-         (records
-          (sk:assert-transaction-manifest (sk:read-tsv manifest)))
-         (expected-sha (or (getenv "SK_P52B_D3_MANIFEST_SHA") ""))
-         (actual-sha (sk:file-sha256 manifest))
-         (transaction-base
-          (fixture-path canonical-root
-                        (record-value records "transaction-base")))
-         (recovery-base
-          (fixture-path canonical-root
-                        (record-value records "recovery-base"))))
+(define (embedded-input context relative)
+  (embedded:transaction-input-text
+   (context-ref context 'inputs)
+   relative))
+
+(define (make-embedded-context manifest-bytes expected-sha root inputs)
+  (ensure (string? manifest-bytes)
+          "embedded fixture manifest is not text")
+  (let ((canonical-root (canonical-directory root "fixture root"))
+        (actual-sha (string-sha256 manifest-bytes)))
     (ensure (hex-string? expected-sha 64)
-            "SK_P52B_D3_MANIFEST_SHA must bind the fixture manifest")
+            "expected SHA256 must bind the embedded fixture manifest")
     (ensure (string=? expected-sha actual-sha)
             "fixture manifest SHA256 mismatch")
-    (ensure (string=?
-             (read-text (string-append canonical-root "/"
-                                       %fixture-sentinel))
-             (string-append %fixture-sentinel-value "\n"))
-            "fixture sentinel is missing or invalid")
-    `((manifest . ,manifest)
-      (manifest-sha . ,actual-sha)
-      (root . ,canonical-root)
-      (repository . ,canonical-repository)
-      (records . ,records)
-      (transaction-base . ,transaction-base)
-      (transaction-dir
-       . ,(string-append transaction-base "/" actual-sha))
-      (recovery-base . ,recovery-base)
-      (recovery-dir
-       . ,(string-append recovery-base "/" actual-sha))
-      (profile-dir
-       . ,(fixture-path canonical-root "/var/guix/profiles"))
-      (journal
-       . ,(string-append transaction-base "/" actual-sha "/journal.tsv"))
-      (backup
-       . ,(string-append transaction-base "/" actual-sha "/old-grub.cfg"))
-      (quarantine
-       . ,(string-append transaction-base "/" actual-sha "/quarantine")))))
-
-(define (assert-repository-inputs context)
-  (let ((repository (context-ref context 'repository)))
-    (for-each
-     (lambda (record)
-       (let ((label (list-ref record 1))
-             (path (repository-file repository (list-ref record 2)))
-             (expected (list-ref record 3)))
-         (ensure-file-hash path expected label)))
-     (manifest-records context "implementation-input" 4))
-    (let* ((source (manifest-record context "new-grub-source" 4))
-           (path (repository-file repository (list-ref source 1))))
-      (ensure-file-hash path (list-ref source 2) "tracked D2b GRUB artifact")
-      (ensure-file-size path
-                        (string->number (list-ref source 3) 10)
-                        "tracked D2b GRUB artifact"))
-    (let* ((registry (manifest-record context "crash-registry" 3))
-           (path (repository-file repository (list-ref registry 1))))
-      (ensure-file-hash path (list-ref registry 2) "crash-point registry"))))
+    (let* ((records
+            (sk:assert-transaction-manifest
+             (sk:read-tsv-string manifest-bytes)))
+           (closed-inputs
+            (embedded:assert-transaction-inputs records inputs))
+           (transaction-base
+            (fixture-path canonical-root
+                          (record-value records "transaction-base")))
+           (recovery-base
+            (fixture-path canonical-root
+                          (record-value records "recovery-base"))))
+      (ensure (string=?
+               (read-text (string-append canonical-root "/"
+                                         %fixture-sentinel))
+               (string-append %fixture-sentinel-value "\n"))
+              "fixture sentinel is missing or invalid")
+      `((manifest-bytes . ,manifest-bytes)
+        (manifest-sha . ,actual-sha)
+        (root . ,canonical-root)
+        (inputs . ,closed-inputs)
+        (records . ,records)
+        (transaction-base . ,transaction-base)
+        (transaction-dir
+         . ,(string-append transaction-base "/" actual-sha))
+        (recovery-base . ,recovery-base)
+        (recovery-dir
+         . ,(string-append recovery-base "/" actual-sha))
+        (profile-dir
+         . ,(fixture-path canonical-root "/var/guix/profiles"))
+        (journal
+         . ,(string-append transaction-base "/" actual-sha "/journal.tsv"))
+        (backup
+         . ,(string-append transaction-base "/" actual-sha "/old-grub.cfg"))
+        (quarantine
+         . ,(string-append transaction-base "/" actual-sha "/quarantine"))))))
 
 (define (store-name-digest directory)
   (let* ((names
@@ -811,10 +807,9 @@
                       "new bootcfg store item")
     (ensure (string=?
              (read-text new-file)
-             (read-text
-              (repository-file
-               (context-ref context 'repository)
-               (list-ref (manifest-record context "new-grub-source" 4) 1))))
+             (embedded-input
+              context
+              (list-ref (manifest-record context "new-grub-source" 4) 1)))
             "new bootcfg store item differs byte-for-byte from tracked D2b")
     (for-each
      (lambda (tuple)
@@ -1023,10 +1018,9 @@
 (define (expanded-crash-points context)
   (let* ((registry-record
           (manifest-record context "crash-registry" 3))
-         (registry-file
-          (repository-file (context-ref context 'repository)
-                           (list-ref registry-record 1)))
-         (records (sk:read-tsv registry-file))
+         (records
+          (sk:read-tsv-string
+           (embedded-input context (list-ref registry-record 1))))
          (roots
           (map (lambda (record) (list-ref record 1))
                (manifest-records context "recovery-root" 3)))
@@ -1317,7 +1311,6 @@
 
 (define (assert-static-surfaces context)
   (assert-fixture-layout context)
-  (assert-repository-inputs context)
   (assert-store-inputs context)
   (assert-protected-surfaces context)
   (ensure (not (eq? 'foreign (recovery-state context)))
@@ -2152,8 +2145,13 @@
           (string-upcase (symbol->string state))
           (context-ref context 'manifest-sha)))
 
-(define (sk:run-fixture-transaction action manifest root repository)
-  "Run ACTION against a sentinel-marked synthetic ROOT only."
+(define (sk:run-embedded-fixture-transaction
+         action manifest-bytes expected-sha root inputs)
+  "Run fixture ACTION using only injected MANIFEST-BYTES and INPUTS.
+
+EXPECTED-SHA must bind MANIFEST-BYTES.  INPUTS is the closed association list
+of repository-relative path strings to exact text required by that manifest.
+Only a sentinel-marked synthetic ROOT is eligible."
   (ensure (member action
                   '("fixture-points"
                     "fixture-verify"
@@ -2162,7 +2160,9 @@
           "unsupported fixture transaction action: ~a" action)
   (ensure (not (= (getuid) 0))
           "fixture transaction refuses uid 0")
-  (let ((context (make-context manifest root repository)))
+  (let ((context
+         (make-embedded-context
+          manifest-bytes expected-sha root inputs)))
     (ensure (string=? (or (getenv "SK_GUIX_REVISION") "")
                       (record-value (context-ref context 'records)
                                     "guix-revision"))
@@ -2190,3 +2190,37 @@
          (let ((state (recover-transaction! context)))
            (print-state action context state)
            state)))))))
+
+(define (read-legacy-repository-inputs records repository)
+  (let ((canonical-repository
+         (canonical-directory repository "repository")))
+    (map
+     (lambda (relative)
+       (let ((path (repository-file canonical-repository relative)))
+         (ensure (eq? 'regular (path-kind path))
+                 "repository input is not a regular file: ~a"
+                 relative)
+         (cons relative (read-text path))))
+     (embedded:transaction-input-paths records))))
+
+(define (sk:run-fixture-transaction action manifest root repository)
+  "Run legacy fixture ACTION after reading its closed repository inputs."
+  (ensure (and (string? manifest)
+               (normalized-absolute-path? manifest))
+          "fixture manifest is not a normalized absolute path")
+  (ensure (eq? 'regular (path-kind manifest))
+          "fixture manifest is not a regular file")
+  (let* ((manifest-bytes (read-text manifest))
+         (expected-sha (or (getenv "SK_P52B_D3_MANIFEST_SHA") ""))
+         (actual-sha (string-sha256 manifest-bytes)))
+    (ensure (hex-string? expected-sha 64)
+            "expected SHA256 must bind the fixture manifest")
+    (ensure (string=? expected-sha actual-sha)
+            "fixture manifest SHA256 mismatch")
+    (let* ((records
+            (sk:assert-transaction-manifest
+             (sk:read-tsv-string manifest-bytes)))
+           (inputs
+            (read-legacy-repository-inputs records repository)))
+      (sk:run-embedded-fixture-transaction
+       action manifest-bytes expected-sha root inputs))))

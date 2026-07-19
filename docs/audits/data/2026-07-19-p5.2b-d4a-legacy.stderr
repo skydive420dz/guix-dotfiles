@@ -1,0 +1,2 @@
+Terminated
+tests/guix-system-pruning-transaction-check: line 195:  1380 Killed                  SK_P52B_D3_MANIFEST_SHA=$manifest_sha SK_P52B_D3_STOP_AFTER=$point SK_P52B_D3_STOP_MODE=$mode SK_P52B_D3_HOLD_LOCK_SECONDS=0 "$launcher" "$action" "$manifest" "$root" > "$output_file" 2>&1

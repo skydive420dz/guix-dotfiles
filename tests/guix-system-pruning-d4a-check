@@ -1,0 +1,336 @@
+#!/bin/sh
+set -eu
+
+LC_ALL=C
+export LC_ALL
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+frontend=${SK_GUIX_FRONTEND_PROFILE:-${HOME:?}/.config/guix/current}
+frontend_resolved=$(readlink -f "$frontend" 2>/dev/null || true)
+expected_frontend=/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+expected_guild=/gnu/store/8vwbdsni9znrlxvcwqi4n02f23ysc1fa-guile-3.0.11/bin/guild
+expected_guile=/gnu/store/f75z9sgss74ndiy1jnr02fippk1fjwkj-guile-wrapper/bin/guile
+expected_guix_program=/gnu/store/0hzhxis25c15rag5412rhm2md38chi6x-guix-command
+expected_guix_revision=a8391f2d7451c2463ba253ffa9872fa6f27485d7
+expected_home_profile=/gnu/store/2p4vnz9y2ndfsbary431rzlf41jhanrs-profile
+expected_system_profile=/gnu/store/z84fzavdzq9ja3lyln3cf9px4h45ybf9-profile
+guix=$frontend_resolved/bin/guix
+guix_site=$frontend_resolved/share/guile/site/3.0
+guix_ccache=$frontend_resolved/lib/guile/3.0/site-ccache
+home_profile=$(readlink -f "${SK_GUIX_HOME_PROFILE:-$HOME/.guix-home/profile}" \
+    2>/dev/null || true)
+home_site=$home_profile/share/guile/site/3.0
+home_ccache=$home_profile/lib/guile/3.0/site-ccache
+system_profile=$(readlink -f /run/current-system/profile 2>/dev/null || true)
+system_site=$system_profile/share/guile/site/3.0
+system_ccache=$system_profile/lib/guile/3.0/site-ccache
+system_extensions=$system_profile/lib/guile/3.0/extensions
+
+fail() {
+    printf 'guix-system-pruning-d4a-check: FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+case $# in
+    0) ;;
+    *)
+        printf 'usage: %s\n' "$0" >&2
+        exit 64
+        ;;
+esac
+
+module_dir=$repo/guix/modules
+transaction_module=$module_dir/sk/system-pruning-transaction.scm
+embedded_context_module=$module_dir/sk/system-pruning-embedded-context.scm
+boundary_module=$module_dir/sk/system-pruning-boundary.scm
+root_backend_module=$module_dir/sk/system-pruning-root-backend.scm
+orchestrator_module=$module_dir/sk/system-pruning-orchestrator.scm
+reconciliation_module=$module_dir/sk/system-pruning-reconciliation.scm
+fused_source_module=$module_dir/sk/system-pruning-fused-source.scm
+phase_engine_module=$module_dir/sk/system-pruning-phase-engine.scm
+fixture_runtime_module=$module_dir/sk/system-pruning-fixture-runtime.scm
+fused_driver=$repo/scripts/guix-system-pruning-fused-driver.scm
+boundary_test=$repo/tests/guix-system-pruning-boundary-check.scm
+root_backend_test=$repo/tests/guix-system-pruning-root-backend-check.scm
+orchestrator_test=$repo/tests/guix-system-pruning-orchestrator-check.scm
+reconciliation_test=$repo/tests/guix-system-pruning-reconciliation-check.scm
+fused_source_test=$repo/tests/guix-system-pruning-fused-source-check.scm
+phase_engine_test=$repo/tests/guix-system-pruning-phase-engine-check.scm
+fixture_runtime_test=$repo/tests/guix-system-pruning-fixture-runtime-check.scm
+
+for required in \
+    "$embedded_context_module" \
+    "$transaction_module" \
+    "$boundary_module" \
+    "$root_backend_module" \
+    "$orchestrator_module" \
+    "$reconciliation_module" \
+    "$fused_source_module" \
+    "$phase_engine_module" \
+    "$fixture_runtime_module" \
+    "$fused_driver" \
+    "$boundary_test" \
+    "$root_backend_test" \
+    "$orchestrator_test" \
+    "$reconciliation_test" \
+    "$fused_source_test" \
+    "$phase_engine_test" \
+    "$fixture_runtime_test"; do
+    if [ ! -f "$required" ] || [ -L "$required" ]; then
+        fail "required Scheme source is not a repository-owned regular file: $required"
+    fi
+done
+
+if [ ! -x "$guix" ]; then
+    printf '%s\n' \
+        'SKIP: D4a system-pruning fixtures (pinned Guix unavailable)'
+    exit 0
+fi
+[ "$frontend_resolved" = "$expected_frontend" ] ||
+    fail "Guix frontend differs from the closed D4a identity: $frontend_resolved"
+guix_resolved=$(readlink -f "$guix" 2>/dev/null || true)
+[ "$guix_resolved" = "$expected_guix_program" ] ||
+    fail "Guix program differs from the closed D4a identity: $guix_resolved"
+[ "$home_profile" = "$expected_home_profile" ] ||
+    fail "Guix Home profile differs from the rendered D4a identity: $home_profile"
+[ "$system_profile" = "$expected_system_profile" ] ||
+    fail "Guix System profile differs from the rendered D4a identity: $system_profile"
+[ -d "$guix_site" ] ||
+    fail "pinned Guix Scheme source path is missing: $guix_site"
+for directory in \
+    "$guix_ccache" \
+    "$home_site" \
+    "$home_ccache" \
+    "$system_site" \
+    "$system_ccache" \
+    "$system_extensions"; do
+    [ -d "$directory" ] ||
+        fail "closed Guile dependency path is missing: $directory"
+done
+
+if ! guild_command=$(command -v guild 2>/dev/null); then
+    fail "Guild is required for warning-fatal D4a compilation"
+fi
+guild=$(readlink -f "$guild_command" 2>/dev/null || true)
+[ -x "$guild" ] || fail "resolved Guild is not executable: $guild"
+[ "$guild" = "$expected_guild" ] ||
+    fail "Guild differs from the closed D4a identity: $guild"
+
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/p52b-d4a-check.XXXXXX")
+
+cleanup() {
+    status=$?
+    trap - 0 HUP INT TERM
+    rm -rf -- "$tmp"
+    exit "$status"
+}
+trap cleanup 0
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+if ! "$guix" describe --format=channels \
+    >"$tmp/guix-channels.scm" 2>"$tmp/guix-describe.stderr"; then
+    cat "$tmp/guix-describe.stderr" >&2
+    fail "could not query the closed Guix frontend revision"
+fi
+[ ! -s "$tmp/guix-describe.stderr" ] ||
+    fail "closed Guix frontend revision query emitted diagnostics"
+revision_count=$(grep -F -c "\"$expected_guix_revision\"" \
+    "$tmp/guix-channels.scm" || true)
+[ "$revision_count" -eq 1 ] ||
+    fail "Guix frontend does not report exactly the closed D4a revision"
+
+compile_index=0
+for source in \
+    "$embedded_context_module" \
+    "$transaction_module" \
+    "$boundary_module" \
+    "$root_backend_module" \
+    "$orchestrator_module" \
+    "$reconciliation_module" \
+    "$fused_source_module" \
+    "$phase_engine_module" \
+    "$fixture_runtime_module" \
+    "$fused_driver" \
+    "$boundary_test" \
+    "$root_backend_test" \
+    "$orchestrator_test" \
+    "$reconciliation_test" \
+    "$fused_source_test" \
+    "$phase_engine_test" \
+    "$fixture_runtime_test"; do
+    compile_index=$((compile_index + 1))
+    stdout=$tmp/compile-$compile_index.stdout
+    stderr=$tmp/compile-$compile_index.stderr
+    if ! env \
+        -u GUILE_LOAD_PATH \
+        -u GUILE_LOAD_COMPILED_PATH \
+        -u GUILE_EXTENSIONS_PATH \
+        GUILE_AUTO_COMPILE=0 \
+        GUILE_LOAD_PATH="$home_site:$system_site" \
+        GUILE_LOAD_COMPILED_PATH="$guix_ccache:$home_ccache:$system_ccache" \
+        GUILE_EXTENSIONS_PATH="$system_extensions" \
+        "$guild" compile -W3 \
+        -L "$module_dir" \
+        -L "$guix_site" \
+        -o "$tmp/compile-$compile_index.go" \
+        "$source" >"$stdout" 2>"$stderr"; then
+        cat "$stdout" >&2
+        cat "$stderr" >&2
+        fail "warning-fatal compilation failed: $source"
+    fi
+    if [ -s "$stderr" ]; then
+        cat "$stderr" >&2
+        fail "warning-fatal compilation emitted diagnostics: $source"
+    fi
+done
+
+run_scheme_test() {
+    label=$1
+    test_file=$2
+    expected=$3
+    shift 3
+    stdout=$tmp/$label.stdout
+    stderr=$tmp/$label.stderr
+
+    if ! env \
+        -u GUILE_LOAD_PATH \
+        -u GUILE_LOAD_COMPILED_PATH \
+        -u GUILE_EXTENSIONS_PATH \
+        GUILE_AUTO_COMPILE=0 \
+        "$guix" repl -q -L "$module_dir" -- \
+        "$test_file" "$@" >"$stdout" 2>"$stderr"; then
+        cat "$stdout" >&2
+        cat "$stderr" >&2
+        fail "Scheme fixture failed: $label"
+    fi
+    if [ -s "$stderr" ]; then
+        cat "$stderr" >&2
+        fail "Scheme fixture emitted diagnostics: $label"
+    fi
+    count=$(awk -v prefix="$expected" '
+        index($0, prefix) == 1 { count++ }
+        END { print count + 0 }
+    ' "$stdout")
+    [ "$count" -eq 1 ] ||
+        fail "Scheme fixture did not emit exactly one PASS prefix: $label"
+    cat "$stdout"
+}
+
+run_scheme_test \
+    boundary \
+    "$boundary_test" \
+    'guix-system-pruning-boundary-check: PASS'
+run_scheme_test \
+    root-backend \
+    "$root_backend_test" \
+    'guix-system-pruning-root-backend-check: PASS'
+run_scheme_test \
+    orchestrator \
+    "$orchestrator_test" \
+    'guix-system-pruning-orchestrator-check: PASS'
+run_scheme_test \
+    reconciliation \
+    "$reconciliation_test" \
+    'guix-system-pruning-reconciliation-check: PASS'
+run_scheme_test \
+    phase-engine \
+    "$phase_engine_test" \
+    'guix-system-pruning-phase-engine-check: PASS'
+run_scheme_test \
+    fixture-runtime \
+    "$fixture_runtime_test" \
+    'guix-system-pruning-fixture-runtime-check: PASS'
+run_scheme_test \
+    fused-source \
+    "$fused_source_test" \
+    'guix-system-pruning-fused-source-check: PASS' \
+    "$repo" \
+    "$tmp/system-pruning-loaded.scm"
+
+rendered_stdout=$tmp/rendered-compile.stdout
+rendered_stderr=$tmp/rendered-compile.stderr
+if ! env \
+    -u GUILE_LOAD_PATH \
+    -u GUILE_LOAD_COMPILED_PATH \
+    -u GUILE_EXTENSIONS_PATH \
+    GUILE_AUTO_COMPILE=0 \
+    GUILE_LOAD_PATH="$home_site:$system_site" \
+    GUILE_LOAD_COMPILED_PATH="$guix_ccache:$home_ccache:$system_ccache" \
+    GUILE_EXTENSIONS_PATH="$system_extensions" \
+    "$guild" compile -W3 \
+    -L "$guix_site" \
+    -o "$tmp/system-pruning-loaded.go" \
+    "$tmp/system-pruning-loaded.scm" \
+    >"$rendered_stdout" 2>"$rendered_stderr"; then
+    cat "$rendered_stdout" >&2
+    cat "$rendered_stderr" >&2
+    fail "warning-fatal compilation failed for the exact rendered source"
+fi
+if [ -s "$rendered_stderr" ]; then
+    cat "$rendered_stderr" >&2
+    fail "warning-fatal rendered compilation emitted diagnostics"
+fi
+
+poison=$tmp/poison
+poison_sentinel=$tmp/poison-loaded
+poison_source=$tmp/poison-source
+mkdir -p "$poison/gcrypt" "$poison_source/gcrypt"
+printf '%s\n' \
+    '(define-module (gcrypt hash))' \
+    '(call-with-output-file (getenv "SK_D4A_POISON_SENTINEL")' \
+    '  (lambda (port) (display "LOADED\n" port)))' \
+    >"$poison_source/gcrypt/hash.scm"
+if ! env \
+    -u GUILE_LOAD_PATH \
+    -u GUILE_LOAD_COMPILED_PATH \
+    -u GUILE_EXTENSIONS_PATH \
+    GUILE_AUTO_COMPILE=0 \
+    "$guild" compile -W3 \
+    -o "$poison/gcrypt/hash.go" \
+    "$poison_source/gcrypt/hash.scm" \
+    >"$tmp/poison-compile.stdout" 2>"$tmp/poison-compile.stderr"; then
+    cat "$tmp/poison-compile.stdout" >&2
+    cat "$tmp/poison-compile.stderr" >&2
+    fail "could not build the compiled inherited-path poison module"
+fi
+[ ! -s "$tmp/poison-compile.stderr" ] ||
+    fail "compiled inherited-path poison emitted diagnostics"
+rm -f -- "$poison_sentinel"
+if ! env \
+    -u GUILE_LOAD_PATH \
+    -u GUILE_EXTENSIONS_PATH \
+    GUILE_LOAD_COMPILED_PATH="$poison" \
+    GUILE_AUTO_COMPILE=0 \
+    SK_D4A_POISON_SENTINEL="$poison_sentinel" \
+    "$expected_guile" \
+    -c '(use-modules (gcrypt hash))' \
+    >"$tmp/poison-control.stdout" 2>"$tmp/poison-control.stderr"; then
+    cat "$tmp/poison-control.stdout" >&2
+    cat "$tmp/poison-control.stderr" >&2
+    fail "compiled inherited-path poison control did not load"
+fi
+[ -f "$poison_sentinel" ] ||
+    fail "compiled inherited-path poison control left no execution evidence"
+rm -f -- "$poison_sentinel"
+chmod 0555 "$tmp/system-pruning-loaded.scm"
+if env \
+    GUILE_LOAD_PATH="$poison" \
+    GUILE_LOAD_COMPILED_PATH="$poison" \
+    GUILE_EXTENSIONS_PATH="$poison" \
+    GUILE_AUTO_COMPILE=1 \
+    SK_D4A_POISON_SENTINEL="$poison_sentinel" \
+    "$tmp/system-pruning-loaded.scm" \
+    fixture-identity \
+    >"$tmp/poison.stdout" 2>"$tmp/poison.stderr"; then
+    fail "mutable rendered copy unexpectedly passed its canonical-store guard"
+fi
+[ ! -e "$poison_sentinel" ] ||
+    fail "compiled poisoned inherited Guile path executed before sanitization"
+grep -F \
+    'fused program is outside the canonical store directory' \
+    "$tmp/poison.stderr" >/dev/null ||
+    fail "direct executable did not reach the canonical-store guard"
+
+printf '%s\n' 'guix-system-pruning-d4a-check: PASS (suites=7)'

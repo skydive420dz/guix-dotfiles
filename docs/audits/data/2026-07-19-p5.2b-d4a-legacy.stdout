@@ -1,0 +1,1 @@
+guix-system-pruning-transaction-check: PASS (forward=54 rollback=44 total=98)

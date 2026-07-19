@@ -222,8 +222,12 @@ snapshot is byte-identical, including all =86/17/5= generation tuples,
 profile/runtime pointers, installed GRUB, =bootcfg=, boot ID, top-level store-
 name digest, and absent transaction surfaces.  This is selected-surface
 evidence, not whole-store or whole-machine identity.  D3b evidence is
-published at =b1d6ecb=; D4a is the next source-only gate, while every store
-build beyond its compile fixtures and every live mutation remain blocked.
+published at =b1d6ecb=.  The D4a source/fixture candidate now passes its seven
+suites, the legacy 98-point matrix, the complete strict gate, and an exact
+19-record selected-surface comparison.  After that checkpoint is published
+and fetched cleanly, D4b is the next bounded gate.  Every store realization
+beyond D4a's temporary compiler outputs and every live mutation remain
+blocked.
 
 Decision D-41 requires one fused store-resident Scheme program with no project
 repository read at runtime.  D4c.1 publishes the live manifest without a
@@ -342,6 +346,11 @@ the D4a/D4b/D4c.1/D4c.2/D4c.3/D5 safety decomposition, conservative
 reconciliation contract, one fused store-program requirement, non-circular
 manifest/program binding, production-root lifecycle, and exact stop/nonclaim
 gates.
+[[file:docs/audits/2026-07-19-p5.2b-d4a-reconciliation-fused-source.org][The P5.2b-D4a source checkpoint]] owns the closed journal automaton,
+root/orchestrator/reconciliation contracts, phase engine and in-memory runtime,
+ten-packet fused-source renderer, loader integration correction, seven-suite
+and legacy/strict results, exact 19-record nonmutation proof, adversarial
+review, and D4b behavioral-loader handoff.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -470,30 +479,45 @@ where D3b's first clean compile gate found two generated unused-variable
 diagnostics.  The validated D3a compile-gate correction is published at
 =0601b9d=.  D3b's clean-published compile, standalone matrix, strict gate,
 closed output packet, and selected-surface comparison pass; its evidence is
-published at =b1d6ecb=.  D4 is now divided into D4a source/fixtures, D4b
-clean-published synthetic fused-program evidence, D4c.1 live-manifest
-publication, D4c.2 exact live-program evidence, D4c.3 unchanged-state
-execution-packet acceptance, and separately authorized D5 execution.
+published at =b1d6ecb=.  D4a is complete at its source/fixture candidate
+boundary: its seven suites, standalone legacy matrix, strict aggregate gate,
+and selected-surface comparison pass without a store realization or live
+action.  D4b remains the next gate after exact D4a publication and clean
+fetch, followed by D4c.1 live-manifest publication, D4c.2 exact live-program
+evidence, D4c.3 unchanged-state execution-packet acceptance, and separately
+authorized D5 execution.
 P5.3 collection remains separate and unpromoted; no further cleanup is
 authorized.
 
 ** Ready
 
-P5.2b-D4a is ready only for bounded source/fixture implementation after this
-design checkpoint is published and fetched cleanly.  P5.2a is complete.
+P5.2b-D4a is evidence-complete at its bounded source/fixture candidate
+boundary.  D4b becomes ready only after the exact D4a checkpoint is committed,
+pushed, fetched, and proven clean and upstream-equal.  P5.2a is complete.
 P5.2b-D1 is complete at the source and synthetic-fixture boundary;
 P5.2b-D2a is complete at its source and native-fixture boundary, and D2b is
 complete and published at its uninstalled artifact/evidence boundary.  D3a is
 published at =676b430=; its first D3b compile gate found two warnings.  The
 minimal D3a correction is published at =0601b9d=.  D3b is evidence-complete
-and published at =b1d6ecb=.  Live P5.2b remains blocked on D4a/D4b source and
-synthetic-artifact evidence, D4c.1/D4c.2 manifest/program publication, D4c.3
-packet acceptance, and a separate exact D5 execution grant.
+and published at =b1d6ecb=.  Live P5.2b remains blocked on D4b synthetic-
+artifact evidence, D4c.1/D4c.2 manifest/program publication, D4c.3 packet
+acceptance, and a separate exact D5 execution grant.
 P4.O1 private Org sync/history remains a selectable non-destructive successor.
 P5.3 is not ready, P5.S1 storage reorganization remains parked, and
 backup/restore implementation is parked as P4.3.
 
 ** Completed
+
+- [X] P5.2b-D4a: reconciliation and fused-program source/fixtures
+  The candidate implements the closed journal automaton, synthetic root and
+  reconciliation contracts, central pre-phase gate, 3,172-check phase engine,
+  297-check in-memory runtime, and deterministic ten-packet fused renderer.
+  The complete harness passes seven suites in 168 seconds; the standalone
+  =54 + 44 = 98= legacy matrix passes in 162 seconds and the strict aggregate
+  gate passes in 445 seconds.  The 19-record selected-live snapshot is
+  byte-identical before/after.  No program was realized, no live action ran,
+  and D4b remains blocked until this checkpoint is published and fetched
+  cleanly.
 
 - [X] P5.2b-D3b: clean-published recovery evidence
   Clean =HEAD == origin/main == GitHub main= at =0601b9d= binds the corrected
@@ -2415,9 +2439,9 @@ The historical live menu contained all 78 candidates twice, so deleting links
 without a new menu would have left 156 stale path occurrences.  The reviewed
 =bootcfg= had only six direct forward references and did not retain every old
 System closure.  The retained-only GRUB artifact is already published, but
-live P5.2b still requires the D4a/D4b reconciliation and fused-program gates,
-D4c.1/D4c.2 manifest/program publication, D4c.3 packet acceptance, and the
-separately granted attended D5 transaction.  P5.3 remains separate and held.
+live P5.2b still requires D4b synthetic fused-program evidence, D4c.1/D4c.2
+manifest/program publication, D4c.3 packet acceptance, and the separately
+granted attended D5 transaction.  P5.3 remains separate and held.
 
 P5.2b-D2a adds =scripts/guix-system-retained-bootcfg= and the Scheme module
 =(sk system-retained-bootcfg)=.  The stage-only input binds the pinned Guix,
@@ -2454,8 +2478,9 @@ fixtures were later published at =676b430=.  Its first D3b clean compile gate
 found two generated unused-variable diagnostics; the separately validated
 D3a correction is published at =0601b9d=.  D3b's warning-free compiles,
 standalone/strict matrices, closed outputs, and 129-record selected-surface
-equality pass and are published at =b1d6ecb=.  D4a is the next bounded
-source/fixture gate; all realization/live gates remain separate.
+equality pass and are published at =b1d6ecb=.  D4a's bounded source/fixture
+candidate now passes its final gates.  D4b is next only after exact D4a
+publication and clean fetch; all realization/live gates remain separate.
 
 * Live symlinks
 

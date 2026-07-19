@@ -61,6 +61,7 @@ shellcheck \
     "$repo/tests/guix-entrypoints-check" \
     "$repo/tests/guix-generation-retention-check" \
     "$repo/tests/guix-system-generation-link-pruner-check" \
+    "$repo/tests/guix-system-pruning-d4a-check" \
     "$repo/tests/guix-system-pruning-transaction-check" \
     "$repo/tests/guix-system-retained-bootcfg-check" \
     "$repo/tests/guix-disk-health-check" \
@@ -85,6 +86,7 @@ shellcheck \
 "$repo/tests/guix-generation-retention-check"
 "$repo/tests/guix-system-generation-link-pruner-check"
 "$repo/tests/guix-system-pruning-transaction-check"
+"$repo/tests/guix-system-pruning-d4a-check"
 if [ "$strict" -eq 1 ]; then
     "$repo/tests/guix-system-retained-bootcfg-check" --strict
 else

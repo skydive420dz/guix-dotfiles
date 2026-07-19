@@ -1,0 +1,19 @@
+schema	p5.2b-d4a-live-surfaces/v1
+boot-id	64140768-9522-4cad-8021-9db54e070e8a
+generation-count	system	86
+generation-count	home	17
+generation-count	pull	5
+symlink	system-profile	/var/guix/profiles/system	/var/guix/profiles/system-87-link	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+symlink	home-profile	/var/guix/profiles/per-user/skydive420dz/guix-home	/var/guix/profiles/per-user/skydive420dz/guix-home-47-link	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home
+symlink	pull-profile	/var/guix/profiles/per-user/skydive420dz/current-guix	current-guix-5-link	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+symlink	current-system	/run/current-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+symlink	booted-system	/run/booted-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+symlink	bootcfg	/var/guix/gcroots/bootcfg	/gnu/store/hdwc6z0wdhgqimxqg1gzkznp9irbkwhl-grub.cfg	/gnu/store/hdwc6z0wdhgqimxqg1gzkznp9irbkwhl-grub.cfg
+grub	/boot/grub/grub.cfg	6e7fe604ee58723c7e321c3a07a645a2017cfcf49bac62b3ecb0c0559ca30671	43262	444	0	0
+surface	transaction-base	absent
+surface	recovery-root-base	absent
+surface	obsolete-program-root-directory	absent
+surface	direct-program-roots	0	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+surface	system-lock	absent
+surface	grub-temporary	absent
+surface	bootcfg-temporary	absent

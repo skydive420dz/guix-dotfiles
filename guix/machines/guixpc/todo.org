@@ -1018,14 +1018,16 @@ CLOSED: [2026-07-19 Sun]
 - [X] Stop without exercising any live transaction surface or granting D4
   authorization.
 
-** TODO P5.2b-D4a reconciliation and fused-program source/fixtures
+** DONE P5.2b-D4a reconciliation and fused-program source/fixtures
+CLOSED: [2026-07-19 Sun]
 :PROPERTIES:
 :created: 2026-07-19
 :blocked_by: none; source/fixture work only
 :END:
 
 - Design: [[file:../../../docs/audits/2026-07-19-p5.2b-d4-production-boundary-design.org][2026-07-19 P5.2b-D4 production-boundary safety decomposition]].
-- [ ] Implement the closed, fail-closed reconciliation table for exact
+- Evidence: [[file:../../../docs/audits/2026-07-19-p5.2b-d4a-reconciliation-fused-source.org][2026-07-19 P5.2b-D4a reconciliation and fused-program source checkpoint]].
+- [X] Implement the closed, fail-closed reconciliation table for exact
   pre-=BEGIN= directory states, absent/complete/provable-prefix partial backup,
   the complete direct-program-root-first root/transaction-base/lock/
   candidate-root/transaction-directory/quarantine/journal bootstrap prefix,
@@ -1033,26 +1035,26 @@ CLOSED: [2026-07-19 Sun]
   state must remain =REVIEW-REQUIRED= without cleanup.  Production recovery
   resumes the exact prefix and never reverse-unlinks persistent lock files or
   the program root before a durable terminal event.
-- [ ] Reject every hash-valid but illegal journal history with one closed
+- [X] Reject every hash-valid but illegal journal history with one closed
   forward/rollback/post-commit automaton, including duplicates, skipped or
   reordered transitions, and any suffix after a terminal event.
-- [ ] Implement the deterministic constructor/render source for one fused
+- [X] Implement the deterministic constructor/render source for one fused
   Scheme file containing the exact transaction implementation and fixture
   manifest bytes.  Validate emitted bytes without realizing a store output;
   D4b owns the first =computed-file= realization and store-location tests.
-- [ ] Retain the cooperative transaction and System-profile locks, require an
+- [X] Retain the cooperative transaction and System-profile locks, require an
   attended quiescence observation, fixture-test transaction-then-System
   no-wait acquisition after the durable program root, and run one exact
   protected-surface/root/journal revalidation gate under both locks before
   every side-effecting forward and rollback phase.  Do not claim exclusion of
   arbitrary =guix system= commands.  Retain both exact lock inodes as terminal
   infrastructure; D5 never unlinks a persistent lock pathname.
-- [ ] Add the one-store-connection root abstraction and synthetic tests for
+- [X] Add the one-store-connection root abstraction and synthetic tests for
   temporary roots plus direct manifest-keyed roots for the fused program,
   every selected target, and old/new =bootcfg=.  Cover missing/retargeted/
   invalid/non-live roots, liveness loss, session failure, partial bootstrap,
   and cleanup.  D4a proves no production registration or liveness.
-- [ ] Keep D4a =FIXTURE-ONLY= / =NOT-GRANTED=, hard-refuse root =/=, pass the
+- [X] Keep D4a =FIXTURE-ONLY= / =NOT-GRANTED=, hard-refuse root =/=, pass the
   legacy 98-point matrix plus reconciliation/pre-phase/root negatives, strict
   source gates, and selected-live-surface nonmutation, then stop without a
   store build or live action.

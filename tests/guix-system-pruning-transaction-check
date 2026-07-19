@@ -6,6 +6,7 @@ export LC_ALL
 
 repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
 launcher=$repo/scripts/guix-system-pruning-transaction
+embedded_context=$repo/guix/modules/sk/system-pruning-embedded-context.scm
 fixture_source=$repo/tests/fixtures/guix-system-pruning-transaction
 manifest=$fixture_source/manifest.tsv
 registry=$fixture_source/phase-registry.tsv
@@ -44,6 +45,7 @@ inode_of() {
 
 for required in \
     "$launcher" \
+    "$embedded_context" \
     "$manifest" \
     "$registry" \
     "$old_grub" \
@@ -63,7 +65,7 @@ if [ ! -x "$guix" ]; then
     exit 0
 fi
 
-manifest_sha=21be14bbad884ee54c68208ec0fd4b08fb91e00bab18029e52f8af8818121b29
+manifest_sha=0bf2ce08c06ec4b27053a2f7af3fd5d20c3c37bda2e739a00d0a6c68e6d9ce61
 [ "$(sha256_file "$manifest")" = "$manifest_sha" ] ||
     fail "reviewed fixture manifest digest changed"
 tab=$(printf '\t')

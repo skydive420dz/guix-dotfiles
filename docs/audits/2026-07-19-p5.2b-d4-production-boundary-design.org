@@ -617,3 +617,12 @@ may implement only the reconciliation, fused-program source, root-contract
 abstraction, pre-phase revalidation, and synthetic fixtures described here.
 
 No later D4 or D5 gate is implicitly authorized.
+
+* Successor checkpoint
+
+The bounded D4a source/fixture implementation and final validation are recorded
+in [[file:2026-07-19-p5.2b-d4a-reconciliation-fused-source.org][the P5.2b-D4a reconciliation and fused-program source checkpoint]].
+
+That successor realizes no store program and authorizes no D4b or live action.
+D4b remains blocked until the exact D4a checkpoint is published, fetched, and
+proven clean.
