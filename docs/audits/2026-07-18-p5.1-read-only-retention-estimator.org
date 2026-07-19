@@ -1,6 +1,6 @@
 #+title: P5.1 read-only retention and closure-accounting estimator
 #+date: 2026-07-18
-#+status: source, fixture, and live read-only gates pass; publication pending
+#+status: complete at source, fixture, live read-only, and publication boundaries
 
 * Outcome
 
@@ -29,17 +29,19 @@ Guix derivation-retention policy, process roots, temporary roots, hardlink/block
 allocation, and collector-time races are not modeled.  The only guaranteed
 reclaim figure is therefore exactly zero.
 
-P5.1 is ready for publication.  It becomes complete only after this source
-checkpoint is pushed and fetched cleanly.  P5.2 generation-link deletion and
-P5.3 store collection remain unpromoted and require separate review and
-explicit attended authorization.
+P5.1 is published as checkpoint
+=93619e90bfb01a43a1c4858be9a09ef76f818eb6=.  The actual checkout is clean,
+=HEAD= equals =origin/main=, and ahead/behind is =0/0=.  P5.2 generation-link
+deletion and P5.3 store collection remain unpromoted and require separate
+review and explicit attended authorization.
 
 * Promotion and scope
 
 The source baseline was clean and upstream-equal at:
 
 #+begin_example
-44c61583bc5da352937772aad4e6e80a1854d5d9
+parent:    44c61583bc5da352937772aad4e6e80a1854d5d9
+published: 93619e90bfb01a43a1c4858be9a09ef76f818eb6
 #+end_example
 
 P4.2's D-32/D-34 decision allows this read-only estimator to proceed without a
@@ -279,21 +281,22 @@ The editable agenda lives outside the repository at
 It was copied only after its live SHA256 still matched the reviewed source:
 
 #+begin_example
-before: 1a486eedddf24334399fd277cf9c363ba54c3789edec0e72c50f88ce6b6084fa
-after:  f71bd1f464cd6862b7cbb500032fa80891a7456d56a8f33bd7ce10dd7b7f6efc
+before P5.1:       1a486eedddf24334399fd277cf9c363ba54c3789edec0e72c50f88ce6b6084fa
+implementation:    f71bd1f464cd6862b7cbb500032fa80891a7456d56a8f33bd7ce10dd7b7f6efc
+publication close: cf278df8c091bc3ea6d39db7cba062ecc93133e38e55828629b10060e020b4ab
 #+end_example
 
-The synchronized roadmap marks Phase 5 =ACTIVE= and P5.1 =NEXT= pending
-publication, leaves P5.2/P5.3 in backlog, corrects the stale D-08/D-09
-reference, and records the same accounting limits as this audit.  The
-publication follow-up returns the parent to =BACKLOG= when P5.1 becomes
-=DONE=.  Org lint passes for the agenda, README, machine TODO, and this audit
-after the new repository links exist.  This same-disk agenda update is
-planning continuity, not backup coverage.
+The synchronized roadmap marks P5.1 =DONE= at published checkpoint =93619e9=,
+returns Phase 5 to =BACKLOG=, leaves P5.2/P5.3 unpromoted, and records the same
+accounting limits as this audit.  It also parks the newly identified
+third-party GNU Guix XLibre path as a future authenticated, non-activating
+evaluation; it does not change the accepted Xorg production baseline.  Org
+lint passes for the agenda, README, machine TODO, and this audit.  This
+same-disk agenda update is planning continuity, not backup coverage.
 
 * Stop boundary and handoff
 
-P5.1 stops before generation deletion.  Publication completes only this
+P5.1 stops before generation deletion.  Publication completed only this
 read-only slice.
 
 P5.2 must:

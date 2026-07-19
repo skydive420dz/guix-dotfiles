@@ -810,10 +810,12 @@ CLOSED: [2026-07-18 Sat]
 - [X] Make no disk, mount, filesystem, package, service, backup, restore,
   generation, GC, activation, process, or reboot change.
 
-* NEXT P5.1 read-only retention and closure-accounting estimator
+* DONE P5.1 read-only retention and closure-accounting estimator
+CLOSED: [2026-07-18 Sat]
 :PROPERTIES:
 :created: 2026-07-18
-:blocked_by: publication of the staged source/evidence checkpoint
+:completed: 2026-07-18
+:published: 93619e90bfb01a43a1c4858be9a09ef76f818eb6
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-18-p5.1-read-only-retention-estimator.org][2026-07-18 P5.1 read-only retention and closure-accounting estimator]].
@@ -833,8 +835,8 @@ CLOSED: [2026-07-18 Sat]
 - [X] Pass ShellCheck, shell syntax, the expanded isolated fixture, two
   byte-identical live runs, pre/post retention verification and rollback drill,
   and a 32,831-record before/after no-mutation snapshot.
-- [ ] Push the staged checkpoint, fetch it into the actual checkout, and prove
-  clean upstream equality before marking P5.1 complete.
+- [X] Published checkpoint =93619e9= is fetched into the actual checkout with
+  =HEAD= equal to =origin/main=, a clean tree, and ahead/behind =0/0=.
 - [X] Keep P5.2 generation deletion and P5.3 store collection in backlog.
   Neither exact estimator output nor publication authorizes mutation.
 - [X] Change no generation link, store object, profile, pin, package,

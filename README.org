@@ -114,10 +114,11 @@ Its exact snapshot reports 108 candidate links: 99 target 64 unretained
 closures; the remaining 9 are duplicate links to 4 retained closures.  The
 NAR-byte rows are forward-reference footprints rather than reclaim predictions;
 derivation policy, process and temporary roots, and filesystem allocation
-remain unmodeled, so guaranteed reclaimable bytes are =0=.  This
-checkpoint still awaits publication before P5.1 closes.  P5.2 deletion and
-P5.3 collection remain unpromoted, separately reviewed, and explicitly
-attended.
+remain unmodeled, so guaranteed reclaimable bytes are =0=.  This checkpoint is
+published as =93619e90bfb01a43a1c4858be9a09ef76f818eb6=; the actual checkout
+is clean, =HEAD= equals =origin/main=, and ahead/behind is =0/0=.  P5.1 is
+complete and Phase 5 has returned to backlog.  P5.2 deletion and P5.3
+collection remain unpromoted, separately reviewed, and explicitly attended.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -298,19 +299,29 @@ or absolute zero-transition result is claimed.
 
 P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
 parked.  Phase 4 backup/storage implementation is parked by explicit owner
-decision.  Phase 5 generation deletion and store collection remain separate
-future gates behind publication and review of the now-live-gated no-mutation
-estimator plus separate attended authorization; no cleanup is promoted.
+decision.  P5.1 is complete at published checkpoint =93619e9=.  Phase 5
+generation-link deletion and store collection remain separate P5.2/P5.3
+future gates behind fresh exact review and separate attended authorization;
+no cleanup is promoted.
 
 ** Ready
 
-No slice is currently ready for unattended implementation.  P5.1 source and
-evidence are ready for publication; upstream equality is its remaining closure
-gate.  P4.O1 private Org sync/history remains a selectable successor.
-P5.2/P5.3 are not ready, P5.S1 storage reorganization remains parked, and
+No slice is currently ready for unattended implementation.  P5.2 is the
+logical sequential candidate, but it is not =READY= until a fresh estimator
+snapshot, exact candidate review, and explicit destructive authorization.
+P4.O1 private Org sync/history remains a selectable non-destructive successor.
+P5.3 is not ready, P5.S1 storage reorganization remains parked, and
 backup/restore implementation is parked as P4.3.
 
 ** Completed
+
+- [X] P5.1: read-only retention and closure-accounting estimator
+  Published checkpoint =93619e9= implements the accepted distinct-closure
+  floor, passes deterministic fixture and live no-mutation gates, and records
+  108 candidate links: 99 target 64 unretained closures and 9 are duplicates
+  to 4 retained closures.  Guaranteed reclaimable bytes remain exactly zero.
+  No generation link, store object, profile, pin, package, activation, backup,
+  disk, boot state, or persistent process changed.
 
 - [X] P4.2: recovery/storage deferral and maintenance-policy decision
   Accepted no backup or storage implementation for now, recorded residual
