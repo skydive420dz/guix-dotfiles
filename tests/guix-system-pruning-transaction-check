@@ -63,7 +63,7 @@ if [ ! -x "$guix" ]; then
     exit 0
 fi
 
-manifest_sha=6af13bbb64cefc4aa2c054dc9d3ddaf673554c9943acaa1eaba4e8b21d684d6c
+manifest_sha=21be14bbad884ee54c68208ec0fd4b08fb91e00bab18029e52f8af8818121b29
 [ "$(sha256_file "$manifest")" = "$manifest_sha" ] ||
     fail "reviewed fixture manifest digest changed"
 tab=$(printf '\t')

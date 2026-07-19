@@ -1,0 +1,119 @@
+#+title: P5.2b-D3a compile-gate correction
+#+date: 2026-07-19
+#+startup: overview
+#+category: guixpc
+#+filetags: :guixpc:guix:scheme:recovery:testing:
+#+status: source correction complete; publication pending
+
+* Outcome
+
+The first P5.2b-D3b clean-published gate correctly stopped on two
+=guild compile -W3= diagnostics in the exact D3a module published at:
+
+#+begin_example
+676b430617b6902c8d7111bd78a483282de314ae
+#+end_example
+
+The transaction behavior was not implicated.  Guile 3.0.11's =ice-9 match=
+expansion created an internal =failure= continuation for each final exhaustive
+=_= clause; because that clause cannot fail, Guild reported the generated
+variable as unused.
+
+The correction validates each closed row's proper-list shape, length, and tag
+before matching, then removes only the unreachable final catch-all clauses.
+The existing custom failure messages and all accepted rows remain unchanged.
+The malformed-journal negative fixture still exercises closed-shape rejection;
+the crash registry remains protected by its exact path and digest.
+
+* Why D3b stopped
+
+After =git fetch origin= on GuixPC, the publication preflight proved:
+
+| Gate | Value |
+|------+-------|
+| Checkout | =/home/skydive420dz/Projects/guix-dotfiles= |
+| Branch | =main= |
+| =HEAD= | =676b430617b6902c8d7111bd78a483282de314ae= |
+| =origin/main= | =676b430617b6902c8d7111bd78a483282de314ae= |
+| Remote =main= | =676b430617b6902c8d7111bd78a483282de314ae= |
+| Git tree | =92df2f62f7cde097089a58699d6d042e97f6359a= |
+| Worktree | clean |
+
+The direct published-byte module compile emitted:
+
+#+begin_example
+sk/system-pruning-transaction.scm:1044:14: warning: unused variable `failure'
+sk/system-pruning-transaction.scm:1188:10: warning: unused variable `failure'
+#+end_example
+
+That result supersedes the original D3a audit's warning-free-compile claim.
+The earlier validation did not retain exact compile output, so this record
+does not infer a more specific cause for that missed observation.  D3b stopped
+before its long matrix and did not reuse the earlier claim.
+
+* Corrected closed inputs
+
+The source correction changes only the module, its manifest binding, and the
+harness's hardcoded manifest digest:
+
+| Input | Published D3a SHA256 | Corrected SHA256 |
+|-------+----------------------+------------------|
+| Scheme transaction module | =e324da3e923460fe1d4641f0107c45704133c0b212cf132140359fcd547de00f= | =aefbf3547f3bc03c5fa69ced9cc188f7a8f59a69004b474314193c3c2382b311= |
+| closed transaction manifest | =6af13bbb64cefc4aa2c054dc9d3ddaf673554c9943acaa1eaba4e8b21d684d6c= | =21be14bbad884ee54c68208ec0fd4b08fb91e00bab18029e52f8af8818121b29= |
+| native fixture harness | =42e3c071dadc8ee152a65aaa3b07aa2c5e2c39d8a19d120cf7a9903fbb47fd9d= | =add0d929deed17e03480f2201e934a32b317ab7efcf12077da897252d0803960= |
+
+The driver, launcher, interruption registry, contention helper, fixture data,
+and D2b GRUB artifact are byte-identical to the published D3a checkpoint.
+
+* Validation
+
+The corrected candidate was validated from the actual GuixPC checkout:
+
+| Gate | Result |
+|------+--------|
+| Module =guild compile -W3= | PASS; zero stderr bytes |
+| Driver =guild compile -W3= | PASS; zero stderr bytes |
+| =sh -n= and ShellCheck | PASS |
+| Exact native matrix | PASS; =forward=54 rollback=44 total=98= |
+| =scripts/shell-check --strict= | PASS; status 0; 252 seconds |
+| Strict stdout | 2,330 bytes; SHA256 =82d59cc8a72e6eac019d2144d29914ff44d4a27b95ac5c8f1bc44af9bde17508= |
+| Strict stderr | 595 bytes; SHA256 =e5fa1b61edf72d9cd28bbe5797821da8104154fc14e05d7fc2b3ede0b8d6e29e= |
+| Git whitespace and Scheme parenthesis checks | PASS |
+
+Strict stderr contains the expected =TERM= / =KILL= fixture notices and one
+Guile note that a separate cached package-ownership checker was older than its
+source.  It contains no Scheme compiler warning and the strict command exits
+successfully.
+
+* Live non-mutation boundary
+
+One 121-record snapshot captured every System/Home/Pull generation-link tuple,
+the three profile pointers, current and booted System, =bootcfg=, installed
+GRUB bytes/metadata, and all five transaction/root/lock/temporary surfaces.
+The before and after files are byte-identical:
+
+#+begin_example
+1fa15b2b40bb5979c79268e56f6fb031b117dd70fa0a846b13f1da478a15ef51
+#+end_example
+
+System/Home/Pull remain =86/17/5=.  Installed GRUB remains SHA256
+=6e7fe604ee58723c7e321c3a07a645a2017cfcf49bac62b3ecb0c0559ca30671=
+and live =bootcfg= remains
+=/gnu/store/hdwc6z0wdhgqimxqg1gzkznp9irbkwhl-grub.cfg=.  The live transaction
+base, recovery-root base, profile lock, GRUB temporary, and =bootcfg=
+temporary remain absent.
+
+No live transaction action, generation-link change, recovery-root creation,
+GRUB/=bootcfg= write, GC, dead/live query, activation, reconfiguration, or
+reboot occurred.
+
+* Handoff
+
+Publish this compile-gate correction first.  D3b must fetch the exact corrected
+commit into a clean, upstream-equal checkout and rerun the full compile,
+98-point matrix, strict, exact-output, and live-snapshot gates.  This candidate
+validation is not substituted for that clean-published evidence.
+
+D4 remains separately blocked on bootstrap/temporary reconciliation, immutable
+loaded-byte packaging, attended quiescence, a fresh published live manifest,
+and manifest-specific attended authorization.  P5.3 remains separate and held.

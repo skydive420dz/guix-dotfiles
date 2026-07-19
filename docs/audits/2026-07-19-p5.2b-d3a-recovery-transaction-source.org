@@ -3,7 +3,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:grub:recovery:testing:
-#+status: source and fixture complete; publication pending
+#+status: published at 676b430; compile-gate correction pending publication
 
 * Outcome
 
@@ -14,9 +14,18 @@ models direct recovery roots, a durable phase journal, cooperative exclusion,
 generation-link quarantine, exact GRUB and =bootcfg= replacement, rollback,
 and post-commit cleanup under a sentinel-marked synthetic root.
 
-The exact closed fixture, warning-free compilation, 98-point native matrix,
-static shell checks, strict repository gate, whitespace check, and Org lint
-pass.  Publication alone remains pending.
+The exact closed fixture, 98-point native matrix, static shell checks, strict
+repository gate, whitespace check, and Org lint passed before publication at:
+
+#+begin_example
+676b430617b6902c8d7111bd78a483282de314ae
+#+end_example
+
+The first D3b clean-published rerun then found two =guild compile -W3=
+unused-variable diagnostics in =ice-9 match= expansions.  That finding
+supersedes this record's original warning-free-compile claim.  The separate
+[[file:2026-07-19-p5.2b-d3a-compile-gate-correction.org][D3a compile-gate correction record]] owns the minimal source correction,
+rebinding, and new validation evidence.
 
 The checkpoint exposes only:
 
@@ -246,15 +255,17 @@ All declared cases passed against the exact bytes recorded above.
 | Every declared rollback interruption and recovery | PASS, 44/44 |
 | =TERM= / =KILL= restart cases | PASS; expected signal notices only |
 | Negative drift and lock-contention cases | PASS |
-| =guild compile -W3= | PASS for module and driver; silent/no warnings |
+| =guild compile -W3= | Original claim superseded: clean-published D3b rerun found two unused =failure= diagnostics in the module |
 | =sh -n= and ShellCheck | PASS |
 | Focused native fixture | PASS; exact final harness emitted =forward=54 rollback=44 total=98= inside the strict run |
 | GuixPC =scripts/shell-check --strict= | PASS from the actual checkout, 252.05 seconds |
 | Git whitespace and Org lint | PASS |
 
-D3a is complete at the source-and-fixture boundary.  It is not a published
-input for D3b until the resulting repository commit is pushed and fetched
-cleanly.
+D3a was published at =676b430617b6902c8d7111bd78a483282de314ae=.
+Its first clean-published D3b compile gate exposed two diagnostics and
+therefore stopped before D3b could be accepted.  The functional fixture result
+remains valid, but D3b now requires the separately validated correction to be
+published and fetched cleanly.
 
 * Explicit non-claims
 
@@ -276,10 +287,10 @@ D3a does not claim:
 
 * Handoff
 
-Publish this validated D3a source-and-fixture checkpoint and stop.
-P5.2b-D3b must then fetch the exact published D3a checkpoint into a clean,
-upstream-equal checkout, rerun the complete declared matrix and strict gates,
-and freeze the exact evidence without touching the live transaction surfaces.
+Publish the validated D3a compile-gate correction and stop.  P5.2b-D3b must
+then fetch that exact corrected checkpoint into a clean, upstream-equal
+checkout, rerun the complete declared matrix and strict gates, and freeze the
+exact evidence without touching the live transaction surfaces.
 
 D4 remains the separate bootstrap/temporary-reconciliation, immutable
 loaded-byte packaging, fresh live manifest, publication, and attended

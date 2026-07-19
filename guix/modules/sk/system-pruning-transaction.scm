@@ -1041,25 +1041,28 @@
     (let ((points
            (append-map
             (lambda (record)
+              (ensure (and (list? record)
+                           (= (length record) 3)
+                           (member (car record)
+                                   '("point" "root-point" "link-point")))
+                      "unknown crash-point registry row: ~s" record)
               (match record
                 (("point" category label)
-                 (ensure (member category '("forward" "rollback"))
-                         "unknown crash-point category: ~a" category)
-                 (list (list category label)))
+                  (ensure (member category '("forward" "rollback"))
+                          "unknown crash-point category: ~a" category)
+                  (list (list category label)))
                 (("root-point" category label)
-                 (ensure (member category '("forward" "rollback"))
-                         "unknown root crash-point category: ~a" category)
-                 (map (lambda (root)
-                        (list category (string-append label ":" root)))
-                      roots))
+                  (ensure (member category '("forward" "rollback"))
+                          "unknown root crash-point category: ~a" category)
+                  (map (lambda (root)
+                         (list category (string-append label ":" root)))
+                       roots))
                 (("link-point" category label)
-                 (ensure (member category '("forward" "rollback"))
-                         "unknown link crash-point category: ~a" category)
-                 (map (lambda (generation)
-                        (list category (string-append label ":" generation)))
-                      generations))
-                (_
-                 (%fail "unknown crash-point registry row: ~s" record))))
+                  (ensure (member category '("forward" "rollback"))
+                          "unknown link crash-point category: ~a" category)
+                  (map (lambda (generation)
+                         (list category (string-append label ":" generation)))
+                       generations))))
             (cdr records))))
       (ensure (= (length (map cadr points))
                  (length (delete-duplicates (map cadr points))))
@@ -1185,32 +1188,35 @@
                (result '()))
       (if (null? remaining)
           (reverse result)
-          (match (car remaining)
-            (("event" sequence-text event subject prior digest)
-             (ensure (decimal-string? sequence-text)
-                     "journal sequence is not decimal")
-             (let ((sequence (string->number sequence-text 10)))
-               (ensure (= sequence expected-sequence)
-                       "journal sequence is missing, duplicated, or reordered")
-               (ensure (member event %journal-events)
-                       "journal contains unknown event: ~a" event)
-               (ensure (event-subject-valid? context event subject)
-                       "journal event subject is invalid: ~a ~a"
-                       event subject)
-               (ensure (string=? prior previous)
-                       "journal hash chain predecessor drift")
-               (ensure (string=?
-                        digest
-                        (string-sha256
-                         (journal-payload sequence event subject prior)))
-                       "journal event digest drift")
-               (loop (cdr remaining)
-                     (+ expected-sequence 1)
-                     digest
-                     (cons (car remaining) result))))
-            (_
-             (%fail "journal row has an invalid closed shape: ~s"
-                    (car remaining))))))))
+          (let ((record (car remaining)))
+            (ensure (and (list? record)
+                         (= (length record) 6)
+                         (string=? (car record) "event"))
+                    "journal row has an invalid closed shape: ~s"
+                    record)
+            (match record
+              (("event" sequence-text event subject prior digest)
+               (ensure (decimal-string? sequence-text)
+                       "journal sequence is not decimal")
+               (let ((sequence (string->number sequence-text 10)))
+                 (ensure (= sequence expected-sequence)
+                         "journal sequence is missing, duplicated, or reordered")
+                 (ensure (member event %journal-events)
+                         "journal contains unknown event: ~a" event)
+                 (ensure (event-subject-valid? context event subject)
+                         "journal event subject is invalid: ~a ~a"
+                         event subject)
+                 (ensure (string=? prior previous)
+                         "journal hash chain predecessor drift")
+                 (ensure (string=?
+                          digest
+                          (string-sha256
+                           (journal-payload sequence event subject prior)))
+                         "journal event digest drift")
+                 (loop (cdr remaining)
+                       (+ expected-sequence 1)
+                       digest
+                       (cons record result))))))))))
 
 (define (journal-event? events name)
   (any (lambda (record) (string=? (list-ref record 2) name))

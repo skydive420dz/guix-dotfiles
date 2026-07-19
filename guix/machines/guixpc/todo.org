@@ -958,6 +958,7 @@ CLOSED: [2026-07-19 Sun]
 CLOSED: [2026-07-19 Sun]
 :PROPERTIES:
 :created: 2026-07-18
+:published: 676b430617b6902c8d7111bd78a483282de314ae
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-19-p5.2b-d3a-recovery-transaction-source.org][2026-07-19 P5.2b-D3a recovery transaction source checkpoint]].
@@ -969,18 +970,38 @@ CLOSED: [2026-07-19 Sun]
   claiming exclusion of arbitrary =guix system= commands.
 - [X] Execute and review all 98 declared interruption points: 54 forward and
   44 rollback.  These are post-operation process-restart boundaries, not
-  arbitrary-instruction or power-loss recovery.  The exact standalone matrix,
-  warning-free compilation, and strict repository gate pass.
+  arbitrary-instruction or power-loss recovery.  The exact standalone matrix
+  and strict repository gate pass.  D3b's later clean-published compile found
+  two generated unused-variable diagnostics; D3a.1 owns their correction.
 - [X] Create no live recovery root, transaction directory, profile lock,
   GRUB/=bootcfg= temporary, generation-link mutation, or authorization.
+
+** DONE P5.2b-D3a.1 compile-gate correction
+CLOSED: [2026-07-19 Sun]
+:PROPERTIES:
+:created: 2026-07-19
+:base_published: 676b430617b6902c8d7111bd78a483282de314ae
+:END:
+
+- Evidence: [[file:../../../docs/audits/2026-07-19-p5.2b-d3a-compile-gate-correction.org][2026-07-19 P5.2b-D3a compile-gate correction]].
+- [X] Reproduce the two clean-published Guile 3.0.11 =guild compile -W3=
+  unused =failure= diagnostics before changing source.
+- [X] Prevalidate the two closed row shapes and remove only their unreachable
+  final =ice-9 match= catch-all clauses; rebind the exact module, manifest, and
+  harness hashes.
+- [X] Require zero compile diagnostics, all =54 + 44 = 98= recovery points,
+  the full strict repository gate, and an exact =121=-record live-snapshot
+  comparison.
+- [X] Keep D3b open until this correction is published and fetched from a
+  clean upstream-equal checkout.
 
 ** BACKLOG P5.2b-D3b clean-published recovery evidence
 :PROPERTIES:
 :created: 2026-07-19
-:blocked_by: published D3a source/fixture checkpoint
+:blocked_by: published D3a.1 compile-gate correction
 :END:
 
-- [ ] Fetch the exact published D3a checkpoint into a clean
+- [ ] Fetch the exact published corrected D3a.1 checkpoint into a clean
   =HEAD == origin/main= checkout and bind the final implementation, manifest,
   registry, and fixture hashes.
 - [ ] Rerun the complete 98-point native matrix, compilation, ShellCheck,
