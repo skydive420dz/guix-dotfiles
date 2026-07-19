@@ -1,0 +1,287 @@
+#+title: P5.2b-D3a recovery transaction source and fixture checkpoint
+#+date: 2026-07-19
+#+startup: overview
+#+category: guixpc
+#+filetags: :guixpc:guix:grub:recovery:testing:
+#+status: source and fixture complete; publication pending
+
+* Outcome
+
+P5.2b-D3a completes the source-and-fixture checkpoint for the recovery
+transaction
+required before any live System-generation pruning can be reviewed.  It
+models direct recovery roots, a durable phase journal, cooperative exclusion,
+generation-link quarantine, exact GRUB and =bootcfg= replacement, rollback,
+and post-commit cleanup under a sentinel-marked synthetic root.
+
+The exact closed fixture, warning-free compilation, 98-point native matrix,
+static shell checks, strict repository gate, whitespace check, and Org lint
+pass.  Publication alone remains pending.
+
+The checkpoint exposes only:
+
+#+begin_example
+fixture-points
+fixture-verify
+fixture-apply
+fixture-recover
+#+end_example
+
+It refuses UID 0, requires an absolute sentinel-marked fixture root, rejects
+root =/=, carries =FIXTURE-ONLY= / =NOT-GRANTED= / =FIXTURE-ONLY= in its
+closed manifest, and exposes no production =apply= action.
+
+* Exact boundary
+
+The candidate is based on the published D2b evidence checkpoint:
+
+#+begin_example
+abcf2efceb2bb2c797ddf00bdd02c4fe7a42c96f
+#+end_example
+
+It binds the tracked D2b retained-only GRUB artifact at 5,163 bytes and
+SHA256:
+
+#+begin_example
+70965414824c26e1712c6a7a51efd9517633eb3c83f36f88927565c87807496b
+#+end_example
+
+The synthetic manifest describes ten System links, retains eight, and selects
+two.  It protects the System/current/booted pointers, synthetic Home and Pull
+profiles, generation pins, an EFI sentinel, implementation inputs, and the
+top-level synthetic store-name inventory.
+
+D3a does not derive or authorize the 78 held live GuixPC candidates.  It
+creates no live recovery root, transaction directory, profile lock, GRUB
+temporary, =bootcfg= temporary, or generation-link quarantine.
+
+* Source checkpoint
+
+| Path | Candidate role |
+|------+----------------|
+| =guix/modules/sk/system-pruning-transaction.scm= | Closed manifest, state validation, durable journal, synthetic recovery roots, forward transaction, and recovery engine |
+| =scripts/guix-system-pruning-transaction.scm= | Fixture-only Scheme command driver |
+| =scripts/guix-system-pruning-transaction= | Non-root, pinned-Guix, hash-preflighted launcher |
+| =tests/fixtures/guix-system-pruning-transaction/manifest.tsv= | Closed synthetic transaction manifest |
+| =tests/fixtures/guix-system-pruning-transaction/phase-registry.tsv= | Reviewed forward and rollback interruption registry |
+| =tests/fixtures/guix-system-pruning-transaction/profile-lock-holder.scm= | Deterministic pinned-Guile contention helper |
+| =tests/guix-system-pruning-transaction-check= | Native fixture harness and declared recovery matrix |
+
+The checkpoint is separate from the published D1 exact-link primitive and the
+D2a/D2b generator, artifact, and result report.  Those inputs are not rewritten
+by this boundary.
+
+The reviewed checkpoint bytes are:
+
+| Input | SHA256 |
+|-------+--------|
+| closed transaction manifest | =6af13bbb64cefc4aa2c054dc9d3ddaf673554c9943acaa1eaba4e8b21d684d6c= |
+| Scheme transaction module | =e324da3e923460fe1d4641f0107c45704133c0b212cf132140359fcd547de00f= |
+| Scheme command driver | =817a35d454bcbcee8b5ed64dcfbd126ee586bc06135eaf3321dbbc80ff78d9e2= |
+| shell launcher | =ac54a3de3d4fe60dd15177158c71106fe890363af6cb581b35902120fa11a105= |
+| native fixture harness | =42e3c071dadc8ee152a65aaa3b07aa2c5e2c39d8a19d120cf7a9903fbb47fd9d= |
+| contention helper | =63855f7fd6edffdcc461af26088658eeb174ba3286192218d38fae7946972b18= |
+| interruption registry | =bd17a2423d9a0fcea86f3eba23cbb52699379b54853eae510597ed7a160aba86= |
+
+The native harness hardcodes the manifest digest rather than accepting
+whatever manifest happens to be present.
+
+* Recovery-root lifecycle
+
+The fixture uses direct synthetic roots beneath:
+
+#+begin_example
+/var/guix/gcroots/p52b-system-prune/MANIFEST-SHA/
+#+end_example
+
+The closed manifest requires:
+
+- one exact, directly named recovery root for each selected generation;
+- one root for the old =bootcfg= store item; and
+- one root for the new =bootcfg= store item.
+
+For the two-generation fixture this is four roots.  Each root is a manifest-
+named symlink to an exact synthetic store target.  The engine creates and
+directory-syncs every root before changing GRUB, =bootcfg=, or a generation
+link, and rechecks the complete root set immediately before each selected-link
+move or discard.  Expected missing subsets can be recreated during pre-commit
+recovery only from the closed manifest and existing exact targets.  A
+retargeted, occupied, unexpected, or otherwise foreign root state fails
+closed.
+
+These paths model the required production lifecycle; they are not registered
+with the live Guix daemon and are not evidence that the future live root
+backend is ready.
+
+* Durable journal
+
+The transaction directory is keyed by the complete manifest SHA256 beneath:
+
+#+begin_example
+/var/guix/profiles/.p52b-system-prune-transactions/
+#+end_example
+
+Its journal header binds the journal schema, manifest hash, fixture-only mode,
+and transaction identity.  Every event contains:
+
+1. a strictly increasing sequence number;
+2. a closed event name;
+3. a manifest-constrained subject;
+4. the preceding record digest; and
+5. the SHA256 of the current payload.
+
+The chain provides deterministic integrity checking for this fixture.  It is
+not authentication against a same-UID actor who can rewrite and rehash the
+whole journal.
+
+The complete journal is replaced through Guix's synchronized atomic-file
+helper.  The candidate additionally =fsync=s the journal directory after each
+rename.  Newly staged GRUB bytes are written with =O_EXCL=, =fdatasync=, exact
+mode, and a parent-directory =fsync=; GRUB and =bootcfg= promotion then use
+same-directory atomic renames followed by directory =fsync=.
+
+The old installed GRUB bytes are copied into the transaction directory,
+durably written, and checked against the manifest before the forward path
+continues.  Unknown journal rows, broken hash chains, reordered or duplicated
+sequences, wrong subjects, truncated state, or orphaned atomic-journal
+temporaries require review rather than inference.
+
+* Interruption scope
+
+The declared matrix injects process termination only at 98 named boundaries
+after the preceding atomic or synchronized operation has returned.  It does
+not inject failure inside =mkdir=, write, =fdatasync=, =fsync=, rename, or
+journal replacement, and it is not a power-loss test.
+
+In particular, D3a deliberately fails closed for a transaction directory or
+quarantine left before durable =BEGIN=, a partial direct backup, and an
+orphaned atomic-journal temporary.  Those states require manual review; they
+are not automatically classified as rollback.  D4 must add and fixture-test
+bootstrap and known-temporary reconciliation before any live promotion.  The
+D3a result therefore supports the exact declared restart boundaries only, not
+arbitrary-instruction or power-loss recovery.
+
+* Forward order
+
+The checkpoint deliberately applies the safe order:
+
+1. validate the exact prestate under both cooperative locks;
+2. durably write and verify the old installed-GRUB backup;
+3. create and verify every recovery root;
+4. atomically install the retained-only GRUB bytes while all links still
+   exist;
+5. atomically promote the new =bootcfg= root;
+6. move only the selected generation symlinks into quarantine;
+7. discard the quarantined symlinks only while recovery roots remain exact;
+8. verify the complete retained-link/GRUB/=bootcfg=/protected-surface
+   poststate;
+9. append and sync =COMMITTED=;
+10. remove recovery roots; and
+11. append and sync =COMPLETE=.
+
+Installing the retained-only menu before link exclusion prevents a committed
+or interrupted state from advertising already removed candidate links.
+
+* Recovery decision
+
+Recovery is determined by the durable =COMMITTED= boundary:
+
+| Journal boundary | Recovery direction |
+|------------------+--------------------|
+| No =COMMITTED= event | Ensure exact roots, restore selected links, old GRUB, and old =bootcfg=; verify prestate; remove roots; record =ROLLED-BACK= |
+| =COMMITTED= present | Preserve the accepted forward state, finish remaining root cleanup, verify poststate, and record =COMPLETE= |
+| Terminal =ROLLED-BACK= or =COMPLETE= | Verify the exact terminal state and return a no-op without changing the journal |
+
+Pre-commit rollback restores link tuples before restoring old GRUB and old
+=bootcfg=.  An occupied live link, ambiguous live/quarantine pair, missing
+backup, unknown GRUB bytes, unknown =bootcfg= tuple, or foreign root stops
+recovery without deleting evidence.
+
+* Cooperative exclusion
+
+The fixture acquires two non-blocking advisory locks in a fixed order:
+
+1. the transaction-wide lock beneath the transaction base; then
+2. the synthetic =system.lock= beside the System profile.
+
+Each is a persistent, non-following regular-file lock whose inode is retained
+across actions; unsafe links, shared inodes, foreign contents, or writable
+parent directories fail closed.  Contention is a hard failure.  This proves
+cooperation among instances of the fixture engine.  It does not exclude
+arbitrary =guix system= processes:
+pinned =guix system= paths do not honor this lock.  A later production design
+must preserve the cooperative lock, add attended quiescence and exact
+phase-by-phase revalidation, and must not describe the lock alone as global
+System-profile exclusion.
+
+* Declared interruption matrix
+
+The reviewed registry expands root- and link-parameterized labels into:
+
+| Direction | Declared points |
+|-----------+-----------------|
+| Forward | 54 |
+| Rollback | 44 |
+| Total | 98 |
+
+The fixture harness declares one clean forward transaction, terminal no-op
+recovery, interruption and restart at each expanded point, selected =TERM= and
+=KILL= cases, lock contention, and negative drift cases for the manifest
+digest, sentinel, pins, selected links, GRUB, =bootcfg=, journal shape,
+orphaned journal temporary, foreign recovery-root contents, and occupied
+rollback path.  Lock-path link safety, persistent inode identity, non-=ENOENT=
+filesystem errors, and exact GRUB size/mode are also checked.  It also
+requires unsupported live =apply= to exit with usage.
+
+All declared cases passed against the exact bytes recorded above.
+
+* Validation status
+
+| Gate | Status |
+|------+--------|
+| Closed manifest and registry review | PASS; no remaining blocker/HIGH adversarial finding |
+| Exact =54 + 44 = 98= registry expansion | PASS |
+| Normal forward transaction and terminal no-op recovery | PASS |
+| Every declared forward interruption and recovery | PASS, 54/54 |
+| Every declared rollback interruption and recovery | PASS, 44/44 |
+| =TERM= / =KILL= restart cases | PASS; expected signal notices only |
+| Negative drift and lock-contention cases | PASS |
+| =guild compile -W3= | PASS for module and driver; silent/no warnings |
+| =sh -n= and ShellCheck | PASS |
+| Focused native fixture | PASS; exact final harness emitted =forward=54 rollback=44 total=98= inside the strict run |
+| GuixPC =scripts/shell-check --strict= | PASS from the actual checkout, 252.05 seconds |
+| Git whitespace and Org lint | PASS |
+
+D3a is complete at the source-and-fixture boundary.  It is not a published
+input for D3b until the resulting repository commit is pushed and fetched
+cleanly.
+
+* Explicit non-claims
+
+D3a does not claim:
+
+- arbitrary-instruction, mid-system-call, or power-loss recovery;
+- automatic classification or cleanup of pre-=BEGIN=, partial-backup, or
+  orphaned atomic-temporary state;
+- hostile same-UID mutation resistance or immutable identity between source
+  hash preflight and Guile loading;
+- production GC-root registration or liveness;
+- exclusion of arbitrary =guix system= processes;
+- a live deletion manifest or authorization;
+- installation of the D2b artifact;
+- any live System-link, GRUB, =bootcfg=, EFI, profile, or store mutation;
+- GC, dead/live enumeration, collection, activation, reconfiguration, or
+  reboot; or
+- D4 or P5.3 readiness.
+
+* Handoff
+
+Publish this validated D3a source-and-fixture checkpoint and stop.
+P5.2b-D3b must then fetch the exact published D3a checkpoint into a clean,
+upstream-equal checkout, rerun the complete declared matrix and strict gates,
+and freeze the exact evidence without touching the live transaction surfaces.
+
+D4 remains the separate bootstrap/temporary-reconciliation, immutable
+loaded-byte packaging, fresh live manifest, publication, and attended
+manifest-specific authorization gate.  P5.3 collection remains separately
+blocked.

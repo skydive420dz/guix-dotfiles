@@ -1,0 +1,762 @@
+#!/bin/sh
+set -eu
+umask 022
+LC_ALL=C
+export LC_ALL
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+launcher=$repo/scripts/guix-system-pruning-transaction
+fixture_source=$repo/tests/fixtures/guix-system-pruning-transaction
+manifest=$fixture_source/manifest.tsv
+registry=$fixture_source/phase-registry.tsv
+old_grub=$fixture_source/old-grub.cfg
+pins=$fixture_source/generation-pins.tsv
+efi=$fixture_source/efi-sentinel.txt
+lock_holder=$fixture_source/profile-lock-holder.scm
+new_grub=$repo/docs/audits/data/2026-07-19-p5.2b-d2b-retained-grub.cfg
+frontend=${SK_GUIX_FRONTEND_PROFILE:-${HOME:?}/.config/guix/current}
+
+fail() {
+    printf 'guix-system-pruning-transaction-check: FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+contains() {
+    case $1 in
+        *"$2"*) ;;
+        *) fail "expected output to contain: $2; actual output: $1" ;;
+    esac
+}
+
+sha256_file() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | awk '{ print $1 }'
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | awk '{ print $1 }'
+    else
+        fail "no SHA256 command is available"
+    fi
+}
+
+inode_of() {
+    stat -c '%i' "$1"
+}
+
+for required in \
+    "$launcher" \
+    "$manifest" \
+    "$registry" \
+    "$old_grub" \
+    "$pins" \
+    "$efi" \
+    "$lock_holder" \
+    "$new_grub"; do
+    [ -f "$required" ] || fail "required source is missing: $required"
+done
+[ -x "$launcher" ] || fail "transaction launcher is not executable"
+
+frontend_resolved=$(readlink -f "$frontend" 2>/dev/null || true)
+guix=$frontend_resolved/bin/guix
+if [ ! -x "$guix" ]; then
+    printf '%s\n' \
+        'SKIP: system-pruning transaction fixtures (pinned Guix unavailable)'
+    exit 0
+fi
+
+manifest_sha=6af13bbb64cefc4aa2c054dc9d3ddaf673554c9943acaa1eaba4e8b21d684d6c
+[ "$(sha256_file "$manifest")" = "$manifest_sha" ] ||
+    fail "reviewed fixture manifest digest changed"
+tab=$(printf '\t')
+old_grub_sha=$(awk -F "$tab" '$1 == "installed-grub" { print $3 }' "$manifest")
+old_grub_mode_decimal=$(awk -F "$tab" \
+    '$1 == "installed-grub" { print $5 }' "$manifest")
+new_grub_sha=$(awk -F "$tab" '$1 == "new-grub-store" { print $3 }' "$manifest")
+old_bootcfg_raw=$(awk -F "$tab" '$1 == "old-bootcfg" { print $3 }' "$manifest")
+new_bootcfg_raw=$(awk -F "$tab" '$1 == "new-bootcfg" { print $3 }' "$manifest")
+transaction_base=$(awk -F "$tab" '$1 == "transaction-base" { print $2 }' "$manifest")
+recovery_base=$(awk -F "$tab" '$1 == "recovery-base" { print $2 }' "$manifest")
+
+[ "${#manifest_sha}" -eq 64 ] || fail "fixture manifest digest is invalid"
+[ "${#old_grub_sha}" -eq 64 ] || fail "old GRUB digest is invalid"
+[ "${#new_grub_sha}" -eq 64 ] || fail "new GRUB digest is invalid"
+expected_grub_mode=$(printf '%o' "$old_grub_mode_decimal")
+
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/p52b-d3-transaction-check.XXXXXX")
+background_pids=
+
+cleanup() {
+    status=$?
+    trap - 0 HUP INT TERM
+    for pid in $background_pids; do
+        kill "$pid" 2>/dev/null || true
+        wait "$pid" 2>/dev/null || true
+    done
+    rm -rf -- "$tmp"
+    exit "$status"
+}
+trap cleanup 0
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+make_fixture() {
+    root=$1
+    mkdir -p \
+        "$root/gnu/store" \
+        "$root/var/guix/profiles" \
+        "$root/var/guix/gcroots" \
+        "$root/boot/grub" \
+        "$root/boot/efi" \
+        "$root/repo"
+
+    printf '%s\n' p5.2b-system-transaction-fixture/v1 \
+        >"$root/.p52b-system-transaction-fixture"
+
+    awk -F "$tab" '
+        $1 == "old-bootcfg" || $1 == "new-bootcfg" {
+            print $4
+            next
+        }
+        $1 == "new-grub-store" {
+            print $2
+            next
+        }
+        $1 == "protected-symlink" {
+            print $4
+            next
+        }
+        $1 == "retain" || $1 == "delete" {
+            print $5
+            next
+        }
+        $1 == "recovery-root" {
+            print $3
+        }
+    ' "$manifest" | LC_ALL=C sort -u |
+        while IFS= read -r logical; do
+            [ -n "$logical" ] || continue
+            physical=$root$logical
+            mkdir -p "$(dirname "$physical")"
+            case $logical in
+                *-grub.cfg) : >"$physical" ;;
+                *) mkdir -p "$physical" ;;
+            esac
+        done
+
+    cp "$old_grub" \
+        "$root/gnu/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-grub.cfg"
+    cp "$new_grub" \
+        "$root/gnu/store/nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn-grub.cfg"
+    cp "$old_grub" "$root/boot/grub/grub.cfg"
+    chmod 0644 "$root/boot/grub/grub.cfg"
+    cp "$pins" "$root/repo/generation-pins.tsv"
+    cp "$efi" "$root/boot/efi/fixture-sentinel.txt"
+
+    awk -F "$tab" '
+        $1 == "retain" || $1 == "delete" {
+            print $3 "\t" $4
+        }
+    ' "$manifest" |
+        while IFS="$tab" read -r logical raw; do
+            mkdir -p "$(dirname "$root$logical")"
+            ln -s "$raw" "$root$logical"
+        done
+
+    awk -F "$tab" '
+        $1 == "protected-symlink" {
+            print $2 "\t" $3
+        }
+    ' "$manifest" |
+        while IFS="$tab" read -r logical raw; do
+            mkdir -p "$(dirname "$root$logical")"
+            ln -s "$raw" "$root$logical"
+        done
+
+    mkdir -p "$(dirname "$root/var/guix/gcroots/bootcfg")"
+    ln -s "$old_bootcfg_raw" "$root/var/guix/gcroots/bootcfg"
+    mkdir -p "$root$transaction_base" "$root$recovery_base"
+    chmod 0700 \
+        "$root/var/guix/profiles" \
+        "$root$transaction_base"
+}
+
+run_action() {
+    action=$1
+    root=$2
+    SK_P52B_D3_MANIFEST_SHA=$manifest_sha \
+        SK_P52B_D3_STOP_AFTER='' \
+        SK_P52B_D3_STOP_MODE=exit \
+        SK_P52B_D3_HOLD_LOCK_SECONDS=0 \
+        "$launcher" "$action" "$manifest" "$root"
+}
+
+expect_stop() {
+    mode=$1
+    action=$2
+    point=$3
+    root=$4
+    output_file=$5
+    case $mode in
+        exit) expected_status=97 ;;
+        term) expected_status=143 ;;
+        kill) expected_status=137 ;;
+        *) fail "invalid test stop mode: $mode" ;;
+    esac
+
+    set +e
+    SK_P52B_D3_MANIFEST_SHA=$manifest_sha \
+        SK_P52B_D3_STOP_AFTER=$point \
+        SK_P52B_D3_STOP_MODE=$mode \
+        SK_P52B_D3_HOLD_LOCK_SECONDS=0 \
+        "$launcher" "$action" "$manifest" "$root" \
+        >"$output_file" 2>&1
+    actual_status=$?
+    set -e
+
+    [ "$actual_status" -eq "$expected_status" ] ||
+        fail "$action at $point ($mode) exited $actual_status, expected $expected_status"
+    output=$(cat "$output_file")
+    contains "$output" "STOP: $point"
+}
+
+expect_failure() {
+    action=$1
+    root=$2
+    expected=$3
+    set +e
+    output=$(run_action "$action" "$root" 2>&1)
+    status=$?
+    set -e
+    [ "$status" -ne 0 ] || fail "$action unexpectedly accepted fixture drift"
+    contains "$output" "$expected"
+}
+
+assert_common_surfaces() {
+    root=$1
+    [ "$(sha256_file "$root/repo/generation-pins.tsv")" = \
+        "$(sha256_file "$pins")" ] ||
+        fail "generation pins changed"
+    [ "$(sha256_file "$root/boot/efi/fixture-sentinel.txt")" = \
+        "$(sha256_file "$efi")" ] ||
+        fail "EFI sentinel changed"
+    [ "$(sha256_file \
+        "$root/gnu/store/nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn-grub.cfg")" = \
+        "$new_grub_sha" ] ||
+        fail "tracked D2b store fixture changed"
+    [ "$(readlink "$root/var/guix/profiles/system")" = system-87-link ] ||
+        fail "System profile pointer changed"
+    [ "$(readlink "$root/run/current-system")" = \
+        ../gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system ] ||
+        fail "current System pointer changed"
+    [ "$(readlink "$root/run/booted-system")" = \
+        ../gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system ] ||
+        fail "booted System pointer changed"
+}
+
+assert_no_recovery_roots() {
+    root=$1
+    if [ -e "$root$recovery_base/$manifest_sha" ] ||
+        [ -L "$root$recovery_base/$manifest_sha" ]; then
+        fail "transaction recovery-root directory remains"
+    fi
+}
+
+assert_prestate() {
+    root=$1
+    output=$(run_action fixture-verify "$root")
+    contains "$output" "state=ROLLED-BACK"
+    for generation in 1 2; do
+        [ -L "$root/var/guix/profiles/system-$generation-link" ] ||
+            fail "candidate generation $generation was not restored"
+    done
+    [ "$(sha256_file "$root/boot/grub/grub.cfg")" = "$old_grub_sha" ] ||
+        fail "precommit recovery did not restore old GRUB"
+    [ "$(stat -c '%a' "$root/boot/grub/grub.cfg")" = \
+        "$expected_grub_mode" ] ||
+        fail "precommit recovery did not restore exact GRUB mode"
+    [ "$(readlink "$root/var/guix/gcroots/bootcfg")" = \
+        "$old_bootcfg_raw" ] ||
+        fail "precommit recovery did not restore old bootcfg"
+    link_count=$(find "$root/var/guix/profiles" -maxdepth 1 \
+        -type l -name 'system-[0-9]*-link' | wc -l | tr -d ' ')
+    [ "$link_count" -eq 10 ] ||
+        fail "prestate System-link count is $link_count, expected 10"
+    assert_no_recovery_roots "$root"
+    assert_common_surfaces "$root"
+}
+
+assert_complete() {
+    root=$1
+    output=$(run_action fixture-verify "$root")
+    contains "$output" "state=COMPLETE"
+    for generation in 1 2; do
+        if [ -e "$root/var/guix/profiles/system-$generation-link" ] ||
+            [ -L "$root/var/guix/profiles/system-$generation-link" ]; then
+            fail "candidate generation $generation survived committed cleanup"
+        fi
+    done
+    [ "$(sha256_file "$root/boot/grub/grub.cfg")" = "$new_grub_sha" ] ||
+        fail "committed transaction does not contain new GRUB"
+    [ "$(stat -c '%a' "$root/boot/grub/grub.cfg")" = \
+        "$expected_grub_mode" ] ||
+        fail "committed transaction does not contain exact GRUB mode"
+    [ "$(readlink "$root/var/guix/gcroots/bootcfg")" = \
+        "$new_bootcfg_raw" ] ||
+        fail "committed transaction does not contain new bootcfg"
+    link_count=$(find "$root/var/guix/profiles" -maxdepth 1 \
+        -type l -name 'system-[0-9]*-link' | wc -l | tr -d ' ')
+    [ "$link_count" -eq 8 ] ||
+        fail "complete System-link count is $link_count, expected 8"
+    assert_no_recovery_roots "$root"
+    assert_common_surfaces "$root"
+}
+
+assert_repeat_recovery() {
+    root=$1
+    expected=$2
+    journal=$root$transaction_base/$manifest_sha/journal.tsv
+    before=$(sha256_file "$journal")
+    output=$(run_action fixture-recover "$root")
+    contains "$output" "state=$expected-NO-OP"
+    after=$(sha256_file "$journal")
+    [ "$before" = "$after" ] ||
+        fail "repeat recovery changed terminal journal $expected"
+}
+
+points_root=$tmp/points-root
+make_fixture "$points_root"
+points=$tmp/points.tsv
+run_action fixture-points "$points_root" >"$points"
+
+awk -F "$tab" '
+    NF != 3 || $1 != "point" ||
+    ($2 != "forward" && $2 != "rollback") ||
+    $3 == "" { bad = 1 }
+    END { exit bad }
+' "$points" || fail "fixture-points emitted an invalid row"
+
+expected_points=$tmp/expected-points.tsv
+: >"$expected_points"
+while IFS="$tab" read -r kind direction label extra; do
+    [ "$kind" = schema ] && continue
+    [ -z "${extra:-}" ] || fail "crash registry has an invalid row"
+    case $kind in
+        point)
+            printf 'point\t%s\t%s\n' "$direction" "$label" \
+                >>"$expected_points"
+            ;;
+        root-point)
+            awk -F "$tab" -v direction="$direction" -v label="$label" '
+                $1 == "recovery-root" {
+                    print "point\t" direction "\t" label ":" $2
+                }
+            ' "$manifest" >>"$expected_points"
+            ;;
+        link-point)
+            awk -F "$tab" -v direction="$direction" -v label="$label" '
+                $1 == "delete" {
+                    print "point\t" direction "\t" label ":" $2
+                }
+            ' "$manifest" >>"$expected_points"
+            ;;
+        *) fail "unknown crash registry row: $kind" ;;
+    esac
+done <"$registry"
+
+cmp -s "$points" "$expected_points" ||
+    fail "fixture-points does not exactly expand the reviewed registry"
+[ -z "$(cut -f3 "$points" | LC_ALL=C sort | uniq -d)" ] ||
+    fail "expanded crash-point labels are duplicated"
+forward_count=$(awk -F "$tab" '$2 == "forward" { count++ } END { print count + 0 }' \
+    "$points")
+rollback_count=$(awk -F "$tab" '$2 == "rollback" { count++ } END { print count + 0 }' \
+    "$points")
+[ "$forward_count" -eq 54 ] ||
+    fail "expanded forward point count is $forward_count, expected 54"
+[ "$rollback_count" -eq 44 ] ||
+    fail "expanded rollback point count is $rollback_count, expected 44"
+
+normal_root=$tmp/normal
+make_fixture "$normal_root"
+output=$(run_action fixture-verify "$normal_root")
+contains "$output" "state=PREPARED"
+normal_transaction_lock=$normal_root$transaction_base/transaction.lock
+normal_profile_lock=$normal_root/var/guix/profiles/system.lock
+for lock in "$normal_transaction_lock" "$normal_profile_lock"; do
+    if [ ! -f "$lock" ] || [ -L "$lock" ]; then
+        fail "fixture lock is not a persistent regular file: $lock"
+    fi
+done
+transaction_lock_inode=$(inode_of "$normal_transaction_lock")
+profile_lock_inode=$(inode_of "$normal_profile_lock")
+output=$(run_action fixture-apply "$normal_root")
+contains "$output" "state=COMPLETE"
+assert_complete "$normal_root"
+[ "$(inode_of "$normal_transaction_lock")" = \
+    "$transaction_lock_inode" ] ||
+    fail "transaction lock inode changed across actions"
+[ "$(inode_of "$normal_profile_lock")" = \
+    "$profile_lock_inode" ] ||
+    fail "profile lock inode changed across actions"
+assert_repeat_recovery "$normal_root" COMPLETE
+cp "$new_grub" "$normal_root/boot/grub/grub.cfg.p52b-new"
+chmod 0644 "$normal_root/boot/grub/grub.cfg.p52b-new"
+expect_failure fixture-verify "$normal_root" \
+    "terminal transaction retains a GRUB temporary"
+rm "$normal_root/boot/grub/grub.cfg.p52b-new"
+assert_complete "$normal_root"
+
+forward_points=$tmp/forward-points.txt
+awk -F "$tab" '$2 == "forward" { print $3 }' "$points" >"$forward_points"
+forward_case=0
+committed=0
+exec 3<"$forward_points"
+while IFS= read -r point <&3; do
+    forward_case=$((forward_case + 1))
+    root=$tmp/forward-$forward_case
+    make_fixture "$root"
+    if [ "$point" = journal-COMMITTED ]; then
+        committed=1
+    fi
+    expect_stop exit fixture-apply "$point" "$root" "$tmp/stop.out"
+    output=$(run_action fixture-recover "$root")
+    if [ "$committed" -eq 1 ]; then
+        contains "$output" "state=COMPLETE"
+        assert_complete "$root"
+    else
+        contains "$output" "state=ROLLED-BACK"
+        assert_prestate "$root"
+    fi
+    rm -rf -- "$root"
+done
+exec 3<&-
+[ "$forward_case" -eq "$forward_count" ] ||
+    fail "did not execute every expanded forward point"
+
+rollback_points=$tmp/rollback-points.txt
+awk -F "$tab" '$2 == "rollback" { print $3 }' "$points" >"$rollback_points"
+rollback_case=0
+exec 3<"$rollback_points"
+while IFS= read -r rollback_point <&3; do
+    rollback_case=$((rollback_case + 1))
+    root=$tmp/rollback-$rollback_case
+    make_fixture "$root"
+    expect_stop exit fixture-apply journal-LINKS-COMMITTED \
+        "$root" "$tmp/seed.out"
+    case $rollback_point in
+        before-rollback-root-ensure:* | \
+            after-rollback-root-ensure:* | \
+            journal-rollback-root-ensure-done:*)
+            root_name=${rollback_point##*:}
+            rm -f -- \
+                "$root$recovery_base/$manifest_sha/$root_name"
+            ;;
+    esac
+    expect_stop exit fixture-recover "$rollback_point" \
+        "$root" "$tmp/stop.out"
+    output=$(run_action fixture-recover "$root")
+    contains "$output" "state=ROLLED-BACK"
+    assert_prestate "$root"
+    rm -rf -- "$root"
+done
+exec 3<&-
+[ "$rollback_case" -eq "$rollback_count" ] ||
+    fail "did not execute every expanded rollback point"
+
+term_root=$tmp/term
+make_fixture "$term_root"
+expect_stop term fixture-apply after-grub-rename "$term_root" "$tmp/term.out"
+output=$(run_action fixture-recover "$term_root")
+contains "$output" "state=ROLLED-BACK"
+assert_prestate "$term_root"
+assert_repeat_recovery "$term_root" ROLLED-BACK
+
+kill_root=$tmp/kill
+make_fixture "$kill_root"
+expect_stop kill fixture-apply \
+    after-forward-root-remove:candidate-g1 \
+    "$kill_root" "$tmp/kill.out"
+output=$(run_action fixture-recover "$kill_root")
+contains "$output" "state=COMPLETE"
+assert_complete "$kill_root"
+assert_repeat_recovery "$kill_root" COMPLETE
+
+transaction_lock_root=$tmp/transaction-lock
+make_fixture "$transaction_lock_root"
+transaction_lock=$transaction_lock_root$transaction_base/transaction.lock
+transaction_ready=$tmp/transaction-lock.ready
+env -u GUILE_LOAD_PATH \
+    -u GUILE_LOAD_COMPILED_PATH \
+    -u GUILE_EXTENSIONS_PATH \
+    GUILE_AUTO_COMPILE=0 \
+    "$guix" repl -q -- \
+    "$lock_holder" "$transaction_lock" "$transaction_ready" 30 \
+    >"$tmp/transaction-lock-holder.out" 2>&1 &
+holder=$!
+background_pids="$background_pids $holder"
+attempt=0
+while [ ! -e "$transaction_ready" ] && [ "$attempt" -lt 100 ]; do
+    sleep 0.1
+    attempt=$((attempt + 1))
+done
+[ -e "$transaction_ready" ] || fail "transaction-lock holder did not start"
+expect_failure fixture-verify "$transaction_lock_root" \
+    "fixture transaction lock is held"
+kill "$holder" 2>/dev/null || true
+wait "$holder" 2>/dev/null || true
+background_pids=
+
+profile_lock_root=$tmp/profile-lock
+make_fixture "$profile_lock_root"
+profile_lock=$profile_lock_root/var/guix/profiles/system.lock
+profile_ready=$tmp/profile-lock.ready
+env -u GUILE_LOAD_PATH \
+    -u GUILE_LOAD_COMPILED_PATH \
+    -u GUILE_EXTENSIONS_PATH \
+    GUILE_AUTO_COMPILE=0 \
+    "$guix" repl -q -- \
+    "$lock_holder" "$profile_lock" "$profile_ready" 30 \
+    >"$tmp/profile-lock-holder.out" 2>&1 &
+holder=$!
+background_pids="$background_pids $holder"
+attempt=0
+while [ ! -e "$profile_ready" ] && [ "$attempt" -lt 100 ]; do
+    sleep 0.1
+    attempt=$((attempt + 1))
+done
+[ -e "$profile_ready" ] || fail "profile-lock holder did not start"
+expect_failure fixture-verify "$profile_lock_root" \
+    "cooperative fixture System-profile lock is held"
+kill "$holder" 2>/dev/null || true
+wait "$holder" 2>/dev/null || true
+background_pids=
+
+fractional_lock_hold_root=$tmp/fractional-lock-hold
+make_fixture "$fractional_lock_hold_root"
+set +e
+output=$(SK_P52B_D3_MANIFEST_SHA=$manifest_sha \
+    SK_P52B_D3_STOP_AFTER='' \
+    SK_P52B_D3_STOP_MODE=exit \
+    SK_P52B_D3_HOLD_LOCK_SECONDS=0.5 \
+    "$launcher" fixture-verify "$manifest" \
+    "$fractional_lock_hold_root" 2>&1)
+status=$?
+set -e
+[ "$status" -ne 0 ] ||
+    fail "fractional fixture lock hold was accepted"
+contains "$output" \
+    "fixture lock hold must be an integer between 0 and 30 seconds"
+
+symlink_lock_root=$tmp/symlink-lock
+make_fixture "$symlink_lock_root"
+symlink_lock_victim=$tmp/symlink-lock-victim
+printf '%s\n' 'must not be truncated through a fixture lock' \
+    >"$symlink_lock_victim"
+symlink_lock_victim_sha=$(sha256_file "$symlink_lock_victim")
+ln -s "$symlink_lock_victim" \
+    "$symlink_lock_root$transaction_base/transaction.lock"
+expect_failure fixture-verify "$symlink_lock_root" \
+    "transaction lock path has an unsafe pre-open type"
+[ "$(sha256_file "$symlink_lock_victim")" = "$symlink_lock_victim_sha" ] ||
+    fail "fixture transaction lock followed and changed an external symlink"
+
+fifo_lock_root=$tmp/fifo-lock
+make_fixture "$fifo_lock_root"
+mkfifo "$fifo_lock_root$transaction_base/transaction.lock"
+expect_failure fixture-verify "$fifo_lock_root" \
+    "transaction lock path has an unsafe pre-open type"
+
+hardlink_lock_root=$tmp/hardlink-lock
+make_fixture "$hardlink_lock_root"
+hardlink_lock_victim=$tmp/hardlink-lock-victim
+printf '%s\n' 'must not be truncated through a fixture lock' \
+    >"$hardlink_lock_victim"
+hardlink_lock_victim_sha=$(sha256_file "$hardlink_lock_victim")
+ln "$hardlink_lock_victim" \
+    "$hardlink_lock_root/var/guix/profiles/system.lock"
+expect_failure fixture-verify "$hardlink_lock_root" \
+    "System-profile lock file has multiple hard links"
+[ "$(sha256_file "$hardlink_lock_victim")" = "$hardlink_lock_victim_sha" ] ||
+    fail "fixture profile lock changed an external hardlink"
+
+writable_lock_parent_root=$tmp/writable-lock-parent
+make_fixture "$writable_lock_parent_root"
+chmod 0770 "$writable_lock_parent_root$transaction_base"
+expect_failure fixture-verify "$writable_lock_parent_root" \
+    "transaction lock parent is group- or world-writable"
+
+wrong_sha_root=$tmp/wrong-sha
+make_fixture "$wrong_sha_root"
+set +e
+output=$(SK_P52B_D3_MANIFEST_SHA=\
+0000000000000000000000000000000000000000000000000000000000000000 \
+    "$launcher" fixture-verify "$manifest" "$wrong_sha_root" 2>&1)
+status=$?
+set -e
+[ "$status" -ne 0 ] || fail "incorrect manifest digest was accepted"
+contains "$output" "fixture manifest SHA256 mismatch"
+
+incomplete_inputs_manifest=$tmp/incomplete-inputs-manifest.tsv
+awk -F "$tab" -v OFS="$tab" \
+    '!($1 == "implementation-input" && $2 == "profile-lock-holder")' \
+    "$manifest" >"$incomplete_inputs_manifest"
+incomplete_inputs_sha=$(sha256_file "$incomplete_inputs_manifest")
+incomplete_inputs_root=$tmp/incomplete-inputs
+make_fixture "$incomplete_inputs_root"
+set +e
+output=$(SK_P52B_D3_MANIFEST_SHA=$incomplete_inputs_sha \
+    "$launcher" fixture-verify \
+    "$incomplete_inputs_manifest" "$incomplete_inputs_root" 2>&1)
+status=$?
+set -e
+[ "$status" -ne 0 ] ||
+    fail "manifest with an omitted implementation input was accepted"
+contains "$output" \
+    "implementation-input label/path mappings differ from the reviewed fixture"
+
+incomplete_protection_manifest=$tmp/incomplete-protection-manifest.tsv
+awk -F "$tab" -v OFS="$tab" \
+    '!($1 == "protected-symlink" && $2 == "/run/booted-system")' \
+    "$manifest" >"$incomplete_protection_manifest"
+incomplete_protection_sha=$(sha256_file "$incomplete_protection_manifest")
+incomplete_protection_root=$tmp/incomplete-protection
+make_fixture "$incomplete_protection_root"
+set +e
+output=$(SK_P52B_D3_MANIFEST_SHA=$incomplete_protection_sha \
+    "$launcher" fixture-verify \
+    "$incomplete_protection_manifest" "$incomplete_protection_root" 2>&1)
+status=$?
+set -e
+[ "$status" -ne 0 ] ||
+    fail "manifest with an omitted protected surface was accepted"
+contains "$output" \
+    "protected-symlink tuples differ from the reviewed fixture"
+
+missing_sentinel_root=$tmp/missing-sentinel
+make_fixture "$missing_sentinel_root"
+rm "$missing_sentinel_root/.p52b-system-transaction-fixture"
+expect_failure fixture-verify "$missing_sentinel_root" \
+    "fixture sentinel is missing"
+
+permission_error_root=$tmp/permission-error
+make_fixture "$permission_error_root"
+chmod 000 "$permission_error_root/boot/grub"
+set +e
+output=$(run_action fixture-verify "$permission_error_root" 2>&1)
+status=$?
+set -e
+chmod 0755 "$permission_error_root/boot/grub"
+[ "$status" -ne 0 ] ||
+    fail "fixture-verify treated EACCES as an absent path"
+contains "$output" "Permission denied"
+
+pins_drift_root=$tmp/pins-drift
+make_fixture "$pins_drift_root"
+printf '%s\n' drift >>"$pins_drift_root/repo/generation-pins.tsv"
+expect_failure fixture-verify "$pins_drift_root" \
+    "protected file /repo/generation-pins.tsv"
+
+link_drift_root=$tmp/link-drift
+make_fixture "$link_drift_root"
+rm "$link_drift_root/var/guix/profiles/system-1-link"
+ln -s ../../../gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system \
+    "$link_drift_root/var/guix/profiles/system-1-link"
+expect_failure fixture-verify "$link_drift_root" \
+    "System profile is not in exact PREPARED state"
+
+store_type_drift_root=$tmp/store-type-drift
+make_fixture "$store_type_drift_root"
+rmdir \
+    "$store_type_drift_root/gnu/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-system"
+: >"$store_type_drift_root/gnu/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-system"
+expect_failure fixture-verify "$store_type_drift_root" \
+    "System store target generation 1 is not a real fixture directory"
+
+grub_drift_root=$tmp/grub-drift
+make_fixture "$grub_drift_root"
+printf '%s\n' drift >"$grub_drift_root/boot/grub/grub.cfg"
+expect_failure fixture-verify "$grub_drift_root" \
+    "installed fixture GRUB has unknown bytes"
+
+grub_mode_drift_root=$tmp/grub-mode-drift
+make_fixture "$grub_mode_drift_root"
+chmod 0600 "$grub_mode_drift_root/boot/grub/grub.cfg"
+expect_failure fixture-verify "$grub_mode_drift_root" \
+    "installed old fixture GRUB mode drift"
+
+backup_mode_drift_root=$tmp/backup-mode-drift
+make_fixture "$backup_mode_drift_root"
+expect_stop exit fixture-apply after-backup \
+    "$backup_mode_drift_root" "$tmp/backup-mode-seed.out"
+chmod 0600 \
+    "$backup_mode_drift_root$transaction_base/$manifest_sha/old-grub.cfg"
+expect_failure fixture-recover "$backup_mode_drift_root" \
+    "transaction old GRUB backup mode drift"
+
+bootcfg_drift_root=$tmp/bootcfg-drift
+make_fixture "$bootcfg_drift_root"
+rm "$bootcfg_drift_root/var/guix/gcroots/bootcfg"
+ln -s ../../../gnu/store/nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn-grub.cfg \
+    "$bootcfg_drift_root/var/guix/gcroots/bootcfg"
+expect_failure fixture-verify "$bootcfg_drift_root" \
+    "bootcfg is not the exact old tuple"
+
+journal_drift_root=$tmp/journal-drift
+make_fixture "$journal_drift_root"
+expect_stop exit fixture-apply after-backup \
+    "$journal_drift_root" "$tmp/journal-seed.out"
+journal=$journal_drift_root$transaction_base/$manifest_sha/journal.tsv
+printf '%s\n' 'unknown-row' >>"$journal"
+expect_failure fixture-recover "$journal_drift_root" \
+    "journal row has an invalid closed shape"
+
+orphan_root=$tmp/orphan-journal
+make_fixture "$orphan_root"
+expect_stop exit fixture-apply after-backup \
+    "$orphan_root" "$tmp/orphan-seed.out"
+touch "$orphan_root$transaction_base/$manifest_sha/journal.tsv.orphan"
+expect_failure fixture-recover "$orphan_root" \
+    "orphaned atomic journal temporary requires review"
+
+foreign_root=$tmp/foreign-root
+make_fixture "$foreign_root"
+expect_stop exit fixture-apply journal-ROOTS-READY \
+    "$foreign_root" "$tmp/foreign-seed.out"
+touch "$foreign_root$recovery_base/$manifest_sha/foreign"
+expect_failure fixture-recover "$foreign_root" \
+    "fixture recovery-root directory has foreign state"
+
+discard_guard_root=$tmp/discard-root-guard
+make_fixture "$discard_guard_root"
+expect_stop exit fixture-apply journal-LINKS-STAGED \
+    "$discard_guard_root" "$tmp/discard-guard-seed.out"
+discard_guard_recovery=$discard_guard_root$recovery_base/$manifest_sha
+rm "$discard_guard_recovery/candidate-g1"
+ln -s \
+    "$discard_guard_root/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system" \
+    "$discard_guard_recovery/candidate-g1"
+expect_failure fixture-recover "$discard_guard_root" \
+    "fixture recovery-root directory has foreign state"
+for generation in 1 2; do
+    [ -L "$discard_guard_root$transaction_base/$manifest_sha/quarantine/system-$generation-link" ] ||
+        fail "candidate generation $generation was discarded after recovery-root drift"
+done
+
+occupied_root=$tmp/occupied-rollback
+make_fixture "$occupied_root"
+expect_stop exit fixture-apply journal-LINKS-COMMITTED \
+    "$occupied_root" "$tmp/occupied-seed.out"
+printf '%s\n' occupied \
+    >"$occupied_root/var/guix/profiles/system-1-link"
+expect_failure fixture-recover "$occupied_root" \
+    "System generation path is not a symlink: system-1-link"
+
+set +e
+output=$("$launcher" apply "$manifest" "$normal_root" 2>&1)
+status=$?
+set -e
+[ "$status" -eq 64 ] || fail "unsupported live apply did not exit 64"
+contains "$output" "usage:"
+
+printf '%s\n' \
+    "guix-system-pruning-transaction-check: PASS (forward=$forward_count rollback=$rollback_count total=$((forward_count + rollback_count)))"

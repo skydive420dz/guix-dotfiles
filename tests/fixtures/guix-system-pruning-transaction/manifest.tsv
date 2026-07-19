@@ -1,0 +1,47 @@
+schema	p5.2b-system-prune-transaction/v1
+mode	FIXTURE-ONLY
+authorization	NOT-GRANTED
+status	FIXTURE-ONLY
+guix-revision	a8391f2d7451c2463ba253ffa9872fa6f27485d7
+base-checkpoint	abcf2efceb2bb2c797ddf00bdd02c4fe7a42c96f
+transaction-base	/var/guix/profiles/.p52b-system-prune-transactions
+recovery-base	/var/guix/gcroots/p52b-system-prune
+profile	/var/guix/profiles/system	10	2	8	8
+installed-grub	/boot/grub/grub.cfg	1ac81963a8c65596be9ca3b196396a2025c30cbf3a56b189045756158bf4ef13	874	420
+old-bootcfg	/var/guix/gcroots/bootcfg	../../../gnu/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-grub.cfg	/gnu/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-grub.cfg
+new-bootcfg	/var/guix/gcroots/bootcfg	../../../gnu/store/nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn-grub.cfg	/gnu/store/nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn-grub.cfg
+new-grub-source	docs/audits/data/2026-07-19-p5.2b-d2b-retained-grub.cfg	70965414824c26e1712c6a7a51efd9517633eb3c83f36f88927565c87807496b	5163
+new-grub-store	/gnu/store/nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn-grub.cfg	70965414824c26e1712c6a7a51efd9517633eb3c83f36f88927565c87807496b	5163
+crash-registry	tests/fixtures/guix-system-pruning-transaction/phase-registry.tsv	bd17a2423d9a0fcea86f3eba23cbb52699379b54853eae510597ed7a160aba86
+store-names	13	5d4b1e49bd8090b41d5fb50129695b005aa2af554e6d0c38bc33737efbc2450f
+implementation-input	module	guix/modules/sk/system-pruning-transaction.scm	e324da3e923460fe1d4641f0107c45704133c0b212cf132140359fcd547de00f
+implementation-input	driver	scripts/guix-system-pruning-transaction.scm	817a35d454bcbcee8b5ed64dcfbd126ee586bc06135eaf3321dbbc80ff78d9e2
+implementation-input	launcher	scripts/guix-system-pruning-transaction	ac54a3de3d4fe60dd15177158c71106fe890363af6cb581b35902120fa11a105
+implementation-input	profile-lock-holder	tests/fixtures/guix-system-pruning-transaction/profile-lock-holder.scm	63855f7fd6edffdcc461af26088658eeb174ba3286192218d38fae7946972b18
+implementation-input	old-grub-fixture	tests/fixtures/guix-system-pruning-transaction/old-grub.cfg	1ac81963a8c65596be9ca3b196396a2025c30cbf3a56b189045756158bf4ef13
+implementation-input	pins-fixture	tests/fixtures/guix-system-pruning-transaction/generation-pins.tsv	cffa2f01a6a8083753b71add5624fba25cee6c74e703c77593e35573268dbee4
+implementation-input	efi-fixture	tests/fixtures/guix-system-pruning-transaction/efi-sentinel.txt	069c1ed4a330dfd29e78e7ad208cee06316370f341dc3b7029ab6ff44dff4509
+protected-file	/repo/generation-pins.tsv	cffa2f01a6a8083753b71add5624fba25cee6c74e703c77593e35573268dbee4
+protected-file	/boot/efi/fixture-sentinel.txt	069c1ed4a330dfd29e78e7ad208cee06316370f341dc3b7029ab6ff44dff4509
+protected-symlink	/var/guix/profiles/system	system-87-link	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+protected-symlink	/run/current-system	../gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+protected-symlink	/run/booted-system	../gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+protected-symlink	/var/guix/profiles/per-user/fixture/guix-home-1-link	../../../../../gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home
+protected-symlink	/var/guix/profiles/per-user/fixture/guix-home	guix-home-1-link	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home
+protected-symlink	/var/guix/profiles/per-user/fixture/current-guix-5-link	../../../../../gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+protected-symlink	/var/guix/profiles/per-user/fixture/current-guix	current-guix-5-link	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+protected-symlink	/home/fixture/.config/guix/current	../../../../var/guix/profiles/per-user/fixture/current-guix	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+retain	75	/var/guix/profiles/system-75-link	../../../gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system
+retain	80	/var/guix/profiles/system-80-link	../../../gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system	/gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system
+retain	81	/var/guix/profiles/system-81-link	../../../gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system
+retain	83	/var/guix/profiles/system-83-link	../../../gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system
+retain	84	/var/guix/profiles/system-84-link	../../../gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system	/gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system
+retain	85	/var/guix/profiles/system-85-link	../../../gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system	/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system
+retain	86	/var/guix/profiles/system-86-link	../../../gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system	/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system
+retain	87	/var/guix/profiles/system-87-link	../../../gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+delete	1	/var/guix/profiles/system-1-link	../../../gnu/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-system	/gnu/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-system
+delete	2	/var/guix/profiles/system-2-link	../../../gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system
+recovery-root	candidate-g1	/gnu/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-system
+recovery-root	candidate-g2	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system
+recovery-root	old-bootcfg	/gnu/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-grub.cfg
+recovery-root	new-bootcfg	/gnu/store/nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn-grub.cfg
