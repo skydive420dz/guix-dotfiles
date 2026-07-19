@@ -1,12 +1,12 @@
 #+title: P5.2 reviewed generation-deletion preflight
 #+date: 2026-07-18
-#+status: read-only Home-canary plan complete; publication and destructive authorization pending
+#+status: historical read-only plan; published at 450f396; see P5.2a postflight
 
 * Outcome
 
-P5.2 remains unexecuted.  A fresh estimator run on =guixpc= is byte-identical
-to the published P5.1 observation, so the exact live candidate set has not
-drifted:
+At this preflight boundary P5.2 remained unexecuted.  A fresh estimator run on
+=guixpc= was byte-identical to the published P5.1 observation, so the exact
+live candidate set had not drifted:
 
 | Profile | Links before | Policy candidates | Selected now | Held | Expected after selected stage |
 |---------+--------------+-------------------+--------------+------+-------------------------------|
@@ -20,9 +20,11 @@ No generation link, store object, bootloader file, profile pointer, pin,
 package, configuration, activation, disk, backup, boot state, or existing
 persistent process/session/service state changed during this preflight.
 
-The plan is not self-authorizing.  Publication, fresh byte-identical
-revalidation, and explicit external authorization of the exact Home selector
-are still required immediately before deletion.
+The plan was not self-authorizing.  It was subsequently published at
+=450f396068d0c6e9c83186ae5599a06524fe694c=, freshly revalidated, separately
+authorized by manifest identity, executed, and stopped at the reviewed Home
+boundary.  The result is
+[[file:2026-07-18-p5.2a-home-generation-deletion.org][the P5.2a Home generation-deletion canary record]].
 
 * Source and live identity
 
@@ -153,7 +155,7 @@ P5.2b must therefore choose one of two separately reviewed designs:
 2. a configuration-aware bootloader regeneration path that consumes the real
    repository configuration rather than Guix's default reconstruction.
 
-* Exact P5.2a Home plan
+* Historical exact P5.2a Home plan
 
 Retain Home generations:
 
@@ -179,7 +181,7 @@ Exact proposed command:
 This code block is a reviewed proposal, not authorization and not an
 instruction to run it unattended.
 
-* Immediate preconditions and invalidation
+* Historical immediate preconditions and invalidation
 
 External authorization is valid only if all of the following pass immediately
 before execution:
@@ -201,7 +203,7 @@ before execution:
 Any drift invalidates authorization.  Regenerate and review the packet; never
 silently widen, narrow, or reinterpret the selector.
 
-* Execution and postflight stop
+* Historical execution and postflight stop
 
 When separately authorized, run exactly one Home command.  Do not continue
 after an error or unexpected line.  Then require:
@@ -252,9 +254,11 @@ tests/guix-generation-retention-p52-review-check
 passes.  Org lint passes for the README, machine TODO, this audit, and the
 editable agenda against a temporary tree containing the new targets.
 
-No =guix home delete-generations=, =guix system delete-generations=,
-=guix gc=, =guix gc --list-dead=, reconfigure, activation, profile switch,
-bootloader command, or reboot was run.
+During construction and validation of this preflight, no
+=guix home delete-generations=, =guix system delete-generations=, =guix gc=,
+=guix gc --list-dead=, reconfigure, activation, profile switch, bootloader
+command, or reboot was run.  The later Home-only execution is recorded only in
+the successor postflight audit.
 
 * Roadmap synchronization
 
@@ -271,14 +275,15 @@ before:  cf278df8c091bc3ea6d39db7cba062ecc93133e38e55828629b10060e020b4ab
 after:   1e57fe6f3ff2250371578285a6a85ae0cd86e5b479365a7c5b4efdc4e3564fdf
 #+end_example
 
-The candidate marks Phase 5 active only at the read-only planning boundary,
-P5.2a next but blocked on publication and exact external authorization, P5.2b
-blocked on a custom-GRUB-safe design, and P5.3 unpromoted.  This same-disk
-agenda update is planning continuity, not backup coverage.
+At this historical planning boundary the candidate marked Phase 5 active only
+for read-only work, P5.2a next but blocked on publication and exact external
+authorization, P5.2b blocked on a custom-GRUB-safe design, and P5.3
+unpromoted.  The same-disk agenda update was planning continuity, not backup
+coverage.  The successor audit records the later closure synchronization.
 
-* Publication boundary
+* Historical publication boundary
 
-This source checkpoint may publish only:
+The plan checkpoint published only:
 
 - this preflight record;
 - the fresh immutable estimator output;
@@ -287,6 +292,8 @@ This source checkpoint may publish only:
 - roadmap/README/TODO synchronization; and
 - no executable deletion path.
 
-After publication and clean upstream equality, present the review-manifest
-hash and exact Home selector again.  Do not infer destructive authorization
-from approval to publish documentation.
+The checkpoint was later fetched with clean upstream equality.  Destructive
+authorization was supplied separately by naming P5.2a and the immutable
+review-manifest hash; it was not inferred from approval to publish
+documentation.  The manifest's =authorization NOT-GRANTED= row remains
+historically and cryptographically unchanged.

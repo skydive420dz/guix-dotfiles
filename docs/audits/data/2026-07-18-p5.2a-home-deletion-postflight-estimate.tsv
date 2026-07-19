@@ -1,0 +1,286 @@
+schema	p5.1-estimate/v1
+mode	read-only
+policy	additional-distinct-closures	5
+profile	system	86	59	87	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+summary	system	retained-links	8
+summary	system	candidate-links	78
+profile	home	17	17	47	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home
+summary	home	retained-links	17
+summary	home	candidate-links	0
+profile	pull	5	5	5	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+summary	pull	retained-links	5
+summary	pull	candidate-links	0
+candidate	system	1	/gnu/store/pxf9kdcvaiy0n0jvack6f5q4bq0hc0lc-system	unretained-closure
+candidate	system	2	/gnu/store/6kdv0x2pcwl4daqwwxyka55b270f9998-system	unretained-closure
+candidate	system	3	/gnu/store/v8v9rc43z8m6zjsmckah6hjafk10z74n-system	unretained-closure
+candidate	system	4	/gnu/store/day53inbwmfd8qca6f2464xx4hq8rdaj-system	unretained-closure
+candidate	system	5	/gnu/store/g31hicydvcfb9m1akwhgnykzdscrk5pz-system	unretained-closure
+candidate	system	6	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system	unretained-closure
+candidate	system	7	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system	unretained-closure
+candidate	system	8	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system	unretained-closure
+candidate	system	9	/gnu/store/4kayh6h8rb42zn5mvq7pddfkfdb68q8n-system	unretained-closure
+candidate	system	11	/gnu/store/1g6dgr5zcnsj9x41p14j783ghxb8lwca-system	unretained-closure
+candidate	system	12	/gnu/store/bvg30i38b7jngf1154s7p17dfbcl0269-system	unretained-closure
+candidate	system	13	/gnu/store/2rgc4g9xh07wkbfwyl9b08jpxcspfa17-system	unretained-closure
+candidate	system	14	/gnu/store/ik0krc8bhss1540ff8pq3d8jkpxzs1y2-system	unretained-closure
+candidate	system	15	/gnu/store/ik0krc8bhss1540ff8pq3d8jkpxzs1y2-system	unretained-closure
+candidate	system	16	/gnu/store/k80j2nz1cvbck5y40y9xdqk56s51k274-system	unretained-closure
+candidate	system	17	/gnu/store/k80j2nz1cvbck5y40y9xdqk56s51k274-system	unretained-closure
+candidate	system	18	/gnu/store/9mwzsqs47ddfdb1qj2m3k8lm0a8xnd9q-system	unretained-closure
+candidate	system	19	/gnu/store/rm3hn7r7padary5jsv2828j644qfv998-system	unretained-closure
+candidate	system	20	/gnu/store/y89hi7p4lh7ps8z2nr0dk0dljvnjdaf8-system	unretained-closure
+candidate	system	21	/gnu/store/pxj1ndm9p14qbil5hs5sz9046mmdrk33-system	unretained-closure
+candidate	system	22	/gnu/store/06kpdfxg30dm3jfrxidwz9rzzc68hzh2-system	unretained-closure
+candidate	system	23	/gnu/store/k6xlrbxsx93vzmh1bdfqifjylhqi9iwa-system	unretained-closure
+candidate	system	24	/gnu/store/9s599qwp7ldr70y474klnk4yqcfm68d2-system	unretained-closure
+candidate	system	25	/gnu/store/k6xlrbxsx93vzmh1bdfqifjylhqi9iwa-system	unretained-closure
+candidate	system	26	/gnu/store/64v93rf8gqs2ip6sr4lxjs6iq1jqpfdm-system	unretained-closure
+candidate	system	27	/gnu/store/bzid5896syg3dsznw5pnjcd972qa8l7q-system	unretained-closure
+candidate	system	28	/gnu/store/85w3kb9q7rd60c95vndh1f5nrc98d1lr-system	unretained-closure
+candidate	system	29	/gnu/store/5q0h468lka59qm9ymh9bd2gw9hf7z08g-system	unretained-closure
+candidate	system	30	/gnu/store/5q0h468lka59qm9ymh9bd2gw9hf7z08g-system	unretained-closure
+candidate	system	31	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system	unretained-closure
+candidate	system	32	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system	unretained-closure
+candidate	system	33	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system	unretained-closure
+candidate	system	34	/gnu/store/a24g3cjwi3ipdmch596rv4y6z3h2bv1n-system	unretained-closure
+candidate	system	35	/gnu/store/f344fd0mhz4l5z6hr9q3dbdac9vwy4j7-system	unretained-closure
+candidate	system	36	/gnu/store/f344fd0mhz4l5z6hr9q3dbdac9vwy4j7-system	unretained-closure
+candidate	system	37	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system	unretained-closure
+candidate	system	38	/gnu/store/qwqs1bnx0jd3zvii5x5nq9kwgppb9xqi-system	unretained-closure
+candidate	system	39	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system	unretained-closure
+candidate	system	40	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system	unretained-closure
+candidate	system	41	/gnu/store/azi8kacji2192hdiirnn7cx920xab8im-system	unretained-closure
+candidate	system	42	/gnu/store/8c5cg42nqas33hfknfmc1m26kv3gqydz-system	unretained-closure
+candidate	system	43	/gnu/store/8c5cg42nqas33hfknfmc1m26kv3gqydz-system	unretained-closure
+candidate	system	44	/gnu/store/gn6vaf99knnfb6i9p4hzlz344xqy9miy-system	unretained-closure
+candidate	system	45	/gnu/store/gn6vaf99knnfb6i9p4hzlz344xqy9miy-system	unretained-closure
+candidate	system	46	/gnu/store/399al9m29qhk5cspam22m6r041cjfyax-system	unretained-closure
+candidate	system	47	/gnu/store/sw3mv9fc90nwlc3mazyrkqvbf6s1nghq-system	unretained-closure
+candidate	system	48	/gnu/store/ia9z3b7jqi17bc9y7cr2wks9spyy24cy-system	unretained-closure
+candidate	system	49	/gnu/store/ia9z3b7jqi17bc9y7cr2wks9spyy24cy-system	unretained-closure
+candidate	system	50	/gnu/store/xi7jjf360ic0nv9b5lvig86y9a8npfzz-system	unretained-closure
+candidate	system	51	/gnu/store/28mkvq5wmg4lw9rlv3q76pmz2v8q335j-system	unretained-closure
+candidate	system	52	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system	unretained-closure
+candidate	system	53	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system	unretained-closure
+candidate	system	54	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system	unretained-closure
+candidate	system	55	/gnu/store/c4pzvhfrdwy3rpn79k4wli0hsq2kwknq-system	unretained-closure
+candidate	system	56	/gnu/store/6wdgy6lgx21m7szc4aalrri7klw81xv5-system	unretained-closure
+candidate	system	57	/gnu/store/wm9g49p8kbbyxlzmc55alydl77c3y9il-system	unretained-closure
+candidate	system	58	/gnu/store/s33vqbfh7rhs0mkvv4i5xaxas5pskrgq-system	unretained-closure
+candidate	system	59	/gnu/store/s33vqbfh7rhs0mkvv4i5xaxas5pskrgq-system	unretained-closure
+candidate	system	60	/gnu/store/gqwbnc3jijhn7as2kw4ld5z5b1zazb91-system	unretained-closure
+candidate	system	61	/gnu/store/gqwbnc3jijhn7as2kw4ld5z5b1zazb91-system	unretained-closure
+candidate	system	62	/gnu/store/2a0jh25wvxf5d4knw3aykrjfwsj70zp5-system	unretained-closure
+candidate	system	63	/gnu/store/5kczpfmnp3igb9mkhs8wypc0mmy2gmdm-system	unretained-closure
+candidate	system	64	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system	unretained-closure
+candidate	system	65	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system	unretained-closure
+candidate	system	66	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system	unretained-closure
+candidate	system	67	/gnu/store/xh6p1d8yb8s4kx8r0lxcsd5ah5p5i6s0-system	unretained-closure
+candidate	system	68	/gnu/store/xh6p1d8yb8s4kx8r0lxcsd5ah5p5i6s0-system	unretained-closure
+candidate	system	69	/gnu/store/ahw8zgrmwv4y086bp69p8iw139x2wiab-system	unretained-closure
+candidate	system	70	/gnu/store/35rdg3394f41m865a7fk4qbdixb5xdgi-system	unretained-closure
+candidate	system	71	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	duplicate-retained-closure
+candidate	system	72	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	duplicate-retained-closure
+candidate	system	73	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	duplicate-retained-closure
+candidate	system	74	/gnu/store/82ya3h1jjzws2rs4yq2j7cmywmm2xyn0-system	unretained-closure
+candidate	system	76	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system	unretained-closure
+candidate	system	77	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system	unretained-closure
+candidate	system	78	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system	unretained-closure
+candidate	system	79	/gnu/store/h4w9z5ljnn31s2zaqs78jv2ynm3fcqdz-system	unretained-closure
+candidate	system	82	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	duplicate-retained-closure
+closure	home	29	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	retain	pin
+closure	home	32	/gnu/store/5l5rn2alj38qclkj93cybla70jhyx6ls-home	retain	pin
+closure	home	33	/gnu/store/dbmnwmi0jypvpi5kb0xn29wjpdhnjr6z-home	retain	pin
+closure	home	34	/gnu/store/xzhsfha3cbbzgs3gddi47iq1fk89fmiq-home	retain	pin
+closure	home	35	/gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home	retain	pin
+closure	home	36	/gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home	retain	pin
+closure	home	37	/gnu/store/693n0j3q7ikb8v0bzj76swqg82b6z219-home	retain	pin
+closure	home	38	/gnu/store/aghqh0si8x2pr0cmfyir7mgaks217yb6-home	retain	pin
+closure	home	39	/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home	retain	pin
+closure	home	40	/gnu/store/by5c2mcdhmxf456q7imb6j56kv2y9s4w-home	retain	pin
+closure	home	41	/gnu/store/ci9szqljcz4jjvwcrp76865j8q8ihl3d-home	retain	pin
+closure	home	42	/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home	retain	newest-additional,pin
+closure	home	43	/gnu/store/1slsnsfv8avdqzi3fsf0xhigyv6vfmal-home	retain	newest-additional
+closure	home	44	/gnu/store/gb9kvfwniwwasga61lia7b1dagfa2a4r-home	retain	newest-additional
+closure	home	45	/gnu/store/9rmcgpl41riggidbkjz7ah3fj7a9wfky-home	retain	newest-additional
+closure	home	46	/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home	retain	newest-additional,pin
+closure	home	47	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home	retain	current,pin
+closure	pull	1	/gnu/store/01fsgyxi06ahv5ca4j7djlqwqy0vb3nx-profile	retain	newest-additional
+closure	pull	2	/gnu/store/fyjqkz8rl6q459pshbn2r9nihfw9x3xw-profile	retain	newest-additional,pin
+closure	pull	3	/gnu/store/x9mc2silb9pdszck8yfbvh4plysxkmw2-profile	retain	newest-additional,pin
+closure	pull	4	/gnu/store/irs2nbihzakvv0jjs0vzvjyxz2lkiym7-profile	retain	newest-additional,pin
+closure	pull	5	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile	retain	current,pin
+closure	system	1	/gnu/store/pxf9kdcvaiy0n0jvack6f5q4bq0hc0lc-system	candidate	outside-floor
+closure	system	2	/gnu/store/6kdv0x2pcwl4daqwwxyka55b270f9998-system	candidate	outside-floor
+closure	system	3	/gnu/store/v8v9rc43z8m6zjsmckah6hjafk10z74n-system	candidate	outside-floor
+closure	system	4	/gnu/store/day53inbwmfd8qca6f2464xx4hq8rdaj-system	candidate	outside-floor
+closure	system	5	/gnu/store/g31hicydvcfb9m1akwhgnykzdscrk5pz-system	candidate	outside-floor
+closure	system	8	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system	candidate	outside-floor
+closure	system	9	/gnu/store/4kayh6h8rb42zn5mvq7pddfkfdb68q8n-system	candidate	outside-floor
+closure	system	11	/gnu/store/1g6dgr5zcnsj9x41p14j783ghxb8lwca-system	candidate	outside-floor
+closure	system	12	/gnu/store/bvg30i38b7jngf1154s7p17dfbcl0269-system	candidate	outside-floor
+closure	system	13	/gnu/store/2rgc4g9xh07wkbfwyl9b08jpxcspfa17-system	candidate	outside-floor
+closure	system	15	/gnu/store/ik0krc8bhss1540ff8pq3d8jkpxzs1y2-system	candidate	outside-floor
+closure	system	17	/gnu/store/k80j2nz1cvbck5y40y9xdqk56s51k274-system	candidate	outside-floor
+closure	system	18	/gnu/store/9mwzsqs47ddfdb1qj2m3k8lm0a8xnd9q-system	candidate	outside-floor
+closure	system	19	/gnu/store/rm3hn7r7padary5jsv2828j644qfv998-system	candidate	outside-floor
+closure	system	20	/gnu/store/y89hi7p4lh7ps8z2nr0dk0dljvnjdaf8-system	candidate	outside-floor
+closure	system	21	/gnu/store/pxj1ndm9p14qbil5hs5sz9046mmdrk33-system	candidate	outside-floor
+closure	system	22	/gnu/store/06kpdfxg30dm3jfrxidwz9rzzc68hzh2-system	candidate	outside-floor
+closure	system	24	/gnu/store/9s599qwp7ldr70y474klnk4yqcfm68d2-system	candidate	outside-floor
+closure	system	25	/gnu/store/k6xlrbxsx93vzmh1bdfqifjylhqi9iwa-system	candidate	outside-floor
+closure	system	26	/gnu/store/64v93rf8gqs2ip6sr4lxjs6iq1jqpfdm-system	candidate	outside-floor
+closure	system	27	/gnu/store/bzid5896syg3dsznw5pnjcd972qa8l7q-system	candidate	outside-floor
+closure	system	28	/gnu/store/85w3kb9q7rd60c95vndh1f5nrc98d1lr-system	candidate	outside-floor
+closure	system	30	/gnu/store/5q0h468lka59qm9ymh9bd2gw9hf7z08g-system	candidate	outside-floor
+closure	system	33	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system	candidate	outside-floor
+closure	system	34	/gnu/store/a24g3cjwi3ipdmch596rv4y6z3h2bv1n-system	candidate	outside-floor
+closure	system	36	/gnu/store/f344fd0mhz4l5z6hr9q3dbdac9vwy4j7-system	candidate	outside-floor
+closure	system	38	/gnu/store/qwqs1bnx0jd3zvii5x5nq9kwgppb9xqi-system	candidate	outside-floor
+closure	system	40	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system	candidate	outside-floor
+closure	system	41	/gnu/store/azi8kacji2192hdiirnn7cx920xab8im-system	candidate	outside-floor
+closure	system	43	/gnu/store/8c5cg42nqas33hfknfmc1m26kv3gqydz-system	candidate	outside-floor
+closure	system	45	/gnu/store/gn6vaf99knnfb6i9p4hzlz344xqy9miy-system	candidate	outside-floor
+closure	system	46	/gnu/store/399al9m29qhk5cspam22m6r041cjfyax-system	candidate	outside-floor
+closure	system	47	/gnu/store/sw3mv9fc90nwlc3mazyrkqvbf6s1nghq-system	candidate	outside-floor
+closure	system	49	/gnu/store/ia9z3b7jqi17bc9y7cr2wks9spyy24cy-system	candidate	outside-floor
+closure	system	50	/gnu/store/xi7jjf360ic0nv9b5lvig86y9a8npfzz-system	candidate	outside-floor
+closure	system	51	/gnu/store/28mkvq5wmg4lw9rlv3q76pmz2v8q335j-system	candidate	outside-floor
+closure	system	54	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system	candidate	outside-floor
+closure	system	55	/gnu/store/c4pzvhfrdwy3rpn79k4wli0hsq2kwknq-system	candidate	outside-floor
+closure	system	56	/gnu/store/6wdgy6lgx21m7szc4aalrri7klw81xv5-system	candidate	outside-floor
+closure	system	57	/gnu/store/wm9g49p8kbbyxlzmc55alydl77c3y9il-system	candidate	outside-floor
+closure	system	59	/gnu/store/s33vqbfh7rhs0mkvv4i5xaxas5pskrgq-system	candidate	outside-floor
+closure	system	61	/gnu/store/gqwbnc3jijhn7as2kw4ld5z5b1zazb91-system	candidate	outside-floor
+closure	system	62	/gnu/store/2a0jh25wvxf5d4knw3aykrjfwsj70zp5-system	candidate	outside-floor
+closure	system	63	/gnu/store/5kczpfmnp3igb9mkhs8wypc0mmy2gmdm-system	candidate	outside-floor
+closure	system	66	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system	candidate	outside-floor
+closure	system	68	/gnu/store/xh6p1d8yb8s4kx8r0lxcsd5ah5p5i6s0-system	candidate	outside-floor
+closure	system	69	/gnu/store/ahw8zgrmwv4y086bp69p8iw139x2wiab-system	candidate	outside-floor
+closure	system	70	/gnu/store/35rdg3394f41m865a7fk4qbdixb5xdgi-system	candidate	outside-floor
+closure	system	74	/gnu/store/82ya3h1jjzws2rs4yq2j7cmywmm2xyn0-system	candidate	outside-floor
+closure	system	75	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	retain	pin
+closure	system	78	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system	candidate	outside-floor
+closure	system	79	/gnu/store/h4w9z5ljnn31s2zaqs78jv2ynm3fcqdz-system	candidate	outside-floor
+closure	system	80	/gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system	retain	pin
+closure	system	81	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system	retain	newest-additional,pin
+closure	system	83	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	retain	newest-additional,pin
+closure	system	84	/gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system	retain	newest-additional,pin
+closure	system	85	/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system	retain	newest-additional,pin
+closure	system	86	/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system	retain	newest-additional,pin
+closure	system	87	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	retain	current,pin
+retain	home	29	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	pin-last-known-good,closure-survivor
+retain	home	32	/gnu/store/5l5rn2alj38qclkj93cybla70jhyx6ls-home	pin-last-known-good,closure-survivor
+retain	home	33	/gnu/store/dbmnwmi0jypvpi5kb0xn29wjpdhnjr6z-home	pin-last-known-good,closure-survivor
+retain	home	34	/gnu/store/xzhsfha3cbbzgs3gddi47iq1fk89fmiq-home	pin-last-known-good,closure-survivor
+retain	home	35	/gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home	pin-last-known-good,closure-survivor
+retain	home	36	/gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home	pin-last-known-good,closure-survivor
+retain	home	37	/gnu/store/693n0j3q7ikb8v0bzj76swqg82b6z219-home	pin-last-known-good,closure-survivor
+retain	home	38	/gnu/store/aghqh0si8x2pr0cmfyir7mgaks217yb6-home	pin-last-known-good,closure-survivor
+retain	home	39	/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home	pin-last-known-good,closure-survivor
+retain	home	40	/gnu/store/by5c2mcdhmxf456q7imb6j56kv2y9s4w-home	pin-last-known-good,closure-survivor
+retain	home	41	/gnu/store/ci9szqljcz4jjvwcrp76865j8q8ihl3d-home	pin-last-known-good,closure-survivor
+retain	home	42	/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home	pin-last-known-good,closure-survivor
+retain	home	43	/gnu/store/1slsnsfv8avdqzi3fsf0xhigyv6vfmal-home	closure-survivor
+retain	home	44	/gnu/store/gb9kvfwniwwasga61lia7b1dagfa2a4r-home	closure-survivor
+retain	home	45	/gnu/store/9rmcgpl41riggidbkjz7ah3fj7a9wfky-home	closure-survivor
+retain	home	46	/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home	pin-preferred-rollback,closure-survivor
+retain	home	47	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home	current,pin-promotion-rollback,closure-survivor
+retain	pull	1	/gnu/store/01fsgyxi06ahv5ca4j7djlqwqy0vb3nx-profile	closure-survivor
+retain	pull	2	/gnu/store/fyjqkz8rl6q459pshbn2r9nihfw9x3xw-profile	pin-last-known-good,closure-survivor
+retain	pull	3	/gnu/store/x9mc2silb9pdszck8yfbvh4plysxkmw2-profile	pin-last-known-good,closure-survivor
+retain	pull	4	/gnu/store/irs2nbihzakvv0jjs0vzvjyxz2lkiym7-profile	pin-preferred-rollback,closure-survivor
+retain	pull	5	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile	current,pin-promotion-rollback,closure-survivor
+retain	system	75	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	pin-last-known-good,closure-survivor
+retain	system	80	/gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system	pin-emergency-rollback,closure-survivor
+retain	system	81	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system	pin-last-known-good,closure-survivor
+retain	system	83	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	pin-last-known-good,closure-survivor
+retain	system	84	/gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system	pin-last-known-good,closure-survivor
+retain	system	85	/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system	pin-last-known-good,closure-survivor
+retain	system	86	/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system	pin-preferred-rollback,closure-survivor
+retain	system	87	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	current,pin-promotion-rollback,closure-survivor
+helper-schema	p5.1-store-estimate/v1
+known-root	/run/booted-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	persistent
+known-root	/run/current-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	persistent
+known-root	/var/guix/gcroots/bootcfg	/gnu/store/hdwc6z0wdhgqimxqg1gzkznp9irbkwhl-grub.cfg	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/current-guix-1-link	/gnu/store/01fsgyxi06ahv5ca4j7djlqwqy0vb3nx-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/current-guix-2-link	/gnu/store/fyjqkz8rl6q459pshbn2r9nihfw9x3xw-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/current-guix-3-link	/gnu/store/x9mc2silb9pdszck8yfbvh4plysxkmw2-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/current-guix-4-link	/gnu/store/irs2nbihzakvv0jjs0vzvjyxz2lkiym7-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/current-guix-5-link	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-29-link	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-32-link	/gnu/store/5l5rn2alj38qclkj93cybla70jhyx6ls-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-33-link	/gnu/store/dbmnwmi0jypvpi5kb0xn29wjpdhnjr6z-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-34-link	/gnu/store/xzhsfha3cbbzgs3gddi47iq1fk89fmiq-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-35-link	/gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-36-link	/gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-37-link	/gnu/store/693n0j3q7ikb8v0bzj76swqg82b6z219-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-38-link	/gnu/store/aghqh0si8x2pr0cmfyir7mgaks217yb6-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-39-link	/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-40-link	/gnu/store/by5c2mcdhmxf456q7imb6j56kv2y9s4w-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-41-link	/gnu/store/ci9szqljcz4jjvwcrp76865j8q8ihl3d-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-42-link	/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-43-link	/gnu/store/1slsnsfv8avdqzi3fsf0xhigyv6vfmal-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-44-link	/gnu/store/gb9kvfwniwwasga61lia7b1dagfa2a4r-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-45-link	/gnu/store/9rmcgpl41riggidbkjz7ah3fj7a9wfky-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-46-link	/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/guix-home-47-link	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/inferiors/bcrjkeiif54sonpn4ucwh35otpd2smyqxw6hgwemc5voam3eumwa	/gnu/store/10f02bgfbc3wwbs8h8n2wyyq8w8i7f65-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/inferiors/bzjrkwqinot6videeo5ub676no6nugepdvr2x7asa3bwxwruicya	/gnu/store/dslw1is0814jrfkfw65s8mfq52gs86c3-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/inferiors/c7hilgbhm2nwxqtcibylrkgphdwhvp26yaondbepngwtm5np5c2q	/gnu/store/ksfmd8xk0hzzljjgigh4rn3wrm52cxgr-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/inferiors/ko77zcjpvj7szq6evvuzj73vd5aca4u4xrespwr62upc4ivkjxpq	/gnu/store/b98ca2wxlmj7gk4xnvsq9fdz6lag5w46-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/inferiors/ue5ofbpopoipzruzmwhdh6tfdmf27bdpwak6kyndi63b5iu27ixa	/gnu/store/40p7k4flb8iqk7isbb2dilbax6s6w5ky-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/inferiors/uw7vu2hxvzeqw6xqex64xtpofmgmtsk4slq4fegb2zrsenewz3eq	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/inferiors/vqm4zge5s5fiwekvi5al4h6bv3a4mlpel6b5co6bgtehs7tgt6wa	/gnu/store/dppzgdnyidiimaz9387lg074pbxk3zf9-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/2egwc3brq3hmo5lui7ivt5i3huyz7rphhg5347bkfr23zki7qlza	/gnu/store/31pzgfv90yqzw0yga3vqyimml68djcfj-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/2oh7psxcgp2kwghl7poof2a5gncvgkqvkx273mvi5rswpn5iiemq	/gnu/store/1242k2q3xgjbpnmsvak3l4420czcnbrw-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/6j76jkhjftv5l2hy5i7dgzi4tewi72c5s6xbv5ucglfgotkaxrka	/gnu/store/cdsp824h9c1k78nyilz37jsxz9qva1ql-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/7d3mjwoctjfeukr5gnedmg3lmmuhmdhq3aojljbeavhc7dg63lba	/gnu/store/pniw109gb7mk808qpvk6c72zdmm3mypa-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/7nfeduoxeqepgoth6qgn4t4nfoyrfbn7pmbm5mr2yvaqtdreqm2q	/gnu/store/n4mnacwl189rd3n5hyh8jzydvl2ksrmk-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/7r5xmh6cezcpzbwcof5c3alfmqduajq5yca4yiyxckcclkwzhkga	/gnu/store/0ixdf9nzjmh677v1qgs2ljzls251zvxw-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/axpbmahfq7shw4jauisnx47sutpf6b43tougwr2rq5uyhaph62zq	/gnu/store/70h04kgk39gblzqgbpzmb4ihv1l7xn61-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/cxvte6kgydxsetoyfswhjax2u5ztxczypk5kwx4ajzhf356w3gea	/gnu/store/jji9zz947gh7l32kwayi3qxnzfb892ac-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/dmsezdx5zotipgxpi7uuxcdfkyxr5df6cxqeq5rgke6r5b7zitba	/gnu/store/z00g4m7pqqf8krp8k6dca2x1d31wyqvp-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/dyijs2ilroekn3hrhr6punl2r4fsbx56vmdhbbxlwmeptlk7ugeq	/gnu/store/jcdc92b86nmanivv53cdg96k6c1cr6v2-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/ekldbefroozu4xlkzt7gqnqiwzxmyh5375rtkxmrezkuorxgkc3a	/gnu/store/rk5c414f6b05lkc3yhl0r661k1753lm7-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/fnbjneqosbbyfjdhdujga6nze5i4eqouzohq4w7oeyzx2mqydfvq	/gnu/store/dachxzl0rbmgkzl4yax78l5zngq4wfyx-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/fxus36aeaav5bi7kxxwr5jux72lcpnezaxbt5exfzygrbdtkyjra	/gnu/store/nb2mnbn800g8kfkm53pk02hmcqv4lvgh-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/i3fnlg4vv2w7mvcs4mxpzcbdjoxiuvvpygibmasdlvaqsre3y4na	/gnu/store/j3j2gzdvlpnj1l21rcjz65m96m8f5fk7-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/i3vts2nbuhkew6r2dtgcd47cou2x2in4wbth3ivlme3omnagoxua	/gnu/store/lh944misbg4clxz1xbfsnd4gd31gzyb1-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/ih3fbqzhlc62wooij7abngrppyhwkqcztuvsyta2pcuglbnvmusq	/gnu/store/faach7c2ndlps0sx04ihicn08qkdjhl6-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/lmo5ezbclczolb4tknpvqe33u3qmlf5vymzbp6brtpbm35fbozxa	/gnu/store/97fhg9vaz8a2l3h8i3scdm4j89nrw276-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/mpzol5egue2y6f25z63lw4zmmv5hkh4obnemspk4uyqgdfeajw3a	/gnu/store/7rgzwm3rgvkagrf8dywkqwkzdamh2v06-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/mupwp4wh6ayam3gn33eay4ox3ijpecru47opgvk2rid2noqw5xaq	/gnu/store/qsyiv5g72kplvh2hngn4higq1sgd1rf2-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/ndd3hwmc77uw3in77rld5e3dtfzpfdamonkw5yc6pazeahtslc3q	/gnu/store/61zg6fdi5k54hf64cwizck4cc4aq2d6h-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/nomhnr4qlvlk72hw66y6sct72bj7cbymvlyl5z7eqjbhtmeod22a	/gnu/store/b302dzfxwnn8sj36h6hy2h58p1577rgd-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/nqv4hbqgxnkcek2x4mu7itpfclyjbxmlt555egxd5tzn66yyslgq	/gnu/store/xq2ma6h82crlwaxwrxv8snyh4x7aipsz-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/o5frsvimaz2v5hhd4a457dz47uvbfhesdpj7lhbohd5qsf5oma7q	/gnu/store/fp1iln6klxjgl7f1myqgkhjhn5pakafa-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/pj2tkjay2uqbs3tf4qflu4f3ux7sikirwifiwefkgka2vozgsblq	/gnu/store/fzvvjbbfhcqdskiiwv1shcila31faacy-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/pk6tha7ju2gfbw3uv46yabbw7uygmttj7rqzwnueauvkbithsu4q	/gnu/store/v5vzwl9g57960384ng0pzjf0ajmdzz36-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/rayypyyqszpdavmfh4x4nk72qq43vfj7flqv7b7z3qiy5qp4x3la	/gnu/store/pniw109gb7mk808qpvk6c72zdmm3mypa-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/tgq776bhb2iswb2yrh3jtzeekjsrruck52wojjx7ixyfszcmeo5q	/gnu/store/2a456lhzrjcgn6k310an45i25jnvhmcc-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/tzlanrj5rmu4cbd2i3k3ijb34xw5pxz7na6m7r4giioevg3nn7qq	/gnu/store/cxxfx3214qlbr3mnddp2xn7yn7nkgkv1-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/vqxdqbmx2tccmkmat2ycmwy6uzuu24zqzv67jsayto6kme7kbyua	/gnu/store/x7qmxw8y95asdxlm26bahffm5m1fnczv-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/wnblhxvm442hxe4oax4zgn5nep6p5dr4sqynk3nwjx5geuyatgqa	/gnu/store/18m15sw21m7l76k50c0grd87hp6rs6mn-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/y76fzxkoayrblwm2ismqxmi5ehfqjn4v7pljgbvvbdrpbuxvlnba	/gnu/store/3jnsx5vdidx95bnxwi0110d9vm0lcsl2-profile	persistent
+known-root	/var/guix/profiles/per-user/skydive420dz/profiles/yzdrrvwzspk2ljgnqgt7hiyho5fnuk3vwxx35o5pvhxjg4hycvta	/gnu/store/4j1650bn16p2pw1zbpmggy0g676ylf62-profile	persistent
+known-root	/var/guix/profiles/system-75-link	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	persistent
+known-root	/var/guix/profiles/system-80-link	/gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system	persistent
+known-root	/var/guix/profiles/system-81-link	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system	persistent
+known-root	/var/guix/profiles/system-83-link	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	persistent
+known-root	/var/guix/profiles/system-84-link	/gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system	persistent
+known-root	/var/guix/profiles/system-85-link	/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system	persistent
+known-root	/var/guix/profiles/system-86-link	/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system	persistent
+known-root	/var/guix/profiles/system-87-link	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	persistent
+estimate	candidate-closure-union	3739	27356043728	measurement
+estimate	candidate-exclusive-vs-policy	2473	11299214832	forward-references-only
+estimate	candidate-exclusive-vs-persistent-known-roots	2472	11299165760	forward-references-only
+estimate	guaranteed-reclaimable	0	0	lower-bound
+coverage	persistent-roots	daemon-find-roots-snapshot-minus-proposed-generation-links
+coverage	gc-derivation-policy	not-modeled
+coverage	process-roots	not-enumerated
+coverage	temporary-roots	not-enumerated
+coverage	filesystem-allocation	nar-bytes-only-hardlinks-and-blocks-not-modeled
+helper-status	PASS
+fingerprint	b8f3a8576e884fc9ca7297e0a40777a7ab9102ebf4eb1d2524c7f5d94ac60884
+status	PASS

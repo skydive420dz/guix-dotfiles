@@ -5,8 +5,10 @@ script_dir=$(CDPATH='' cd "$(dirname "$0")" && pwd -P)
 repo=$(CDPATH='' cd "$script_dir/.." && pwd -P)
 fresh=$repo/docs/audits/data/2026-07-18-p5.2-preflight-estimate.tsv
 review=$repo/docs/audits/data/2026-07-18-p5.2-generation-deletion-review.tsv
+post=$repo/docs/audits/data/2026-07-18-p5.2a-home-deletion-postflight-estimate.tsv
 expected_estimate=1fe7ab18d7fb4e7d3c6ed0e3fd148f796d36d1122a80f1aa903165dd7eee8e11
 expected_review=75c8e4a40d7cacb32ab8324d50001b09d2450972a57eb142112cf8ae07edbb2d
+expected_post=41a668d38b8a1d3121415db9c00641a8de592bf7142dbb5631621dda97baf6ee
 tab=$(printf '\t')
 work=$(mktemp -d "${TMPDIR:-/tmp}/p52-review-check.XXXXXX")
 trap 'rm -rf -- "$work"' EXIT HUP INT TERM
@@ -24,10 +26,14 @@ hash_file() {
     fail "fresh estimate hash mismatch"
 [ "$(hash_file "$review")" = "$expected_review" ] ||
     fail "review manifest hash mismatch"
+[ "$(hash_file "$post")" = "$expected_post" ] ||
+    fail "postflight estimate hash mismatch"
 [ "$(wc -l <"$fresh" | tr -d ' ')" -eq 329 ] ||
     fail "fresh estimate row count mismatch"
 [ "$(wc -l <"$review" | tr -d ' ')" -eq 172 ] ||
     fail "review manifest row count mismatch"
+[ "$(wc -l <"$post" | tr -d ' ')" -eq 286 ] ||
+    fail "postflight estimate row count mismatch"
 
 awk -F "$tab" '$1 == "candidate" && $2 == "home" {
     print $3 "\t" $4 "\t" $5
@@ -83,5 +89,106 @@ awk -F "$tab" '
                auth == 1 && status == 1)
     }
 ' "$review" || fail "review manifest cardinality or boundary mismatch"
+
+awk -F "$tab" '
+    $1 == "profile" { profile_rows++ }
+    $1 == "profile" && $2 == "system" &&
+        $3 == 86 && $4 == 59 && $5 == 87 &&
+        $6 == "/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system" &&
+        NF == 6 {
+            system_profile++
+        }
+    $1 == "profile" && $2 == "home" &&
+        $3 == 17 && $4 == 17 && $5 == 47 &&
+        $6 == "/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home" &&
+        NF == 6 {
+            home_profile++
+        }
+    $1 == "profile" && $2 == "pull" &&
+        $3 == 5 && $4 == 5 && $5 == 5 &&
+        $6 == "/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile" &&
+        NF == 6 {
+            pull_profile++
+        }
+    $1 == "summary" { summary_rows++ }
+    $1 == "summary" && $2 == "system" &&
+        $3 == "retained-links" && $4 == 8 { system_retained++ }
+    $1 == "summary" && $2 == "system" &&
+        $3 == "candidate-links" && $4 == 78 { system_candidates++ }
+    $1 == "summary" && $2 == "home" &&
+        $3 == "retained-links" && $4 == 17 { home_retained++ }
+    $1 == "summary" && $2 == "home" &&
+        $3 == "candidate-links" && $4 == 0 { home_candidates++ }
+    $1 == "summary" && $2 == "pull" &&
+        $3 == "retained-links" && $4 == 5 { pull_retained++ }
+    $1 == "summary" && $2 == "pull" &&
+        $3 == "candidate-links" && $4 == 0 { pull_candidates++ }
+    $1 == "candidate" {
+        candidates++
+        if ($2 == "system" && NF == 5) system_candidate_rows++
+        else wrong_candidate_profile++
+    }
+    $1 == "retain" {
+        retains++
+        if (NF != 5) malformed_retains++
+        if ($2 == "system") system_retain_rows++
+        else if ($2 == "home") home_retain_rows++
+        else if ($2 == "pull") pull_retain_rows++
+        else wrong_retain_profile++
+    }
+    $1 == "estimate" && $2 == "guaranteed-reclaimable" &&
+        $3 == 0 && $4 == 0 && $5 == "lower-bound" { zero_reclaim++ }
+    $1 == "helper-status" && $2 == "PASS" { helper_status++ }
+    $1 == "fingerprint" &&
+        $2 == "b8f3a8576e884fc9ca7297e0a40777a7ab9102ebf4eb1d2524c7f5d94ac60884" {
+            fingerprint++
+        }
+    $1 == "status" && $2 == "PASS" { status++ }
+    END {
+        exit !(profile_rows == 3 && system_profile == 1 &&
+               home_profile == 1 && pull_profile == 1 &&
+               summary_rows == 6 &&
+               system_retained == 1 && system_candidates == 1 &&
+               home_retained == 1 && home_candidates == 1 &&
+               pull_retained == 1 && pull_candidates == 1 &&
+               candidates == 78 && system_candidate_rows == 78 &&
+               wrong_candidate_profile == 0 && retains == 30 &&
+               system_retain_rows == 8 && home_retain_rows == 17 &&
+               pull_retain_rows == 5 && malformed_retains == 0 &&
+               wrong_retain_profile == 0 &&
+               zero_reclaim == 1 && helper_status == 1 &&
+               fingerprint == 1 && status == 1)
+    }
+' "$post" || fail "postflight estimate cardinality or boundary mismatch"
+
+awk -F "$tab" '$1 == "hold" && $2 == "system" {
+    print $3 "\t" $6 "\t" $7
+}' "$review" >"$work/review-held-system"
+awk -F "$tab" '$1 == "candidate" && $2 == "system" {
+    print $3 "\t" $4 "\t" $5
+}' "$post" >"$work/post-system-candidates"
+cmp -s "$work/review-held-system" "$work/post-system-candidates" ||
+    fail "postflight System candidates differ from reviewed held rows"
+
+awk -F "$tab" '$1 == "retain" {
+    print $2 "\t" $3 "\t" $6 "\t" $7
+}' "$review" >"$work/review-retained"
+awk -F "$tab" '$1 == "retain" {
+    print $2 "\t" $3 "\t" $4 "\t" $5
+}' "$post" >"$work/post-retained"
+cmp -s "$work/review-retained" "$work/post-retained" ||
+    fail "postflight retained rows differ from review manifest"
+
+awk -F "$tab" '
+    NR == FNR {
+        if ($1 == "delete" && $2 == "home")
+            deleted[$2 SUBSEP $3] = 1
+        next
+    }
+    ($1 == "candidate" || $1 == "retain") &&
+        (($2 SUBSEP $3) in deleted) { conflicts++ }
+    END { exit conflicts != 0 }
+' "$review" "$post" ||
+    fail "reviewed deleted Home generation remains in postflight rows"
 
 printf 'guix-generation-retention-p52-review-check: PASS\n'

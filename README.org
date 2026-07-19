@@ -121,15 +121,16 @@ complete; its closure returned Phase 5 to backlog.  At that boundary P5.2
 deletion and P5.3 collection remained unpromoted, separately reviewed, and
 explicitly attended.
 
-P5.2's read-only preflight now observes a byte-identical =108=-candidate state
-and selects only the 30 Home links as a proposed first manual cycle.  The
-review manifest records exact raw/canonical targets, retained reasons, the
-=47 -> 17= expected Home transition, and a zero material-store-reclaim
-expectation.  All 78 System candidates are held: the installed supported
-System deletion action also reconstructs GRUB from a default bootloader
-configuration, while GuixPC declares a custom EFI target, ultrawide
-theme/gfxmode, and keyboard layout.  Publication and a separate external
-authorization remain pending; no generation or bootloader mutation is claimed.
+P5.2's historical read-only preflight observed a byte-identical
+=108=-candidate state and selected only the 30 Home links for the first manual
+cycle.  Its plan was published at =450f396= and separately authorized by
+immutable review-manifest hash.  P5.2a then removed exactly Home
+=1..28,30,31=: Home links changed =47 -> 17= while current Home remained
+generation 47.  System/Home/Pull now have =86/17/5= links and =78/0/0=
+candidates.  All retained tuples, all 78 held System candidates, GRUB,
+=bootcfg=, pins, current/booted pointers, and top-level store names remain
+exact.  No GC or dead/live query ran, no store object was removed, and material
+reclaim is zero.  P5.2b and P5.3 remain separately held.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -201,6 +202,9 @@ the separate P5.2/P5.3 stop boundary.
 estimate, exact Home-canary manifest and proposed selector, held System
 candidates, discovered default-GRUB reconstruction hazard, and the
 publication/authorization/postflight boundaries.  It records no deletion.
+[[file:docs/audits/2026-07-18-p5.2a-home-generation-deletion.org][The P5.2a Home generation-deletion record]] owns the later manifest-scoped
+authorization, exact =47 -> 17= link transition, immutable postflight estimate,
+unchanged GRUB/store boundaries, and explicit P5.2b/P5.3 stop.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -315,24 +319,31 @@ or absolute zero-transition result is claimed.
 P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
 parked.  Phase 4 backup/storage implementation is parked by explicit owner
 decision.  P5.1 is complete at published checkpoint =93619e9=.  Phase 5 is
-active only at P5.2's read-only planning boundary.  The proposed P5.2a Home
-canary still requires plan publication and exact attended authorization;
-P5.2b System deletion is held behind a separate design because the supported
-command rewrites GRUB from defaults.  P5.3 collection remains separate and
-unpromoted; no cleanup is authorized.
+back in =BACKLOG= after the completed P5.2a Home canary.  The canary removed
+exactly its 30 reviewed Home links and passed the full =86/17/5= postflight
+without GC, store-object removal, activation, or reboot.  P5.2 remains
+=BACKLOG= because P5.2b System deletion is held behind a separate design: the
+supported command rewrites GRUB from defaults.  P5.3 collection remains
+separate and unpromoted; no further cleanup is authorized.
 
 ** Ready
 
-No slice is currently ready for unattended implementation.  P5.2a is the
-logical sequential candidate: its fresh estimate and exact Home-only review
-packet are ready for publication, but deletion remains blocked on clean
-upstream equality and explicit authorization of the reviewed artifact and
-selector.  P5.2b is not ready until its System/GRUB boundary is designed.
+No slice is currently ready for unattended implementation.  P5.2a is
+complete.  P5.2b is not ready until its System/GRUB boundary is designed.
 P4.O1 private Org sync/history remains a selectable non-destructive successor.
 P5.3 is not ready, P5.S1 storage reorganization remains parked, and
 backup/restore implementation is parked as P4.3.
 
 ** Completed
+
+- [X] P5.2a: reviewed Home generation-deletion canary
+  Published plan checkpoint =450f396= and manifest-scoped authorization bound
+  one attended deletion to Home =1..28,30,31=.  Home links changed
+  =47 -> 17=; System/Home/Pull now have =86/17/5= links and =78/0/0=
+  candidates, with current generations still =87/47/5=.  Retained tuples,
+  System/Pull, pins, GRUB, =bootcfg=, and top-level store names remain exact;
+  =verify= and =rollback-drill= pass.  No GC, store-object removal,
+  activation, or reboot occurred, and material reclaim is zero.
 
 - [X] P5.1: read-only retention and closure-accounting estimator
   Published checkpoint =93619e9= implements the accepted distinct-closure
@@ -410,9 +421,9 @@ backup/restore implementation is parked as P4.3.
   values were not queried.  Guix explicitly permits one build job at a time and
   reports/allows up to four cores to that job; this is an explicit local cap
   with unmeasured throughput/interactivity effects, not a confirmed defect.
-  Forty-four unprotected older same-target generation-link candidates remain
-  only Phase 5
-  inventory evidence; no generation was deleted and no garbage was collected.
+  At that P2.S1a boundary, 44 unprotected older same-target generation-link
+  candidates remained only Phase 5 inventory evidence; no generation was
+  deleted and no garbage was collected during that baseline.
 
 - [X] P2.K1a: read-only boot-edge kernel attribution
   Two of two inspected boots reproduced the exact early initrd-Guile signal,
@@ -2177,14 +2188,18 @@ The exact 329-row result and all coverage limits live in
 authorization.
 
 The P5.2 preflight reproduced that 329-row artifact byte-for-byte, then created
-an exact Home-only review manifest.  Its proposed first manual cycle retains
-Home =29,32..47= and removes only =1..28,30,31=, for =47 -> 17= Home
-generation links.  System remains =86= links and Pull remains =5=.  The
-official System deletion action is held because its post-deletion
+an exact Home-only review manifest.  P5.2a subsequently retained Home
+=29,32..47= and removed only =1..28,30,31=, changing Home links
+=47 -> 17=.  Live System/Home/Pull counts are now =86/17/5=; current
+generations remain =87/47/5= and candidates are =78/0/0=.  The exact 286-row
+result is
+[[file:docs/audits/data/2026-07-18-p5.2a-home-deletion-postflight-estimate.tsv][the P5.2a postflight estimator data]].  No GC ran, no top-level store object
+was removed, and material reclaim is zero.  The official System deletion
+action remains held because its post-deletion
 =reinstall-bootloader= path reconstructs default bootloader configuration
 instead of consuming GuixPC's declared EFI/ultrawide/keymap fields.  No
-deletion command is exposed as an unattended action, and no material store
-space is expected before separately authorized P5.3 collection.
+deletion command is exposed as an unattended action; P5.2b and P5.3 require
+separate review and authorization.
 
 * Live symlinks
 

@@ -844,15 +844,19 @@ CLOSED: [2026-07-18 Sat]
   configuration, activation, backup, disk, boot state, or persistent process
   state.
 
-* NEXT P5.2a reviewed Home generation deletion
+* DONE P5.2a reviewed Home generation deletion
+CLOSED: [2026-07-18 Sat]
 :PROPERTIES:
 :created: 2026-07-18
-:blocked_by: published review checkpoint and explicit authorization of the exact artifact and Home selector
+:completed: 2026-07-18
+:plan_published: 450f396068d0c6e9c83186ae5599a06524fe694c
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-18-p5.2-reviewed-generation-deletion.org][2026-07-18 P5.2 reviewed generation-deletion preflight]].
+- Postflight: [[file:../../../docs/audits/2026-07-18-p5.2a-home-generation-deletion.org][2026-07-18 P5.2a Home generation-deletion canary]].
 - Fresh estimate: [[file:../../../docs/audits/data/2026-07-18-p5.2-preflight-estimate.tsv][329-row P5.2 estimator snapshot]].
 - Review manifest: [[file:../../../docs/audits/data/2026-07-18-p5.2-generation-deletion-review.tsv][exact Home-canary review manifest]].
+- Postflight estimate: [[file:../../../docs/audits/data/2026-07-18-p5.2a-home-deletion-postflight-estimate.tsv][286-row P5.2a estimator snapshot]].
 - [X] Reproduce the complete P5.1 estimate byte-for-byte at SHA256
   =1fe7ab18d7fb4e7d3c6ed0e3fd148f796d36d1122a80f1aa903165dd7eee8e11=
   and pass the 32,831-record no-mutation gate.
@@ -864,15 +868,42 @@ CLOSED: [2026-07-18 Sat]
 - [X] Hold all 78 System candidates.  The supported System command also
   rebuilds GRUB from a default bootloader configuration that omits GuixPC's
   declared EFI target, ultrawide theme/gfxmode, and keyboard layout.
-- [ ] Publish and fetch the review checkpoint with clean upstream equality.
-- [ ] Obtain explicit external authorization naming the review-manifest hash,
-  exact Home selector, expected =47 -> 17= transition, and prohibition on
-  System/Pull/GRUB/store/GC changes.
-- [ ] Run the one reviewed Home command, prove exact link/pointer/pin/store/
+- [X] Publish and fetch review checkpoint =450f396= with clean upstream
+  equality.
+- [X] Obtain explicit external authorization naming P5.2a and the immutable
+  review-manifest hash, thereby binding its exact selector, expected
+  =47 -> 17= transition, and System/Pull/GRUB/store/GC prohibitions.
+- [X] Run the one reviewed Home command, prove exact link/pointer/pin/store/
   GRUB state plus =verify= and =rollback-drill=, and stop.
 - [X] During preflight, change no generation, store object, profile, pin,
   package, configuration, activation, disk, bootloader, backup, boot state, or
   existing persistent process/session/service state.
+
+* BACKLOG P5.2b System generation deletion and custom-GRUB boundary
+:PROPERTIES:
+:created: 2026-07-18
+:blocked_by: separately reviewed fixture-tested exact-link or configuration-aware bootloader design
+:END:
+
+- Hold all 78 System candidates.
+- Do not run the installed supported System deletion command: after removing
+  links it reconstructs GRUB from default bootloader configuration rather than
+  GuixPC's declared EFI target, ultrawide theme/gfxmode, and keyboard layout.
+- Design and review a custom-GRUB-safe boundary separately.  P5.2a does not
+  authorize this stage.
+
+* BACKLOG P5.3 reviewed unreachable-store collection
+:PROPERTIES:
+:created: 2026-07-18
+:blocked_by: accepted post-P5.2 non-mutating estimate and separate explicit collection authorization
+:END:
+
+- Treat generation-link deletion and store-object collection as different
+  destructive operations.
+- P5.2a ran no GC or dead/live query, removed no top-level store object, and
+  reclaimed zero material store space.
+- Review the exact post-deletion liveness boundary before separately
+  authorizing any query with side effects or any collection.
 
 * TODO Hardware inventory for custom kernel
 :PROPERTIES:
