@@ -1,0 +1,21 @@
+schema	p5.2b-retained-bootcfg-result/v1
+mode	STAGE-ONLY
+authorization	NOT-GRANTED
+source-checkpoint	e8e563d342e98d06e2ac5bd14321a4d35ec1e9ad
+guix-revision	a8391f2d7451c2463ba253ffa9872fa6f27485d7
+source-sha256	34398678c3fe52e31f7f0cbf623b9f6f6e5796b132d3e9ce25dd30aeac1ed887
+implementation-module-sha256	7cfb52eee21bcbb36ac7b70b71b33ed3f7ff4c50fd039cc6170ca8f94dfed655
+implementation-driver-sha256	27000fa46b5838379ba8467ee83969234e110d7ffbe654167df98f08ce1e85ef
+implementation-launcher-sha256	27da8fcebd884dfd0f20807ed9db9c9f86599b5da875c8ba88eaba44fb1276d5
+evaluation-input-sha256	8f6ba789739d2880c84005883da76bc84c0e0c822d44b06d3ee3544792768721
+output	/gnu/store/1pfbqbj5mxmxllnhcn0nfpx0ya94fn81-grub.cfg
+output-sha256	70965414824c26e1712c6a7a51efd9517633eb3c83f36f88927565c87807496b
+output-bytes	5163
+projection-equals-output	TRUE
+retained-generations	86,85,84,83,81,80,75
+semantic-result	PASS
+byte-projection-result	PASS
+reviewed-surfaces-pre-post	IDENTICAL
+store-effect	IMMUTABLE-BUILD-OUTPUT-REALIZED
+configuration-tuple	((bootloader . grub-efi) (targets "/boot/efi") (default-entry . 0) (timeout . 5) (terminal-outputs gfxterm) (terminal-inputs) (serial-unit . #f) (serial-speed . #f) (device-tree-support? . #t) (extra-initrd . #f) (static-menu-entries) (theme-resolution 3440 . 1440) (theme-gfxmodes "3440x1440" "2560x1440" "1920x1080" "auto") (theme-image-present? . #t) (theme-color-normal (fg . light-gray) (bg . black)) (theme-color-highlight (fg . yellow) (bg . black)) (keyboard-name . "us") (keyboard-variant . #f) (keyboard-model . #f) (keyboard-options "caps:escape"))
+semantic-tuple	((current-system . "/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system") (current-occurrences . 2) (retained-generations 86 85 84 83 81 80 75) (retained-link-occurrences . 14) (old-submenu-count . 1))

@@ -939,18 +939,19 @@ CLOSED: [2026-07-18 Sat]
   installation, link deletion, GC, root promotion, reconfiguration,
   activation, or reboot action.
 
-** BACKLOG P5.2b-D2b uninstalled retained-only bootcfg artifact
+** DONE P5.2b-D2b uninstalled retained-only bootcfg artifact
+CLOSED: [2026-07-19 Sun]
 :PROPERTIES:
 :created: 2026-07-18
-:blocked_by: published and fetched clean/upstream-equal D2a source checkpoint
 :END:
 
-- [ ] From clean =HEAD == origin/main=, run only the unprivileged immutable
+- Evidence: [[file:../../../docs/audits/2026-07-19-p5.2b-d2b-uninstalled-retained-only-bootcfg.org][2026-07-19 P5.2b-D2b uninstalled retained-only bootcfg artifact]].
+- [X] From clean =HEAD == origin/main=, run only the unprivileged immutable
   store build and require byte equality with the accepted-GRUB projection.
-- [ ] Freeze the exact generated =grub.cfg= bytes, SHA256, size, source
+- [X] Freeze the exact generated =grub.cfg= bytes, SHA256, size, source
   configuration tuple, semantic result, and reviewed pre/post surfaces in the
   repository.
-- [ ] Report immutable store realization explicitly; do not claim whole-store
+- [X] Report immutable store realization explicitly; do not claim whole-store
   or whole-machine byte identity and do not make the result active.
 
 ** BACKLOG P5.2b-D3 recovery transaction and rollback fixtures

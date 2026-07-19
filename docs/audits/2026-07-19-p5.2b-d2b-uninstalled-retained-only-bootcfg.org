@@ -1,0 +1,167 @@
+#+title: P5.2b-D2b uninstalled retained-only bootcfg artifact
+#+date: 2026-07-19
+#+startup: overview
+#+category: guixpc
+#+filetags: :guixpc:guix:grub:maintenance:
+
+* Outcome
+
+P5.2b-D2b realized or confirmed one immutable, uninstalled retained-only GRUB
+configuration from the exact published D2a source checkpoint.  The generated
+bytes equal the independent projection of the accepted installed GRUB, with
+only the seven reviewed old entries retained.
+
+The tracked evidence is:
+
+| Evidence | Path | SHA256 / size |
+|----------+------+---------------|
+| Exact generated GRUB bytes | [[file:data/2026-07-19-p5.2b-d2b-retained-grub.cfg][=data/2026-07-19-p5.2b-d2b-retained-grub.cfg=]] | =70965414824c26e1712c6a7a51efd9517633eb3c83f36f88927565c87807496b= / 5,163 bytes |
+| Untouched stage stdout | [[file:data/2026-07-19-p5.2b-d2b-stage-result.tsv][=data/2026-07-19-p5.2b-d2b-stage-result.tsv=]] | =851e2ad18c8001c32909dec129c9b7b6159668fc3dfea0ab7d3c8c6f3d7bfc61= / 1,804 bytes |
+
+The historical realized output was:
+
+#+begin_example
+/gnu/store/1pfbqbj5mxmxllnhcn0nfpx0ya94fn81-grub.cfg
+#+end_example
+
+It was a regular, read-only =root:root= store file when captured.  No GC root
+naming it was found after capture, so it may disappear independently; the
+tracked copy preserves its reviewed bytes.
+
+This is not an installed or active boot configuration.  D2b changed no System
+generation link, profile pointer, installed GRUB byte, live =bootcfg= root,
+EFI state, boot state, package/profile, or operating-system declaration.
+
+* Publication and source gate
+
+The stage ran only after:
+
+| Gate | Reviewed value |
+|------+----------------|
+| Host / user | =guixpc= / =skydive420dz= |
+| Clean =HEAD= | =e8e563d342e98d06e2ac5bd14321a4d35ec1e9ad= |
+| Fetched =origin/main= | =e8e563d342e98d06e2ac5bd14321a4d35ec1e9ad= |
+| Canonical-spec introduction commit | =e8e563d342e98d06e2ac5bd14321a4d35ec1e9ad= |
+| D2a source record | [[file:2026-07-18-p5.2b-d2a-retained-only-bootcfg-source.org][P5.2b-D2a retained-only bootcfg source checkpoint]] |
+| System/Home/Pull generation links | =86/17/5= |
+| Current System | generation =87= / =/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system= |
+| Booted System | =/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system= |
+| Installed GRUB SHA256 | =6e7fe604ee58723c7e321c3a07a645a2017cfcf49bac62b3ecb0c0559ca30671= |
+| Live =bootcfg= | =/gnu/store/hdwc6z0wdhgqimxqg1gzkznp9irbkwhl-grub.cfg= |
+
+The launcher additionally bound the exact D2a module, driver, launcher,
+evaluation input, operating-system source, Pull-profile store item, pinned
+Guix revision, and canonical stage specification recorded in the result.
+Inherited Guile search paths were removed before evaluation.
+
+* Command and permitted effect
+
+The unprivileged command was:
+
+#+begin_src sh
+cd ~/Projects/guix-dotfiles
+git fetch origin
+scripts/guix-system-retained-bootcfg stage \
+  "$PWD/guix/machines/guixpc/p5.2b-d2-retained-bootcfg-stage.tsv"
+#+end_src
+
+Standard output and diagnostics were captured separately under =/tmp= while
+the checkout remained clean.  The command exited successfully.  Its only
+permitted persistent effect was Guix daemon realization or confirmation of
+immutable store data and associated daemon metadata.  Standard error was:
+
+#+begin_example
+building path(s) `/gnu/store/1pfbqbj5mxmxllnhcn0nfpx0ya94fn81-grub.cfg'
+#+end_example
+
+That diagnostic does not establish whether every referenced store object was
+new, substituted, already present, or how many store bytes changed.
+
+* Exact result
+
+The closed 21-record result reports:
+
+| Field | Result |
+|-------+--------|
+| Schema | =p5.2b-retained-bootcfg-result/v1= |
+| Mode / authorization | =STAGE-ONLY= / =NOT-GRANTED= |
+| Source checkpoint | =e8e563d342e98d06e2ac5bd14321a4d35ec1e9ad= |
+| Output SHA256 / bytes | =70965414824c26e1712c6a7a51efd9517633eb3c83f36f88927565c87807496b= / =5163= |
+| Retained generations | =86,85,84,83,81,80,75= |
+| Projection equality | =TRUE= |
+| Semantic result | =PASS= |
+| Byte-projection result | =PASS= |
+| Reviewed pre/post surfaces | =IDENTICAL= |
+| Store effect | =IMMUTABLE-BUILD-OUTPUT-REALIZED= |
+
+The complete source configuration and semantic tuples remain in the untouched
+tracked result rather than being reserialized here.
+
+Independent checks against the tracked bytes prove:
+
+| Property | Result |
+|----------+--------|
+| Current direct-store occurrences | exactly 2 |
+| Generation-87 link occurrences | zero |
+| Retained link occurrences | exactly 14 |
+| Compressed retained order | =86,85,84,83,81,80,75= |
+| Tracked artifact equals captured store bytes | byte-for-byte |
+| Tracked report equals captured standard output | byte-for-byte |
+| Result schema | exactly 21 known, single-occurrence records |
+
+* Postflight
+
+Immediately after realization and before evidence files entered the checkout:
+
+| Surface | Result |
+|---------+--------|
+| Repository | clean; =HEAD == origin/main == e8e563d= |
+| System/Home/Pull links | unchanged at =86/17/5= |
+| System pointer | unchanged at =/var/guix/profiles/system-87-link= |
+| Booted System | unchanged direct store item |
+| Installed GRUB | unchanged SHA256 =6e7fe604...30671= |
+| Live =bootcfg= | unchanged =hdwc6z0...-grub.cfg= |
+| GC root naming staged output | none found |
+
+The stage driver independently hashed and compared its selected reviewed
+surfaces before and after the build and returned =IDENTICAL=.
+
+* Validation
+
+| Gate | Result |
+|------+--------|
+| D2a exact publication/source gate | PASS |
+| Stage exit | PASS |
+| Closed result-schema parser | PASS; 21 records |
+| Store-output hash and byte count | PASS |
+| Store-output / tracked-artifact byte comparison | PASS |
+| Captured-stdout / tracked-report byte comparison | PASS |
+| GRUB semantic checks | PASS |
+| Accepted-GRUB byte projection | PASS |
+| Independent live postflight | PASS |
+| GuixPC =scripts/shell-check --strict= | PASS |
+| Org lint: README, machine TODO, D2b audit, live-agenda candidate | PASS |
+| Git whitespace check | PASS |
+
+* Explicit non-claims
+
+D2b does not claim:
+
+- that the staged store path will remain reachable without a root;
+- a known whole-store object or byte delta;
+- whole-store or whole-machine identity;
+- installation to =/boot= or EFI;
+- active =bootcfg= promotion;
+- firmware, reboot, or boot testing;
+- recovery-root or transaction readiness;
+- deletion or collection readiness; or
+- authorization for any live mutation.
+
+* Handoff
+
+Publish this D2b evidence checkpoint first.  P5.2b-D3 may then implement and
+fixture-test recovery-root creation/removal, durable phase journaling, profile
+exclusion, and rollback without creating live recovery roots.  D4 remains the
+fresh live manifest and attended-authorization gate before any generation-link,
+GRUB, =bootcfg=, or recovery-root transaction mutation.  P5.3 collection
+remains separate.
