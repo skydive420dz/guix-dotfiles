@@ -1,0 +1,129 @@
+schema	p5.2b-d3b-live-snapshot/v2
+boot-id	64140768-9522-4cad-8021-9db54e070e8a
+repository	branch	main
+repository	head	0601b9d8537afb36b9e3589c6227e8cf652336e1
+repository	origin-main	0601b9d8537afb36b9e3589c6227e8cf652336e1
+repository	tree	2e8e88a6b8b9539117667e1e0ce13898447851f4
+repository	worktree	CLEAN
+source	generation-pins	49c811d35ddaa940afdbe450f08cd67a2fc73ae3d860610c121b7b32caec1ca0	3289:644:1000:998
+generation-link	system	/var/guix/profiles/system-1-link	/gnu/store/pxf9kdcvaiy0n0jvack6f5q4bq0hc0lc-system	/gnu/store/pxf9kdcvaiy0n0jvack6f5q4bq0hc0lc-system
+generation-link	system	/var/guix/profiles/system-11-link	/gnu/store/1g6dgr5zcnsj9x41p14j783ghxb8lwca-system	/gnu/store/1g6dgr5zcnsj9x41p14j783ghxb8lwca-system
+generation-link	system	/var/guix/profiles/system-12-link	/gnu/store/bvg30i38b7jngf1154s7p17dfbcl0269-system	/gnu/store/bvg30i38b7jngf1154s7p17dfbcl0269-system
+generation-link	system	/var/guix/profiles/system-13-link	/gnu/store/2rgc4g9xh07wkbfwyl9b08jpxcspfa17-system	/gnu/store/2rgc4g9xh07wkbfwyl9b08jpxcspfa17-system
+generation-link	system	/var/guix/profiles/system-14-link	/gnu/store/ik0krc8bhss1540ff8pq3d8jkpxzs1y2-system	/gnu/store/ik0krc8bhss1540ff8pq3d8jkpxzs1y2-system
+generation-link	system	/var/guix/profiles/system-15-link	/gnu/store/ik0krc8bhss1540ff8pq3d8jkpxzs1y2-system	/gnu/store/ik0krc8bhss1540ff8pq3d8jkpxzs1y2-system
+generation-link	system	/var/guix/profiles/system-16-link	/gnu/store/k80j2nz1cvbck5y40y9xdqk56s51k274-system	/gnu/store/k80j2nz1cvbck5y40y9xdqk56s51k274-system
+generation-link	system	/var/guix/profiles/system-17-link	/gnu/store/k80j2nz1cvbck5y40y9xdqk56s51k274-system	/gnu/store/k80j2nz1cvbck5y40y9xdqk56s51k274-system
+generation-link	system	/var/guix/profiles/system-18-link	/gnu/store/9mwzsqs47ddfdb1qj2m3k8lm0a8xnd9q-system	/gnu/store/9mwzsqs47ddfdb1qj2m3k8lm0a8xnd9q-system
+generation-link	system	/var/guix/profiles/system-19-link	/gnu/store/rm3hn7r7padary5jsv2828j644qfv998-system	/gnu/store/rm3hn7r7padary5jsv2828j644qfv998-system
+generation-link	system	/var/guix/profiles/system-2-link	/gnu/store/6kdv0x2pcwl4daqwwxyka55b270f9998-system	/gnu/store/6kdv0x2pcwl4daqwwxyka55b270f9998-system
+generation-link	system	/var/guix/profiles/system-20-link	/gnu/store/y89hi7p4lh7ps8z2nr0dk0dljvnjdaf8-system	/gnu/store/y89hi7p4lh7ps8z2nr0dk0dljvnjdaf8-system
+generation-link	system	/var/guix/profiles/system-21-link	/gnu/store/pxj1ndm9p14qbil5hs5sz9046mmdrk33-system	/gnu/store/pxj1ndm9p14qbil5hs5sz9046mmdrk33-system
+generation-link	system	/var/guix/profiles/system-22-link	/gnu/store/06kpdfxg30dm3jfrxidwz9rzzc68hzh2-system	/gnu/store/06kpdfxg30dm3jfrxidwz9rzzc68hzh2-system
+generation-link	system	/var/guix/profiles/system-23-link	/gnu/store/k6xlrbxsx93vzmh1bdfqifjylhqi9iwa-system	/gnu/store/k6xlrbxsx93vzmh1bdfqifjylhqi9iwa-system
+generation-link	system	/var/guix/profiles/system-24-link	/gnu/store/9s599qwp7ldr70y474klnk4yqcfm68d2-system	/gnu/store/9s599qwp7ldr70y474klnk4yqcfm68d2-system
+generation-link	system	/var/guix/profiles/system-25-link	/gnu/store/k6xlrbxsx93vzmh1bdfqifjylhqi9iwa-system	/gnu/store/k6xlrbxsx93vzmh1bdfqifjylhqi9iwa-system
+generation-link	system	/var/guix/profiles/system-26-link	/gnu/store/64v93rf8gqs2ip6sr4lxjs6iq1jqpfdm-system	/gnu/store/64v93rf8gqs2ip6sr4lxjs6iq1jqpfdm-system
+generation-link	system	/var/guix/profiles/system-27-link	/gnu/store/bzid5896syg3dsznw5pnjcd972qa8l7q-system	/gnu/store/bzid5896syg3dsznw5pnjcd972qa8l7q-system
+generation-link	system	/var/guix/profiles/system-28-link	/gnu/store/85w3kb9q7rd60c95vndh1f5nrc98d1lr-system	/gnu/store/85w3kb9q7rd60c95vndh1f5nrc98d1lr-system
+generation-link	system	/var/guix/profiles/system-29-link	/gnu/store/5q0h468lka59qm9ymh9bd2gw9hf7z08g-system	/gnu/store/5q0h468lka59qm9ymh9bd2gw9hf7z08g-system
+generation-link	system	/var/guix/profiles/system-3-link	/gnu/store/v8v9rc43z8m6zjsmckah6hjafk10z74n-system	/gnu/store/v8v9rc43z8m6zjsmckah6hjafk10z74n-system
+generation-link	system	/var/guix/profiles/system-30-link	/gnu/store/5q0h468lka59qm9ymh9bd2gw9hf7z08g-system	/gnu/store/5q0h468lka59qm9ymh9bd2gw9hf7z08g-system
+generation-link	system	/var/guix/profiles/system-31-link	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system
+generation-link	system	/var/guix/profiles/system-32-link	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system
+generation-link	system	/var/guix/profiles/system-33-link	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system	/gnu/store/mk0pv7lfa9f072gzxfw1gxnw4k8q045s-system
+generation-link	system	/var/guix/profiles/system-34-link	/gnu/store/a24g3cjwi3ipdmch596rv4y6z3h2bv1n-system	/gnu/store/a24g3cjwi3ipdmch596rv4y6z3h2bv1n-system
+generation-link	system	/var/guix/profiles/system-35-link	/gnu/store/f344fd0mhz4l5z6hr9q3dbdac9vwy4j7-system	/gnu/store/f344fd0mhz4l5z6hr9q3dbdac9vwy4j7-system
+generation-link	system	/var/guix/profiles/system-36-link	/gnu/store/f344fd0mhz4l5z6hr9q3dbdac9vwy4j7-system	/gnu/store/f344fd0mhz4l5z6hr9q3dbdac9vwy4j7-system
+generation-link	system	/var/guix/profiles/system-37-link	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system
+generation-link	system	/var/guix/profiles/system-38-link	/gnu/store/qwqs1bnx0jd3zvii5x5nq9kwgppb9xqi-system	/gnu/store/qwqs1bnx0jd3zvii5x5nq9kwgppb9xqi-system
+generation-link	system	/var/guix/profiles/system-39-link	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system
+generation-link	system	/var/guix/profiles/system-4-link	/gnu/store/day53inbwmfd8qca6f2464xx4hq8rdaj-system	/gnu/store/day53inbwmfd8qca6f2464xx4hq8rdaj-system
+generation-link	system	/var/guix/profiles/system-40-link	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system	/gnu/store/krcvng8rdh8r3cfqbba9h616yibfgi1g-system
+generation-link	system	/var/guix/profiles/system-41-link	/gnu/store/azi8kacji2192hdiirnn7cx920xab8im-system	/gnu/store/azi8kacji2192hdiirnn7cx920xab8im-system
+generation-link	system	/var/guix/profiles/system-42-link	/gnu/store/8c5cg42nqas33hfknfmc1m26kv3gqydz-system	/gnu/store/8c5cg42nqas33hfknfmc1m26kv3gqydz-system
+generation-link	system	/var/guix/profiles/system-43-link	/gnu/store/8c5cg42nqas33hfknfmc1m26kv3gqydz-system	/gnu/store/8c5cg42nqas33hfknfmc1m26kv3gqydz-system
+generation-link	system	/var/guix/profiles/system-44-link	/gnu/store/gn6vaf99knnfb6i9p4hzlz344xqy9miy-system	/gnu/store/gn6vaf99knnfb6i9p4hzlz344xqy9miy-system
+generation-link	system	/var/guix/profiles/system-45-link	/gnu/store/gn6vaf99knnfb6i9p4hzlz344xqy9miy-system	/gnu/store/gn6vaf99knnfb6i9p4hzlz344xqy9miy-system
+generation-link	system	/var/guix/profiles/system-46-link	/gnu/store/399al9m29qhk5cspam22m6r041cjfyax-system	/gnu/store/399al9m29qhk5cspam22m6r041cjfyax-system
+generation-link	system	/var/guix/profiles/system-47-link	/gnu/store/sw3mv9fc90nwlc3mazyrkqvbf6s1nghq-system	/gnu/store/sw3mv9fc90nwlc3mazyrkqvbf6s1nghq-system
+generation-link	system	/var/guix/profiles/system-48-link	/gnu/store/ia9z3b7jqi17bc9y7cr2wks9spyy24cy-system	/gnu/store/ia9z3b7jqi17bc9y7cr2wks9spyy24cy-system
+generation-link	system	/var/guix/profiles/system-49-link	/gnu/store/ia9z3b7jqi17bc9y7cr2wks9spyy24cy-system	/gnu/store/ia9z3b7jqi17bc9y7cr2wks9spyy24cy-system
+generation-link	system	/var/guix/profiles/system-5-link	/gnu/store/g31hicydvcfb9m1akwhgnykzdscrk5pz-system	/gnu/store/g31hicydvcfb9m1akwhgnykzdscrk5pz-system
+generation-link	system	/var/guix/profiles/system-50-link	/gnu/store/xi7jjf360ic0nv9b5lvig86y9a8npfzz-system	/gnu/store/xi7jjf360ic0nv9b5lvig86y9a8npfzz-system
+generation-link	system	/var/guix/profiles/system-51-link	/gnu/store/28mkvq5wmg4lw9rlv3q76pmz2v8q335j-system	/gnu/store/28mkvq5wmg4lw9rlv3q76pmz2v8q335j-system
+generation-link	system	/var/guix/profiles/system-52-link	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system
+generation-link	system	/var/guix/profiles/system-53-link	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system
+generation-link	system	/var/guix/profiles/system-54-link	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system	/gnu/store/i547q255zccvap7ljm98m00wc7ddcfi4-system
+generation-link	system	/var/guix/profiles/system-55-link	/gnu/store/c4pzvhfrdwy3rpn79k4wli0hsq2kwknq-system	/gnu/store/c4pzvhfrdwy3rpn79k4wli0hsq2kwknq-system
+generation-link	system	/var/guix/profiles/system-56-link	/gnu/store/6wdgy6lgx21m7szc4aalrri7klw81xv5-system	/gnu/store/6wdgy6lgx21m7szc4aalrri7klw81xv5-system
+generation-link	system	/var/guix/profiles/system-57-link	/gnu/store/wm9g49p8kbbyxlzmc55alydl77c3y9il-system	/gnu/store/wm9g49p8kbbyxlzmc55alydl77c3y9il-system
+generation-link	system	/var/guix/profiles/system-58-link	/gnu/store/s33vqbfh7rhs0mkvv4i5xaxas5pskrgq-system	/gnu/store/s33vqbfh7rhs0mkvv4i5xaxas5pskrgq-system
+generation-link	system	/var/guix/profiles/system-59-link	/gnu/store/s33vqbfh7rhs0mkvv4i5xaxas5pskrgq-system	/gnu/store/s33vqbfh7rhs0mkvv4i5xaxas5pskrgq-system
+generation-link	system	/var/guix/profiles/system-6-link	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system
+generation-link	system	/var/guix/profiles/system-60-link	/gnu/store/gqwbnc3jijhn7as2kw4ld5z5b1zazb91-system	/gnu/store/gqwbnc3jijhn7as2kw4ld5z5b1zazb91-system
+generation-link	system	/var/guix/profiles/system-61-link	/gnu/store/gqwbnc3jijhn7as2kw4ld5z5b1zazb91-system	/gnu/store/gqwbnc3jijhn7as2kw4ld5z5b1zazb91-system
+generation-link	system	/var/guix/profiles/system-62-link	/gnu/store/2a0jh25wvxf5d4knw3aykrjfwsj70zp5-system	/gnu/store/2a0jh25wvxf5d4knw3aykrjfwsj70zp5-system
+generation-link	system	/var/guix/profiles/system-63-link	/gnu/store/5kczpfmnp3igb9mkhs8wypc0mmy2gmdm-system	/gnu/store/5kczpfmnp3igb9mkhs8wypc0mmy2gmdm-system
+generation-link	system	/var/guix/profiles/system-64-link	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system
+generation-link	system	/var/guix/profiles/system-65-link	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system
+generation-link	system	/var/guix/profiles/system-66-link	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system	/gnu/store/520h4k3xjhxsb5zj4k9j44p59c5smifc-system
+generation-link	system	/var/guix/profiles/system-67-link	/gnu/store/xh6p1d8yb8s4kx8r0lxcsd5ah5p5i6s0-system	/gnu/store/xh6p1d8yb8s4kx8r0lxcsd5ah5p5i6s0-system
+generation-link	system	/var/guix/profiles/system-68-link	/gnu/store/xh6p1d8yb8s4kx8r0lxcsd5ah5p5i6s0-system	/gnu/store/xh6p1d8yb8s4kx8r0lxcsd5ah5p5i6s0-system
+generation-link	system	/var/guix/profiles/system-69-link	/gnu/store/ahw8zgrmwv4y086bp69p8iw139x2wiab-system	/gnu/store/ahw8zgrmwv4y086bp69p8iw139x2wiab-system
+generation-link	system	/var/guix/profiles/system-7-link	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system
+generation-link	system	/var/guix/profiles/system-70-link	/gnu/store/35rdg3394f41m865a7fk4qbdixb5xdgi-system	/gnu/store/35rdg3394f41m865a7fk4qbdixb5xdgi-system
+generation-link	system	/var/guix/profiles/system-71-link	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system
+generation-link	system	/var/guix/profiles/system-72-link	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system
+generation-link	system	/var/guix/profiles/system-73-link	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system
+generation-link	system	/var/guix/profiles/system-74-link	/gnu/store/82ya3h1jjzws2rs4yq2j7cmywmm2xyn0-system	/gnu/store/82ya3h1jjzws2rs4yq2j7cmywmm2xyn0-system
+generation-link	system	/var/guix/profiles/system-75-link	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system
+generation-link	system	/var/guix/profiles/system-76-link	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system
+generation-link	system	/var/guix/profiles/system-77-link	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system
+generation-link	system	/var/guix/profiles/system-78-link	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system	/gnu/store/hq8cpzffjksirkbfhw31hdjkil9vx8il-system
+generation-link	system	/var/guix/profiles/system-79-link	/gnu/store/h4w9z5ljnn31s2zaqs78jv2ynm3fcqdz-system	/gnu/store/h4w9z5ljnn31s2zaqs78jv2ynm3fcqdz-system
+generation-link	system	/var/guix/profiles/system-8-link	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system	/gnu/store/blq7x37xnfqinnb19jww0mr0njn4da4v-system
+generation-link	system	/var/guix/profiles/system-80-link	/gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system	/gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system
+generation-link	system	/var/guix/profiles/system-81-link	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system
+generation-link	system	/var/guix/profiles/system-82-link	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system
+generation-link	system	/var/guix/profiles/system-83-link	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system
+generation-link	system	/var/guix/profiles/system-84-link	/gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system	/gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system
+generation-link	system	/var/guix/profiles/system-85-link	/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system	/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system
+generation-link	system	/var/guix/profiles/system-86-link	/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system	/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system
+generation-link	system	/var/guix/profiles/system-87-link	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+generation-link	system	/var/guix/profiles/system-9-link	/gnu/store/4kayh6h8rb42zn5mvq7pddfkfdb68q8n-system	/gnu/store/4kayh6h8rb42zn5mvq7pddfkfdb68q8n-system
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-29-link	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-32-link	/gnu/store/5l5rn2alj38qclkj93cybla70jhyx6ls-home	/gnu/store/5l5rn2alj38qclkj93cybla70jhyx6ls-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-33-link	/gnu/store/dbmnwmi0jypvpi5kb0xn29wjpdhnjr6z-home	/gnu/store/dbmnwmi0jypvpi5kb0xn29wjpdhnjr6z-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-34-link	/gnu/store/xzhsfha3cbbzgs3gddi47iq1fk89fmiq-home	/gnu/store/xzhsfha3cbbzgs3gddi47iq1fk89fmiq-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-35-link	/gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home	/gnu/store/7f2lqwx64ixl4bf1l3y97pdn3fxghb3c-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-36-link	/gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home	/gnu/store/n0xnfq95gry4xrlqknvsv682fqid0zd7-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-37-link	/gnu/store/693n0j3q7ikb8v0bzj76swqg82b6z219-home	/gnu/store/693n0j3q7ikb8v0bzj76swqg82b6z219-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-38-link	/gnu/store/aghqh0si8x2pr0cmfyir7mgaks217yb6-home	/gnu/store/aghqh0si8x2pr0cmfyir7mgaks217yb6-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-39-link	/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home	/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-40-link	/gnu/store/by5c2mcdhmxf456q7imb6j56kv2y9s4w-home	/gnu/store/by5c2mcdhmxf456q7imb6j56kv2y9s4w-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-41-link	/gnu/store/ci9szqljcz4jjvwcrp76865j8q8ihl3d-home	/gnu/store/ci9szqljcz4jjvwcrp76865j8q8ihl3d-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-42-link	/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home	/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-43-link	/gnu/store/1slsnsfv8avdqzi3fsf0xhigyv6vfmal-home	/gnu/store/1slsnsfv8avdqzi3fsf0xhigyv6vfmal-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-44-link	/gnu/store/gb9kvfwniwwasga61lia7b1dagfa2a4r-home	/gnu/store/gb9kvfwniwwasga61lia7b1dagfa2a4r-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-45-link	/gnu/store/9rmcgpl41riggidbkjz7ah3fj7a9wfky-home	/gnu/store/9rmcgpl41riggidbkjz7ah3fj7a9wfky-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-46-link	/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home	/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home
+generation-link	home	/var/guix/profiles/per-user/skydive420dz/guix-home-47-link	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home
+generation-link	pull	/var/guix/profiles/per-user/skydive420dz/current-guix-1-link	/gnu/store/01fsgyxi06ahv5ca4j7djlqwqy0vb3nx-profile	/gnu/store/01fsgyxi06ahv5ca4j7djlqwqy0vb3nx-profile
+generation-link	pull	/var/guix/profiles/per-user/skydive420dz/current-guix-2-link	/gnu/store/fyjqkz8rl6q459pshbn2r9nihfw9x3xw-profile	/gnu/store/fyjqkz8rl6q459pshbn2r9nihfw9x3xw-profile
+generation-link	pull	/var/guix/profiles/per-user/skydive420dz/current-guix-3-link	/gnu/store/x9mc2silb9pdszck8yfbvh4plysxkmw2-profile	/gnu/store/x9mc2silb9pdszck8yfbvh4plysxkmw2-profile
+generation-link	pull	/var/guix/profiles/per-user/skydive420dz/current-guix-4-link	/gnu/store/irs2nbihzakvv0jjs0vzvjyxz2lkiym7-profile	/gnu/store/irs2nbihzakvv0jjs0vzvjyxz2lkiym7-profile
+generation-link	pull	/var/guix/profiles/per-user/skydive420dz/current-guix-5-link	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+pointer	system-profile	/var/guix/profiles/system	/var/guix/profiles/system-87-link	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+pointer	home-profile	/var/guix/profiles/per-user/skydive420dz/guix-home	/var/guix/profiles/per-user/skydive420dz/guix-home-47-link	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home
+pointer	pull-profile	/var/guix/profiles/per-user/skydive420dz/current-guix	current-guix-5-link	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+pointer	current-system	/run/current-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+pointer	booted-system	/run/booted-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system
+pointer	bootcfg	/var/guix/gcroots/bootcfg	/gnu/store/hdwc6z0wdhgqimxqg1gzkznp9irbkwhl-grub.cfg	/gnu/store/hdwc6z0wdhgqimxqg1gzkznp9irbkwhl-grub.cfg
+file	installed-grub	/boot/grub/grub.cfg	6e7fe604ee58723c7e321c3a07a645a2017cfcf49bac62b3ecb0c0559ca30671	43262:444:0:0
+store-name-inventory	32602	e92eb1c16e1dbca9e8eaf695b6a026b469e427b7c8a02c382237ec1d3d5400bb
+transaction-surface	transaction-base	ABSENT	-
+transaction-surface	recovery-root-base	ABSENT	-
+transaction-surface	system-profile-lock	ABSENT	-
+transaction-surface	grub-temporary	ABSENT	-
+transaction-surface	bootcfg-temporary	ABSENT	-

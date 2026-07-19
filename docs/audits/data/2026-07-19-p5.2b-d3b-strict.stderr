@@ -1,0 +1,4 @@
+Terminated
+/home/skydive420dz/Projects/guix-dotfiles/tests/guix-system-pruning-transaction-check: line 193: 19353 Killed                  SK_P52B_D3_MANIFEST_SHA=$manifest_sha SK_P52B_D3_STOP_AFTER=$point SK_P52B_D3_STOP_MODE=$mode SK_P52B_D3_HOLD_LOCK_SECONDS=0 "$launcher" "$action" "$manifest" "$root" > "$output_file" 2>&1
+;;; note: source file /home/skydive420dz/Projects/guix-dotfiles/tests/guix-package-ownership-check.scm
+;;;       newer than compiled /home/skydive420dz/.cache/guile/ccache/3.0-LE-8-4.7/home/skydive420dz/Projects/guix-dotfiles/tests/guix-package-ownership-check.scm.go

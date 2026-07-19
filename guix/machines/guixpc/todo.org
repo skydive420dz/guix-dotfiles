@@ -882,7 +882,7 @@ CLOSED: [2026-07-18 Sat]
 * BACKLOG P5.2b System generation deletion and custom-GRUB boundary
 :PROPERTIES:
 :created: 2026-07-18
-:blocked_by: published D3b recovery evidence, fresh live manifest, publication, and manifest-specific authorization
+:blocked_by: published D3b evidence; D4 reconciliation, immutable loading, attended quiescence/revalidation, production GC-root liveness, fresh manifest, and exact authorization
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-18-p5.2b-custom-grub-safe-system-pruning-design.org][2026-07-18 P5.2b custom-GRUB-safe System-pruning design]].
@@ -981,6 +981,7 @@ CLOSED: [2026-07-19 Sun]
 :PROPERTIES:
 :created: 2026-07-19
 :base_published: 676b430617b6902c8d7111bd78a483282de314ae
+:published: 0601b9d8537afb36b9e3589c6227e8cf652336e1
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-19-p5.2b-d3a-compile-gate-correction.org][2026-07-19 P5.2b-D3a compile-gate correction]].
@@ -995,25 +996,31 @@ CLOSED: [2026-07-19 Sun]
 - [X] Keep D3b open until this correction is published and fetched from a
   clean upstream-equal checkout.
 
-** BACKLOG P5.2b-D3b clean-published recovery evidence
+** DONE P5.2b-D3b clean-published recovery evidence
+CLOSED: [2026-07-19 Sun]
 :PROPERTIES:
 :created: 2026-07-19
-:blocked_by: published D3a.1 compile-gate correction
+:source_published: 0601b9d8537afb36b9e3589c6227e8cf652336e1
+:evidence_publication: PENDING
 :END:
 
-- [ ] Fetch the exact published corrected D3a.1 checkpoint into a clean
+- Evidence: [[file:../../../docs/audits/2026-07-19-p5.2b-d3b-clean-published-recovery-evidence.org][2026-07-19 P5.2b-D3b clean-published recovery evidence]].
+- [X] Fetch the exact published corrected D3a.1 checkpoint into a clean
   =HEAD == origin/main= checkout and bind the final implementation, manifest,
   registry, and fixture hashes.
-- [ ] Rerun the complete 98-point native matrix, compilation, ShellCheck,
+- [X] Rerun the complete 98-point native matrix, compilation, ShellCheck,
   strict repository gate, whitespace check, and Org lint; freeze exact output
   and non-mutation evidence.
-- [ ] Stop without exercising any live transaction surface or granting D4
+- [X] Track the closed 54-record result, four raw channels, and byte-identical
+  129-record selected-surface snapshot without claiming whole-store or
+  whole-machine identity.
+- [X] Stop without exercising any live transaction surface or granting D4
   authorization.
 
 ** BACKLOG P5.2b-D4 fresh live manifest and attended authorization
 :PROPERTIES:
 :created: 2026-07-18
-:blocked_by: published D3b clean recovery evidence and all source/build/semantic gates
+:blocked_by: published D3b evidence; D4 reconciliation, immutable loading, attended quiescence/revalidation, production GC-root liveness, fresh manifest, and exact authorization
 :END:
 
 - [ ] Produce and publish a fresh immutable live manifest, then obtain
@@ -1026,6 +1033,13 @@ CLOSED: [2026-07-19 Sun]
 - [ ] Package the production driver, module, and exact manifest as one
   immutable loaded-byte input; D3a proves source hash preflight, not resistance
   to hostile same-UID replacement between preflight and Guile loading.
+- [ ] Retain the cooperative transaction and System-profile locks, require an
+  attended quiescent window, and fail closed unless every protected surface is
+  revalidated exactly before each transaction phase.  This does not claim
+  exclusion of arbitrary =guix system= commands.
+- [ ] Before any mutation, prove that production recovery roots for every
+  selected candidate and the old/new =bootcfg= targets are registered and
+  live; keep them registered and live until safe cleanup completes.
 
 * BACKLOG P5.3 reviewed unreachable-store collection
 :PROPERTIES:

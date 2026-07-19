@@ -1,0 +1,273 @@
+#+title: P5.2b-D3b clean-published recovery evidence
+#+date: 2026-07-19
+#+startup: overview
+#+category: guixpc
+#+filetags: :guixpc:guix:scheme:grub:recovery:testing:
+#+status: evidence complete; publication pending
+
+* Outcome
+
+P5.2b-D3b reproduces the corrected recovery-transaction evidence from exact
+published checkpoint:
+
+#+begin_example
+0601b9d8537afb36b9e3589c6227e8cf652336e1
+#+end_example
+
+The actual GuixPC checkout was fetched, clean, and equal to local
+=origin/main= and GitHub =refs/heads/main=.  Direct module and driver
+=guild compile -W3= runs emitted zero diagnostics.  The standalone native
+matrix passed all =54 + 44 = 98= declared interruption/recovery points, and
+the complete repository strict gate independently passed with the same matrix
+embedded.
+
+A fresh 129-record selected-surface snapshot is byte-identical before and
+after the gates.  No live transaction action ran.  No recovery root,
+transaction directory, profile lock, GRUB temporary, or =bootcfg= temporary
+was created.  System/Home/Pull generation links, current and booted System,
+installed GRUB, live =bootcfg=, the recorded top-level store-name set, and the
+boot ID remained exact.
+
+This closes only corrected-published-source reproducibility and selected
+non-mutation evidence.  It does not expand D3a's declared restart-boundary
+scope and does not authorize D4 or live System pruning.
+
+The evidence run began at =2026-07-19T16:42:09Z= and completed by
+=2026-07-19T16:54:02Z=.
+
+* Published corrected source gate
+
+| Gate | Exact value |
+|------+-------------|
+| Host / user / UID | =guixpc= / =skydive420dz= / =1000= |
+| Repository | =/home/skydive420dz/Projects/guix-dotfiles= |
+| Branch | =main= |
+| =HEAD= | =0601b9d8537afb36b9e3589c6227e8cf652336e1= |
+| =origin/main= | =0601b9d8537afb36b9e3589c6227e8cf652336e1= |
+| GitHub =refs/heads/main= | =0601b9d8537afb36b9e3589c6227e8cf652336e1= |
+| Parent | =676b430617b6902c8d7111bd78a483282de314ae= |
+| Git tree | =2e8e88a6b8b9539117667e1e0ce13898447851f4= |
+| Ahead / behind | =0 / 0= |
+| Pre/post worktree | clean / clean |
+| Guix frontend | =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile= |
+| Guix revision | =a8391f2d7451c2463ba253ffa9872fa6f27485d7= |
+| Guile / Guild | =/gnu/store/8vwbdsni9znrlxvcwqi4n02f23ysc1fa-guile-3.0.11= / =3.0.11= |
+| ShellCheck | =/gnu/store/xxj5hyp2a8m1qbshs0dq5d4kpd66wvgj-shellcheck-0.10.0= |
+
+The source gate was rechecked after all execution gates and before evidence
+entered the checkout.  It remained clean and upstream-equal.
+
+* Closed evidence packet
+
+The packet contains one closed 54-record result, four separately captured raw
+output channels, and one canonical selected-surface snapshot:
+
+| Evidence | Bytes | SHA256 |
+|----------+-------+--------|
+| [[file:data/2026-07-19-p5.2b-d3b-result.tsv][closed result]] | 4,794 | =5dcd05303d832db94f4299aa5eef7a1bf4f468d27847b6cb295c28a0035b16a3= |
+| [[file:data/2026-07-19-p5.2b-d3b-native.stdout][native stdout]] | 78 | =1c7db5ee57ecc38d9ccd0cbc17f436c83db62ba81e74d3e29a51578d7ae36ca1= |
+| [[file:data/2026-07-19-p5.2b-d3b-native.stderr][native stderr]] | 285 | =276961438dd9923d4336be9ea8f257027027fbd1c7e5b428f0747e0c44cbccee= |
+| [[file:data/2026-07-19-p5.2b-d3b-strict.stdout][strict stdout]] | 2,330 | =82d59cc8a72e6eac019d2144d29914ff44d4a27b95ac5c8f1bc44af9bde17508= |
+| [[file:data/2026-07-19-p5.2b-d3b-strict.stderr][strict stderr]] | 595 | =114245c765b528ceaa6e89474ba84c9c43dbbc7dd6b70de42e23bc3439ad5cc3= |
+| [[file:data/2026-07-19-p5.2b-d3b-live-surfaces.tsv][canonical selected surfaces]] | 19,375 | =296edb4c4eadb9089f41a0c562864482d4afa1d593700c0726497762f5a95405= |
+
+The result schema is =p5.2b-d3b-recovery-evidence/v1=.  It rejects an open
+interpretation by fixing the record count, order, labels, field counts,
+digests, byte counts, gate statuses, matrix counts, snapshot equality, and
+authorization/non-claim values.
+
+Compile, syntax, ShellCheck, and whitespace channels were empty where
+expected.  Their zero length and the standard empty SHA256
+=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855=
+are recorded in the result rather than as redundant tracked files.
+
+* Exact input bindings
+
+The result binds twelve exact source, harness, fixture, and D2b artifact
+inputs.  The corrected identity chain is:
+
+| Input | SHA256 |
+|-------+--------|
+| transaction module | =aefbf3547f3bc03c5fa69ced9cc188f7a8f59a69004b474314193c3c2382b311= |
+| closed manifest | =21be14bbad884ee54c68208ec0fd4b08fb91e00bab18029e52f8af8818121b29= |
+| native harness | =add0d929deed17e03480f2201e934a32b317ab7efcf12077da897252d0803960= |
+
+The driver, launcher, registry, lock helper, three small fixture inputs,
+strict-gate script, and D2b artifact hashes match the manifest and the
+published checkpoint.  The D2b artifact remains 5,163 bytes with SHA256
+=70965414824c26e1712c6a7a51efd9517633eb3c83f36f88927565c87807496b=.
+
+* Commands and output capture
+
+All execution output was captured outside the repository with stdout and
+stderr kept separate.  The relevant command shapes were:
+
+#+begin_src sh
+guild compile -W3 -L guix/modules \
+  -o /tmp/p52b-d3b-system-pruning-transaction.go \
+  guix/modules/sk/system-pruning-transaction.scm
+guild compile -W3 -L guix/modules \
+  -o /tmp/p52b-d3b-system-pruning-transaction-driver.go \
+  scripts/guix-system-pruning-transaction.scm
+sh -n scripts/guix-system-pruning-transaction \
+  tests/guix-system-pruning-transaction-check
+shellcheck scripts/guix-system-pruning-transaction \
+  tests/guix-system-pruning-transaction-check
+tests/guix-system-pruning-transaction-check
+scripts/shell-check --strict
+git diff --check
+#+end_src
+
+No =fixture-apply= or =fixture-recover= action was invoked against a live
+root.  The native harness constructs sentinel-marked synthetic roots only
+beneath its temporary directory and removes them through its exit trap.
+
+* Warning-free compile and static gates
+
+| Gate | Exit | Seconds | stdout | stderr |
+|------+------|---------|--------|--------|
+| module =guild compile -W3= | 0 | 4 | 52 bytes: output path only | 0 bytes |
+| driver =guild compile -W3= | 0 | 0 | 59 bytes: output path only | 0 bytes |
+| =sh -n= | 0 | 0 | 0 bytes | 0 bytes |
+| ShellCheck | 0 | 1 | 0 bytes | 0 bytes |
+| =git diff --check= | 0 | 0 | 0 bytes | 0 bytes |
+
+This is the exact clean-published rerun that D3a.1 required.  Neither of the
+two Guile =failure= diagnostics found at original checkpoint =676b430=
+reappears.
+
+* Complete 98-point native matrix
+
+The standalone harness exited 0 after 143 seconds.  Its complete stdout is:
+
+#+begin_example
+guix-system-pruning-transaction-check: PASS (forward=54 rollback=44 total=98)
+#+end_example
+
+The 285-byte stderr contains only the deliberate =TERM= and =KILL= restart
+notices.  The matrix covers all 54 forward and 44 rollback points declared by
+the reviewed registry, plus its normal, idempotence, contention, path-safety,
+metadata, drift, journal, root, unsupported-action, and negative-isolation
+checks.
+
+This remains a process-restart matrix at declared post-operation boundaries.
+It is not an arbitrary-instruction, mid-system-call, or power-loss result.
+
+* Strict repository gate
+
+=scripts/shell-check --strict= exited 0 after 254 seconds.  Its 2,330-byte
+stdout ends in =shell-check: PASS= and independently contains:
+
+#+begin_example
+guix-system-pruning-transaction-check: PASS (forward=54 rollback=44 total=98)
+#+end_example
+
+The 595-byte stderr contains the expected signal notices plus one Guile note
+that the separate cached package-ownership checker was older than its source.
+It contains no Scheme compiler warning and no failed gate.
+
+* Selected live-surface equality
+
+The pre and post snapshots were independently captured under =/tmp= and
+compared byte-for-byte.  Each has 129 records and SHA256:
+
+#+begin_example
+296edb4c4eadb9089f41a0c562864482d4afa1d593700c0726497762f5a95405
+#+end_example
+
+The tracked canonical copy contains:
+
+- one schema and one boot-ID record;
+- five exact repository identity/state records;
+- one generation-pins source hash/metadata record;
+- all =86/17/5= System/Home/Pull generation-link tuples;
+- System/Home/Pull, current/booted System, and =bootcfg= pointers;
+- installed-GRUB bytes and metadata;
+- a count and digest of the sorted top-level =/gnu/store= name set; and
+- the five absent transaction/root/lock/temporary surfaces.
+
+Installed GRUB remains 43,262 bytes, mode =0444=, =root:root=, SHA256
+=6e7fe604ee58723c7e321c3a07a645a2017cfcf49bac62b3ecb0c0559ca30671=.
+Live =bootcfg= remains
+=/gnu/store/hdwc6z0wdhgqimxqg1gzkznp9irbkwhl-grub.cfg=.  Current and booted
+System remain
+=/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system=.
+
+The store-name row records 32,602 top-level names and the digest of that
+sorted name list.  It does not hash store contents, database state, NAR
+metadata, allocation, or daemon metadata and therefore is not whole-store
+identity evidence.
+
+* Validation
+
+| Gate | Result |
+|------+--------|
+| Corrected checkpoint / local origin / GitHub remote equality | PASS |
+| Clean pre/post published worktree | PASS |
+| Closed twelve-input binding | PASS |
+| Module and driver =guild compile -W3= | PASS; zero diagnostics |
+| =sh -n= / ShellCheck | PASS |
+| Standalone =54 + 44 = 98= matrix | PASS |
+| Complete strict repository gate | PASS |
+| Pre/post selected-surface =cmp= | PASS |
+| Closed 54-record result validator | PASS; exact order, shapes, inputs, raw channels, snapshot, and fixed values |
+| Raw/tracked byte and digest comparison | PASS |
+| Git whitespace and Org lint | PASS |
+
+* Explicit non-claims
+
+D3b does not claim:
+
+- arbitrary-instruction, mid-system-call, or power-loss recovery;
+- automatic reconciliation of pre-=BEGIN=, partial-backup, or orphaned
+  known-temporary state;
+- immutable identity between mutable source hash preflight and Guile loading;
+- hostile same-UID resistance;
+- exclusion of arbitrary =guix system= processes;
+- production GC-root registration or liveness;
+- a fresh live deletion manifest or manifest-specific authorization;
+- installation of the D2b retained-only GRUB artifact;
+- whole-store or whole-machine byte identity;
+- a known store-object, database, allocation, or material-byte delta;
+- GC, dead/live enumeration, collection, generation deletion, activation,
+  reconfiguration, or reboot; or
+- D4 or P5.3 readiness.
+
+* Roadmap synchronization
+
+The repository README and GuixPC TODO close D3b only at this evidence
+boundary.  D4 remains separately blocked on conservative bootstrap/temporary
+reconciliation, immutable loaded-byte packaging, attended quiescence with
+exact phase-by-phase protected-surface revalidation, production recovery-root
+registration and liveness through safe cleanup, a fresh published live
+manifest, and manifest-specific attended authorization.  Its cooperative
+locks still do not claim exclusion of arbitrary =guix system= commands.
+
+The live agenda was staged from SHA256:
+
+#+begin_example
+62321659c12c5b97c81faf1efbfe46fc419149eb489dca7fe889eeebda533d1d
+#+end_example
+
+It passed =org-lint= in GuixPC repository-link context and was installed only
+after the live input hash was rechecked.  Its final SHA256 is:
+
+#+begin_example
+9c31abaed1fae59e9772366218ec8ef04d0d59a9079c88f7455306333512ac8b
+#+end_example
+
+* Handoff
+
+Publish this D3b evidence checkpoint and stop.  Only after clean upstream
+equality may D4 source design begin.  D4 must first implement and fixture-test
+bootstrap/known-temporary reconciliation and immutable loaded-byte packaging.
+It must retain cooperative locking without claiming exclusion of arbitrary
+=guix system= commands, establish attended quiescence, and revalidate every
+protected surface exactly before each phase.  It must also prove before any
+mutation that production recovery roots for every selected candidate and the
+old/new =bootcfg= targets are registered and live, and keep them so through
+safe cleanup.  Only then may it publish a fresh live manifest and obtain
+attended authorization naming that exact hash before any generation-link,
+GRUB, =bootcfg=, or recovery-root mutation.
+
+P5.3 collection remains a separate held operation.

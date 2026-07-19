@@ -1,0 +1,48 @@
+exwm-session-check: PASS
+desktop-audio-output-check fixture: PASS
+desktop-policy-check: PASS
+emacs-performance-snapshot-check: PASS
+emacs-startup-attribution-check: PASS
+emacs-fennel-check fixture: PASS
+guix-bootstrap-check: PASS
+guix-build-gate-check: PASS
+PASS: guix entrypoint checks and bootstrap safety
+guix-generation-retention-check: PASS
+guix-system-generation-link-pruner-check: PASS
+guix-system-pruning-transaction-check: PASS (forward=54 rollback=44 total=98)
+guix-system-retained-bootcfg-check: PASS (7 retained production generations)
+guix-disk-health-check: PASS
+guix-home-links-check: PASS
+theme-check: PASS (299 checks)
+theme-check: native parsers PASS
+guix-lisp-shell-check: PASS
+PASS: complete immutable Home candidate
+PASS: late or absent generated-theme loading is rejected
+PASS: generated adapter byte drift is rejected
+PASS: reversed Home/repository activation order is rejected
+PASS: ambiguous duplicate Home activation marker is rejected
+PASS: simultaneous Kitty repository and Home ownership is rejected
+PASS: GTK 4 runtime without the bin output is rejected
+PASS: GTK 4 runtime without the out output is rejected
+PASS: GTK 4 factory from undeclared bin provenance is rejected
+PASS: GTK 4 runtime without the ColorChooser schema is rejected
+PASS: GTK 4 schema from undeclared out provenance is rejected
+PASS: GTK 4 runtime without the merged schema cache is rejected
+PASS: GTK 4 runtime with an incomplete schema cache is rejected
+PASS: GTK 4 runtime without gst-plugins-base ownership is rejected
+PASS: GTK 4 runtime without gst-plugins-good ownership is rejected
+PASS: GStreamer playback plugin from undeclared provenance is rejected
+PASS: GStreamer VP9 plugin from undeclared provenance is rejected
+PASS: profile without its GStreamer search-path environment is rejected
+PASS: malformed GStreamer search-path export is rejected
+PASS: GStreamer registry without playbin3 is rejected
+PASS: GStreamer registry without VP9 decoding is rejected
+PASS: registry result from the wrong plugin path is rejected
+PASS: font policy resolution drift is rejected
+PASS: restored immutable Home candidate
+guix-theme-home-check fixture: PASS
+clojure-project-check-test: PASS
+lisp-project-check-test: PASS
+guix-package-ownership-check: PASS (recovery=13 home=91 explicit=1)
+guix-reconfigure-check: PASS
+shell-check: PASS
