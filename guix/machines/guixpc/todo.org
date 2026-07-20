@@ -1185,12 +1185,15 @@ CLOSED: [2026-07-20 Mon]
 :created: 2026-07-19
 :ready_after: 9577e1daac3d5258222d1cbf186facba809d10fb
 :protocol_checkpoint: 79a361a7f3c2e46ddb27b0c4d5e44a8751914dd5
+:publication_checkpoint: 0d97e5d5ed10fdd6e0500c072dec470c966f4995
 :END:
 
 - Protocol checkpoint: [[file:../../../docs/audits/2026-07-20-p5.2b-d4c1a-live-manifest-protocol.org][2026-07-20 D4c.1a live-manifest protocol and production-source gap]].
-- Local bounded source checkpoint
-  =79a361a7f3c2e46ddb27b0c4d5e44a8751914dd5=; publication and upstream
-  equality remain pending.
+- [X] Publish bounded source checkpoint
+  =79a361a7f3c2e46ddb27b0c4d5e44a8751914dd5= and documentation closure
+  =0d97e5d5ed10fdd6e0500c072dec470c966f4995=; verify clean
+  =HEAD == origin/main == direct GitHub main= at =0d97e5d= and unchanged
+  protected live snapshot/boot identity.
 - [X] Correct the source/publication ordering and add the first bounded pure,
   canonical live-manifest protocol/parser/renderer with positive and
   adversarial fixtures.  Preserve every frozen D3/D4a/D4b source, artifact,

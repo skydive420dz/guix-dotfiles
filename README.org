@@ -578,12 +578,12 @@ live fused-program adapter, and synthetic fixtures.  It must publish cleanly
 and stop without capturing a live manifest, lowering or building a program,
 creating a root, or running a live action.
 
-- The first bounded D4c.1a protocol checkpoint is staged locally at
-  =79a361a7f3c2e46ddb27b0c4d5e44a8751914dd5=; publication verification is
-  pending.  It adds a pure canonical live-manifest protocol and adversarial
-  fixtures while documenting the exact production-source gap.  Its postflight
-  rows cover only successful forward =COMPLETE=.  D4c.1a remains open for
-  additive live
+- The first bounded D4c.1a protocol source checkpoint =79a361a= and
+  documentation closure =0d97e5d= are published with clean GuixPC/origin/direct
+  GitHub equality.  It adds a pure canonical live-manifest protocol and
+  adversarial fixtures while documenting the exact production-source gap.  Its
+  postflight rows cover only successful forward =COMPLETE=.  D4c.1a remains
+  open for additive live
   boundary/journal/reconciliation, grant grammar, runtime adapter, collector,
   fused renderer/driver source, the final exact source-input inventory, the
   =ROLLED-BACK= postflight branch, and the recovery-root-base terminal

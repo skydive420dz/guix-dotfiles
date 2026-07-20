@@ -3,8 +3,9 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:source:
-#+status: bounded protocol checkpoint; D4c.1a remains open
+#+status: bounded protocol checkpoint published; D4c.1a remains open
 #+source_checkpoint: 79a361a7f3c2e46ddb27b0c4d5e44a8751914dd5
+#+publication_checkpoint: 0d97e5d5ed10fdd6e0500c072dec470c966f4995
 
 * Outcome
 
@@ -30,9 +31,12 @@ runtime adapter, fused renderer/driver, and their complete synthetic gates
 remain required before any live manifest may be captured.
 
 The exact bounded source checkpoint is
-=79a361a7f3c2e46ddb27b0c4d5e44a8751914dd5=.  It is a local checkpoint until
-the separate push and upstream-equality proof completes; this document does
-not call it published yet.
+=79a361a7f3c2e46ddb27b0c4d5e44a8751914dd5= and its documentation/provenance
+closure is =0d97e5d5ed10fdd6e0500c072dec470c966f4995=.  After the push,
+=HEAD == origin/main == direct GitHub main= at =0d97e5d= with a clean tree and
+ahead/behind =0/0=.  The protected 19-record live snapshot remained exact at
+SHA256 =44a31120baabf015556e42a387903153ce6b54f02624b12ab7dbc21bc80dfc11=
+under unchanged boot ID =64140768-9522-4cad-8021-9db54e070e8a=.
 
 * Why the extra source checkpoint is required
 
