@@ -882,7 +882,7 @@ CLOSED: [2026-07-18 Sat]
 * BACKLOG P5.2b System generation deletion and custom-GRUB boundary
 :PROPERTIES:
 :created: 2026-07-18
-:blocked_by: published clean-upstream-equal D4b evidence; D4c.1/D4c.2 live manifest/program publication; D4c.3 packet acceptance; separate D5 execution grant
+:blocked_by: D4c.1/D4c.2 live manifest/program publication; D4c.3 packet acceptance; separate D5 execution grant
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-18-p5.2b-custom-grub-safe-system-pruning-design.org][2026-07-18 P5.2b custom-GRUB-safe System-pruning design]].
@@ -1060,7 +1060,8 @@ CLOSED: [2026-07-19 Sun]
   source gates, and selected-live-surface nonmutation, then stop without a
   store build or live action.
 
-** TODO P5.2b-D4b final synthetic fused-program evidence publication
+** DONE P5.2b-D4b clean-published synthetic fused-program evidence
+CLOSED: [2026-07-20 Mon]
 :PROPERTIES:
 :created: 2026-07-19
 :helper_published: 002d1ef05bab80162f6807a5cd31b98d209baa7c
@@ -1068,7 +1069,7 @@ CLOSED: [2026-07-19 Sun]
 :first_validator_published: 99dfdeff36443aad4627fb6bb87dd6c42dcb2e87
 :second_validator_published: bf8040dfc3ec4438c2f229de60978792ffe0a493
 :third_validator_published: cdd4bd489313f36c325ea0841ad7586b6d152904
-:next_gate: final docs/data evidence publication and clean upstream equality
+:evidence_publication: 9577e1daac3d5258222d1cbf186facba809d10fb
 :END:
 
 - Helper evidence: [[file:../../../docs/audits/2026-07-19-p5.2b-d4b-helper-source.org][2026-07-19 P5.2b-D4b source-only helper checkpoint]].
@@ -1174,14 +1175,15 @@ CLOSED: [2026-07-19 Sun]
   =44a31120baabf015556e42a387903153ce6b54f02624b12ab7dbc21bc80dfc11:1455:19=
   remain unchanged.  Authorization is =NOT-GRANTED=; lowering/realization
   are =NOT-RUN=.  No result link, GC root, or live change occurred.
-- [ ] Publish the exact docs/data evidence checkpoint from clean
-  =cdd4bd4=, fetch it, prove =HEAD == origin/main == GitHub main=, record the
-  publication identity, and stop.
+- [X] Publish the exact docs/data evidence checkpoint =9577e1d= from clean
+  third-validator checkpoint =cdd4bd4=, fetch it, prove
+  =HEAD == origin/main == GitHub main=, record the publication identity, and
+  stop.
 
 ** BACKLOG P5.2b-D4c.1 fresh live-state manifest publication
 :PROPERTIES:
 :created: 2026-07-19
-:blocked_by: published clean-upstream-equal D4b evidence checkpoint
+:ready_after: 9577e1daac3d5258222d1cbf186facba809d10fb
 :END:
 
 - [ ] Recompute every candidate, retained, protected, GRUB/=bootcfg=/EFI,

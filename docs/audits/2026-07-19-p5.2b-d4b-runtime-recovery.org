@@ -4,7 +4,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:runtime:recovery:evidence:
-#+status: runtime proof complete after cdd4bd4; docs/data publication pending; D4c.1 BACKLOG
+#+status: D4b evidence complete; published at 9577e1d; D4c.1 next
 
 * Outcome
 
@@ -53,9 +53,9 @@ second lowering, build, realization, confirmation, or live change occurred.
 The source-only harness correction was later published with clean equality at
 =cdd4bd489313f36c325ea0841ad7586b6d152904=.  Its third recovery completed
 the exact runtime-v4 and checkout-independence gates.  The bounded runtime
-proof is complete, but its docs/data evidence publication and clean upstream
-equality are still pending.  D4c.1 fresh live-state review remains blocked on
-that publication boundary.
+proof is complete, and its docs/data evidence is published with clean upstream
+equality at =9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1 fresh
+live-state review is now eligible.
 
 * Retained realization
 
@@ -370,8 +370,9 @@ root, live transaction, activation, reconfiguration, collection, or reboot
 was created or run.  The failed runtime attempts remain exact historical
 evidence rather than being discarded or overwritten.
 
-The D4b runtime proof is complete.  Its docs/data evidence publication and
-clean upstream equality remain pending, so D4c.1 may not begin yet.
+The D4b evidence is complete and published with clean upstream equality at
+=9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1 may now begin only as a
+fresh, read-only live-state review and manifest-publication gate.
 
 * Exact nonclaims
 

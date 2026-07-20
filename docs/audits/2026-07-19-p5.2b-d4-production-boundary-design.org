@@ -3,7 +3,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:design:
-#+status: accepted design; D4b runtime proof complete; evidence publication pending; D4c.1 BACKLOG
+#+status: accepted design; D4b evidence complete and published at 9577e1d; D4c.1 next
 
 * Outcome
 
@@ -395,8 +395,8 @@ All three failed channel pairs, the realization result, artifact, and exact
 =authorization=NOT-GRANTED=, =lowering=NOT-RUN=,
 =realization=NOT-RUN=, and =live-action=NOT-GRANTED=.  No result link,
 artifact root, or live change occurred.  The D4b runtime proof is complete,
-but its docs/data evidence publication and clean upstream equality remain
-pending.
+and its docs/data evidence is published with clean upstream equality at
+=9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1 is now eligible.
 
 * D4c.1: fresh live-state review manifest publication
 
@@ -733,5 +733,6 @@ the artifact correctly rejected the harness's 0755 D4a fixture root.  The
 third D4a/legacy fixture-topology correction is published at =cdd4bd4= and
 its exact runtime-v4 plus checkout-independence gates pass.  All failed
 channels are retained, no second realization occurred, and the D4b runtime
-proof is complete.  Its docs/data evidence publication and clean upstream
-equality remain pending; D4c.1 fresh live-state review remains blocked.
+proof is complete.  Its docs/data evidence is published with clean upstream
+equality at =9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1 fresh
+live-state review is next.

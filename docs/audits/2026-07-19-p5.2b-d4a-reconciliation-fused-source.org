@@ -3,7 +3,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:testing:
-#+status: source/fixture checkpoint complete at 41e1115; D4b runtime proof complete; evidence publication pending
+#+status: source/fixture checkpoint complete at 41e1115; D4b evidence published at 9577e1d; D4c.1 next
 
 * Outcome
 
@@ -32,8 +32,9 @@ At its original publication boundary this closed only the D4a source/fixture
 checkpoint.  D4b was the first eligible immutable realization and positive
 fused-loader runtime boundary, and it could begin only after this checkpoint
 was published and fetched cleanly.  The later D4b realization and runtime
-proof are recorded by the successor documents below; their final docs/data
-evidence publication remains pending.
+proof are recorded by the successor documents below.  Their final docs/data
+evidence is published with clean upstream equality at
+=9577e1daac3d5258222d1cbf186facba809d10fb=.
 
 * Exact predecessor and source boundary
 
@@ -341,5 +342,5 @@ lower a derivation or realize a store output.  It was later published at
 =002d1ef=, its one explicit bounded-effect grant was consumed, and its exact
 synthetic artifact was realized.  Runtime-v4 and checkout-independence later
 passed from published validator checkpoint =cdd4bd4=.  The runtime proof is
-complete; its final docs/data evidence publication and clean upstream equality
-remain pending.
+complete, and its final docs/data evidence is published with clean upstream
+equality at =9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1 is next.

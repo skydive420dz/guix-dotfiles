@@ -252,9 +252,9 @@ actions, 11 empty nested-loader sites, and =54 + 44 = 98= artifact points.
 The exact 4,582-byte stdout is
 [[file:docs/audits/data/2026-07-20-p5.2b-d4b-runtime-recovery-3.stdout][tracked]],
 stderr is empty, all prior evidence/live surfaces remain unchanged, and no
-second realization or live action ran.  The D4b runtime proof is complete;
-its final docs/data evidence publication and clean upstream equality remain
-pending.  Every live mutation remains blocked behind D4c and D5.
+second realization or live action ran.  D4b evidence is complete and
+published with clean upstream equality at =9577e1d=.  Every live mutation
+remains blocked behind D4c and D5.
 
 Decision D-41 requires one fused store-resident Scheme program with no project
 repository read at runtime.  D4c.1 publishes the live manifest without a
@@ -392,7 +392,8 @@ empty-stderr policy, published third-validator checkpoint =cdd4bd4=,
 subsequent runtime-v4/checkout PASS, exact
 [[file:docs/audits/data/2026-07-20-p5.2b-d4b-runtime-recovery-3.stdout][final stdout]],
 and the complete D4b runtime proof without a second realization or live
-action.  Final docs/data evidence publication remains pending.
+action.  The final docs/data evidence is published with clean upstream
+equality at =9577e1d=.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -547,10 +548,10 @@ is published at =cdd4bd4=.  Runtime-v4 and checkout-independence pass: six
 production suites, five D4a actions, 11 empty nested-loader sites, and all
 =54 + 44 = 98= artifact points.  The checkout is restored; all failed
 channels, the result/artifact, and the 19-record live snapshot remain exact.
-The D4b runtime proof is complete; its final docs/data evidence publication
-and clean upstream equality remain pending.  D4c.1 live-manifest publication,
-D4c.2 exact live-program evidence, D4c.3 unchanged-state execution-packet
-acceptance, and separately authorized D5 execution remain later gates.
+D4b evidence is complete and published with clean upstream equality at
+=9577e1d=.  D4c.1 live-manifest publication is the next gate; D4c.2 exact
+live-program evidence, D4c.3 unchanged-state execution-packet acceptance, and
+separately authorized D5 execution remain later gates.
 P5.3 collection remains separate and unpromoted; no further cleanup is
 authorized.
 
@@ -565,14 +566,14 @@ published; all six production suites passed warning-free before its D4a
 fixture root failed the artifact's exact capability guard.  Third validator
 checkpoint =cdd4bd4= is published and equal; its exact runtime-v4 and
 checkout-independence packets pass with empty stderr and restored checkout.
-The current ready action is the final D4b docs/data evidence publication and
-clean upstream-equality proof.  D4c.1 remains =BACKLOG= until that boundary is
-published.  No live program, root, execution, garbage collection, activation,
-reconfiguration, or reboot is authorized.
+The final D4b docs/data evidence is published with clean upstream equality at
+=9577e1d=.  The current ready action is D4c.1 fresh read-only live-state
+review and manifest publication.  No live program, root, execution, garbage
+collection, activation, reconfiguration, or reboot is authorized.
 
-- [ ] P5.2b-D4b: publish the frozen runtime evidence and tracked 78-line
-  stdout from clean validator checkpoint =cdd4bd4=, prove upstream equality,
-  and stop.
+- [ ] P5.2b-D4c.1: recompute and publish the fresh closed live-state review
+  manifest with =authorization NOT-GRANTED=, then prove upstream equality and
+  stop without a program build, root, or transaction mutation.
 P5.2a is complete.
 P5.2b-D1 is complete at the source and synthetic-fixture boundary;
 P5.2b-D2a is complete at its source and native-fixture boundary, and D2b is
@@ -580,15 +581,24 @@ complete and published at its uninstalled artifact/evidence boundary.  D3a is
 published at =676b430=; its first D3b compile gate found two warnings.  The
 minimal D3a correction is published at =0601b9d=.  D3b is evidence-complete
 and published at =b1d6ecb=.  D4b's successful third validator is published
-at =cdd4bd4=; its runtime proof is complete, while final docs/data evidence
-publication and clean upstream equality remain pending.  Live P5.2b remains
-blocked on that publication, D4c.1/D4c.2 manifest/program publication, D4c.3
-packet acceptance, and a separate exact D5 execution grant.
+at =cdd4bd4=; D4b evidence is complete and published with clean upstream
+equality at =9577e1d=.  Live P5.2b remains blocked on D4c.1/D4c.2
+manifest/program publication, D4c.3 packet acceptance, and a separate exact
+D5 execution grant.
 P4.O1 private Org sync/history remains a selectable non-destructive successor.
 P5.3 is not ready, P5.S1 storage reorganization remains parked, and
 backup/restore implementation is parked as P4.3.
 
 ** Completed
+
+- [X] P5.2b-D4b: clean-published synthetic fused-program evidence
+  Evidence publication =9577e1d= is clean-upstream-equal and records
+  third-validator checkpoint =cdd4bd4=, runtime-v4 and checkout-independence
+  PASS, exact 78-line stdout and empty stderr, six production suites, five
+  D4a actions, 11 empty nested-loader sites, and all =54 + 44 = 98= artifact
+  points.  The checkout was restored, the 19-record live snapshot remained
+  exact, and all failed attempts were retained.  No second lowering or
+  realization, result/root, or live action occurred.
 
 - [X] P5.2b-D4a: reconciliation and fused-program source/fixtures
   Published checkpoint =41e1115= implements the closed journal automaton,
@@ -2521,11 +2531,10 @@ drift, injected failure, and signal interruption.
 The historical live menu contained all 78 candidates twice, so deleting links
 without a new menu would have left 156 stale path occurrences.  The reviewed
 =bootcfg= had only six direct forward references and did not retain every old
-System closure.  The retained-only GRUB artifact is already published, but
-live P5.2b still requires final D4b docs/data evidence publication and clean
-upstream equality, D4c.1/D4c.2 manifest/program publication, D4c.3 packet
-acceptance, and the separately granted attended D5 transaction.  P5.3 remains
-separate and held.
+System closure.  The retained-only GRUB artifact and D4b evidence are already
+published.  Live P5.2b still requires D4c.1/D4c.2 manifest/program
+publication, D4c.3 packet acceptance, and the separately granted attended D5
+transaction.  P5.3 remains separate and held.
 
 P5.2b-D2a adds =scripts/guix-system-retained-bootcfg= and the Scheme module
 =(sk system-retained-bootcfg)=.  The stage-only input binds the pinned Guix,
@@ -2581,9 +2590,9 @@ root/0600 reconciliation-sentinel topology from legacy transaction topology;
 it is published at =cdd4bd4=.  Exact runtime-v4 and checkout-independence
 validation pass with 4,582-byte tracked stdout, empty stderr, restored
 checkout, unchanged historical evidence, and unchanged selected live
-surfaces.  The D4b runtime proof is complete, but its final docs/data evidence
-publication and clean upstream equality remain pending.  No additional
-lowering or realization occurred, and all live gates remain separate.
+surfaces.  D4b evidence is complete and published with clean upstream equality
+at =9577e1d=.  No additional lowering or realization occurred, and all live
+gates remain separate.
 
 * Live symlinks
 
