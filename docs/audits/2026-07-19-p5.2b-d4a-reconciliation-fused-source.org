@@ -3,7 +3,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:testing:
-#+status: source/fixture checkpoint complete; D4b realization not started
+#+status: source/fixture checkpoint complete at 41e1115; D4b runtime proof complete; evidence publication pending
 
 * Outcome
 
@@ -28,9 +28,12 @@ also retains all =54 + 44 = 98= declared restart boundaries, and the strict
 repository gate independently reruns both.  A fresh 19-record selected-live-
 surface snapshot is byte-identical before and after the final gates.
 
-This closes only the D4a source/fixture checkpoint.  D4b remains the first
-eligible immutable realization and positive fused-loader runtime boundary, and
-it may begin only after this checkpoint is published and fetched cleanly.
+At its original publication boundary this closed only the D4a source/fixture
+checkpoint.  D4b was the first eligible immutable realization and positive
+fused-loader runtime boundary, and it could begin only after this checkpoint
+was published and fetched cleanly.  The later D4b realization and runtime
+proof are recorded by the successor documents below; their final docs/data
+evidence publication remains pending.
 
 * Exact predecessor and source boundary
 
@@ -302,10 +305,10 @@ D4a does not claim:
   reconfiguration, bootloader installation, EFI mutation, or reboot; or
 - D4c, D5, or P5.3 readiness or authorization.
 
-* D4b handoff
+* Historical D4b handoff
 
-After this checkpoint is committed, pushed, fetched, and proven clean at
-=HEAD == origin/main == GitHub main=, D4b may:
+At this D4a publication boundary, after the checkpoint was committed, pushed,
+fetched, and proven clean at =HEAD == origin/main == GitHub main=, D4b could:
 
 1. construct the first unprivileged =computed-file= from the exact published
    renderer and manifest;
@@ -333,6 +336,10 @@ The separate
 [[file:2026-07-19-p5.2b-d4b-helper-source.org][D4b source-only helper checkpoint]]
 adds the exact-input =computed-file= constructor, exact-code loader probe, and
 artifact runtime/restart harness without changing this renderer or any of its
-18 inputs.  That successor does not lower a derivation or realize a store
-output.  Its publication and a later explicit bounded-effect grant remain
-prerequisites for the first D4b realization.
+18 inputs.  At its own source-only publication boundary that successor did not
+lower a derivation or realize a store output.  It was later published at
+=002d1ef=, its one explicit bounded-effect grant was consumed, and its exact
+synthetic artifact was realized.  Runtime-v4 and checkout-independence later
+passed from published validator checkpoint =cdd4bd4=.  The runtime proof is
+complete; its final docs/data evidence publication and clean upstream equality
+remain pending.

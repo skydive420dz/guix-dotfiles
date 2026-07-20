@@ -882,7 +882,7 @@ CLOSED: [2026-07-18 Sat]
 * BACKLOG P5.2b System generation deletion and custom-GRUB boundary
 :PROPERTIES:
 :created: 2026-07-18
-:blocked_by: D4a/D4b fused-program gates; D4c.1/D4c.2 live manifest/program publication; D4c.3 packet acceptance; separate D5 execution grant
+:blocked_by: published clean-upstream-equal D4b evidence; D4c.1/D4c.2 live manifest/program publication; D4c.3 packet acceptance; separate D5 execution grant
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-18-p5.2b-custom-grub-safe-system-pruning-design.org][2026-07-18 P5.2b custom-GRUB-safe System-pruning design]].
@@ -1060,14 +1060,15 @@ CLOSED: [2026-07-19 Sun]
   source gates, and selected-live-surface nonmutation, then stop without a
   store build or live action.
 
-** BACKLOG P5.2b-D4b clean-published synthetic fused-program evidence
+** TODO P5.2b-D4b final synthetic fused-program evidence publication
 :PROPERTIES:
 :created: 2026-07-19
 :helper_published: 002d1ef05bab80162f6807a5cd31b98d209baa7c
 :realization_checkpoint: 002d1ef05bab80162f6807a5cd31b98d209baa7c
 :first_validator_published: 99dfdeff36443aad4627fb6bb87dd6c42dcb2e87
 :second_validator_published: bf8040dfc3ec4438c2f229de60978792ffe0a493
-:blocked_by: validated/published third fixture-topology correction and successful recovery validators
+:third_validator_published: cdd4bd489313f36c325ea0841ad7586b6d152904
+:next_gate: final docs/data evidence publication and clean upstream equality
 :END:
 
 - Helper evidence: [[file:../../../docs/audits/2026-07-19-p5.2b-d4b-helper-source.org][2026-07-19 P5.2b-D4b source-only helper checkpoint]].
@@ -1137,34 +1138,50 @@ CLOSED: [2026-07-19 Sun]
   =fab5d2d47758443c8714f5e5f47cf21158f58dc903675060d11ed6def6462c74=.
   Do not retry =bf8040d= or overwrite any failed channel.  No artifact
   semantic check failed and no second realization or live change ran.
-- [ ] Validate and publish a third descendant validator checkpoint that
-  separates fixture topology completely.  D4a uses an exact owned 0700 root,
+- [X] Validate and publish third descendant validator checkpoint =cdd4bd4=
+  that separates fixture topology completely.  D4a uses an exact owned 0700 root,
   the exact 0600 reconciliation sentinel, and absent transaction/root
   namespaces.  Legacy 98-point coverage retains the transaction sentinel and
-  required directories.  Candidate loader/runtime/source-gate identities are
+  required directories.  Final loader/runtime/source-gate identities are
   =6591f029...:18049=, =dca63d3d...:68082=, and
-  =fcacf9c3...:20662=.  Source validation passed; publication is pending.
-- [ ] Prove the exact program runs with the checkout unavailable, ignores
+  =fcacf9c3...:20662=.
+- [X] Prove the exact program runs with the checkout unavailable, ignores
   poisoned Guile paths after realization, embeds the reviewed bytes, rejects a
   mutable copy and every live action, and passes the six production-module D4a
   suites plus all 98 interruption points.  Keep the renderer suite as the
   byte-frozen source gate.  The external evidence gate rejects an unrecorded
   alternate store output; the program does not embed its self-referential
-  final path/hash.  Run only the corrected runtime and checkout-unavailable
-  validators against the retained result/output; report
+  final path/hash.  Only the corrected runtime and checkout-unavailable
+  validators ran against the retained result/output; they report
   =lowering=NOT-RUN= / =realization=NOT-RUN= / =live-action=NOT-GRANTED=.
-  Both gates must refuse any realization acceptance token.  Create
+  Both gates refused any realization acceptance token.  They created
   =runtime-recovery-3.stdout= / =runtime-recovery-3.stderr= with no-clobber
-  semantics and recheck all three preserved failed-channel pairs before and
+  semantics and rechecked all three preserved failed-channel pairs before and
   after.
-- [ ] Freeze derivation/output identity, program hash/size, loaded-byte
+- [X] Freeze derivation/output identity, program hash/size, loaded-byte
   provenance, raw results, bounded realization effects, and unchanged selected
-  live transaction surfaces; publish and stop.
+  live transaction surfaces.  Runtime-v4 and checkout-independence both PASS.
+  Exact stdout is 4,582 bytes / 78 lines /
+  SHA256
+  =5c123e7d134d43398a0573fb19fa9668f323d0d112532c0f101c7b52b016f3a8=
+  and is tracked at
+  [[file:../../../docs/audits/data/2026-07-20-p5.2b-d4b-runtime-recovery-3.stdout][2026-07-20 D4b runtime-recovery-3 stdout]].
+  Stderr is exactly empty with SHA256
+  =e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855=.
+  Six suites, five D4a actions, 11 empty nested-loader sites, and all
+  =54 + 44 = 98= points pass; checkout is restored.  All failed pairs,
+  result/artifact, and selected-live identity
+  =44a31120baabf015556e42a387903153ce6b54f02624b12ab7dbc21bc80dfc11:1455:19=
+  remain unchanged.  Authorization is =NOT-GRANTED=; lowering/realization
+  are =NOT-RUN=.  No result link, GC root, or live change occurred.
+- [ ] Publish the exact docs/data evidence checkpoint from clean
+  =cdd4bd4=, fetch it, prove =HEAD == origin/main == GitHub main=, record the
+  publication identity, and stop.
 
 ** BACKLOG P5.2b-D4c.1 fresh live-state manifest publication
 :PROPERTIES:
 :created: 2026-07-19
-:blocked_by: published D4b evidence
+:blocked_by: published clean-upstream-equal D4b evidence checkpoint
 :END:
 
 - [ ] Recompute every candidate, retained, protected, GRUB/=bootcfg=/EFI,

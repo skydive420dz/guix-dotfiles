@@ -3,7 +3,7 @@
 #+date: 2026-07-19
 #+startup: overview
 #+property: header-args :eval never-export
-#+status: published at 002d1ef; realization retained; second recovery preserved; third pending
+#+status: helper published at 002d1ef; runtime proof complete; evidence publication pending; D4c.1 BACKLOG
 
 * Outcome
 
@@ -394,18 +394,31 @@ The complete source-only correction separates the previously combined
 fixture constructor.  D4a topology uses an exact owned 0700 root, the exact
 0600 reconciliation sentinel, and absent transaction/root namespaces.
 Legacy 98-point topology retains its transaction sentinel and required
-directories.  Its loader/runtime/source-gate candidate identities are
+directories.  Its final loader/runtime/source-gate identities are
 =6591f0292d02ae98d8267ce038a44efbe9e10f61e948e8d508f54dd554cfa030:18049=,
 =dca63d3d1ab1d9a87e41d0fd8cc4990f1ac8db7c4f3a693f9e587826e9663dfe:68082=,
 and
 =fcacf9c362d4219783df6eb642cdb616dcbdd96968f9c7a932695d6be5738409:20662=.
-Source validation passed; publication remains pending.  A later run must create
-=runtime-recovery-3.*= without clobbering any of the three failed attempts.
-All 6 + 4 + 1 = 11 nested-loader sites still require empty stderr.
+It was published with clean equality at
+=cdd4bd489313f36c325ea0841ad7586b6d152904=.  The exact
+=runtime-recovery-3.stdout= is 4,582 bytes with SHA256
+=5c123e7d134d43398a0573fb19fa9668f323d0d112532c0f101c7b52b016f3a8=;
+=runtime-recovery-3.stderr= is empty with SHA256
+=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855=.
+The exact 78-line stdout is tracked at
+[[file:data/2026-07-20-p5.2b-d4b-runtime-recovery-3.stdout][=data/2026-07-20-p5.2b-d4b-runtime-recovery-3.stdout=]].
 
-Every recovery gate refuses any realization acceptance token and reports
-=lowering=NOT-RUN= / =realization=NOT-RUN=.  No second lowering, build, or
-realization occurred or is needed or permitted by the consumed grant.
+Runtime schema =p5.2b-d4b-runtime-evidence/v4= and checkout schema
+=p5.2b-d4b-checkout-independence/v1= both terminate in exact PASS.  The gate
+completed six production suites, five D4a actions, 11 empty nested-loader
+stderr sites, and all =54 + 44 = 98= interruption points.  The checkout was
+renamed and restored.  All three failed channel pairs, the realization result,
+artifact, and selected 19-record live surfaces remained unchanged.
+
+The final recovery reports =authorization=NOT-GRANTED=,
+=lowering=NOT-RUN=, =realization=NOT-RUN=, and
+=live-action=NOT-GRANTED=.  No second lowering, build, realization, result
+link, GC root, or live change occurred.
 
 * Source-checkpoint nonclaims
 
@@ -432,15 +445,14 @@ grant is consumed.  The first source-only validator correction is published
 at =99dfdeff36443aad4627fb6bb87dd6c42dcb2e87= and its safely failed
 =runtime-recovery.*= channels are retained.  The second correction is
 published at =bf8040dfc3ec4438c2f229de60978792ffe0a493= and its safely
-failed =runtime-recovery-2.*= channels are also retained.  Validate and
-publish the distinct D4a/legacy fixture-topology correction at another
-descendant, prove clean local/upstream/remote equality, and then run only the
-corrected runtime and checkout-unavailable validators against the retained
-result and output using no-clobber =runtime-recovery-3.*= channels.  Pin and
-recheck all three failed-channel pairs before and after.  Do not retry either
-published failed validator, run preflight, lower, build, or realize again, or
-supply or reuse the consumed acceptance token.
+failed =runtime-recovery-2.*= channels are also retained.  The distinct
+D4a/legacy fixture-topology correction is published at
+=cdd4bd489313f36c325ea0841ad7586b6d152904=; its exact runtime-v4 and
+checkout-independence validators pass from clean equality using
+=runtime-recovery-3.*=.  All earlier failed channels remain historical
+evidence, and the retained artifact/result and selected live surfaces remain
+unchanged.
 
-Publish final D4b evidence only after the corrected matrix and unchanged
-selected live surfaces pass.  D4c.1 remains blocked until that evidence is
-published and fetched cleanly.
+The D4b runtime proof is complete, but its docs/data evidence publication and
+clean upstream equality remain pending.  D4c.1 fresh live-state review and
+manifest publication remain blocked; no live action is implicitly authorized.

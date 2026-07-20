@@ -4,7 +4,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:runtime:recovery:evidence:
-#+status: second recovery preserved; third source-only correction validated; publication pending
+#+status: runtime proof complete after cdd4bd4; docs/data publication pending; D4c.1 BACKLOG
 
 * Outcome
 
@@ -31,11 +31,12 @@ stopped safely at the orchestrator suite because the validator's whole-line
 matcher expected a bare PASS while the frozen suite emits =PASS (313
 checks)=.  No artifact semantic check failed.
 
-That second stop is preserved as validator evidence.  Its correction is again
-source-only: it pins the six exact frozen suite PASS literals rather than
-changing a suite or the artifact.  It must be validated and published at
-another later descendant checkpoint before it runs.  It must not lower,
-build, realize, or confirm another derivation and must perform no live action.
+That second stop is preserved as validator evidence.  Its correction was again
+source-only: it pinned the six exact frozen suite PASS literals rather than
+changing a suite or the artifact.  At that stop it still required validation
+and publication at another descendant checkpoint before it could run.  It
+could not lower, build, realize, or confirm another derivation and could
+perform no live action.
 
 That correction was published at
 =bf8040dfc3ec4438c2f229de60978792ffe0a493=.  Its second recovery passed all
@@ -49,9 +50,12 @@ transaction/root namespaces.
 This second recovery stop is also preserved as validator evidence.  No
 artifact semantic check failed, no failed channel was overwritten, and no
 second lowering, build, realization, confirmation, or live change occurred.
-The next correction remains source-only and must align the complete harness
-fixture capability before a new published descendant may use separate
-no-clobber recovery channels.
+The source-only harness correction was later published with clean equality at
+=cdd4bd489313f36c325ea0841ad7586b6d152904=.  Its third recovery completed
+the exact runtime-v4 and checkout-independence gates.  The bounded runtime
+proof is complete, but its docs/data evidence publication and clean upstream
+equality are still pending.  D4c.1 fresh live-state review remains blocked on
+that publication boundary.
 
 * Retained realization
 
@@ -316,9 +320,12 @@ be overwritten.  The original, first-recovery, and second-recovery channel
 pairs remain failed-attempt evidence.  No second lowering, build,
 realization, confirmation, result link, GC root, or live change occurred.
 
-* Third source-only candidate and next gate
+* Published third validator and successful D4b runtime proof
 
-The source-only fixture-topology correction candidate has these identities:
+The source-only fixture-topology correction was published with clean local,
+upstream, and remote equality at
+=cdd4bd489313f36c325ea0841ad7586b6d152904=.  Its final source identities
+are:
 
 | Source | Bytes | SHA256 |
 |--------+-------+--------|
@@ -326,35 +333,55 @@ The source-only fixture-topology correction candidate has these identities:
 | Runtime validator | 68,082 | =dca63d3d1ab1d9a87e41d0fd8cc4990f1ac8db7c4f3a693f9e587826e9663dfe= |
 | Aggregate source gate | 20,662 | =fcacf9c362d4219783df6eb642cdb616dcbdd96968f9c7a932695d6be5738409= |
 
-Source-only validation passed; publication is pending.  After it is published
-at a clean descendant and local/upstream/remote equality is proven, create
-exactly =runtime-recovery-3.stdout= and
-=runtime-recovery-3.stderr= with no-clobber semantics and run only:
+The third recovery used exact no-clobber channels:
 
-1. the third corrected exact-artifact runtime validator against the retained
-   realization result and output; and
-2. the checkout-unavailable validator against those same retained identities.
+| Channel | Bytes | SHA256 |
+|---------+-------+--------|
+| =runtime-recovery-3.stdout= | 4,582 | =5c123e7d134d43398a0573fb19fa9668f323d0d112532c0f101c7b52b016f3a8= |
+| =runtime-recovery-3.stderr= | 0 | =e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855= |
 
-The gate must hash and size-check all three preserved failed-channel pairs
-before and after the complete matrix.  The corrected runtime result, new raw
-channels, validator and loader source identities, checkout-unavailable result,
-pre/post historical-channel identities, and unchanged selected live surfaces
-must then be reviewed and published as final D4b evidence.  Successful
-recovery must have empty =runtime-recovery-3.stderr=.  Until that happens,
-D4b is not evidence-complete and D4c.1 remains blocked.
+The exact 78-line stdout is tracked at
+[[file:data/2026-07-20-p5.2b-d4b-runtime-recovery-3.stdout][=data/2026-07-20-p5.2b-d4b-runtime-recovery-3.stdout=]].
+No repository empty file is needed for the exact zero-byte stderr.
+
+The 4,582-byte stdout contains two closed PASS packets:
+
+1. =p5.2b-d4b-runtime-evidence/v4= binds realization checkpoint =002d1ef=,
+   validator checkpoint =cdd4bd4=, the retained result and program, all three
+   failed attempts, six production suites, five D4a actions, four loader
+   modes, 11 empty nested-loader stderr sites, and all =54 + 44 = 98=
+   artifact interruption points.  It terminates with
+   =guix-system-pruning-d4b-runtime-check: PASS=.
+2. =p5.2b-d4b-checkout-independence/v1= binds the same result and program,
+   records =checkout=RENAMED-AND-RESTORED=, and terminates with
+   =guix-system-pruning-d4b-checkout-independence: PASS=.
+
+The successful gate reports =authorization=NOT-GRANTED=,
+=lowering=NOT-RUN=, =realization=NOT-RUN=,
+=original-wrapper-regression=NOT-RUN=, and
+=live-action=NOT-GRANTED=.  The checkout was restored.  All original and
+failed-recovery channel pairs, the 914-byte realization result, and the exact
+956,987-byte artifact remained unchanged.
+
+A fresh selected-live comparison is byte-identical at
+=44a31120baabf015556e42a387903153ce6b54f02624b12ab7dbc21bc80dfc11=
+/ 1,455 bytes / 19 records.  No result link, artifact GC root, production
+root, live transaction, activation, reconfiguration, collection, or reboot
+was created or run.  The failed runtime attempts remain exact historical
+evidence rather than being discarded or overwritten.
+
+The D4b runtime proof is complete.  Its docs/data evidence publication and
+clean upstream equality remain pending, so D4c.1 may not begin yet.
 
 * Exact nonclaims
 
 This recovery record does not claim:
 
-- that the third corrected validator is published or has passed its runtime
-  matrix;
-- that the complete six-suite, 98-point, canary, refusal, and
-  checkout-unavailable matrix has completed against the store artifact;
 - that the historical 117-byte warning is safe, classified, allowed, or
   suppressible;
 - that the =99dfdeff= matcher stop is an artifact semantic failure;
 - that the =bf8040d= fixture-capability stop is an artifact semantic failure;
+- that =original-wrapper-regression= ran during the final runtime-v4 gate;
 - a second lowering, build, realization, confirmation, substitute, graft,
   offload, result symlink, or GC root;
 - a live manifest, production root, transaction, generation-link deletion,

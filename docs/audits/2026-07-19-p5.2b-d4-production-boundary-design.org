@@ -3,7 +3,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:design:
-#+status: accepted design; D4a published; D4b third runtime recovery pending
+#+status: accepted design; D4b runtime proof complete; evidence publication pending; D4c.1 BACKLOG
 
 * Outcome
 
@@ -374,22 +374,29 @@ failure.
 The third source-only correction separates D4a topology from legacy 98-point
 topology.  D4a receives an exact owned 0700 root, exact 0600 reconciliation
 sentinel, and absent transaction/root namespaces; legacy retains its
-transaction sentinel and required directories.  Its
-loader/runtime/source-gate candidate identities are
+transaction sentinel and required directories.  Its final
+loader/runtime/source-gate identities are
 =6591f029...:18049=, =dca63d3d...:68082=, and
-=fcacf9c3...:20662=.  Source validation passed; publication is pending.
+=fcacf9c3...:20662=.  It is published with clean equality at
+=cdd4bd489313f36c325ea0841ad7586b6d152904=.
 
-After clean publication, the next recovery must preserve and pre/post hash
-all three failed channel pairs, create =runtime-recovery-3.*= without
-clobbering, refuse any realization token, rerun only the runtime and
-checkout-unavailable validators against the retained result/output, and
-report =lowering=NOT-RUN=, =realization=NOT-RUN=, and
-=live-action=NOT-GRANTED=.  Neither published failed validator is retried.
+The exact third-recovery stdout is tracked at
+[[file:data/2026-07-20-p5.2b-d4b-runtime-recovery-3.stdout][=data/2026-07-20-p5.2b-d4b-runtime-recovery-3.stdout=]]:
+4,582 bytes, 78 lines, SHA256
+=5c123e7d134d43398a0573fb19fa9668f323d0d112532c0f101c7b52b016f3a8=.
+The corresponding stderr is exactly empty with SHA256
+=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855=.
+Runtime-v4 and checkout-independence both PASS: six production suites, five
+D4a actions, 11 empty nested-loader sites, and all =54 + 44 = 98= artifact
+points complete; the checkout is renamed and restored.
 
-All 6 + 4 + 1 = 11 sites still require empty stderr; the historical warning
-is never classified or allowed.  Suites, fixtures, and artifact inputs remain
-exported from =002d1ef=, while only validator-owned corrections come from
-later checkpoints.  D4b is not evidence-complete.
+All three failed channel pairs, the realization result, artifact, and exact
+19-record selected-live snapshot remain unchanged.  The final gate reports
+=authorization=NOT-GRANTED=, =lowering=NOT-RUN=,
+=realization=NOT-RUN=, and =live-action=NOT-GRANTED=.  No result link,
+artifact root, or live change occurred.  The D4b runtime proof is complete,
+but its docs/data evidence publication and clean upstream equality remain
+pending.
 
 * D4c.1: fresh live-state review manifest publication
 
@@ -722,7 +729,9 @@ The realized artifact is retained; a later source-only validator correction
 was published at =99dfdeff= and then failed safely at a whole-line PASS
 matcher after two warning-free suites.  The second matcher correction was
 published at =bf8040d=; all six production suites passed warning-free before
-the artifact correctly rejected the harness's 0755 D4a fixture root.  A third
-source-only D4a/legacy fixture-topology correction, clean publication, and
-=runtime-recovery-3.*= run remain required before final D4b evidence.  All
-failed channels are retained and no second realization occurred.
+the artifact correctly rejected the harness's 0755 D4a fixture root.  The
+third D4a/legacy fixture-topology correction is published at =cdd4bd4= and
+its exact runtime-v4 plus checkout-independence gates pass.  All failed
+channels are retained, no second realization occurred, and the D4b runtime
+proof is complete.  Its docs/data evidence publication and clean upstream
+equality remain pending; D4c.1 fresh live-state review remains blocked.

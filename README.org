@@ -246,10 +246,15 @@ rejected the harness's 0755 D4a root.  Its exact 0-byte stdout and 115-byte
 stderr are retained; no artifact semantic check failed and no second
 realization ran.  The third source-only correction separates exact D4a
 topology (0700 root, 0600 reconciliation sentinel, absent transaction/root
-namespaces) from legacy 98-point topology.  Its source validation passed;
-publication and the no-clobber =runtime-recovery-3.*= run remain pending.
-Every live mutation
-remains blocked.
+namespaces) from legacy 98-point topology.  It is published at =cdd4bd4=;
+runtime-v4 and checkout-independence pass all six production suites, five D4a
+actions, 11 empty nested-loader sites, and =54 + 44 = 98= artifact points.
+The exact 4,582-byte stdout is
+[[file:docs/audits/data/2026-07-20-p5.2b-d4b-runtime-recovery-3.stdout][tracked]],
+stderr is empty, all prior evidence/live surfaces remain unchanged, and no
+second realization or live action ran.  The D4b runtime proof is complete;
+its final docs/data evidence publication and clean upstream equality remain
+pending.  Every live mutation remains blocked behind D4c and D5.
 
 Decision D-41 requires one fused store-resident Scheme program with no project
 repository read at runtime.  D4c.1 publishes the live manifest without a
@@ -383,8 +388,11 @@ bounded realization handoff.
 published =99dfdeff= first recovery, its safely failed orchestrator matcher
 channels, published =bf8040d= second recovery, its safely failed fixture-root
 capability channels, the distinct D4a/legacy topology contract, closed 11-site
-empty-stderr policy, and the pending no-second-realization
-=runtime-recovery-3.*= boundary.
+empty-stderr policy, published third-validator checkpoint =cdd4bd4=,
+subsequent runtime-v4/checkout PASS, exact
+[[file:docs/audits/data/2026-07-20-p5.2b-d4b-runtime-recovery-3.stdout][final stdout]],
+and the complete D4b runtime proof without a second realization or live
+action.  Final docs/data evidence publication remains pending.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -533,13 +541,16 @@ production suites with empty nested-loader stderr, then stopped safely when
 the artifact's capability guard rejected the harness-created 0755 D4a root.
 The 0-byte =runtime-recovery-2.stdout= and 115-byte
 =runtime-recovery-2.stderr= are preserved; no artifact semantic check
-failed and no second realization ran.  The third source-only candidate
+failed and no second realization ran.  The third source-only correction
 separates exact D4a fixture topology from the legacy 98-point topology and
-has passed source validation and must be published before only
-=runtime-recovery-3.*= runtime/checkout-unavailable validation runs.  D4c.1 live-manifest
-publication, D4c.2 exact live-program evidence, D4c.3 unchanged-state
-execution-packet acceptance, and separately authorized D5 execution remain
-later gates.
+is published at =cdd4bd4=.  Runtime-v4 and checkout-independence pass: six
+production suites, five D4a actions, 11 empty nested-loader sites, and all
+=54 + 44 = 98= artifact points.  The checkout is restored; all failed
+channels, the result/artifact, and the 19-record live snapshot remain exact.
+The D4b runtime proof is complete; its final docs/data evidence publication
+and clean upstream equality remain pending.  D4c.1 live-manifest publication,
+D4c.2 exact live-program evidence, D4c.3 unchanged-state execution-packet
+acceptance, and separately authorized D5 execution remain later gates.
 P5.3 collection remains separate and unpromoted; no further cleanup is
 authorized.
 
@@ -551,23 +562,28 @@ authorized realization succeeded.  First validator correction =99dfdeff= is
 published; its recovery stopped safely at the orchestrator PASS matcher after
 two warning-free production suites.  Second validator correction =bf8040d= is
 published; all six production suites passed warning-free before its D4a
-fixture root failed the artifact's exact capability guard.  The current ready
-action is to publish the validated third source-only D4a/legacy
-fixture-topology correction, prove clean equality, then run only runtime and
-checkout-unavailable validation against the retained artifact/result with new
-no-clobber =runtime-recovery-3.*= channels.  All three failed-channel pairs
-must remain pinned and unchanged.  No second preflight, lowering, build,
-realization, or live action is authorized, and every recovery gate must
-refuse any realization acceptance token.  Candidate validation and
-publication are still pending.  P5.2a is complete.
+fixture root failed the artifact's exact capability guard.  Third validator
+checkpoint =cdd4bd4= is published and equal; its exact runtime-v4 and
+checkout-independence packets pass with empty stderr and restored checkout.
+The current ready action is the final D4b docs/data evidence publication and
+clean upstream-equality proof.  D4c.1 remains =BACKLOG= until that boundary is
+published.  No live program, root, execution, garbage collection, activation,
+reconfiguration, or reboot is authorized.
+
+- [ ] P5.2b-D4b: publish the frozen runtime evidence and tracked 78-line
+  stdout from clean validator checkpoint =cdd4bd4=, prove upstream equality,
+  and stop.
+P5.2a is complete.
 P5.2b-D1 is complete at the source and synthetic-fixture boundary;
 P5.2b-D2a is complete at its source and native-fixture boundary, and D2b is
 complete and published at its uninstalled artifact/evidence boundary.  D3a is
 published at =676b430=; its first D3b compile gate found two warnings.  The
 minimal D3a correction is published at =0601b9d=.  D3b is evidence-complete
-and published at =b1d6ecb=.  Live P5.2b remains blocked on D4b synthetic-
-artifact evidence, D4c.1/D4c.2 manifest/program publication, D4c.3 packet
-acceptance, and a separate exact D5 execution grant.
+and published at =b1d6ecb=.  D4b's successful third validator is published
+at =cdd4bd4=; its runtime proof is complete, while final docs/data evidence
+publication and clean upstream equality remain pending.  Live P5.2b remains
+blocked on that publication, D4c.1/D4c.2 manifest/program publication, D4c.3
+packet acceptance, and a separate exact D5 execution grant.
 P4.O1 private Org sync/history remains a selectable non-destructive successor.
 P5.3 is not ready, P5.S1 storage reorganization remains parked, and
 backup/restore implementation is parked as P4.3.
@@ -2506,9 +2522,10 @@ The historical live menu contained all 78 candidates twice, so deleting links
 without a new menu would have left 156 stale path occurrences.  The reviewed
 =bootcfg= had only six direct forward references and did not retain every old
 System closure.  The retained-only GRUB artifact is already published, but
-live P5.2b still requires D4b synthetic fused-program evidence, D4c.1/D4c.2
-manifest/program publication, D4c.3 packet acceptance, and the separately
-granted attended D5 transaction.  P5.3 remains separate and held.
+live P5.2b still requires final D4b docs/data evidence publication and clean
+upstream equality, D4c.1/D4c.2 manifest/program publication, D4c.3 packet
+acceptance, and the separately granted attended D5 transaction.  P5.3 remains
+separate and held.
 
 P5.2b-D2a adds =scripts/guix-system-retained-bootcfg= and the Scheme module
 =(sk system-retained-bootcfg)=.  The stage-only input binds the pinned Guix,
@@ -2561,9 +2578,12 @@ nested-loader stderr, then the artifact correctly rejected the harness's 0755
 D4a fixture root.  Its no-clobber =runtime-recovery-2.*= channels are
 preserved.  The third source-only correction separates the D4a 0700
 root/0600 reconciliation-sentinel topology from legacy transaction topology;
-source validation passed; publication remains pending before its no-clobber
-=runtime-recovery-3.*= run.  No additional lowering or realization occurred,
-and all live gates remain separate.
+it is published at =cdd4bd4=.  Exact runtime-v4 and checkout-independence
+validation pass with 4,582-byte tracked stdout, empty stderr, restored
+checkout, unchanged historical evidence, and unchanged selected live
+surfaces.  The D4b runtime proof is complete, but its final docs/data evidence
+publication and clean upstream equality remain pending.  No additional
+lowering or realization occurred, and all live gates remain separate.
 
 * Live symlinks
 
