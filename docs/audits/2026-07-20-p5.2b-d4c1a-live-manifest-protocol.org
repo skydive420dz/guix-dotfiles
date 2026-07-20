@@ -4,6 +4,7 @@
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:source:
 #+status: bounded protocol checkpoint; D4c.1a remains open
+#+source_checkpoint: 79a361a7f3c2e46ddb27b0c4d5e44a8751914dd5
 
 * Outcome
 
@@ -27,6 +28,11 @@ This is not D4c.1a completion.  The deterministic collector, live-specific
 boundary/journal/reconciliation core, exact D5 grant-token grammar, production
 runtime adapter, fused renderer/driver, and their complete synthetic gates
 remain required before any live manifest may be captured.
+
+The exact bounded source checkpoint is
+=79a361a7f3c2e46ddb27b0c4d5e44a8751914dd5=.  It is a local checkpoint until
+the separate push and upstream-equality proof completes; this document does
+not call it published yet.
 
 * Why the extra source checkpoint is required
 
