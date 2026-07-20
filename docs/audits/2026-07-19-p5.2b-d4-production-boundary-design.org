@@ -3,7 +3,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:design:
-#+status: accepted design; D4a published; D4b helper source not yet published
+#+status: accepted design; D4a published; D4b runtime recovery pending
 
 * Outcome
 
@@ -307,6 +307,48 @@ identity.
 D4b is not a live manifest, live-target program, production-root liveness
 proof, authorization, installation, activation, reconfiguration, collection,
 or reboot.
+
+** D4b realization and validator recovery status
+
+The source-only helper was published at
+=002d1ef05bab80162f6807a5cd31b98d209baa7c=.  Its one authorized
+unprivileged lowering and realization succeeded, producing:
+
+| Item | Exact identity |
+|------+----------------|
+| Derivation | =/gnu/store/3ky2sgbkg10amsvfx5as4m2w76szkr6a-system-pruning-loaded.scm.drv= |
+| Output | =/gnu/store/17i7zdd5lhncw5v97cfkxbg4zdvpw5jb-system-pruning-loaded.scm= |
+| Output SHA256 / bytes | =95b84e29853a2327bffab857383cf78a30ab41b965144fd298edc384335b9d70= / =956,987= |
+| Result SHA256 / bytes | =02506b54d887da9e2c10a94a62a2527f3a1b128380c628f3efa2efeb2e445fd3= / =914= |
+
+The first runtime validator then stopped on the exact Guile 3.0.11
+nested-loader warning
+=9100e8a721dc98c18905be24b2c46ad40af5122494a0156aec64003197907a6c=
+/ 117 bytes.  Its successful child status and required PASS output were not
+enough because empty child stderr was and remains mandatory.  Root-cause
+analysis found a lazily spawned Guile finalizer thread before startup
+environment mutation reached =scm_putenv=; Guile documents the multi-thread
+operation as unspecified.
+
+[[file:2026-07-19-p5.2b-d4b-runtime-recovery.org][The D4b runtime-validator recovery record]]
+preserves the realization at =002d1ef= and requires a distinct later
+validator checkpoint.  That checkpoint owns one exact pinned loader checker
+whose =dynamic-wind= disables GC only for =load-exact-loader-prefix= and
+restores GC before packets, suites, or canaries run.  The standalone
+preexisting-module check restores its saved caller module before enabling GC.
+All 6 + 4 + 1 = 11 sites require empty stderr; the historical warning is never
+classified or allowed.  Suites, fixtures, and artifact inputs remain exported
+from =002d1ef=, while only the corrected loader comes from the validator
+checkpoint.
+
+The recovery must preserve and pre/post hash the old channels, create
+=runtime-recovery.*= without clobbering, refuse any realization token, rerun
+only the runtime and checkout-unavailable validators against the retained
+result/output, and report =lowering=NOT-RUN=, =realization=NOT-RUN=, and
+=live-action=NOT-GRANTED=.  The correction candidate has passed its final
+source-only gates with no open critical, high, or medium finding.  It has not
+yet been published, and the recovery run remains pending, so D4b is not
+evidence-complete.
 
 * D4c.1: fresh live-state review manifest publication
 
@@ -625,11 +667,15 @@ No later D4 or D5 gate is implicitly authorized.
 The bounded D4a source/fixture implementation and final validation are recorded
 in [[file:2026-07-19-p5.2b-d4a-reconciliation-fused-source.org][the P5.2b-D4a reconciliation and fused-program source checkpoint]].
 
-That successor realizes no store program and authorizes no D4b or live action.
+That successor realized no store program and authorized no D4b or live action.
 D4a is now published at
 =41e11155f817c8ccf2f8e8b3c9c62af566f53209=.  The subsequent
 [[file:2026-07-19-p5.2b-d4b-helper-source.org][D4b source-only helper checkpoint]]
-prepares the exact-input constructor and runtime evidence gates while
-deliberately performing no lowering or realization.  D4b's one permitted
-synthetic realization remains blocked until that helper checkpoint is
-published, fetched cleanly, and covered by an explicit bounded-effect grant.
+was published at =002d1ef05bab80162f6807a5cd31b98d209baa7c= and prepared
+the exact-input constructor and runtime evidence gates without lowering at
+that source checkpoint.  Its later one permitted synthetic realization
+succeeded.  The first runtime gate exposed the bounded validator-policy issue
+recorded in
+[[file:2026-07-19-p5.2b-d4b-runtime-recovery.org][the D4b runtime-validator recovery record]].
+The realized artifact is retained; a later source-only validator correction
+and recovery run remain required before final D4b evidence.

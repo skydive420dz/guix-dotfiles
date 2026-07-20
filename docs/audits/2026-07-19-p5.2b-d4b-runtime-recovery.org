@@ -1,0 +1,233 @@
+#+title: P5.2b-D4b fused-artifact runtime-validator recovery
+#+author: Rafael Oliveira
+#+date: 2026-07-19
+#+startup: overview
+#+category: guixpc
+#+filetags: :guixpc:guix:scheme:runtime:recovery:evidence:
+#+status: source-only validator correction passed; publication and run pending
+
+* Outcome
+
+The one explicitly authorized P5.2b-D4b lowering and
+realization-or-confirmation succeeded from published helper checkpoint
+=002d1ef05bab80162f6807a5cd31b98d209baa7c=.  It produced the exact
+956,987-byte D4a fused program, classified every bounded store addition,
+preserved the selected live surfaces, and created no result symlink or GC
+root.
+
+The first runtime gate then stopped at its first nested production-suite
+loader because the child emitted a Guile 3.0.11 environment-mutation warning.
+The child exited successfully and printed both required PASS lines, but empty
+=stderr= was and remains the correct gate.  Guile documents concurrent
+environment mutation as unspecified; the exact warning must remain fatal.
+The defect is in the validator-owned loader checker's GC/thread timing, not
+the realized artifact.
+
+The realized program and its closed result remain the accepted D4b artifact
+inputs.  The correction is source-only and must be published at a later
+validator checkpoint before it runs.  It must not lower, build, realize, or
+confirm another derivation and must perform no live action.
+
+* Retained realization
+
+The consumed authorization covered exactly one unprivileged
+=computed-file= lowering and realization-or-confirmation with substitutes,
+grafts, offload, result/GC roots, and live action disabled.
+
+| Item | Exact identity |
+|------+----------------|
+| Realization checkpoint | =002d1ef05bab80162f6807a5cd31b98d209baa7c= |
+| D4a rendered source SHA256 / bytes | =95b84e29853a2327bffab857383cf78a30ab41b965144fd298edc384335b9d70= / =956,987= |
+| Derivation | =/gnu/store/3ky2sgbkg10amsvfx5as4m2w76szkr6a-system-pruning-loaded.scm.drv= |
+| Output | =/gnu/store/17i7zdd5lhncw5v97cfkxbg4zdvpw5jb-system-pruning-loaded.scm= |
+| Result state | =REALIZED= |
+| Realization result | =/tmp/p52b-d4b-realization-evidence.002d1ef05bab80162f6807a5cd31b98d209baa7c/realization-result.tsv= |
+| Result SHA256 / bytes | =02506b54d887da9e2c10a94a62a2527f3a1b128380c628f3efa2efeb2e445fd3= / =914= |
+| Preflight snapshot | =6a2c9073ff890df220dd619b373ef7e5e428c2a1ddc20de8f4692f3bb3025bd7= |
+| Top-level store additions | =3= |
+| Unrelated additions / removals | =0 / 0= |
+| Selected live surfaces | byte-identical |
+| Result symlink / GC root | absent / none created |
+| Live action | =NOT-GRANTED= |
+
+Every phase status in the closed result is zero and its terminal row is PASS.
+The output SHA256 and size equal the independently frozen D4a render.  These
+facts remain bound to the realization checkpoint; a later validator commit
+must not rewrite their provenance.
+
+* First runtime stop
+
+The published runtime helper at the realization checkpoint has historical
+identity:
+
+| File | Bytes | SHA256 |
+|------+-------+--------|
+| =tests/guix-system-pruning-d4b-runtime-check= | 46,151 | =bfd4cfb6a51f4651cee9fd03073d817a7e3c8dccc9a92ce9a1f3990ddc7d2a28= |
+
+Its first post-realization invocation exited 1 before entering the complete
+runtime matrix.  The original raw channels are retained and must not be
+overwritten:
+
+| Channel | Bytes | SHA256 |
+|---------+-------+--------|
+| =runtime.stdout= | 0 | =e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855= |
+| =runtime.stderr= | 222 | =ea0799970363414fa8c9c5a0d32a2cb6b6125e620abd81f2b926795f26c8864d= |
+
+The exact failed top-level diagnostic was:
+
+#+begin_example
+warning: mutating the process environment while multiple threads are running;
+         further behavior unspecified.
+guix-system-pruning-d4b-runtime-check: FAIL: exact-production module suite emitted diagnostics: boundary
+#+end_example
+
+The child warning alone is exactly 117 bytes:
+
+| Item | Value |
+|------+-------|
+| Warning SHA256 | =9100e8a721dc98c18905be24b2c46ad40af5122494a0156aec64003197907a6c= |
+| Warning bytes | =117= |
+
+The exact production-boundary child exited zero and printed its required
+suite PASS plus loader PASS.  Repetition and the isolated canary modes showed
+the same warning bytes, but repeatability does not make the condition safe.
+
+The validator-owned checker allowed Guile's finalizer thread to be spawned
+lazily before the exact startup prefix completed.  A startup =setenv= then
+reached Guile 3.0.11's =scm_putenv= with multiple threads present.  Guile
+warned because mutation of the process environment in that state has
+unspecified behavior.  Therefore the historical 117-byte warning is retained
+as exact failure evidence; it must not be classified, allowlisted, suppressed,
+or accepted by the recovery gate.
+
+* Bounded validator correction
+
+The corrected runtime validator must preserve two independent checkpoints:
+
+1. =realization-checkpoint= is the historical
+   =002d1ef05bab80162f6807a5cd31b98d209baa7c= checkpoint that constructed
+   and realized the accepted artifact.
+2. =validator-checkpoint= is a later clean, published descendant containing
+   only the reviewed loader-checker/runtime-harness recovery correction and
+   its documentation.
+
+The validator must export production suites, fixtures, manifests, and every
+artifact input from the realization checkpoint, not from the later validator
+checkpoint.  The corrected validator-owned loader checker is the one
+deliberate exception: it must be materialized from the exact later validator
+checkpoint, made unwritable in the private runtime tree, and pinned by exact
+SHA256 and size.  The gate must separately require clean
+=HEAD == origin/main == validator-checkpoint= and prove that the realization
+checkpoint is its ancestor.
+
+The corrected loader checker wraps only =load-exact-loader-prefix= in:
+
+#+begin_src scheme
+(dynamic-wind
+  gc-disable
+  (lambda ()
+    (load-exact-loader-prefix %fused-program))
+  gc-enable)
+#+end_src
+
+The =dynamic-wind= after thunk restores normal GC even if prefix loading
+fails.  Normal GC must be restored before any source packet, production
+suite, or canary is evaluated; the correction is not a whole-process GC
+suppression.
+
+The standalone preexisting-module refusal must save its caller module before
+loading the store program.  Its =dynamic-wind= after thunk restores that
+caller module first and calls =gc-enable= second.  This preserves both module
+context and normal collection across the expected prefix refusal.
+
+All nested-loader sites still require empty =stderr=.  The expected closed
+count is 11 checked sites:
+
+| Site family | Count |
+|-------------+-------|
+| Six byte-frozen production suites | 6 |
+| Four isolated loader-canary modes | 4 |
+| Direct preexisting-module refusal | 1 |
+| Total | 11 |
+
+At every site, successful child status, the exact expected PASS lines, and a
+direct zero-byte =stderr= file remain mandatory.  Any diagnostic, a nonzero
+child status, a missing PASS line, or a checked-site count other than 11 must
+remain fatal.  The historical warning identity is not an accepted runtime
+identity.
+
+The recovery run must use exact new top-level channel names
+=runtime-recovery.stdout= and =runtime-recovery.stderr= in the retained
+evidence directory.  The caller must use no-clobber creation and refuse if
+either path already exists.  The gate must hash and size-check the original
+=runtime.stdout= and =runtime.stderr= before and after the complete matrix, so
+the recovery cannot replace or mutate the first failed channels.
+
+The gate must hard-pin the retained result path, result SHA256/size, output,
+derivation, rendered-program SHA256/size, preflight snapshot, store-addition
+count, and terminal realization PASS.  Its closed result must name both
+checkpoints, the exact validator-owned loader identity, 11 empty-stderr sites,
+and report:
+
+#+begin_example
+lowering=NOT-RUN
+realization=NOT-RUN
+live-action=NOT-GRANTED
+#+end_example
+
+The checkout-unavailable validator may then be rerun against the same retained
+result and output.  Neither corrected validator may invoke the preflight,
+lowering, build, or realization gate.
+
+Both the source recovery gate and runtime recovery gate must fail if
+=SK_P52B_D4B_ACCEPTANCE_TOKEN= is present, even if its value is empty.  The
+consumed realization token is neither an input to nor authorization for this
+source-only recovery.
+
+* Publication and next gate
+
+The validator correction candidate has passed its final source-only gates:
+
+| Source | Bytes | SHA256 |
+|--------+-------+--------|
+| Corrected loader checker | 18,049 | =6591f0292d02ae98d8267ce038a44efbe9e10f61e948e8d508f54dd554cfa030= |
+| Corrected runtime validator | 57,955 | =55cab0aa14d6c4a2854f1f38925b0b6fd1fae9ab34e92e51bd208bc549204099= |
+| Aggregate source gate | 20,132 | =b86b00ee3561956699608706ccbfc847dc1e80e305809f6ae1746449ea00f87f= |
+
+The exact D4b source gate passed on GuixPC with
+=lowered=FALSE= / =realized=FALSE=.  The strict repository source/fixture
+suite, Org lint, whitespace checks, and independent adversarial review also
+passed with no open critical, high, or medium finding.  No preflight,
+lowering, build, realization, or live action ran during validation.
+
+The candidate has not yet been published.  After clean local, upstream, and
+remote equality is proven for its later checkpoint, create the two new
+recovery channels with no-clobber semantics and run only:
+
+1. the corrected exact-artifact runtime validator against the retained
+   realization result and output; and
+2. the checkout-unavailable validator against those same retained identities.
+
+The corrected runtime result, new raw channels, validator and loader source
+identities, checkout-unavailable result, pre/post historical-channel
+identities, and unchanged selected live surfaces must then be reviewed and
+published as final D4b evidence.  Successful recovery must have empty
+=runtime-recovery.stderr=.  Until that happens, D4b is not evidence-complete
+and D4c.1 remains blocked.
+
+* Exact nonclaims
+
+This recovery record does not claim:
+
+- that the corrected validator is published or its runtime matrix has passed;
+- that the complete six-suite, 98-point, canary, refusal, and
+  checkout-unavailable matrix has completed against the store artifact;
+- that the historical 117-byte warning is safe, classified, allowed, or
+  suppressible;
+- a second lowering, build, realization, confirmation, substitute, graft,
+  offload, result symlink, or GC root;
+- a live manifest, production root, transaction, generation-link deletion,
+  GRUB or =bootcfg= mutation;
+- authorization for D4c, D5, garbage collection, activation,
+  reconfiguration, or reboot; or
+- P5.3 readiness.

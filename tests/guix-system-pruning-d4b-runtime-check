@@ -13,6 +13,26 @@ expected_user=skydive420dz
 expected_uid=1000
 expected_repo=/home/skydive420dz/Projects/guix-dotfiles
 expected_d4a=41e11155f817c8ccf2f8e8b3c9c62af566f53209
+expected_realization_checkpoint=002d1ef05bab80162f6807a5cd31b98d209baa7c
+expected_realization_result_sha=\
+02506b54d887da9e2c10a94a62a2527f3a1b128380c628f3efa2efeb2e445fd3
+expected_realization_result_size=914
+expected_failed_runtime_stdout_sha=\
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+expected_failed_runtime_stdout_size=0
+expected_failed_runtime_stderr_sha=\
+ea0799970363414fa8c9c5a0d32a2cb6b6125e620abd81f2b926795f26c8864d
+expected_failed_runtime_stderr_size=222
+expected_store_program=\
+/gnu/store/17i7zdd5lhncw5v97cfkxbg4zdvpw5jb-system-pruning-loaded.scm
+expected_derivation=\
+/gnu/store/3ky2sgbkg10amsvfx5as4m2w76szkr6a-system-pruning-loaded.scm.drv
+expected_preflight_snapshot=\
+6a2c9073ff890df220dd619b373ef7e5e428c2a1ddc20de8f4692f3bb3025bd7
+expected_store_additions=3
+expected_nested_loader_sites=11
+expected_guile=\
+/gnu/store/f75z9sgss74ndiy1jnr02fippk1fjwkj-guile-wrapper/bin/guile
 repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
 fixture_source=$repo/tests/fixtures/guix-system-pruning-transaction
 manifest=$fixture_source/manifest.tsv
@@ -33,8 +53,12 @@ fixture_runtime_test=$repo/tests/guix-system-pruning-fixture-runtime-check.scm
 manifest_sha=0bf2ce08c06ec4b27053a2f7af3fd5d20c3c37bda2e739a00d0a6c68e6d9ce61
 registry_sha=bd17a2423d9a0fcea86f3eba23cbb52699379b54853eae510597ed7a160aba86
 new_grub_sha=70965414824c26e1712c6a7a51efd9517633eb3c83f36f88927565c87807496b
-loader_behavior_sha=379a72400e9c480d929e6c06464d71bbe9700029cbc4cb24799ab2fae896c9e1
-loader_behavior_size=17534
+realization_loader_behavior_sha=\
+379a72400e9c480d929e6c06464d71bbe9700029cbc4cb24799ab2fae896c9e1
+realization_loader_behavior_size=17534
+validator_loader_behavior_sha=\
+6591f0292d02ae98d8267ce038a44efbe9e10f61e948e8d508f54dd554cfa030
+validator_loader_behavior_size=18049
 boundary_test_sha=7d8d48c2644c8c1ff5237b418f8cef403da1003710e9688cba56e8137b445065
 boundary_test_size=34760
 root_backend_test_sha=f49671a205487d8413f536fbc7d805a0453d251f648c54043016303711ca2912
@@ -62,7 +86,7 @@ fail() {
 
 usage() {
     printf '%s\n' \
-        "usage: $program_name EXACT-STORE-PROGRAM EXACT-HELPER-CHECKPOINT EXACT-REALIZATION-RESULT" \
+        "usage: $program_name EXACT-STORE-PROGRAM REALIZATION-CHECKPOINT VALIDATOR-CHECKPOINT EXACT-REALIZATION-RESULT" \
         >&2
     exit 64
 }
@@ -139,6 +163,23 @@ sha256_file() {
     printf '%s\n' "$sha_digest"
 }
 
+assert_historical_runtime_channel() {
+    channel_label=$1
+    channel_path=$2
+    channel_sha=$3
+    channel_size=$4
+    if [ ! -f "$channel_path" ] || [ -L "$channel_path" ]; then
+        fail "historical runtime channel is not one direct file: $channel_label"
+    fi
+    [ "$(readlink -f "$channel_path" 2>/dev/null || true)" = \
+        "$channel_path" ] ||
+        fail "historical runtime channel path is not canonical: $channel_label"
+    [ "$(sha256_file "$channel_path")" = "$channel_sha" ] ||
+        fail "historical runtime channel digest changed: $channel_label"
+    [ "$(stat -c '%s' "$channel_path")" -eq "$channel_size" ] ||
+        fail "historical runtime channel size changed: $channel_label"
+}
+
 assert_store_program() {
     candidate=$1
     case $candidate in
@@ -181,14 +222,17 @@ assert_store_program() {
 }
 
 case $# in
-    3)
+    4)
         store_program=$1
-        expected_checkpoint=$2
-        realization_result=$3
+        realization_checkpoint=$2
+        validator_checkpoint=$3
+        realization_result=$4
         ;;
     *) usage ;;
 esac
 
+[ "${SK_P52B_D4B_ACCEPTANCE_TOKEN+x}" != x ] ||
+    fail "runtime recovery refuses a realization acceptance token"
 [ "$(hostname)" = "$expected_host" ] ||
     fail "runtime gate is outside the accepted GuixPC"
 [ "$(id -un)" = "$expected_user" ] ||
@@ -203,13 +247,24 @@ script=$(readlink -f "$0" 2>/dev/null || true)
 if [ ! -f "$script" ] || [ -L "$script" ]; then
     fail "runtime gate is not one repository-owned regular file"
 fi
-[ "${#expected_checkpoint}" -eq 40 ] ||
-    fail "helper checkpoint has the wrong length"
-case $expected_checkpoint in
-    *[!0-9a-f]*) fail "helper checkpoint is not lowercase hexadecimal" ;;
+validator_program_sha=$(sha256_file "$script")
+validator_program_size=$(stat -c '%s' "$script")
+[ "${#realization_checkpoint}" -eq 40 ] ||
+    fail "realization checkpoint has the wrong length"
+case $realization_checkpoint in
+    *[!0-9a-f]*) fail "realization checkpoint is not lowercase hexadecimal" ;;
+esac
+[ "$realization_checkpoint" = "$expected_realization_checkpoint" ] ||
+    fail "realization checkpoint differs from the retained first realization"
+[ "${#validator_checkpoint}" -eq 40 ] ||
+    fail "validator checkpoint has the wrong length"
+case $validator_checkpoint in
+    *[!0-9a-f]*) fail "validator checkpoint is not lowercase hexadecimal" ;;
 esac
 
 assert_store_program "$store_program"
+[ "$store_program" = "$expected_store_program" ] ||
+    fail "STORE_PROGRAM differs from the retained first realization"
 
 program_sha=$(sha256_file "$store_program")
 program_size=$(stat -c '%s' "$store_program")
@@ -235,10 +290,35 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+assert_empty_nested_loader_stderr() {
+    label=$1
+    stderr_file=$2
+    if [ ! -f "$stderr_file" ] || [ -L "$stderr_file" ]; then
+        fail "nested-loader stderr is not one direct regular file: $label"
+    fi
+    [ ! -s "$stderr_file" ] || {
+        cat "$stderr_file" >&2
+        fail "nested-loader emitted diagnostics: $label"
+    }
+    nested_loader_empty_stderr_count=$((nested_loader_empty_stderr_count + 1))
+}
+
+nested_loader_empty_stderr_count=0
+
 expected_realization_evidence=\
-/tmp/p52b-d4b-realization-evidence.$expected_checkpoint
+/tmp/p52b-d4b-realization-evidence.$realization_checkpoint
 expected_realization_result=\
 $expected_realization_evidence/realization-result.tsv
+failed_runtime_stdout=$expected_realization_evidence/runtime.stdout
+failed_runtime_stderr=$expected_realization_evidence/runtime.stderr
+assert_historical_runtime_channel \
+    stdout "$failed_runtime_stdout" \
+    "$expected_failed_runtime_stdout_sha" \
+    "$expected_failed_runtime_stdout_size"
+assert_historical_runtime_channel \
+    stderr "$failed_runtime_stderr" \
+    "$expected_failed_runtime_stderr_sha" \
+    "$expected_failed_runtime_stderr_size"
 realization_result_source=$realization_result
 [ "$realization_result_source" = "$expected_realization_result" ] ||
     fail "realization result path differs from the accepted evidence path"
@@ -251,6 +331,10 @@ fi
     fail "realization result path is not canonical"
 realization_result_sha=$(sha256_file "$realization_result_source")
 realization_result_size=$(stat -c '%s' "$realization_result_source")
+[ "$realization_result_sha" = "$expected_realization_result_sha" ] ||
+    fail "realization result differs from the retained first realization"
+[ "$realization_result_size" -eq "$expected_realization_result_size" ] ||
+    fail "realization result size differs from the retained first realization"
 realization_result=$tmp/realization-result.tsv
 cp "$realization_result_source" "$realization_result"
 chmod a-w "$realization_result"
@@ -266,7 +350,7 @@ cmp -s "$realization_result_source" "$realization_result" ||
 
 assert_result_row schema p5.2b-d4b-first-realization/v1
 assert_result_row authorization EXACT-COMMIT-BOUND-TOKEN
-assert_result_row checkpoint "$expected_checkpoint"
+assert_result_row checkpoint "$realization_checkpoint"
 assert_result_row render "$expected_program_sha:$expected_program_size"
 assert_result_row output "$store_program"
 assert_result_row lower-status 0
@@ -289,10 +373,8 @@ assert_result_row live-action NOT-GRANTED
 
 assert_result_key state
 realization_state=$(result_value state)
-case $realization_state in
-    REALIZED | ALREADY-PRESENT) ;;
-    *) fail "realization result contains an invalid state" ;;
-esac
+[ "$realization_state" = REALIZED ] ||
+    fail "retained first realization does not report REALIZED"
 assert_result_key preflight-snapshot
 preflight_snapshot=$(result_value preflight-snapshot)
 [ "${#preflight_snapshot}" -eq 64 ] ||
@@ -300,6 +382,8 @@ preflight_snapshot=$(result_value preflight-snapshot)
 case $preflight_snapshot in
     *[!0-9a-f]*) fail "realization preflight snapshot is not hexadecimal" ;;
 esac
+[ "$preflight_snapshot" = "$expected_preflight_snapshot" ] ||
+    fail "realization preflight snapshot differs from the retained grant"
 assert_result_key derivation
 derivation=$(result_value derivation)
 if [ ! -f "$derivation" ] || [ -L "$derivation" ]; then
@@ -311,11 +395,15 @@ case $derivation in
     /gnu/store/*.drv) ;;
     *) fail "realization result contains an invalid derivation path" ;;
 esac
+[ "$derivation" = "$expected_derivation" ] ||
+    fail "derivation differs from the retained first realization"
 assert_result_key store-additions
 store_additions=$(result_value store-additions)
 case $store_additions in
     '' | *[!0-9]*) fail "realization result has an invalid addition count" ;;
 esac
+[ "$store_additions" -eq "$expected_store_additions" ] ||
+    fail "store additions differ from the retained first realization"
 
 if ! git_status=$(run_clean_git -C "$repo" status --porcelain); then
     fail "cannot inspect the runtime checkout state"
@@ -333,35 +421,104 @@ if [ "$git_dir" != "$repo/.git" ] ||
 fi
 head=$(run_clean_git -C "$repo" rev-parse HEAD)
 origin=$(run_clean_git -C "$repo" rev-parse origin/main)
-[ "$head" = "$expected_checkpoint" ] ||
-    fail "runtime checkout HEAD differs from the accepted helper checkpoint"
-[ "$origin" = "$expected_checkpoint" ] ||
+[ "$head" = "$validator_checkpoint" ] ||
+    fail "runtime checkout HEAD differs from the validator checkpoint"
+[ "$origin" = "$validator_checkpoint" ] ||
     fail "runtime checkout is not upstream-equal"
 run_clean_git -C "$repo" merge-base --is-ancestor "$expected_d4a" "$head" ||
-    fail "published D4a is not an ancestor of the helper checkpoint"
+    fail "published D4a is not an ancestor of the validator checkpoint"
+run_clean_git -C "$repo" merge-base --is-ancestor \
+    "$realization_checkpoint" "$head" ||
+    fail "realization checkpoint is not an ancestor of the validator checkpoint"
+[ "$head" != "$realization_checkpoint" ] ||
+    fail "runtime recovery requires a later validator checkpoint"
 
 mkdir "$tmp/source" "$tmp/home"
-if ! run_clean_git -C "$repo" archive --format=tar "$head" \
+printf '%s\n' \
+    'M	README.org' \
+    'M	docs/audits/2026-07-19-p5.2b-d4-production-boundary-design.org' \
+    'M	docs/audits/2026-07-19-p5.2b-d4b-helper-source.org' \
+    'A	docs/audits/2026-07-19-p5.2b-d4b-runtime-recovery.org' \
+    'M	guix/machines/guixpc/todo.org' \
+    'M	tests/guix-system-pruning-d4b-runtime-check' \
+    'M	tests/guix-system-pruning-d4b-source-check' \
+    'M	tests/guix-system-pruning-fused-loader-behavior-check.scm' \
+    >"$tmp/validator-diff.expected"
+if ! run_clean_git -C "$repo" diff --name-status --no-renames \
+    "$realization_checkpoint" "$validator_checkpoint" \
+    >"$tmp/validator-diff.actual" 2>"$tmp/validator-diff.stderr"; then
+    cat "$tmp/validator-diff.stderr" >&2
+    fail "cannot inspect the validator checkpoint scope"
+fi
+[ ! -s "$tmp/validator-diff.stderr" ] || {
+    cat "$tmp/validator-diff.stderr" >&2
+    fail "validator checkpoint scope inspection emitted diagnostics"
+}
+cmp -s "$tmp/validator-diff.expected" "$tmp/validator-diff.actual" || {
+    cat "$tmp/validator-diff.actual" >&2
+    fail "validator checkpoint changed a path outside the closed recovery scope"
+}
+
+validator_loader_behavior_source=$loader_behavior_check
+[ "$(readlink -f "$validator_loader_behavior_source" 2>/dev/null || true)" = \
+    "$validator_loader_behavior_source" ] ||
+    fail "validator loader checker path is not canonical"
+if [ ! -f "$validator_loader_behavior_source" ] ||
+    [ -L "$validator_loader_behavior_source" ]; then
+    fail "validator loader checker is not one direct regular file"
+fi
+[ "$(sha256_file "$validator_loader_behavior_source")" = \
+    "$validator_loader_behavior_sha" ] ||
+    fail "validator loader checker digest differs from the reviewed correction"
+[ "$(stat -c '%s' "$validator_loader_behavior_source")" -eq \
+    "$validator_loader_behavior_size" ] ||
+    fail "validator loader checker size differs from the reviewed correction"
+validator_loader_behavior_check=$tmp/validator-loader-behavior-check.scm
+if ! run_clean_git -C "$repo" cat-file blob \
+    "$validator_checkpoint:tests/guix-system-pruning-fused-loader-behavior-check.scm" \
+    >"$validator_loader_behavior_check" \
+    2>"$tmp/validator-loader.stderr"; then
+    cat "$tmp/validator-loader.stderr" >&2
+    fail "cannot materialize the committed validator loader checker"
+fi
+[ ! -s "$tmp/validator-loader.stderr" ] || {
+    cat "$tmp/validator-loader.stderr" >&2
+    fail "committed validator loader materialization emitted diagnostics"
+}
+chmod a-w "$validator_loader_behavior_check"
+[ "$(sha256_file "$validator_loader_behavior_check")" = \
+    "$validator_loader_behavior_sha" ] ||
+    fail "private validator loader checker has the wrong digest"
+[ "$(stat -c '%s' "$validator_loader_behavior_check")" -eq \
+    "$validator_loader_behavior_size" ] ||
+    fail "private validator loader checker has the wrong size"
+cmp -s \
+    "$validator_loader_behavior_source" \
+    "$validator_loader_behavior_check" ||
+    fail "private validator loader checker is not byte-identical"
+
+if ! run_clean_git -C "$repo" archive --format=tar \
+    "$realization_checkpoint" \
     >"$tmp/source.tar" 2>"$tmp/source-archive.stderr"; then
     cat "$tmp/source-archive.stderr" >&2
-    fail "cannot export the accepted runtime checkpoint"
+    fail "cannot export the retained realization checkpoint"
 fi
 [ ! -s "$tmp/source-archive.stderr" ] || {
     cat "$tmp/source-archive.stderr" >&2
-    fail "accepted runtime checkpoint export emitted diagnostics"
+    fail "retained realization checkpoint export emitted diagnostics"
 }
 if ! env -i PATH="$PATH" LC_ALL=C \
     tar -xf "$tmp/source.tar" -C "$tmp/source" \
     >"$tmp/source-extract.stdout" 2>"$tmp/source-extract.stderr"; then
     cat "$tmp/source-extract.stdout" >&2
     cat "$tmp/source-extract.stderr" >&2
-    fail "cannot extract the accepted runtime checkpoint"
+    fail "cannot extract the retained realization checkpoint"
 fi
 [ ! -s "$tmp/source-extract.stdout" ] ||
-    fail "accepted runtime checkpoint extraction emitted stdout"
+    fail "retained realization checkpoint extraction emitted stdout"
 [ ! -s "$tmp/source-extract.stderr" ] || {
     cat "$tmp/source-extract.stderr" >&2
-    fail "accepted runtime checkpoint extraction emitted diagnostics"
+    fail "retained realization checkpoint extraction emitted diagnostics"
 }
 
 frozen_repo=$tmp/source
@@ -373,8 +530,9 @@ pins=$fixture_source/generation-pins.tsv
 efi=$fixture_source/efi-sentinel.txt
 new_grub=\
 $frozen_repo/docs/audits/data/2026-07-19-p5.2b-d2b-retained-grub.cfg
-loader_behavior_check=\
+realization_loader_behavior_check=\
 $frozen_repo/tests/guix-system-pruning-fused-loader-behavior-check.scm
+loader_behavior_check=$validator_loader_behavior_check
 boundary_test=$frozen_repo/tests/guix-system-pruning-boundary-check.scm
 root_backend_test=\
 $frozen_repo/tests/guix-system-pruning-root-backend-check.scm
@@ -422,6 +580,7 @@ for required in \
     "$pins" \
     "$efi" \
     "$new_grub" \
+    "$realization_loader_behavior_check" \
     "$loader_behavior_check" \
     "$boundary_test" \
     "$root_backend_test" \
@@ -447,14 +606,21 @@ assert_source_identity() {
     expected_sha=$3
     expected_size=$4
     [ "$(sha256_file "$source")" = "$expected_sha" ] ||
-        fail "published D4a $label suite digest changed"
+        fail "retained realization $label source digest changed"
     [ "$(stat -c '%s' "$source")" = "$expected_size" ] ||
-        fail "published D4a $label suite size changed"
+        fail "retained realization $label source size changed"
 }
 
 assert_source_identity \
-    loader-behavior "$loader_behavior_check" \
-    "$loader_behavior_sha" "$loader_behavior_size"
+    loader-behavior "$realization_loader_behavior_check" \
+    "$realization_loader_behavior_sha" \
+    "$realization_loader_behavior_size"
+[ "$(sha256_file "$loader_behavior_check")" = \
+    "$validator_loader_behavior_sha" ] ||
+    fail "private validator loader checker digest changed"
+[ "$(stat -c '%s' "$loader_behavior_check")" -eq \
+    "$validator_loader_behavior_size" ] ||
+    fail "private validator loader checker size changed"
 assert_source_identity \
     boundary "$boundary_test" "$boundary_test_sha" "$boundary_test_size"
 assert_source_identity \
@@ -527,6 +693,8 @@ guile_program=$(printf '%s\n' "$identity" |
     awk -F = '$1 == "guile-program" { print $2 }')
 [ -n "$guile_program" ] || fail "identity omitted the Guile program"
 [ -x "$guile_program" ] || fail "reported Guile program is not executable"
+[ "$guile_program" = "$expected_guile" ] ||
+    fail "reported Guile program differs from the pinned Guile 3.0.11"
 
 run_production_suite() {
     label=$1
@@ -542,11 +710,8 @@ run_production_suite() {
         "$store_program" \
         production-suite \
         "$suite" >"$stdout" 2>"$stderr"
-    [ ! -s "$stderr" ] || {
-        cat "$stderr" >&2
-        fail "exact-production module suite emitted diagnostics: $label"
-    }
-    suite_pass_count=$(grep -F -c "$expected" "$stdout" || true)
+    assert_empty_nested_loader_stderr "production-suite:$label" "$stderr"
+    suite_pass_count=$(grep -F -x -c "$expected" "$stdout" || true)
     [ "$suite_pass_count" -eq 1 ] ||
         fail "exact-production suite did not emit exactly one PASS: $label"
     loader_pass_count=$(grep -F -x -c \
@@ -1036,6 +1201,10 @@ clean_env \
     SK_D4B_POISON_SENTINEL="$poison_sentinel" \
     "$guile_program" -c '(use-modules (gcrypt hash))' \
     >"$tmp/poison-control.stdout" 2>"$tmp/poison-control.stderr"
+[ ! -s "$tmp/poison-control.stderr" ] || {
+    cat "$tmp/poison-control.stderr" >&2
+    fail "compiled inherited-path poison control emitted diagnostics"
+}
 [ -f "$poison_sentinel" ] ||
     fail "compiled inherited-path poison control did not execute"
 rm -f -- "$poison_sentinel"
@@ -1054,6 +1223,10 @@ LC_ALL=C sort "$tmp/poison-files-before.unsorted" \
         SK_D4B_POISON_SENTINEL="$poison_sentinel" \
         "$store_program" fixture-identity
 ) >"$tmp/poisoned-identity.stdout" 2>"$tmp/poisoned-identity.stderr"
+[ ! -s "$tmp/poisoned-identity.stderr" ] || {
+    cat "$tmp/poisoned-identity.stderr" >&2
+    fail "poisoned inherited-path artifact identity emitted diagnostics"
+}
 contains "$(cat "$tmp/poisoned-identity.stdout")" \
     "guix-system-pruning-fused: PASS: action=fixture-identity"
 [ ! -e "$poison_sentinel" ] ||
@@ -1079,10 +1252,8 @@ for loader_mode in malformed-final preexisting-final wrong-digest success; do
         "$store_program" \
         "$loader_mode" \
         >"$loader_stdout" 2>"$loader_stderr"
-    [ ! -s "$loader_stderr" ] || {
-        cat "$loader_stderr" >&2
-        fail "loader behavior mode emitted diagnostics: $loader_mode"
-    }
+    assert_empty_nested_loader_stderr \
+        "loader-mode:$loader_mode" "$loader_stderr"
     [ ! -e "$poison_sentinel" ] ||
         fail "loader behavior mode executed the inherited-path canary"
 done
@@ -1091,8 +1262,9 @@ for negative_mode in malformed-final preexisting-final wrong-digest; do
     negative_output=$tmp/loader-$negative_mode.stdout
     [ "$(wc -l <"$negative_output" | tr -d ' ')" -eq 1 ] ||
         fail "negative loader mode emitted initializer/main output: $negative_mode"
-    contains "$(cat "$negative_output")" \
-        "guix-system-pruning-fused-loader-behavior-check: PASS: mode=$negative_mode"
+    [ "$(cat "$negative_output")" = \
+        "guix-system-pruning-fused-loader-behavior-check: PASS: mode=$negative_mode" ] ||
+        fail "negative loader mode omitted its exact PASS: $negative_mode"
 done
 
 cat >"$tmp/loader-success.expected" <<'EOF'
@@ -1116,6 +1288,7 @@ preexisting_test=$tmp/preexisting-module.scm
 printf '%s\n' \
     '(use-modules (ice-9 format))' \
     '(define root-module (resolve-module (quote ()) #f))' \
+    '(define preexisting-caller-module (current-module))' \
     '(define (existing-module name)' \
     '  (nested-ref-module root-module name))' \
     '(define seeded-module' \
@@ -1125,7 +1298,14 @@ printf '%s\n' \
     '  seeded-marker)' \
     '(define caught #f)' \
     '(catch #t' \
-    '  (lambda () (primitive-load (getenv "SK_D4B_STORE_PROGRAM")))' \
+    '  (lambda ()' \
+    '    (dynamic-wind' \
+    '      gc-disable' \
+    '      (lambda ()' \
+    '        (primitive-load (getenv "SK_D4B_STORE_PROGRAM")))' \
+    '      (lambda ()' \
+    '        (set-current-module preexisting-caller-module)' \
+    '        (gc-enable))))' \
     '  (lambda (key . arguments)' \
     '    (set! caught (cons key arguments))))' \
     '(unless caught' \
@@ -1168,11 +1348,16 @@ clean_env \
     SK_D4B_STORE_PROGRAM="$store_program" \
     "$guile_program" --no-auto-compile "$preexisting_test" \
     >"$tmp/preexisting.stdout" 2>"$tmp/preexisting.stderr"
-[ ! -s "$tmp/preexisting.stderr" ] || {
-    cat "$tmp/preexisting.stderr" >&2
-    fail "preexisting-module isolation emitted diagnostics"
-}
-contains "$(cat "$tmp/preexisting.stdout")" "preexisting-module: PASS"
+assert_empty_nested_loader_stderr \
+    preexisting-module "$tmp/preexisting.stderr"
+[ "$(wc -l <"$tmp/preexisting.stdout" | tr -d ' ')" -eq 1 ] ||
+    fail "preexisting-module emitted an unexpected stdout line count"
+[ "$(cat "$tmp/preexisting.stdout")" = "preexisting-module: PASS" ] ||
+    fail "preexisting-module omitted its exact PASS"
+
+[ "$nested_loader_empty_stderr_count" -eq \
+    "$expected_nested_loader_sites" ] ||
+    fail "nested-loader stderr count differs from the closed 11-site matrix"
 
 snapshot_manifest "$frozen_repo" "$tmp/source-post"
 cmp -s "$tmp/source-pre.metadata" "$tmp/source-post.metadata" ||
@@ -1196,10 +1381,41 @@ if [ "$terminal_git_dir" != "$repo/.git" ] ||
     [ -L "$terminal_git_dir" ]; then
     fail "terminal runtime Git proof resolved another Git directory"
 fi
-[ "$terminal_head" = "$expected_checkpoint" ] ||
+[ "$terminal_head" = "$validator_checkpoint" ] ||
     fail "runtime checkout HEAD changed during the matrix"
-[ "$terminal_origin" = "$expected_checkpoint" ] ||
+[ "$terminal_origin" = "$validator_checkpoint" ] ||
     fail "runtime origin/main changed during the matrix"
+terminal_script=$(readlink -f "$repo/tests/$program_name" 2>/dev/null || true)
+[ "$terminal_script" = "$script" ] ||
+    fail "runtime validator path changed during the matrix"
+if [ ! -f "$terminal_script" ] || [ -L "$terminal_script" ]; then
+    fail "runtime validator changed type during the matrix"
+fi
+[ "$(sha256_file "$terminal_script")" = "$validator_program_sha" ] ||
+    fail "runtime validator bytes changed during the matrix"
+[ "$(stat -c '%s' "$terminal_script")" -eq \
+    "$validator_program_size" ] ||
+    fail "runtime validator size changed during the matrix"
+terminal_loader_behavior_source=$(readlink -f \
+    "$repo/tests/guix-system-pruning-fused-loader-behavior-check.scm" \
+    2>/dev/null || true)
+[ "$terminal_loader_behavior_source" = \
+    "$validator_loader_behavior_source" ] ||
+    fail "validator loader checker path changed during the matrix"
+if [ ! -f "$terminal_loader_behavior_source" ] ||
+    [ -L "$terminal_loader_behavior_source" ]; then
+    fail "validator loader checker changed type during the matrix"
+fi
+[ "$(sha256_file "$terminal_loader_behavior_source")" = \
+    "$validator_loader_behavior_sha" ] ||
+    fail "validator loader checker bytes changed during the matrix"
+[ "$(stat -c '%s' "$terminal_loader_behavior_source")" -eq \
+    "$validator_loader_behavior_size" ] ||
+    fail "validator loader checker size changed during the matrix"
+cmp -s \
+    "$terminal_loader_behavior_source" \
+    "$validator_loader_behavior_check" ||
+    fail "validator and private loader checkers differ after the matrix"
 
 if [ ! -f "$realization_result_source" ] ||
     [ -L "$realization_result_source" ]; then
@@ -1225,11 +1441,23 @@ assert_store_program "$store_program"
     fail "STORE_PROGRAM bytes changed during the matrix"
 [ "$(stat -c '%s' "$store_program")" -eq "$program_size" ] ||
     fail "STORE_PROGRAM size changed during the matrix"
+assert_historical_runtime_channel \
+    stdout "$failed_runtime_stdout" \
+    "$expected_failed_runtime_stdout_sha" \
+    "$expected_failed_runtime_stdout_size"
+assert_historical_runtime_channel \
+    stderr "$failed_runtime_stderr" \
+    "$expected_failed_runtime_stderr_sha" \
+    "$expected_failed_runtime_stderr_size"
 
 printf '%s\n' \
-    "schema=p5.2b-d4b-runtime-evidence/v1" \
+    "schema=p5.2b-d4b-runtime-evidence/v2" \
     "authorization=NOT-GRANTED" \
-    "checkpoint=$expected_checkpoint" \
+    "realization-checkpoint=$realization_checkpoint" \
+    "validator-checkpoint=$validator_checkpoint" \
+    "validator=$script" \
+    "validator-sha256=$validator_program_sha" \
+    "validator-size=$validator_program_size" \
     "realization-result=$realization_result_source" \
     "realization-result-sha256=$realization_result_sha" \
     "realization-result-size=$realization_result_size" \
@@ -1248,10 +1476,25 @@ printf '%s\n' \
     "renderer-suite=SOURCE-GATE" \
     "d4a-actions=5" \
     "loader-modes=4" \
+    "validator-loader=$validator_loader_behavior_source" \
+    "validator-loader-checkpoint=$validator_checkpoint" \
+    "validator-loader-sha256=$validator_loader_behavior_sha" \
+    "validator-loader-size=$validator_loader_behavior_size" \
+    "failed-runtime-stdout=$failed_runtime_stdout" \
+    "failed-runtime-stdout-sha256=$expected_failed_runtime_stdout_sha" \
+    "failed-runtime-stdout-size=$expected_failed_runtime_stdout_size" \
+    "failed-runtime-stderr=$failed_runtime_stderr" \
+    "failed-runtime-stderr-sha256=$expected_failed_runtime_stderr_sha" \
+    "failed-runtime-stderr-size=$expected_failed_runtime_stderr_size" \
+    "nested-loader-stderr-sites=$nested_loader_empty_stderr_count" \
+    "nested-loader-stderr=EMPTY" \
+    "recovery=GC-QUIESCENT-EXACT-PREFIX-LOAD" \
     "artifact-forward=$forward_count" \
     "artifact-rollback=$rollback_count" \
     "artifact-total=$((forward_count + rollback_count))" \
     "original-wrapper-regression=NOT-RUN" \
+    "lowering=NOT-RUN" \
+    "realization=NOT-RUN" \
     "mode=FIXTURE-ONLY" \
     "live-action=NOT-GRANTED" \
     "$program_name: PASS"

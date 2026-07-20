@@ -246,7 +246,17 @@
 
 (define %caller-module (current-module))
 (define %loaded-prefix
-  (load-exact-loader-prefix %fused-program))
+  ;; The fused startup mutates its private Guile path environment.  Keep
+  ;; Guile's lazy finalizer thread from being created while this test harness
+  ;; reads and evaluates that exact prefix; otherwise Guile 3.0.11 reaches
+  ;; scm_putenv with two threads and declares the mutation unspecified.
+  ;; `dynamic-wind' restores normal collection before any source packet,
+  ;; production suite, or canary is evaluated, including on a prefix failure.
+  (dynamic-wind
+    gc-disable
+    (lambda ()
+      (load-exact-loader-prefix %fused-program))
+    gc-enable))
 (define %startup-module (car %loaded-prefix))
 (define %production-tail (cadr %loaded-prefix))
 

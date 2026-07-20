@@ -1063,26 +1063,63 @@ CLOSED: [2026-07-19 Sun]
 ** BACKLOG P5.2b-D4b clean-published synthetic fused-program evidence
 :PROPERTIES:
 :created: 2026-07-19
-:blocked_by: published D4b helper checkpoint and exact realization grant
+:helper_published: 002d1ef05bab80162f6807a5cd31b98d209baa7c
+:realization_checkpoint: 002d1ef05bab80162f6807a5cd31b98d209baa7c
+:blocked_by: published validator correction and successful recovery validators
 :END:
 
+- Helper evidence: [[file:../../../docs/audits/2026-07-19-p5.2b-d4b-helper-source.org][2026-07-19 P5.2b-D4b source-only helper checkpoint]].
+- Runtime recovery: [[file:../../../docs/audits/2026-07-19-p5.2b-d4b-runtime-recovery.org][2026-07-19 P5.2b-D4b runtime-validator recovery]].
 - [X] Fetch exact published D4a =41e1115= into a clean upstream-equal checkout
   and add a separate source-only exact-input constructor, exact-code loader
   probe, six byte-frozen production-suite paths, checkout-unavailable probe,
   artifact 54+44 restart harness, and commit/live/store-state-bound two-phase
   realization gate.  The pure gate reproduces =95b84e2...= / 956,987 bytes
   and reports =lowered=FALSE= / =realized=FALSE=.
-- [ ] Commit and publish the helper-only checkpoint, fetch it cleanly, then
-  request an exact grant covering one unprivileged synthetic =computed-file=
-  lowering/realization or confirmation and its bounded immutable-store
-  metadata.  Do not create a result symlink or GC root.
+- [X] Publish the helper-only checkpoint at =002d1ef=, fetch it cleanly, and
+  consume the exact grant for one unprivileged synthetic =computed-file=
+  lowering/realization.  The result is =REALIZED= at
+  =/gnu/store/17i7zdd5lhncw5v97cfkxbg4zdvpw5jb-system-pruning-loaded.scm=;
+  its SHA256/size equal =95b84e2...= / 956,987, exactly three bounded
+  top-level store additions occurred, selected live surfaces remained equal,
+  and no result symlink or GC root was created.
+- [X] Preserve the first runtime stop: 0-byte stdout SHA256
+  =e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855=
+  and 222-byte stderr SHA256
+  =ea0799970363414fa8c9c5a0d32a2cb6b6125e620abd81f2b926795f26c8864d=.
+  The child passed but emitted the exact Guile 3.0.11 warning
+  =9100e8a721dc98c18905be24b2c46ad40af5122494a0156aec64003197907a6c=
+  / 117 bytes.  Empty stderr remains mandatory: Guile reached =scm_putenv=
+  after lazily spawning its finalizer thread and documents multi-thread
+  environment mutation as unspecified.  Preserve the warning only as exact
+  historical failure evidence.
+- [X] Prepare and validate the source-only recovery candidate.  Exact
+  loader/runtime/source-gate identities are
+  =6591f029...:18049=, =55cab0aa...:57955=, and
+  =b86b00ee...:20132=.  The D4b source gate reports
+  =lowered=FALSE= / =realized=FALSE=; the strict repository suite, Org lint,
+  whitespace checks, and independent review pass with no open critical,
+  high, or medium finding.
+- [ ] Publish a later descendant validator checkpoint that preserves
+  =002d1ef= as the realization/source archive.  Materialize and pin only the
+  corrected loader checker from the later checkpoint.  Wrap only
+  =load-exact-loader-prefix= in =dynamic-wind= with
+  =gc-disable= / =gc-enable=, restore normal GC before packets/suites, and
+  have the standalone preexisting-module after thunk restore its saved caller
+  module before =gc-enable=.  Require empty stderr at all
+  6 + 4 + 1 = 11 checked sites; never classify or allow the old warning.
 - [ ] Prove the exact program runs with the checkout unavailable, ignores
   poisoned Guile paths after realization, embeds the reviewed bytes, rejects a
   mutable copy and every live action, and passes the six production-module D4a
   suites plus all 98 interruption points.  Keep the renderer suite as the
   byte-frozen source gate.  The external evidence gate rejects an unrecorded
   alternate store output; the program does not embed its self-referential
-  final path/hash.
+  final path/hash.  Run only the corrected runtime and checkout-unavailable
+  validators against the retained result/output; report
+  =lowering=NOT-RUN= / =realization=NOT-RUN= / =live-action=NOT-GRANTED=.
+  Both gates must refuse any realization acceptance token.  Create
+  =runtime-recovery.stdout= / =runtime-recovery.stderr= with no-clobber
+  semantics and recheck the original channel hashes before and after.
 - [ ] Freeze derivation/output identity, program hash/size, loaded-byte
   provenance, raw results, bounded realization effects, and unchanged selected
   live transaction surfaces; publish and stop.

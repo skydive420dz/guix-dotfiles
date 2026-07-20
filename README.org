@@ -225,9 +225,17 @@ evidence, not whole-store or whole-machine identity.  D3b evidence is
 published at =b1d6ecb=.  The D4a source/fixture checkpoint passes its seven
 suites, the legacy 98-point matrix, the complete strict gate, and an exact
 19-record selected-surface comparison; it is published at =41e1115=.  D4b's
-source-only helper candidate must be published and fetched cleanly before its
-commit/state-bound first-realization token can be considered.  Every D4b store
-realization and every live mutation remain blocked.
+source-only helper is published at =002d1ef=.  Its one authorized
+=computed-file= lowering and realization succeeded, yielding the exact
+=95b84e2...= / 956,987-byte fused program with three bounded store additions,
+no result root, and unchanged selected live surfaces.  The first runtime gate
+then stopped on an exact Guile 3.0.11 nested-loader warning.  Empty child
+stderr remains mandatory: root-cause analysis found that a lazily spawned
+finalizer thread made startup environment mutation reach =scm_putenv= with
+multiple threads, a condition Guile documents as unspecified.  The
+artifact/result remain accepted; a later source-only validator correction
+prevents the condition only during exact-prefix loading, and its publication
+and recovery run remain pending.  Every live mutation remains blocked.
 
 Decision D-41 requires one fused store-resident Scheme program with no project
 repository read at runtime.  D4c.1 publishes the live manifest without a
@@ -351,6 +359,15 @@ root/orchestrator/reconciliation contracts, phase engine and in-memory runtime,
 ten-packet fused-source renderer, loader integration correction, seven-suite
 and legacy/strict results, exact 19-record nonmutation proof, adversarial
 review, and D4b behavioral-loader handoff.
+[[file:docs/audits/2026-07-19-p5.2b-d4b-helper-source.org][The P5.2b-D4b helper checkpoint]] owns the published exact-input
+constructor, preflight/realization gates, exact-code loader probe, runtime and
+checkout-unavailable validators, their historical source identities, and the
+bounded realization handoff.
+[[file:docs/audits/2026-07-19-p5.2b-d4b-runtime-recovery.org][The P5.2b-D4b runtime-validator recovery record]] owns the retained
+=002d1ef= realization/result identities, first failed runtime channels, exact
+117-byte Guile warning diagnosis, GC-quiescent exact-prefix correction,
+closed 11-site empty-stderr contract, and the pending
+no-second-realization recovery boundary.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -483,20 +500,32 @@ published at =b1d6ecb=.  D4a is complete and published at =41e1115=:
 its seven suites, standalone legacy matrix, strict aggregate gate, and
 selected-surface comparison pass without a store realization or live action.
 D4b's separate source-only constructor and runtime-evidence helpers reproduce
-the exact =95b84e2...= / 956,987-byte D4a render without lowering it.  They
-must be published and fetched cleanly before the first explicitly approved
-synthetic realization.  D4c.1 live-manifest publication, D4c.2 exact
-live-program evidence, D4c.3 unchanged-state execution-packet acceptance, and
-separately authorized D5 execution remain later gates.
+the exact =95b84e2...= / 956,987-byte D4a render.  They were published at
+=002d1ef=, and the one explicitly approved synthetic realization succeeded.
+Its first runtime validation stopped on the exact 117-byte Guile nested-loader
+warning.  Empty stderr remains the required policy because Guile documents
+the observed multi-thread environment mutation as unspecified.  The accepted
+artifact is retained; publish and run only the source-only validator
+correction that prevents lazy finalizer-thread creation during exact-prefix
+loading and restores normal GC before packets or suites.  D4c.1 live-manifest
+publication, D4c.2 exact live-program evidence, D4c.3 unchanged-state
+execution-packet acceptance, and separately authorized D5 execution remain
+later gates.
 P5.3 collection remains separate and unpromoted; no further cleanup is
 authorized.
 
 ** Ready
 
 P5.2b-D4a is evidence-complete and published at =41e1115= at its bounded
-source/fixture boundary.  D4b's source-only helper checkpoint is validated but
-must be committed, pushed, fetched, and proven clean and upstream-equal before
-requesting the exact first lowering/realization grant.  P5.2a is complete.
+source/fixture boundary.  D4b's helper is published at =002d1ef= and its one
+authorized realization succeeded.  The current ready action is to publish a
+later descendant containing the bounded runtime-validator correction, then
+run only runtime and checkout-unavailable validation against the retained
+artifact/result.  No second preflight, lowering, build, realization, or live
+action is authorized, and both recovery gates must refuse any realization
+acceptance token.  The correction candidate has passed its final source-only
+gates with no open critical, high, or medium finding, but it has not yet been
+published.  P5.2a is complete.
 P5.2b-D1 is complete at the source and synthetic-fixture boundary;
 P5.2b-D2a is complete at its source and native-fixture boundary, and D2b is
 complete and published at its uninstalled artifact/evidence boundary.  D3a is
@@ -2484,10 +2513,13 @@ D3a correction is published at =0601b9d=.  D3b's warning-free compiles,
 standalone/strict matrices, closed outputs, and 129-record selected-surface
 equality pass and are published at =b1d6ecb=.  D4a's bounded source/fixture
 checkpoint passes its final gates and is published at =41e1115=.  D4b's
-source-only helper candidate now prepares the guarded synthetic realization
-and evidence gates; it must itself be published and fetched cleanly before an
-exact first-realization token may be accepted.  All realization/live gates
-remain separate.
+source-only helper is published at =002d1ef= and its one guarded synthetic
+realization succeeded.  The accepted result/output are retained while a later
+validator checkpoint prevents Guile's lazy finalizer thread during only the
+exact-prefix load, restores GC before packets/suites, and retains empty stderr
+at all 11 checked sites.  Runtime evidence then reruns without another
+lowering or realization.  The correction is not yet published or passed, and
+all live gates remain separate.
 
 * Live symlinks
 

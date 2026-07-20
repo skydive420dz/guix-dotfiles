@@ -3,12 +3,13 @@
 #+date: 2026-07-19
 #+startup: overview
 #+property: header-args :eval never-export
-#+status: source helpers validated; lowering and realization not authorized
+#+status: published at 002d1ef; realization retained; runtime recovery pending
 
 * Outcome
 
-This checkpoint prepares the bounded P5.2b-D4b immutable-artifact operation
-without performing it.  From a clean fetched D4a checkout it adds:
+At its publication boundary, this checkpoint prepared the bounded P5.2b-D4b
+immutable-artifact operation without performing it.  From a clean fetched D4a
+checkout it adds:
 
 - one closed constructor for the exact published D4a fused-program bytes;
 - one guarded build expression, a one-output derivation reader, and a
@@ -20,10 +21,10 @@ without performing it.  From a clean fetched D4a checkout it adds:
 - one exact-artifact runtime harness, including the registry-bound
   =54 + 44 = 98= interruption/recovery schedule.
 
-The complete source gate reports =lowered=FALSE= and =realized=FALSE=.  No
-derivation was lowered, no store output was realized or confirmed, and no
-result symlink, GC root, live manifest, live action, collection, activation,
-reconfiguration, or reboot occurred.
+The complete source gate reports =lowered=FALSE= and =realized=FALSE=.  At
+this source checkpoint no derivation was lowered, no store output was
+realized or confirmed, and no result symlink, GC root, live manifest, live
+action, collection, activation, reconfiguration, or reboot occurred.
 
 * Clean published boundary
 
@@ -264,8 +265,12 @@ GuixPC/GNU-userland-specific: they rely on GNU =readlink=, =stat=, =find=,
 | =tests/guix-system-pruning-d4b-preflight= | 6,710 | =3b357052a8e2944a316e53d021912a303da4306cef0742bf62c819077763b177= |
 | =tests/guix-system-pruning-d4b-realize= | 28,181 | =f4287f7ef9d2d2f51ee82350cf7a947757a5c7a967c4d69c0f30a0bd7970bc62= |
 
-These identities bind the pre-publication candidate.  Any correction after
-this record must update the table and rerun the warning-fatal source gate.
+These identities bind the pre-publication candidate.  It was subsequently
+published without changing them at
+=002d1ef05bab80162f6807a5cd31b98d209baa7c=.  The runtime-helper and loader
+rows above are historical identities and must remain preserved.  A later
+source-only validator correction must record its own distinct identities and
+rerun the warning-fatal source gate; it does not rewrite this table.
 
 * Validation
 
@@ -312,9 +317,55 @@ Final publication review must show zero open blocker, high, or medium findings
 against the exact identities below.  A later edit to any helper reopens this
 table and requires a new source gate and review.
 
-* Exact nonclaims
+* Post-publication realization and validator stop
 
-This source checkpoint does not claim:
+One exact external grant was later consumed against clean published helper
+checkpoint =002d1ef05bab80162f6807a5cd31b98d209baa7c=.  The authorized
+unprivileged operation succeeded:
+
+| Item | Exact identity |
+|------+----------------|
+| Derivation | =/gnu/store/3ky2sgbkg10amsvfx5as4m2w76szkr6a-system-pruning-loaded.scm.drv= |
+| Output | =/gnu/store/17i7zdd5lhncw5v97cfkxbg4zdvpw5jb-system-pruning-loaded.scm= |
+| Output SHA256 / bytes | =95b84e29853a2327bffab857383cf78a30ab41b965144fd298edc384335b9d70= / =956,987= |
+| Realization result SHA256 / bytes | =02506b54d887da9e2c10a94a62a2527f3a1b128380c628f3efa2efeb2e445fd3= / =914= |
+| State / store additions | =REALIZED= / =3= |
+| Unrelated additions / removals | =0 / 0= |
+| Result symlink / GC root | absent / none created |
+| Selected live surfaces | byte-identical |
+
+The first runtime gate stopped before the complete matrix because Guile
+3.0.11 emitted one exact 117-byte nested-loader warning whose SHA256 is
+=9100e8a721dc98c18905be24b2c46ad40af5122494a0156aec64003197907a6c=.
+The child itself exited successfully and printed its required PASS lines, but
+the published helper correctly required empty child stderr.  Root-cause
+analysis found that the validator-owned loader checker allowed Guile's
+finalizer thread to spawn lazily before a startup =setenv= reached
+=scm_putenv=; Guile documents multi-thread environment mutation as
+unspecified.  The warning therefore remains fatal historical evidence, not an
+allowlist candidate.  The original 0-byte stdout and 222-byte stderr remain
+retained with SHA256 identities
+=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855=
+and
+=ea0799970363414fa8c9c5a0d32a2cb6b6125e620abd81f2b926795f26c8864d=.
+
+[[file:2026-07-19-p5.2b-d4b-runtime-recovery.org][The D4b runtime-validator recovery record]]
+owns the diagnosis and bounded correction.  It preserves this realization
+checkpoint and requires a distinct later validator checkpoint.  The later
+checkpoint supplies one exact pinned loader checker that disables GC only
+around =load-exact-loader-prefix= with =dynamic-wind= and restores normal GC
+before packets or suites run.  All 6 + 4 + 1 = 11 sites still require empty
+stderr.  New =runtime-recovery.*= channels must be created without clobbering
+the originals, whose identities are rechecked before and after the matrix.
+Both recovery gates refuse any realization acceptance token and report
+=lowering=NOT-RUN= / =realization=NOT-RUN=.  No second lowering, build, or
+realization is needed or permitted by the consumed grant.  The correction has
+passed final source-only validation with no open critical, high, or medium
+finding; it has not yet been published or run.
+
+* Source-checkpoint nonclaims
+
+At its publication boundary this source checkpoint did not claim:
 
 - a lowered derivation or realized/confirmed output;
 - a canonical output path, output hash/size/mode/owner, references, closure,
@@ -329,25 +380,16 @@ This source checkpoint does not claim:
   reconfiguration, or reboot; or
 - P5.3 readiness.
 
-* Publication and next approval boundary
+* Publication and next boundary
 
-Publish this helper-only checkpoint and prove
-=HEAD == origin/main == GitHub main= from a fresh clean fetch.  Only then may a
-new explicit approval cover:
+The helper-only checkpoint is published at
+=002d1ef05bab80162f6807a5cd31b98d209baa7c=, and its one exact realization
+grant is consumed.  Publish the source-only validator correction at a later
+descendant checkpoint, prove clean local/upstream/remote equality, and then
+run only the corrected runtime and checkout-unavailable validators against
+the retained result and output.  Do not run preflight, lowering, build, or
+realization again, and do not supply or reuse the consumed acceptance token.
 
-#+begin_quote
-The exact token printed by the fresh D4b preflight, covering one unprivileged
-synthetic =computed-file= lowering and realization-or-confirmation, including
-the exact derivation/output identities, bounded top-level store additions, and
-associated Guix daemon/build metadata.  Create no result symlink or
-persistent/direct/indirect GC root; run no live manifest/action, GC
-query/collection, activation, reconfiguration, or reboot.
-#+end_quote
-
-Before that operation, recapture the selected live transaction surfaces and
-the bounded top-level store-name inventory.  Lower and realize once inside one
-captured gate, distinguish =REALIZED= from =ALREADY-PRESENT=, classify every
-store addition, run the runtime/loader matrices against the exact accepted
-output, recapture the selected live surfaces, and publish the final D4b
-evidence.  D4c.1 remains blocked until that evidence is published and fetched
-cleanly.
+Publish final D4b evidence only after the corrected matrix and unchanged
+selected live surfaces pass.  D4c.1 remains blocked until that evidence is
+published and fetched cleanly.
