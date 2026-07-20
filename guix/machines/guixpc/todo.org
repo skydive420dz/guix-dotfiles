@@ -1066,7 +1066,8 @@ CLOSED: [2026-07-19 Sun]
 :helper_published: 002d1ef05bab80162f6807a5cd31b98d209baa7c
 :realization_checkpoint: 002d1ef05bab80162f6807a5cd31b98d209baa7c
 :first_validator_published: 99dfdeff36443aad4627fb6bb87dd6c42dcb2e87
-:blocked_by: validated/published second matcher correction and successful recovery validators
+:second_validator_published: bf8040dfc3ec4438c2f229de60978792ffe0a493
+:blocked_by: validated/published third fixture-topology correction and successful recovery validators
 :END:
 
 - Helper evidence: [[file:../../../docs/audits/2026-07-19-p5.2b-d4b-helper-source.org][2026-07-19 P5.2b-D4b source-only helper checkpoint]].
@@ -1111,11 +1112,12 @@ CLOSED: [2026-07-19 Sun]
   and 129-byte =runtime-recovery.stderr= SHA256
   =a29ff114427bca8a4d1bb786a3b77cec9d592b3da2cb37c3d0efbf9f47a670b5=.
   No artifact semantic check failed and no second realization ran.
-- [ ] Validate and publish a second descendant validator checkpoint that
+- [X] Validate and publish second descendant validator checkpoint =bf8040d=
+  that
   pins the exact frozen whole-line PASS literal for all six production
-  suites.  Candidate loader/runtime/source-gate identities are
+  suites.  Published loader/runtime/source-gate identities are
   =6591f029...:18049=, =d4cc2ee0...:61745=, and
-  =11fc5047...:20384=.  Candidate validation and publication are pending.
+  =11fc5047...:20384=.
   Preserve =002d1ef= as the realization/source archive.  Materialize and pin
   only the corrected loader checker from the later checkpoint.  Wrap only
   =load-exact-loader-prefix= in =dynamic-wind= with
@@ -1123,6 +1125,25 @@ CLOSED: [2026-07-19 Sun]
   have the standalone preexisting-module after thunk restore its saved caller
   module before =gc-enable=.  Require empty stderr at all
   6 + 4 + 1 = 11 checked sites; never classify or allow the old warning.
+- [X] Preserve the second recovery stop.  All six production suites passed
+  with exact stdout and empty nested-loader stderr before D4a fixture
+  verification.  The artifact capability guard correctly rejected the
+  harness's 0755 root with exact diagnostic:
+  =guix-system-pruning-fused: FAIL: sk-system-pruning-reconciliation ("fixture root is not an exact owned directory")=.
+  Preserve 0-byte
+  =runtime-recovery-2.stdout= SHA256
+  =e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855=
+  and 115-byte =runtime-recovery-2.stderr= SHA256
+  =fab5d2d47758443c8714f5e5f47cf21158f58dc903675060d11ed6def6462c74=.
+  Do not retry =bf8040d= or overwrite any failed channel.  No artifact
+  semantic check failed and no second realization or live change ran.
+- [ ] Validate and publish a third descendant validator checkpoint that
+  separates fixture topology completely.  D4a uses an exact owned 0700 root,
+  the exact 0600 reconciliation sentinel, and absent transaction/root
+  namespaces.  Legacy 98-point coverage retains the transaction sentinel and
+  required directories.  Candidate loader/runtime/source-gate identities are
+  =6591f029...:18049=, =dca63d3d...:68082=, and
+  =fcacf9c3...:20662=.  Source validation passed; publication is pending.
 - [ ] Prove the exact program runs with the checkout unavailable, ignores
   poisoned Guile paths after realization, embeds the reviewed bytes, rejects a
   mutable copy and every live action, and passes the six production-module D4a
@@ -1133,8 +1154,9 @@ CLOSED: [2026-07-19 Sun]
   validators against the retained result/output; report
   =lowering=NOT-RUN= / =realization=NOT-RUN= / =live-action=NOT-GRANTED=.
   Both gates must refuse any realization acceptance token.  Create
-  =runtime-recovery-2.stdout= / =runtime-recovery-2.stderr= with no-clobber
-  semantics and recheck both preserved failed-channel pairs before and after.
+  =runtime-recovery-3.stdout= / =runtime-recovery-3.stderr= with no-clobber
+  semantics and recheck all three preserved failed-channel pairs before and
+  after.
 - [ ] Freeze derivation/output identity, program hash/size, loaded-byte
   provenance, raw results, bounded realization effects, and unchanged selected
   live transaction surfaces; publish and stop.

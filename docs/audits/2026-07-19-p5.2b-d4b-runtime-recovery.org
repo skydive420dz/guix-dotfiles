@@ -4,7 +4,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:runtime:recovery:evidence:
-#+status: first recovery preserved; second source-only correction validation and publication pending
+#+status: second recovery preserved; third source-only correction validated; publication pending
 
 * Outcome
 
@@ -36,6 +36,22 @@ source-only: it pins the six exact frozen suite PASS literals rather than
 changing a suite or the artifact.  It must be validated and published at
 another later descendant checkpoint before it runs.  It must not lower,
 build, realize, or confirm another derivation and must perform no live action.
+
+That correction was published at
+=bf8040dfc3ec4438c2f229de60978792ffe0a493=.  Its second recovery passed all
+six exact production suites with empty nested-loader stderr, then stopped
+safely when the artifact's D4a fixture-capability guard rejected the
+validator harness's 0755 root.  The artifact guard behaved correctly; the
+harness had reused legacy transaction-fixture topology where the D4a path
+requires a distinct 0700 root, exact reconciliation sentinel, and absent
+transaction/root namespaces.
+
+This second recovery stop is also preserved as validator evidence.  No
+artifact semantic check failed, no failed channel was overwritten, and no
+second lowering, build, realization, confirmation, or live change occurred.
+The next correction remains source-only and must align the complete harness
+fixture capability before a new published descendant may use separate
+no-clobber recovery channels.
 
 * Retained realization
 
@@ -241,18 +257,21 @@ pins all six literals together:
 | Fixture runtime | =guix-system-pruning-fixture-runtime-check: PASS (297 checks forward-effects=71 recovery-effects=47 illegal-chains=5)= |
 
 No second realization occurred.  Both =runtime.*= and
-=runtime-recovery.*= remain immutable failed-attempt evidence.  A read-only
-post-stop audit confirmed both pairs' exact identities, the intact result and
-artifact, no result link or artifact GC root, and no
-=runtime-recovery-2.*= paths.  Its fresh 19-record selected-live snapshot was
-byte-identical to the retained surfaces at
+=runtime-recovery.*= remain immutable failed-attempt evidence.  At that
+first-recovery boundary, a read-only post-stop audit confirmed both pairs'
+exact identities, the intact result and artifact, no result link or artifact
+GC root, and no =runtime-recovery-2.*= paths.  Its fresh 19-record
+selected-live snapshot was byte-identical to the retained surfaces at
 =44a31120baabf015556e42a387903153ce6b54f02624b12ab7dbc21bc80dfc11=
 / 1,455 bytes.  This is a bounded nonmutation audit, not final runtime
 acceptance.
 
-* Second source-only candidate and next gate
+* Second published recovery and safe fixture-capability stop
 
-The next source-only candidate currently has these identities:
+The six-literal validator correction was published with clean local,
+upstream, and remote equality at
+=bf8040dfc3ec4438c2f229de60978792ffe0a493=.  Its exact source identities
+were:
 
 | Source | Bytes | SHA256 |
 |--------+-------+--------|
@@ -260,34 +279,82 @@ The next source-only candidate currently has these identities:
 | Runtime validator | 61,745 | =d4cc2ee06d572a6ac0df58d5cf0171277314f7cbb8f738df9314658e210101c2= |
 | Aggregate source gate | 20,384 | =11fc5047f9402589e3f29179cf6fd797f090e16b65b47bbfd2b05b229cab263d= |
 
-Candidate validation and publication are pending.  After its source-only
-gates pass, it is published at a clean descendant, and local/upstream/remote
-equality is proven, create exactly =runtime-recovery-2.stdout= and
-=runtime-recovery-2.stderr= with no-clobber semantics and run only:
+The second recovery created its own no-clobber channels:
 
-1. the second corrected exact-artifact runtime validator against the retained
+| Channel | Bytes | SHA256 |
+|---------+-------+--------|
+| =runtime-recovery-2.stdout= | 0 | =e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855= |
+| =runtime-recovery-2.stderr= | 115 | =fab5d2d47758443c8714f5e5f47cf21158f58dc903675060d11ed6def6462c74= |
+
+Its exact diagnostic is:
+
+#+begin_example
+guix-system-pruning-fused: FAIL: sk-system-pruning-reconciliation ("fixture root is not an exact owned directory")
+#+end_example
+
+All six byte-frozen production suites necessarily passed with their exact two
+stdout lines and empty nested-loader stderr before the validator entered the
+D4a artifact fixture phase.  At its first fixture verification, the
+artifact's capability guard correctly rejected the harness-created 0755 root;
+the closed D4a reconciliation contract requires an exact owned 0700 root.
+This was a fail-closed validator-harness topology mismatch, not an artifact
+semantic failure.
+
+The harness had one combined fixture constructor.  It supplied legacy
+transaction topology to both paths: a legacy transaction sentinel and
+precreated transaction/root namespaces.  The complete correction must keep
+two explicit topologies:
+
+1. D4a artifact topology has an exact owned 0700 root, the exact
+   =.p52b-system-pruning-reconciliation= sentinel with 0600 mode and closed
+   bytes, and absent transaction and root namespaces.
+2. Legacy 98-point topology retains the transaction fixture sentinel and the
+   directories required by the embedded legacy transaction engine.
+
+The second attempt is not retried at =bf8040d= and neither of its channels may
+be overwritten.  The original, first-recovery, and second-recovery channel
+pairs remain failed-attempt evidence.  No second lowering, build,
+realization, confirmation, result link, GC root, or live change occurred.
+
+* Third source-only candidate and next gate
+
+The source-only fixture-topology correction candidate has these identities:
+
+| Source | Bytes | SHA256 |
+|--------+-------+--------|
+| Loader checker, unchanged | 18,049 | =6591f0292d02ae98d8267ce038a44efbe9e10f61e948e8d508f54dd554cfa030= |
+| Runtime validator | 68,082 | =dca63d3d1ab1d9a87e41d0fd8cc4990f1ac8db7c4f3a693f9e587826e9663dfe= |
+| Aggregate source gate | 20,662 | =fcacf9c362d4219783df6eb642cdb616dcbdd96968f9c7a932695d6be5738409= |
+
+Source-only validation passed; publication is pending.  After it is published
+at a clean descendant and local/upstream/remote equality is proven, create
+exactly =runtime-recovery-3.stdout= and
+=runtime-recovery-3.stderr= with no-clobber semantics and run only:
+
+1. the third corrected exact-artifact runtime validator against the retained
    realization result and output; and
 2. the checkout-unavailable validator against those same retained identities.
 
-The gate must hash and size-check both pairs of preserved failed channels
+The gate must hash and size-check all three preserved failed-channel pairs
 before and after the complete matrix.  The corrected runtime result, new raw
 channels, validator and loader source identities, checkout-unavailable result,
 pre/post historical-channel identities, and unchanged selected live surfaces
 must then be reviewed and published as final D4b evidence.  Successful
-recovery must have empty =runtime-recovery-2.stderr=.  Until that happens,
+recovery must have empty =runtime-recovery-3.stderr=.  Until that happens,
 D4b is not evidence-complete and D4c.1 remains blocked.
 
 * Exact nonclaims
 
 This recovery record does not claim:
 
-- that the second corrected validator is validated, published, or has passed
-  its runtime matrix;
+- that the third corrected validator is published or has passed its runtime
+  matrix;
 - that the complete six-suite, 98-point, canary, refusal, and
   checkout-unavailable matrix has completed against the store artifact;
 - that the historical 117-byte warning is safe, classified, allowed, or
   suppressible;
 - that the =99dfdeff= matcher stop is an artifact semantic failure;
+- that the =bf8040d= fixture-capability stop is an artifact semantic failure;
 - a second lowering, build, realization, confirmation, substitute, graft,
   offload, result symlink, or GC root;
 - a live manifest, production root, transaction, generation-link deletion,

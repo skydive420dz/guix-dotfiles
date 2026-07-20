@@ -239,9 +239,17 @@ published at =99dfdeff=; its first recovery passed boundary and root-backend
 with empty child stderr, then stopped safely because the orchestrator
 whole-line matcher expected bare PASS instead of the frozen =PASS (313
 checks)= line.  No artifact semantics failed and no second realization ran.
-A second source-only matcher candidate pins all six exact PASS literals; its
-validation, publication, and no-clobber =runtime-recovery-2.*= run remain
-pending.  Every live mutation remains blocked.
+A second source-only matcher correction pins all six exact PASS literals.  Its
+published checkpoint =bf8040d= passed all six production suites with empty
+nested-loader stderr, then stopped safely when the artifact capability guard
+rejected the harness's 0755 D4a root.  Its exact 0-byte stdout and 115-byte
+stderr are retained; no artifact semantic check failed and no second
+realization ran.  The third source-only correction separates exact D4a
+topology (0700 root, 0600 reconciliation sentinel, absent transaction/root
+namespaces) from legacy 98-point topology.  Its source validation passed;
+publication and the no-clobber =runtime-recovery-3.*= run remain pending.
+Every live mutation
+remains blocked.
 
 Decision D-41 requires one fused store-resident Scheme program with no project
 repository read at runtime.  D4c.1 publishes the live manifest without a
@@ -373,8 +381,10 @@ bounded realization handoff.
 =002d1ef= realization/result identities, first failed runtime channels, exact
 117-byte Guile warning diagnosis, GC-quiescent exact-prefix correction,
 published =99dfdeff= first recovery, its safely failed orchestrator matcher
-channels, the six exact PASS literals, closed 11-site empty-stderr contract,
-and the pending no-second-realization =runtime-recovery-2.*= boundary.
+channels, published =bf8040d= second recovery, its safely failed fixture-root
+capability channels, the distinct D4a/legacy topology contract, closed 11-site
+empty-stderr policy, and the pending no-second-realization
+=runtime-recovery-3.*= boundary.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -517,12 +527,19 @@ published at =99dfdeff=.  Its recovery passed boundary and root-backend with
 empty child stderr, then stopped safely when a bare-PASS whole-line matcher
 rejected the successful frozen orchestrator =PASS (313 checks)= line.  Its
 0-byte stdout and 129-byte stderr are preserved; no artifact semantics failed
-and no second realization ran.  The next candidate pins all six exact suite
-PASS literals and must be validated and published before only
-=runtime-recovery-2.*= runtime/checkout-unavailable validation runs.  D4c.1
-live-manifest publication, D4c.2 exact live-program evidence, D4c.3
-unchanged-state execution-packet acceptance, and separately authorized D5
-execution remain later gates.
+and no second realization ran.  The second correction pins all six exact suite
+PASS literals and was published at =bf8040d=.  Its recovery passed all six
+production suites with empty nested-loader stderr, then stopped safely when
+the artifact's capability guard rejected the harness-created 0755 D4a root.
+The 0-byte =runtime-recovery-2.stdout= and 115-byte
+=runtime-recovery-2.stderr= are preserved; no artifact semantic check
+failed and no second realization ran.  The third source-only candidate
+separates exact D4a fixture topology from the legacy 98-point topology and
+has passed source validation and must be published before only
+=runtime-recovery-3.*= runtime/checkout-unavailable validation runs.  D4c.1 live-manifest
+publication, D4c.2 exact live-program evidence, D4c.3 unchanged-state
+execution-packet acceptance, and separately authorized D5 execution remain
+later gates.
 P5.3 collection remains separate and unpromoted; no further cleanup is
 authorized.
 
@@ -532,14 +549,17 @@ P5.2b-D4a is evidence-complete and published at =41e1115= at its bounded
 source/fixture boundary.  D4b's helper is published at =002d1ef= and its one
 authorized realization succeeded.  First validator correction =99dfdeff= is
 published; its recovery stopped safely at the orchestrator PASS matcher after
-two warning-free production suites.  The current ready action is to validate
-and publish the second source-only matcher correction, prove clean equality,
-then run only runtime and checkout-unavailable validation against the
-retained artifact/result with new no-clobber =runtime-recovery-2.*= channels.
-No second preflight, lowering, build, realization, or live action is
-authorized, and both recovery gates must refuse any realization acceptance
-token.  Candidate validation and publication are still pending.  P5.2a is
-complete.
+two warning-free production suites.  Second validator correction =bf8040d= is
+published; all six production suites passed warning-free before its D4a
+fixture root failed the artifact's exact capability guard.  The current ready
+action is to publish the validated third source-only D4a/legacy
+fixture-topology correction, prove clean equality, then run only runtime and
+checkout-unavailable validation against the retained artifact/result with new
+no-clobber =runtime-recovery-3.*= channels.  All three failed-channel pairs
+must remain pinned and unchanged.  No second preflight, lowering, build,
+realization, or live action is authorized, and every recovery gate must
+refuse any realization acceptance token.  Candidate validation and
+publication are still pending.  P5.2a is complete.
 P5.2b-D1 is complete at the source and synthetic-fixture boundary;
 P5.2b-D2a is complete at its source and native-fixture boundary, and D2b is
 complete and published at its uninstalled artifact/evidence boundary.  D3a is
@@ -2535,10 +2555,15 @@ at all 11 checked sites.  That checkpoint is published at =99dfdeff=; its
 first recovery passed boundary and root-backend warning-free, then stopped at
 a whole-line orchestrator matcher that expected bare PASS instead of the
 frozen =PASS (313 checks)= line.  No artifact semantics failed.  The next
-source-only candidate pins all six exact suite PASS literals; validation and
-publication remain pending before its no-clobber =runtime-recovery-2.*= run.
-No additional lowering or realization occurred, and all live gates remain
-separate.
+source-only correction pins all six exact suite PASS literals and is published
+at =bf8040d=.  Its recovery passed all six production suites with empty
+nested-loader stderr, then the artifact correctly rejected the harness's 0755
+D4a fixture root.  Its no-clobber =runtime-recovery-2.*= channels are
+preserved.  The third source-only correction separates the D4a 0700
+root/0600 reconciliation-sentinel topology from legacy transaction topology;
+source validation passed; publication remains pending before its no-clobber
+=runtime-recovery-3.*= run.  No additional lowering or realization occurred,
+and all live gates remain separate.
 
 * Live symlinks
 

@@ -18,6 +18,11 @@ expected_failed_validator_checkpoint=99dfdeff36443aad4627fb6bb87dd6c42dcb2e87
 expected_failed_validator_runtime_sha=\
 55cab0aa14d6c4a2854f1f38925b0b6fd1fae9ab34e92e51bd208bc549204099
 expected_failed_validator_runtime_size=57955
+expected_fixture_failed_validator_checkpoint=\
+bf8040dfc3ec4438c2f229de60978792ffe0a493
+expected_fixture_failed_validator_runtime_sha=\
+d4cc2ee06d572a6ac0df58d5cf0171277314f7cbb8f738df9314658e210101c2
+expected_fixture_failed_validator_runtime_size=61745
 expected_realization_result_sha=\
 02506b54d887da9e2c10a94a62a2527f3a1b128380c628f3efa2efeb2e445fd3
 expected_realization_result_size=914
@@ -33,6 +38,12 @@ expected_failed_recovery_stdout_size=0
 expected_failed_recovery_stderr_sha=\
 a29ff114427bca8a4d1bb786a3b77cec9d592b3da2cb37c3d0efbf9f47a670b5
 expected_failed_recovery_stderr_size=129
+expected_failed_recovery_2_stdout_sha=\
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+expected_failed_recovery_2_stdout_size=0
+expected_failed_recovery_2_stderr_sha=\
+fab5d2d47758443c8714f5e5f47cf21158f58dc903675060d11ed6def6462c74
+expected_failed_recovery_2_stderr_size=115
 expected_store_program=\
 /gnu/store/17i7zdd5lhncw5v97cfkxbg4zdvpw5jb-system-pruning-loaded.scm
 expected_derivation=\
@@ -63,6 +74,8 @@ fixture_runtime_test=$repo/tests/guix-system-pruning-fixture-runtime-check.scm
 manifest_sha=0bf2ce08c06ec4b27053a2f7af3fd5d20c3c37bda2e739a00d0a6c68e6d9ce61
 registry_sha=bd17a2423d9a0fcea86f3eba23cbb52699379b54853eae510597ed7a160aba86
 new_grub_sha=70965414824c26e1712c6a7a51efd9517633eb3c83f36f88927565c87807496b
+reconciliation_sentinel_sha=\
+814087458b76762da6e320dd1f528384537f3a380dc2078de61292da854568ad
 realization_loader_behavior_sha=\
 379a72400e9c480d929e6c06464d71bbe9700029cbc4cb24799ab2fae896c9e1
 realization_loader_behavior_size=17534
@@ -323,6 +336,10 @@ failed_runtime_stdout=$expected_realization_evidence/runtime.stdout
 failed_runtime_stderr=$expected_realization_evidence/runtime.stderr
 failed_recovery_stdout=$expected_realization_evidence/runtime-recovery.stdout
 failed_recovery_stderr=$expected_realization_evidence/runtime-recovery.stderr
+failed_recovery_2_stdout=\
+$expected_realization_evidence/runtime-recovery-2.stdout
+failed_recovery_2_stderr=\
+$expected_realization_evidence/runtime-recovery-2.stderr
 assert_historical_runtime_channel \
     stdout "$failed_runtime_stdout" \
     "$expected_failed_runtime_stdout_sha" \
@@ -339,6 +356,14 @@ assert_historical_runtime_channel \
     recovery-stderr "$failed_recovery_stderr" \
     "$expected_failed_recovery_stderr_sha" \
     "$expected_failed_recovery_stderr_size"
+assert_historical_runtime_channel \
+    recovery-2-stdout "$failed_recovery_2_stdout" \
+    "$expected_failed_recovery_2_stdout_sha" \
+    "$expected_failed_recovery_2_stdout_size"
+assert_historical_runtime_channel \
+    recovery-2-stderr "$failed_recovery_2_stderr" \
+    "$expected_failed_recovery_2_stderr_sha" \
+    "$expected_failed_recovery_2_stderr_size"
 realization_result_source=$realization_result
 [ "$realization_result_source" = "$expected_realization_result" ] ||
     fail "realization result path differs from the accepted evidence path"
@@ -453,10 +478,15 @@ run_clean_git -C "$repo" merge-base --is-ancestor \
 run_clean_git -C "$repo" merge-base --is-ancestor \
     "$expected_failed_validator_checkpoint" "$head" ||
     fail "failed validator checkpoint is not an ancestor of the correction"
+run_clean_git -C "$repo" merge-base --is-ancestor \
+    "$expected_fixture_failed_validator_checkpoint" "$head" ||
+    fail "fixture-failed validator checkpoint is not an ancestor of the correction"
 [ "$head" != "$realization_checkpoint" ] ||
     fail "runtime recovery requires a later validator checkpoint"
 [ "$head" != "$expected_failed_validator_checkpoint" ] ||
     fail "runtime recovery requires a later corrected validator checkpoint"
+[ "$head" != "$expected_fixture_failed_validator_checkpoint" ] ||
+    fail "runtime recovery requires a later fixture-corrected validator checkpoint"
 
 mkdir "$tmp/source" "$tmp/home"
 failed_validator_runtime=$tmp/failed-validator-runtime-check
@@ -478,6 +508,26 @@ chmod a-w "$failed_validator_runtime"
 [ "$(stat -c '%s' "$failed_validator_runtime")" -eq \
     "$expected_failed_validator_runtime_size" ] ||
     fail "failed runtime validator size differs from its checkpoint"
+
+fixture_failed_validator_runtime=$tmp/fixture-failed-validator-runtime-check
+if ! run_clean_git -C "$repo" cat-file blob \
+    "$expected_fixture_failed_validator_checkpoint:tests/guix-system-pruning-d4b-runtime-check" \
+    >"$fixture_failed_validator_runtime" \
+    2>"$tmp/fixture-failed-validator-runtime.stderr"; then
+    cat "$tmp/fixture-failed-validator-runtime.stderr" >&2
+    fail "cannot materialize the committed fixture-failed runtime validator"
+fi
+[ ! -s "$tmp/fixture-failed-validator-runtime.stderr" ] || {
+    cat "$tmp/fixture-failed-validator-runtime.stderr" >&2
+    fail "fixture-failed runtime validator materialization emitted diagnostics"
+}
+chmod a-w "$fixture_failed_validator_runtime"
+[ "$(sha256_file "$fixture_failed_validator_runtime")" = \
+    "$expected_fixture_failed_validator_runtime_sha" ] ||
+    fail "fixture-failed runtime validator digest differs from its checkpoint"
+[ "$(stat -c '%s' "$fixture_failed_validator_runtime")" -eq \
+    "$expected_fixture_failed_validator_runtime_size" ] ||
+    fail "fixture-failed runtime validator size differs from its checkpoint"
 
 printf '%s\n' \
     'M	README.org' \
@@ -794,6 +844,12 @@ run_production_suite \
 
 make_fixture() {
     root=$1
+    contract=$2
+    case $contract in
+        d4a | legacy) ;;
+        *) fail "unknown fixture contract: $contract" ;;
+    esac
+
     mkdir -p \
         "$root/gnu/store" \
         "$root/var/guix/profiles" \
@@ -801,9 +857,6 @@ make_fixture() {
         "$root/boot/grub" \
         "$root/boot/efi" \
         "$root/repo"
-
-    printf '%s\n' p5.2b-system-transaction-fixture/v1 \
-        >"$root/.p52b-system-transaction-fixture"
 
     awk -F "$tab" '
         $1 == "old-bootcfg" || $1 == "new-bootcfg" {
@@ -866,10 +919,54 @@ make_fixture() {
         done
 
     ln -s "$old_bootcfg_raw" "$root/var/guix/gcroots/bootcfg"
-    mkdir -p "$root$transaction_base" "$root$recovery_base"
-    chmod 0700 \
-        "$root/var/guix/profiles" \
-        "$root$transaction_base"
+    chmod 0700 "$root/var/guix/profiles"
+
+    case $contract in
+        d4a)
+            reconciliation_sentinel=\
+$root/.p52b-system-pruning-reconciliation
+            chmod 0700 "$root"
+            printf '%s\n' \
+                p5.2b-system-pruning-reconciliation/v1 \
+                >"$reconciliation_sentinel"
+            chmod 0600 "$reconciliation_sentinel"
+
+            if [ -e "$root$transaction_base" ] ||
+                [ -L "$root$transaction_base" ]; then
+                fail "D4a fixture unexpectedly contains the transaction base"
+            fi
+            if [ -e "$root$recovery_base/$manifest_sha" ] ||
+                [ -L "$root$recovery_base/$manifest_sha" ]; then
+                fail "D4a fixture unexpectedly contains the root namespace"
+            fi
+            [ "$(readlink -f "$root" 2>/dev/null || true)" = "$root" ] ||
+                fail "D4a fixture root is not canonical"
+            [ "$(stat -c '%u' "$root")" -eq "$expected_uid" ] ||
+                fail "D4a fixture root owner differs from the accepted UID"
+            [ "$(stat -c '%a' "$root")" = 700 ] ||
+                fail "D4a fixture root mode is not exact 0700"
+            if [ ! -f "$reconciliation_sentinel" ] ||
+                [ -L "$reconciliation_sentinel" ]; then
+                fail "D4a reconciliation sentinel is not one direct regular file"
+            fi
+            [ "$(stat -c '%h' "$reconciliation_sentinel")" -eq 1 ] ||
+                fail "D4a reconciliation sentinel link count is not one"
+            [ "$(stat -c '%u' "$reconciliation_sentinel")" -eq \
+                "$expected_uid" ] ||
+                fail "D4a reconciliation sentinel owner differs from the accepted UID"
+            [ "$(stat -c '%a' "$reconciliation_sentinel")" = 600 ] ||
+                fail "D4a reconciliation sentinel mode is not exact 0600"
+            [ "$(sha256_file "$reconciliation_sentinel")" = \
+                "$reconciliation_sentinel_sha" ] ||
+                fail "D4a reconciliation sentinel bytes differ"
+            ;;
+        legacy)
+            printf '%s\n' p5.2b-system-transaction-fixture/v1 \
+                >"$root/.p52b-system-transaction-fixture"
+            mkdir -p "$root$transaction_base" "$root$recovery_base"
+            chmod 0700 "$root$transaction_base"
+            ;;
+    esac
 }
 
 snapshot_fixture() {
@@ -1022,12 +1119,12 @@ assert_repeat_recovery() {
 }
 
 points_root=$tmp/points-root
-make_fixture "$points_root"
+make_fixture "$points_root" legacy
 points=$tmp/artifact-points.tsv
 run_action fixture-points "$points_root" >"$points"
 
 d4a_root=$tmp/d4a-runtime
-make_fixture "$d4a_root"
+make_fixture "$d4a_root" d4a
 snapshot_fixture "$d4a_root" "$tmp/d4a-before"
 for d4a_action in \
     fixture-points \
@@ -1095,7 +1192,7 @@ rollback_count=$(awk -F "$tab" \
     fail "artifact rollback point count is $rollback_count, expected 44"
 
 normal_root=$tmp/normal
-make_fixture "$normal_root"
+make_fixture "$normal_root" legacy
 output=$(run_action fixture-verify "$normal_root")
 contains "$output" "state=PREPARED"
 output=$(run_action fixture-apply "$normal_root")
@@ -1111,7 +1208,7 @@ exec 3<"$forward_points"
 while IFS= read -r point <&3; do
     forward_case=$((forward_case + 1))
     root=$tmp/forward-$forward_case
-    make_fixture "$root"
+    make_fixture "$root" legacy
     if [ "$point" = journal-COMMITTED ]; then
         committed=1
     fi
@@ -1137,7 +1234,7 @@ exec 3<"$rollback_points"
 while IFS= read -r rollback_point <&3; do
     rollback_case=$((rollback_case + 1))
     root=$tmp/rollback-$rollback_case
-    make_fixture "$root"
+    make_fixture "$root" legacy
     expect_stop fixture-apply journal-LINKS-COMMITTED \
         "$root" "$tmp/rollback-seed.out"
     case $rollback_point in
@@ -1160,7 +1257,7 @@ exec 3<&-
     fail "did not execute every artifact rollback point"
 
 poison_root=$tmp/manifest-env-poison
-make_fixture "$poison_root"
+make_fixture "$poison_root" legacy
 output=$(clean_env \
     GUILE_AUTO_COMPILE=0 \
     SK_P52B_D3_MANIFEST_SHA=\
@@ -1468,6 +1565,12 @@ cmp -s \
 [ "$(stat -c '%s' "$failed_validator_runtime")" -eq \
     "$expected_failed_validator_runtime_size" ] ||
     fail "private failed runtime validator size changed during the matrix"
+[ "$(sha256_file "$fixture_failed_validator_runtime")" = \
+    "$expected_fixture_failed_validator_runtime_sha" ] ||
+    fail "private fixture-failed runtime validator changed during the matrix"
+[ "$(stat -c '%s' "$fixture_failed_validator_runtime")" -eq \
+    "$expected_fixture_failed_validator_runtime_size" ] ||
+    fail "private fixture-failed runtime validator size changed during the matrix"
 
 if [ ! -f "$realization_result_source" ] ||
     [ -L "$realization_result_source" ]; then
@@ -1509,15 +1612,26 @@ assert_historical_runtime_channel \
     recovery-stderr "$failed_recovery_stderr" \
     "$expected_failed_recovery_stderr_sha" \
     "$expected_failed_recovery_stderr_size"
+assert_historical_runtime_channel \
+    recovery-2-stdout "$failed_recovery_2_stdout" \
+    "$expected_failed_recovery_2_stdout_sha" \
+    "$expected_failed_recovery_2_stdout_size"
+assert_historical_runtime_channel \
+    recovery-2-stderr "$failed_recovery_2_stderr" \
+    "$expected_failed_recovery_2_stderr_sha" \
+    "$expected_failed_recovery_2_stderr_size"
 
 printf '%s\n' \
-    "schema=p5.2b-d4b-runtime-evidence/v3" \
+    "schema=p5.2b-d4b-runtime-evidence/v4" \
     "authorization=NOT-GRANTED" \
     "realization-checkpoint=$realization_checkpoint" \
     "validator-checkpoint=$validator_checkpoint" \
     "failed-validator-checkpoint=$expected_failed_validator_checkpoint" \
     "failed-validator-runtime-sha256=$expected_failed_validator_runtime_sha" \
     "failed-validator-runtime-size=$expected_failed_validator_runtime_size" \
+    "fixture-failed-validator-checkpoint=$expected_fixture_failed_validator_checkpoint" \
+    "fixture-failed-validator-runtime-sha256=$expected_fixture_failed_validator_runtime_sha" \
+    "fixture-failed-validator-runtime-size=$expected_fixture_failed_validator_runtime_size" \
     "validator=$script" \
     "validator-sha256=$validator_program_sha" \
     "validator-size=$validator_program_size" \
@@ -1555,7 +1669,13 @@ printf '%s\n' \
     "failed-recovery-stderr=$failed_recovery_stderr" \
     "failed-recovery-stderr-sha256=$expected_failed_recovery_stderr_sha" \
     "failed-recovery-stderr-size=$expected_failed_recovery_stderr_size" \
-    "failed-runtime-attempts=2" \
+    "failed-recovery-2-stdout=$failed_recovery_2_stdout" \
+    "failed-recovery-2-stdout-sha256=$expected_failed_recovery_2_stdout_sha" \
+    "failed-recovery-2-stdout-size=$expected_failed_recovery_2_stdout_size" \
+    "failed-recovery-2-stderr=$failed_recovery_2_stderr" \
+    "failed-recovery-2-stderr-sha256=$expected_failed_recovery_2_stderr_sha" \
+    "failed-recovery-2-stderr-size=$expected_failed_recovery_2_stderr_size" \
+    "failed-runtime-attempts=3" \
     "nested-loader-stderr-sites=$nested_loader_empty_stderr_count" \
     "nested-loader-stderr=EMPTY" \
     "recovery=GC-QUIESCENT-EXACT-PREFIX-LOAD" \

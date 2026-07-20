@@ -3,7 +3,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:design:
-#+status: accepted design; D4a published; D4b second runtime recovery pending
+#+status: accepted design; D4a published; D4b third runtime recovery pending
 
 * Outcome
 
@@ -350,16 +350,41 @@ failed.  The no-clobber =runtime-recovery.stdout= is 0 bytes with SHA256
 =a29ff114427bca8a4d1bb786a3b77cec9d592b3da2cb37c3d0efbf9f47a670b5=.
 No second realization ran.
 
-The next source-only candidate pins the exact whole-line PASS literal for all
-six frozen production suites.  Its loader/runtime/source-gate identities are
+The second source-only correction pins the exact whole-line PASS literal for
+all six frozen production suites.  Its loader/runtime/source-gate identities
+are
 =6591f029...:18049=, =d4cc2ee0...:61745=, and
-=11fc5047...:20384=.  Candidate validation and publication are pending.
+=11fc5047...:20384=.  It was published with clean equality at
+=bf8040dfc3ec4438c2f229de60978792ffe0a493=.  Its second recovery passed all
+six exact production suites with empty nested-loader stderr before entering
+D4a fixture verification.  The artifact capability guard then correctly
+rejected the validator harness's 0755 root:
+
+#+begin_example
+guix-system-pruning-fused: FAIL: sk-system-pruning-reconciliation ("fixture root is not an exact owned directory")
+#+end_example
+
+The no-clobber =runtime-recovery-2.stdout= is 0 bytes with SHA256
+=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855=;
+=runtime-recovery-2.stderr= is 115 bytes with SHA256
+=fab5d2d47758443c8714f5e5f47cf21158f58dc903675060d11ed6def6462c74=.
+This was a fail-closed harness topology mismatch, not an artifact semantic
+failure.
+
+The third source-only correction separates D4a topology from legacy 98-point
+topology.  D4a receives an exact owned 0700 root, exact 0600 reconciliation
+sentinel, and absent transaction/root namespaces; legacy retains its
+transaction sentinel and required directories.  Its
+loader/runtime/source-gate candidate identities are
+=6591f029...:18049=, =dca63d3d...:68082=, and
+=fcacf9c3...:20662=.  Source validation passed; publication is pending.
+
 After clean publication, the next recovery must preserve and pre/post hash
-both failed channel pairs, create =runtime-recovery-2.*= without clobbering,
-refuse any realization token, rerun only the runtime and
+all three failed channel pairs, create =runtime-recovery-3.*= without
+clobbering, refuse any realization token, rerun only the runtime and
 checkout-unavailable validators against the retained result/output, and
 report =lowering=NOT-RUN=, =realization=NOT-RUN=, and
-=live-action=NOT-GRANTED=.
+=live-action=NOT-GRANTED=.  Neither published failed validator is retried.
 
 All 6 + 4 + 1 = 11 sites still require empty stderr; the historical warning
 is never classified or allowed.  Suites, fixtures, and artifact inputs remain
@@ -695,6 +720,9 @@ recorded in
 [[file:2026-07-19-p5.2b-d4b-runtime-recovery.org][the D4b runtime-validator recovery record]].
 The realized artifact is retained; a later source-only validator correction
 was published at =99dfdeff= and then failed safely at a whole-line PASS
-matcher after two warning-free suites.  A second source-only matcher
-correction, clean publication, and =runtime-recovery-2.*= run remain required
-before final D4b evidence.  No second realization occurred.
+matcher after two warning-free suites.  The second matcher correction was
+published at =bf8040d=; all six production suites passed warning-free before
+the artifact correctly rejected the harness's 0755 D4a fixture root.  A third
+source-only D4a/legacy fixture-topology correction, clean publication, and
+=runtime-recovery-3.*= run remain required before final D4b evidence.  All
+failed channels are retained and no second realization occurred.

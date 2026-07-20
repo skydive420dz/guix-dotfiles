@@ -3,7 +3,7 @@
 #+date: 2026-07-19
 #+startup: overview
 #+property: header-args :eval never-export
-#+status: published at 002d1ef; realization retained; first recovery preserved; second pending
+#+status: published at 002d1ef; realization retained; second recovery preserved; third pending
 
 * Outcome
 
@@ -369,17 +369,41 @@ are:
 | =runtime-recovery.stdout= | 0 | =e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855= |
 | =runtime-recovery.stderr= | 129 | =a29ff114427bca8a4d1bb786a3b77cec9d592b3da2cb37c3d0efbf9f47a670b5= |
 
-The next source-only candidate pins all six exact frozen suite PASS literals.
-Its loader/runtime/source-gate identities are
+The second source-only correction pins all six exact frozen suite PASS
+literals.  Its loader/runtime/source-gate identities are
 =6591f0292d02ae98d8267ce038a44efbe9e10f61e948e8d508f54dd554cfa030:18049=,
 =d4cc2ee06d572a6ac0df58d5cf0171277314f7cbb8f738df9314658e210101c2:61745=,
 and
 =11fc5047f9402589e3f29179cf6fd797f090e16b65b47bbfd2b05b229cab263d:20384=.
-Its validation and publication remain pending.  A later run must create
-=runtime-recovery-2.*= without clobbering either failed attempt.  All
-6 + 4 + 1 = 11 nested-loader sites still require empty stderr.
+It was published with clean equality at
+=bf8040dfc3ec4438c2f229de60978792ffe0a493=.  Its recovery passed all six
+production suites with empty nested-loader stderr, then stopped safely when
+the artifact capability guard rejected the harness's 0755 D4a root:
 
-Both recovery gates refuse any realization acceptance token and report
+#+begin_example
+guix-system-pruning-fused: FAIL: sk-system-pruning-reconciliation ("fixture root is not an exact owned directory")
+#+end_example
+
+The preserved =runtime-recovery-2.stdout= is 0 bytes with SHA256
+=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855=.
+The preserved =runtime-recovery-2.stderr= is 115 bytes with SHA256
+=fab5d2d47758443c8714f5e5f47cf21158f58dc903675060d11ed6def6462c74=.
+No artifact semantic check failed.
+
+The complete source-only correction separates the previously combined
+fixture constructor.  D4a topology uses an exact owned 0700 root, the exact
+0600 reconciliation sentinel, and absent transaction/root namespaces.
+Legacy 98-point topology retains its transaction sentinel and required
+directories.  Its loader/runtime/source-gate candidate identities are
+=6591f0292d02ae98d8267ce038a44efbe9e10f61e948e8d508f54dd554cfa030:18049=,
+=dca63d3d1ab1d9a87e41d0fd8cc4990f1ac8db7c4f3a693f9e587826e9663dfe:68082=,
+and
+=fcacf9c362d4219783df6eb642cdb616dcbdd96968f9c7a932695d6be5738409:20662=.
+Source validation passed; publication remains pending.  A later run must create
+=runtime-recovery-3.*= without clobbering any of the three failed attempts.
+All 6 + 4 + 1 = 11 nested-loader sites still require empty stderr.
+
+Every recovery gate refuses any realization acceptance token and reports
 =lowering=NOT-RUN= / =realization=NOT-RUN=.  No second lowering, build, or
 realization occurred or is needed or permitted by the consumed grant.
 
@@ -406,13 +430,16 @@ The helper-only checkpoint is published at
 =002d1ef05bab80162f6807a5cd31b98d209baa7c=, and its one exact realization
 grant is consumed.  The first source-only validator correction is published
 at =99dfdeff36443aad4627fb6bb87dd6c42dcb2e87= and its safely failed
-=runtime-recovery.*= channels are retained.  Validate and publish the next
-whole-line matcher correction at another descendant, prove clean
-local/upstream/remote equality, and then run only the corrected runtime and
-checkout-unavailable validators against the retained result and output using
-no-clobber =runtime-recovery-2.*= channels.  Do not run preflight, lowering,
-build, or realization again, and do not supply or reuse the consumed
-acceptance token.
+=runtime-recovery.*= channels are retained.  The second correction is
+published at =bf8040dfc3ec4438c2f229de60978792ffe0a493= and its safely
+failed =runtime-recovery-2.*= channels are also retained.  Validate and
+publish the distinct D4a/legacy fixture-topology correction at another
+descendant, prove clean local/upstream/remote equality, and then run only the
+corrected runtime and checkout-unavailable validators against the retained
+result and output using no-clobber =runtime-recovery-3.*= channels.  Pin and
+recheck all three failed-channel pairs before and after.  Do not retry either
+published failed validator, run preflight, lower, build, or realize again, or
+supply or reuse the consumed acceptance token.
 
 Publish final D4b evidence only after the corrected matrix and unchanged
 selected live surfaces pass.  D4c.1 remains blocked until that evidence is
