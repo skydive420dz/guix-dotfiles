@@ -234,8 +234,14 @@ stderr remains mandatory: root-cause analysis found that a lazily spawned
 finalizer thread made startup environment mutation reach =scm_putenv= with
 multiple threads, a condition Guile documents as unspecified.  The
 artifact/result remain accepted; a later source-only validator correction
-prevents the condition only during exact-prefix loading, and its publication
-and recovery run remain pending.  Every live mutation remains blocked.
+prevents the condition only during exact-prefix loading.  That correction was
+published at =99dfdeff=; its first recovery passed boundary and root-backend
+with empty child stderr, then stopped safely because the orchestrator
+whole-line matcher expected bare PASS instead of the frozen =PASS (313
+checks)= line.  No artifact semantics failed and no second realization ran.
+A second source-only matcher candidate pins all six exact PASS literals; its
+validation, publication, and no-clobber =runtime-recovery-2.*= run remain
+pending.  Every live mutation remains blocked.
 
 Decision D-41 requires one fused store-resident Scheme program with no project
 repository read at runtime.  D4c.1 publishes the live manifest without a
@@ -366,8 +372,9 @@ bounded realization handoff.
 [[file:docs/audits/2026-07-19-p5.2b-d4b-runtime-recovery.org][The P5.2b-D4b runtime-validator recovery record]] owns the retained
 =002d1ef= realization/result identities, first failed runtime channels, exact
 117-byte Guile warning diagnosis, GC-quiescent exact-prefix correction,
-closed 11-site empty-stderr contract, and the pending
-no-second-realization recovery boundary.
+published =99dfdeff= first recovery, its safely failed orchestrator matcher
+channels, the six exact PASS literals, closed 11-site empty-stderr contract,
+and the pending no-second-realization =runtime-recovery-2.*= boundary.
 [[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
 There is no successor numbered stabilization slice; new work is promoted
 through the dated roadmap.
@@ -505,12 +512,17 @@ the exact =95b84e2...= / 956,987-byte D4a render.  They were published at
 Its first runtime validation stopped on the exact 117-byte Guile nested-loader
 warning.  Empty stderr remains the required policy because Guile documents
 the observed multi-thread environment mutation as unspecified.  The accepted
-artifact is retained; publish and run only the source-only validator
-correction that prevents lazy finalizer-thread creation during exact-prefix
-loading and restores normal GC before packets or suites.  D4c.1 live-manifest
-publication, D4c.2 exact live-program evidence, D4c.3 unchanged-state
-execution-packet acceptance, and separately authorized D5 execution remain
-later gates.
+artifact is retained.  The first source-only validator correction is
+published at =99dfdeff=.  Its recovery passed boundary and root-backend with
+empty child stderr, then stopped safely when a bare-PASS whole-line matcher
+rejected the successful frozen orchestrator =PASS (313 checks)= line.  Its
+0-byte stdout and 129-byte stderr are preserved; no artifact semantics failed
+and no second realization ran.  The next candidate pins all six exact suite
+PASS literals and must be validated and published before only
+=runtime-recovery-2.*= runtime/checkout-unavailable validation runs.  D4c.1
+live-manifest publication, D4c.2 exact live-program evidence, D4c.3
+unchanged-state execution-packet acceptance, and separately authorized D5
+execution remain later gates.
 P5.3 collection remains separate and unpromoted; no further cleanup is
 authorized.
 
@@ -518,14 +530,16 @@ authorized.
 
 P5.2b-D4a is evidence-complete and published at =41e1115= at its bounded
 source/fixture boundary.  D4b's helper is published at =002d1ef= and its one
-authorized realization succeeded.  The current ready action is to publish a
-later descendant containing the bounded runtime-validator correction, then
-run only runtime and checkout-unavailable validation against the retained
-artifact/result.  No second preflight, lowering, build, realization, or live
-action is authorized, and both recovery gates must refuse any realization
-acceptance token.  The correction candidate has passed its final source-only
-gates with no open critical, high, or medium finding, but it has not yet been
-published.  P5.2a is complete.
+authorized realization succeeded.  First validator correction =99dfdeff= is
+published; its recovery stopped safely at the orchestrator PASS matcher after
+two warning-free production suites.  The current ready action is to validate
+and publish the second source-only matcher correction, prove clean equality,
+then run only runtime and checkout-unavailable validation against the
+retained artifact/result with new no-clobber =runtime-recovery-2.*= channels.
+No second preflight, lowering, build, realization, or live action is
+authorized, and both recovery gates must refuse any realization acceptance
+token.  Candidate validation and publication are still pending.  P5.2a is
+complete.
 P5.2b-D1 is complete at the source and synthetic-fixture boundary;
 P5.2b-D2a is complete at its source and native-fixture boundary, and D2b is
 complete and published at its uninstalled artifact/evidence boundary.  D3a is
@@ -2517,9 +2531,14 @@ source-only helper is published at =002d1ef= and its one guarded synthetic
 realization succeeded.  The accepted result/output are retained while a later
 validator checkpoint prevents Guile's lazy finalizer thread during only the
 exact-prefix load, restores GC before packets/suites, and retains empty stderr
-at all 11 checked sites.  Runtime evidence then reruns without another
-lowering or realization.  The correction is not yet published or passed, and
-all live gates remain separate.
+at all 11 checked sites.  That checkpoint is published at =99dfdeff=; its
+first recovery passed boundary and root-backend warning-free, then stopped at
+a whole-line orchestrator matcher that expected bare PASS instead of the
+frozen =PASS (313 checks)= line.  No artifact semantics failed.  The next
+source-only candidate pins all six exact suite PASS literals; validation and
+publication remain pending before its no-clobber =runtime-recovery-2.*= run.
+No additional lowering or realization occurred, and all live gates remain
+separate.
 
 * Live symlinks
 

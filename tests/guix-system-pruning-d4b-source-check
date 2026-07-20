@@ -31,6 +31,7 @@ preflight=$repo/tests/guix-system-pruning-d4b-preflight
 realization_gate=$repo/tests/guix-system-pruning-d4b-realize
 expected_checkpoint=41e11155f817c8ccf2f8e8b3c9c62af566f53209
 expected_realization_checkpoint=002d1ef05bab80162f6807a5cd31b98d209baa7c
+expected_failed_validator_checkpoint=99dfdeff36443aad4627fb6bb87dd6c42dcb2e87
 expected_frontend=/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
 expected_guix_program=/gnu/store/0hzhxis25c15rag5412rhm2md38chi6x-guix-command
 expected_guix_revision=a8391f2d7451c2463ba253ffa9872fa6f27485d7
@@ -47,8 +48,8 @@ expected_loader_behavior_sha=\
 6591f0292d02ae98d8267ce038a44efbe9e10f61e948e8d508f54dd554cfa030
 expected_loader_behavior_size=18049
 expected_runtime_gate_sha=\
-55cab0aa14d6c4a2854f1f38925b0b6fd1fae9ab34e92e51bd208bc549204099
-expected_runtime_gate_size=57955
+d4cc2ee06d572a6ac0df58d5cf0171277314f7cbb8f738df9314658e210101c2
+expected_runtime_gate_size=61745
 expected_checkout_independence_sha=\
 88bb197aa74256813effa9616172ed919609d1a048871b6a1ae21fecb3ef64e7
 expected_checkout_independence_size=13058
@@ -239,6 +240,9 @@ run_clean_git -C "$repo" merge-base --is-ancestor \
 run_clean_git -C "$repo" merge-base --is-ancestor \
     "$expected_realization_checkpoint" HEAD ||
     fail "published D4b realization checkpoint is not an ancestor of HEAD"
+run_clean_git -C "$repo" merge-base --is-ancestor \
+    "$expected_failed_validator_checkpoint" HEAD ||
+    fail "failed D4b validator checkpoint is not an ancestor of HEAD"
 repository_head=$(run_clean_git -C "$repo" rev-parse HEAD)
 
 # Recovery may change only the validator harness and documentation.  Keep the

@@ -14,6 +14,10 @@ expected_uid=1000
 expected_repo=/home/skydive420dz/Projects/guix-dotfiles
 expected_d4a=41e11155f817c8ccf2f8e8b3c9c62af566f53209
 expected_realization_checkpoint=002d1ef05bab80162f6807a5cd31b98d209baa7c
+expected_failed_validator_checkpoint=99dfdeff36443aad4627fb6bb87dd6c42dcb2e87
+expected_failed_validator_runtime_sha=\
+55cab0aa14d6c4a2854f1f38925b0b6fd1fae9ab34e92e51bd208bc549204099
+expected_failed_validator_runtime_size=57955
 expected_realization_result_sha=\
 02506b54d887da9e2c10a94a62a2527f3a1b128380c628f3efa2efeb2e445fd3
 expected_realization_result_size=914
@@ -23,6 +27,12 @@ expected_failed_runtime_stdout_size=0
 expected_failed_runtime_stderr_sha=\
 ea0799970363414fa8c9c5a0d32a2cb6b6125e620abd81f2b926795f26c8864d
 expected_failed_runtime_stderr_size=222
+expected_failed_recovery_stdout_sha=\
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+expected_failed_recovery_stdout_size=0
+expected_failed_recovery_stderr_sha=\
+a29ff114427bca8a4d1bb786a3b77cec9d592b3da2cb37c3d0efbf9f47a670b5
+expected_failed_recovery_stderr_size=129
 expected_store_program=\
 /gnu/store/17i7zdd5lhncw5v97cfkxbg4zdvpw5jb-system-pruning-loaded.scm
 expected_derivation=\
@@ -291,14 +301,14 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 assert_empty_nested_loader_stderr() {
-    label=$1
+    nested_stderr_label=$1
     stderr_file=$2
     if [ ! -f "$stderr_file" ] || [ -L "$stderr_file" ]; then
-        fail "nested-loader stderr is not one direct regular file: $label"
+        fail "nested-loader stderr is not one direct regular file: $nested_stderr_label"
     fi
     [ ! -s "$stderr_file" ] || {
         cat "$stderr_file" >&2
-        fail "nested-loader emitted diagnostics: $label"
+        fail "nested-loader emitted diagnostics: $nested_stderr_label"
     }
     nested_loader_empty_stderr_count=$((nested_loader_empty_stderr_count + 1))
 }
@@ -311,6 +321,8 @@ expected_realization_result=\
 $expected_realization_evidence/realization-result.tsv
 failed_runtime_stdout=$expected_realization_evidence/runtime.stdout
 failed_runtime_stderr=$expected_realization_evidence/runtime.stderr
+failed_recovery_stdout=$expected_realization_evidence/runtime-recovery.stdout
+failed_recovery_stderr=$expected_realization_evidence/runtime-recovery.stderr
 assert_historical_runtime_channel \
     stdout "$failed_runtime_stdout" \
     "$expected_failed_runtime_stdout_sha" \
@@ -319,6 +331,14 @@ assert_historical_runtime_channel \
     stderr "$failed_runtime_stderr" \
     "$expected_failed_runtime_stderr_sha" \
     "$expected_failed_runtime_stderr_size"
+assert_historical_runtime_channel \
+    recovery-stdout "$failed_recovery_stdout" \
+    "$expected_failed_recovery_stdout_sha" \
+    "$expected_failed_recovery_stdout_size"
+assert_historical_runtime_channel \
+    recovery-stderr "$failed_recovery_stderr" \
+    "$expected_failed_recovery_stderr_sha" \
+    "$expected_failed_recovery_stderr_size"
 realization_result_source=$realization_result
 [ "$realization_result_source" = "$expected_realization_result" ] ||
     fail "realization result path differs from the accepted evidence path"
@@ -430,10 +450,35 @@ run_clean_git -C "$repo" merge-base --is-ancestor "$expected_d4a" "$head" ||
 run_clean_git -C "$repo" merge-base --is-ancestor \
     "$realization_checkpoint" "$head" ||
     fail "realization checkpoint is not an ancestor of the validator checkpoint"
+run_clean_git -C "$repo" merge-base --is-ancestor \
+    "$expected_failed_validator_checkpoint" "$head" ||
+    fail "failed validator checkpoint is not an ancestor of the correction"
 [ "$head" != "$realization_checkpoint" ] ||
     fail "runtime recovery requires a later validator checkpoint"
+[ "$head" != "$expected_failed_validator_checkpoint" ] ||
+    fail "runtime recovery requires a later corrected validator checkpoint"
 
 mkdir "$tmp/source" "$tmp/home"
+failed_validator_runtime=$tmp/failed-validator-runtime-check
+if ! run_clean_git -C "$repo" cat-file blob \
+    "$expected_failed_validator_checkpoint:tests/guix-system-pruning-d4b-runtime-check" \
+    >"$failed_validator_runtime" \
+    2>"$tmp/failed-validator-runtime.stderr"; then
+    cat "$tmp/failed-validator-runtime.stderr" >&2
+    fail "cannot materialize the committed failed runtime validator"
+fi
+[ ! -s "$tmp/failed-validator-runtime.stderr" ] || {
+    cat "$tmp/failed-validator-runtime.stderr" >&2
+    fail "failed runtime validator materialization emitted diagnostics"
+}
+chmod a-w "$failed_validator_runtime"
+[ "$(sha256_file "$failed_validator_runtime")" = \
+    "$expected_failed_validator_runtime_sha" ] ||
+    fail "failed runtime validator digest differs from its checkpoint"
+[ "$(stat -c '%s' "$failed_validator_runtime")" -eq \
+    "$expected_failed_validator_runtime_size" ] ||
+    fail "failed runtime validator size differs from its checkpoint"
+
 printf '%s\n' \
     'M	README.org' \
     'M	docs/audits/2026-07-19-p5.2b-d4-production-boundary-design.org' \
@@ -711,14 +756,15 @@ run_production_suite() {
         production-suite \
         "$suite" >"$stdout" 2>"$stderr"
     assert_empty_nested_loader_stderr "production-suite:$label" "$stderr"
-    suite_pass_count=$(grep -F -x -c "$expected" "$stdout" || true)
-    [ "$suite_pass_count" -eq 1 ] ||
-        fail "exact-production suite did not emit exactly one PASS: $label"
-    loader_pass_count=$(grep -F -x -c \
+    expected_stdout=$tmp/production-$label.expected
+    printf '%s\n' \
+        "$expected" \
         "guix-system-pruning-fused-loader-behavior-check: PASS: mode=production-suite" \
-        "$stdout" || true)
-    [ "$loader_pass_count" -eq 1 ] ||
-        fail "production loader did not emit exactly one PASS: $label"
+        >"$expected_stdout"
+    cmp -s "$expected_stdout" "$stdout" || {
+        cat "$stdout" >&2
+        fail "exact-production stdout drift: $label"
+    }
 }
 
 run_production_suite \
@@ -732,19 +778,19 @@ run_production_suite \
 run_production_suite \
     orchestrator \
     "$orchestrator_test" \
-    "guix-system-pruning-orchestrator-check: PASS"
+    "guix-system-pruning-orchestrator-check: PASS (313 checks)"
 run_production_suite \
     reconciliation \
     "$reconciliation_test" \
-    "guix-system-pruning-reconciliation-check: PASS"
+    "guix-system-pruning-reconciliation-check: PASS (128 checks)"
 run_production_suite \
     phase-engine \
     "$phase_engine_test" \
-    "guix-system-pruning-phase-engine-check: PASS"
+    "guix-system-pruning-phase-engine-check: PASS (3172 checks phases=78 rollback-prefixes=14 rollback-restarts=204 cleanup-prefixes=8)"
 run_production_suite \
     fixture-runtime \
     "$fixture_runtime_test" \
-    "guix-system-pruning-fixture-runtime-check: PASS"
+    "guix-system-pruning-fixture-runtime-check: PASS (297 checks forward-effects=71 recovery-effects=47 illegal-chains=5)"
 
 make_fixture() {
     root=$1
@@ -1416,6 +1462,12 @@ cmp -s \
     "$terminal_loader_behavior_source" \
     "$validator_loader_behavior_check" ||
     fail "validator and private loader checkers differ after the matrix"
+[ "$(sha256_file "$failed_validator_runtime")" = \
+    "$expected_failed_validator_runtime_sha" ] ||
+    fail "private failed runtime validator changed during the matrix"
+[ "$(stat -c '%s' "$failed_validator_runtime")" -eq \
+    "$expected_failed_validator_runtime_size" ] ||
+    fail "private failed runtime validator size changed during the matrix"
 
 if [ ! -f "$realization_result_source" ] ||
     [ -L "$realization_result_source" ]; then
@@ -1449,12 +1501,23 @@ assert_historical_runtime_channel \
     stderr "$failed_runtime_stderr" \
     "$expected_failed_runtime_stderr_sha" \
     "$expected_failed_runtime_stderr_size"
+assert_historical_runtime_channel \
+    recovery-stdout "$failed_recovery_stdout" \
+    "$expected_failed_recovery_stdout_sha" \
+    "$expected_failed_recovery_stdout_size"
+assert_historical_runtime_channel \
+    recovery-stderr "$failed_recovery_stderr" \
+    "$expected_failed_recovery_stderr_sha" \
+    "$expected_failed_recovery_stderr_size"
 
 printf '%s\n' \
-    "schema=p5.2b-d4b-runtime-evidence/v2" \
+    "schema=p5.2b-d4b-runtime-evidence/v3" \
     "authorization=NOT-GRANTED" \
     "realization-checkpoint=$realization_checkpoint" \
     "validator-checkpoint=$validator_checkpoint" \
+    "failed-validator-checkpoint=$expected_failed_validator_checkpoint" \
+    "failed-validator-runtime-sha256=$expected_failed_validator_runtime_sha" \
+    "failed-validator-runtime-size=$expected_failed_validator_runtime_size" \
     "validator=$script" \
     "validator-sha256=$validator_program_sha" \
     "validator-size=$validator_program_size" \
@@ -1486,6 +1549,13 @@ printf '%s\n' \
     "failed-runtime-stderr=$failed_runtime_stderr" \
     "failed-runtime-stderr-sha256=$expected_failed_runtime_stderr_sha" \
     "failed-runtime-stderr-size=$expected_failed_runtime_stderr_size" \
+    "failed-recovery-stdout=$failed_recovery_stdout" \
+    "failed-recovery-stdout-sha256=$expected_failed_recovery_stdout_sha" \
+    "failed-recovery-stdout-size=$expected_failed_recovery_stdout_size" \
+    "failed-recovery-stderr=$failed_recovery_stderr" \
+    "failed-recovery-stderr-sha256=$expected_failed_recovery_stderr_sha" \
+    "failed-recovery-stderr-size=$expected_failed_recovery_stderr_size" \
+    "failed-runtime-attempts=2" \
     "nested-loader-stderr-sites=$nested_loader_empty_stderr_count" \
     "nested-loader-stderr=EMPTY" \
     "recovery=GC-QUIESCENT-EXACT-PREFIX-LOAD" \

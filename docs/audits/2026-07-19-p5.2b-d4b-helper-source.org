@@ -3,7 +3,7 @@
 #+date: 2026-07-19
 #+startup: overview
 #+property: header-args :eval never-export
-#+status: published at 002d1ef; realization retained; runtime recovery pending
+#+status: published at 002d1ef; realization retained; first recovery preserved; second pending
 
 * Outcome
 
@@ -351,17 +351,37 @@ and
 
 [[file:2026-07-19-p5.2b-d4b-runtime-recovery.org][The D4b runtime-validator recovery record]]
 owns the diagnosis and bounded correction.  It preserves this realization
-checkpoint and requires a distinct later validator checkpoint.  The later
-checkpoint supplies one exact pinned loader checker that disables GC only
-around =load-exact-loader-prefix= with =dynamic-wind= and restores normal GC
-before packets or suites run.  All 6 + 4 + 1 = 11 sites still require empty
-stderr.  New =runtime-recovery.*= channels must be created without clobbering
-the originals, whose identities are rechecked before and after the matrix.
+checkpoint and requires distinct later validator checkpoints.  The first was
+published at =99dfdeff36443aad4627fb6bb87dd6c42dcb2e87=.  Its exact pinned
+loader checker disables GC only around =load-exact-loader-prefix= with
+=dynamic-wind= and restores normal GC before packets or suites run.
+
+That first recovery passed the boundary and root-backend suites with empty
+child stderr, then stopped safely at the orchestrator whole-line matcher.  The
+frozen suite emitted
+=guix-system-pruning-orchestrator-check: PASS (313 checks)=, while the
+validator expected the older bare =guix-system-pruning-orchestrator-check:
+PASS=.  No artifact semantic check failed.  Its preserved no-clobber channels
+are:
+
+| Channel | Bytes | SHA256 |
+|---------+-------+--------|
+| =runtime-recovery.stdout= | 0 | =e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855= |
+| =runtime-recovery.stderr= | 129 | =a29ff114427bca8a4d1bb786a3b77cec9d592b3da2cb37c3d0efbf9f47a670b5= |
+
+The next source-only candidate pins all six exact frozen suite PASS literals.
+Its loader/runtime/source-gate identities are
+=6591f0292d02ae98d8267ce038a44efbe9e10f61e948e8d508f54dd554cfa030:18049=,
+=d4cc2ee06d572a6ac0df58d5cf0171277314f7cbb8f738df9314658e210101c2:61745=,
+and
+=11fc5047f9402589e3f29179cf6fd797f090e16b65b47bbfd2b05b229cab263d:20384=.
+Its validation and publication remain pending.  A later run must create
+=runtime-recovery-2.*= without clobbering either failed attempt.  All
+6 + 4 + 1 = 11 nested-loader sites still require empty stderr.
+
 Both recovery gates refuse any realization acceptance token and report
 =lowering=NOT-RUN= / =realization=NOT-RUN=.  No second lowering, build, or
-realization is needed or permitted by the consumed grant.  The correction has
-passed final source-only validation with no open critical, high, or medium
-finding; it has not yet been published or run.
+realization occurred or is needed or permitted by the consumed grant.
 
 * Source-checkpoint nonclaims
 
@@ -384,11 +404,15 @@ At its publication boundary this source checkpoint did not claim:
 
 The helper-only checkpoint is published at
 =002d1ef05bab80162f6807a5cd31b98d209baa7c=, and its one exact realization
-grant is consumed.  Publish the source-only validator correction at a later
-descendant checkpoint, prove clean local/upstream/remote equality, and then
-run only the corrected runtime and checkout-unavailable validators against
-the retained result and output.  Do not run preflight, lowering, build, or
-realization again, and do not supply or reuse the consumed acceptance token.
+grant is consumed.  The first source-only validator correction is published
+at =99dfdeff36443aad4627fb6bb87dd6c42dcb2e87= and its safely failed
+=runtime-recovery.*= channels are retained.  Validate and publish the next
+whole-line matcher correction at another descendant, prove clean
+local/upstream/remote equality, and then run only the corrected runtime and
+checkout-unavailable validators against the retained result and output using
+no-clobber =runtime-recovery-2.*= channels.  Do not run preflight, lowering,
+build, or realization again, and do not supply or reuse the consumed
+acceptance token.
 
 Publish final D4b evidence only after the corrected matrix and unchanged
 selected live surfaces pass.  D4c.1 remains blocked until that evidence is

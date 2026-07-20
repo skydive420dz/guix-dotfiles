@@ -3,7 +3,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:design:
-#+status: accepted design; D4a published; D4b runtime recovery pending
+#+status: accepted design; D4a published; D4b second runtime recovery pending
 
 * Outcome
 
@@ -331,24 +331,40 @@ environment mutation reached =scm_putenv=; Guile documents the multi-thread
 operation as unspecified.
 
 [[file:2026-07-19-p5.2b-d4b-runtime-recovery.org][The D4b runtime-validator recovery record]]
-preserves the realization at =002d1ef= and requires a distinct later
-validator checkpoint.  That checkpoint owns one exact pinned loader checker
-whose =dynamic-wind= disables GC only for =load-exact-loader-prefix= and
-restores GC before packets, suites, or canaries run.  The standalone
-preexisting-module check restores its saved caller module before enabling GC.
-All 6 + 4 + 1 = 11 sites require empty stderr; the historical warning is never
-classified or allowed.  Suites, fixtures, and artifact inputs remain exported
-from =002d1ef=, while only the corrected loader comes from the validator
-checkpoint.
+preserves the realization at =002d1ef= and requires distinct later validator
+checkpoints.  The first correction was published at
+=99dfdeff36443aad4627fb6bb87dd6c42dcb2e87=.  Its exact pinned loader
+checker's =dynamic-wind= disables GC only for
+=load-exact-loader-prefix= and restores GC before packets, suites, or
+canaries run.  The standalone preexisting-module check restores its saved
+caller module before enabling GC.
 
-The recovery must preserve and pre/post hash the old channels, create
-=runtime-recovery.*= without clobbering, refuse any realization token, rerun
-only the runtime and checkout-unavailable validators against the retained
-result/output, and report =lowering=NOT-RUN=, =realization=NOT-RUN=, and
-=live-action=NOT-GRANTED=.  The correction candidate has passed its final
-source-only gates with no open critical, high, or medium finding.  It has not
-yet been published, and the recovery run remains pending, so D4b is not
-evidence-complete.
+The first recovery run passed the boundary and root-backend production suites
+with empty child stderr, then stopped safely in validator policy.  The
+orchestrator suite exited successfully with exact line
+=guix-system-pruning-orchestrator-check: PASS (313 checks)=, but its
+whole-line matcher expected the older bare PASS.  No artifact semantics
+failed.  The no-clobber =runtime-recovery.stdout= is 0 bytes with SHA256
+=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855=;
+=runtime-recovery.stderr= is 129 bytes with SHA256
+=a29ff114427bca8a4d1bb786a3b77cec9d592b3da2cb37c3d0efbf9f47a670b5=.
+No second realization ran.
+
+The next source-only candidate pins the exact whole-line PASS literal for all
+six frozen production suites.  Its loader/runtime/source-gate identities are
+=6591f029...:18049=, =d4cc2ee0...:61745=, and
+=11fc5047...:20384=.  Candidate validation and publication are pending.
+After clean publication, the next recovery must preserve and pre/post hash
+both failed channel pairs, create =runtime-recovery-2.*= without clobbering,
+refuse any realization token, rerun only the runtime and
+checkout-unavailable validators against the retained result/output, and
+report =lowering=NOT-RUN=, =realization=NOT-RUN=, and
+=live-action=NOT-GRANTED=.
+
+All 6 + 4 + 1 = 11 sites still require empty stderr; the historical warning
+is never classified or allowed.  Suites, fixtures, and artifact inputs remain
+exported from =002d1ef=, while only validator-owned corrections come from
+later checkpoints.  D4b is not evidence-complete.
 
 * D4c.1: fresh live-state review manifest publication
 
@@ -678,4 +694,7 @@ succeeded.  The first runtime gate exposed the bounded validator-policy issue
 recorded in
 [[file:2026-07-19-p5.2b-d4b-runtime-recovery.org][the D4b runtime-validator recovery record]].
 The realized artifact is retained; a later source-only validator correction
-and recovery run remain required before final D4b evidence.
+was published at =99dfdeff= and then failed safely at a whole-line PASS
+matcher after two warning-free suites.  A second source-only matcher
+correction, clean publication, and =runtime-recovery-2.*= run remain required
+before final D4b evidence.  No second realization occurred.

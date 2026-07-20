@@ -4,7 +4,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:runtime:recovery:evidence:
-#+status: source-only validator correction passed; publication and run pending
+#+status: first recovery preserved; second source-only correction validation and publication pending
 
 * Outcome
 
@@ -24,9 +24,18 @@ The defect is in the validator-owned loader checker's GC/thread timing, not
 the realized artifact.
 
 The realized program and its closed result remain the accepted D4b artifact
-inputs.  The correction is source-only and must be published at a later
-validator checkpoint before it runs.  It must not lower, build, realize, or
-confirm another derivation and must perform no live action.
+inputs.  The first source-only correction was published at
+=99dfdeff36443aad4627fb6bb87dd6c42dcb2e87=.  Its recovery run passed the
+boundary and root-backend production suites with empty child stderr, then
+stopped safely at the orchestrator suite because the validator's whole-line
+matcher expected a bare PASS while the frozen suite emits =PASS (313
+checks)=.  No artifact semantic check failed.
+
+That second stop is preserved as validator evidence.  Its correction is again
+source-only: it pins the six exact frozen suite PASS literals rather than
+changing a suite or the artifact.  It must be validated and published at
+another later descendant checkpoint before it runs.  It must not lower,
+build, realize, or confirm another derivation and must perform no live action.
 
 * Retained realization
 
@@ -100,16 +109,16 @@ unspecified behavior.  Therefore the historical 117-byte warning is retained
 as exact failure evidence; it must not be classified, allowlisted, suppressed,
 or accepted by the recovery gate.
 
-* Bounded validator correction
+* First bounded validator correction contract
 
 The corrected runtime validator must preserve two independent checkpoints:
 
 1. =realization-checkpoint= is the historical
    =002d1ef05bab80162f6807a5cd31b98d209baa7c= checkpoint that constructed
    and realized the accepted artifact.
-2. =validator-checkpoint= is a later clean, published descendant containing
-   only the reviewed loader-checker/runtime-harness recovery correction and
-   its documentation.
+2. =validator-checkpoint= is the later clean, published descendant
+   =99dfdeff36443aad4627fb6bb87dd6c42dcb2e87= containing only the reviewed
+   loader-checker/runtime-harness recovery correction and its documentation.
 
 The validator must export production suites, fixtures, manifests, and every
 artifact input from the realization checkpoint, not from the later validator
@@ -156,9 +165,9 @@ child status, a missing PASS line, or a checked-site count other than 11 must
 remain fatal.  The historical warning identity is not an accepted runtime
 identity.
 
-The recovery run must use exact new top-level channel names
+The first recovery run was required to use exact new top-level channel names
 =runtime-recovery.stdout= and =runtime-recovery.stderr= in the retained
-evidence directory.  The caller must use no-clobber creation and refuse if
+evidence directory.  Its caller used no-clobber creation and refused if
 either path already exists.  The gate must hash and size-check the original
 =runtime.stdout= and =runtime.stderr= before and after the complete matrix, so
 the recovery cannot replace or mutate the first failed channels.
@@ -184,46 +193,101 @@ Both the source recovery gate and runtime recovery gate must fail if
 consumed realization token is neither an input to nor authorization for this
 source-only recovery.
 
-* Publication and next gate
+* First published recovery and safe matcher stop
 
-The validator correction candidate has passed its final source-only gates:
+The first loader/runtime recovery was published at validator checkpoint
+=99dfdeff36443aad4627fb6bb87dd6c42dcb2e87=.  It retained
+=002d1ef05bab80162f6807a5cd31b98d209baa7c= as the realization and source
+archive, used the existing result and output, and did not run preflight,
+lowering, build, realization, confirmation, or a live action.
+
+The no-clobber first recovery channels are retained:
+
+| Channel | Bytes | SHA256 |
+|---------+-------+--------|
+| =runtime-recovery.stdout= | 0 | =e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855= |
+| =runtime-recovery.stderr= | 129 | =a29ff114427bca8a4d1bb786a3b77cec9d592b3da2cb37c3d0efbf9f47a670b5= |
+
+Its exact top-level diagnostic is:
+
+#+begin_example
+guix-system-pruning-d4b-runtime-check: FAIL: exact-production suite did not emit exactly one PASS: production-suite:orchestrator
+#+end_example
+
+The boundary and root-backend suites had already succeeded with direct
+zero-byte child stderr.  This proves that the first correction removed the
+historical Guile warning at both reached nested-loader sites.  The
+orchestrator child also exited zero and emitted its successful frozen line:
+
+#+begin_example
+guix-system-pruning-orchestrator-check: PASS (313 checks)
+#+end_example
+
+The validator nevertheless counted zero matches because its expected
+whole-line literal was the older bare
+=guix-system-pruning-orchestrator-check: PASS=.  The failure is therefore a
+safe harness-policy stop, not a failure of the retained artifact, its loader,
+the orchestrator semantics, or empty-stderr enforcement.  The following
+quantified suites had the same latent expectation risk, so the next candidate
+pins all six literals together:
+
+| Suite | Exact required PASS line |
+|-------+--------------------------|
+| Boundary | =guix-system-pruning-boundary-check: PASS= |
+| Root backend | =guix-system-pruning-root-backend-check: PASS= |
+| Orchestrator | =guix-system-pruning-orchestrator-check: PASS (313 checks)= |
+| Reconciliation | =guix-system-pruning-reconciliation-check: PASS (128 checks)= |
+| Phase engine | =guix-system-pruning-phase-engine-check: PASS (3172 checks phases=78 rollback-prefixes=14 rollback-restarts=204 cleanup-prefixes=8)= |
+| Fixture runtime | =guix-system-pruning-fixture-runtime-check: PASS (297 checks forward-effects=71 recovery-effects=47 illegal-chains=5)= |
+
+No second realization occurred.  Both =runtime.*= and
+=runtime-recovery.*= remain immutable failed-attempt evidence.  A read-only
+post-stop audit confirmed both pairs' exact identities, the intact result and
+artifact, no result link or artifact GC root, and no
+=runtime-recovery-2.*= paths.  Its fresh 19-record selected-live snapshot was
+byte-identical to the retained surfaces at
+=44a31120baabf015556e42a387903153ce6b54f02624b12ab7dbc21bc80dfc11=
+/ 1,455 bytes.  This is a bounded nonmutation audit, not final runtime
+acceptance.
+
+* Second source-only candidate and next gate
+
+The next source-only candidate currently has these identities:
 
 | Source | Bytes | SHA256 |
 |--------+-------+--------|
-| Corrected loader checker | 18,049 | =6591f0292d02ae98d8267ce038a44efbe9e10f61e948e8d508f54dd554cfa030= |
-| Corrected runtime validator | 57,955 | =55cab0aa14d6c4a2854f1f38925b0b6fd1fae9ab34e92e51bd208bc549204099= |
-| Aggregate source gate | 20,132 | =b86b00ee3561956699608706ccbfc847dc1e80e305809f6ae1746449ea00f87f= |
+| Loader checker, unchanged from =99dfdeff= | 18,049 | =6591f0292d02ae98d8267ce038a44efbe9e10f61e948e8d508f54dd554cfa030= |
+| Runtime validator | 61,745 | =d4cc2ee06d572a6ac0df58d5cf0171277314f7cbb8f738df9314658e210101c2= |
+| Aggregate source gate | 20,384 | =11fc5047f9402589e3f29179cf6fd797f090e16b65b47bbfd2b05b229cab263d= |
 
-The exact D4b source gate passed on GuixPC with
-=lowered=FALSE= / =realized=FALSE=.  The strict repository source/fixture
-suite, Org lint, whitespace checks, and independent adversarial review also
-passed with no open critical, high, or medium finding.  No preflight,
-lowering, build, realization, or live action ran during validation.
+Candidate validation and publication are pending.  After its source-only
+gates pass, it is published at a clean descendant, and local/upstream/remote
+equality is proven, create exactly =runtime-recovery-2.stdout= and
+=runtime-recovery-2.stderr= with no-clobber semantics and run only:
 
-The candidate has not yet been published.  After clean local, upstream, and
-remote equality is proven for its later checkpoint, create the two new
-recovery channels with no-clobber semantics and run only:
-
-1. the corrected exact-artifact runtime validator against the retained
+1. the second corrected exact-artifact runtime validator against the retained
    realization result and output; and
 2. the checkout-unavailable validator against those same retained identities.
 
-The corrected runtime result, new raw channels, validator and loader source
-identities, checkout-unavailable result, pre/post historical-channel
-identities, and unchanged selected live surfaces must then be reviewed and
-published as final D4b evidence.  Successful recovery must have empty
-=runtime-recovery.stderr=.  Until that happens, D4b is not evidence-complete
-and D4c.1 remains blocked.
+The gate must hash and size-check both pairs of preserved failed channels
+before and after the complete matrix.  The corrected runtime result, new raw
+channels, validator and loader source identities, checkout-unavailable result,
+pre/post historical-channel identities, and unchanged selected live surfaces
+must then be reviewed and published as final D4b evidence.  Successful
+recovery must have empty =runtime-recovery-2.stderr=.  Until that happens,
+D4b is not evidence-complete and D4c.1 remains blocked.
 
 * Exact nonclaims
 
 This recovery record does not claim:
 
-- that the corrected validator is published or its runtime matrix has passed;
+- that the second corrected validator is validated, published, or has passed
+  its runtime matrix;
 - that the complete six-suite, 98-point, canary, refusal, and
   checkout-unavailable matrix has completed against the store artifact;
 - that the historical 117-byte warning is safe, classified, allowed, or
   suppressible;
+- that the =99dfdeff= matcher stop is an artifact semantic failure;
 - a second lowering, build, realization, confirmation, substitute, graft,
   offload, result symlink, or GC root;
 - a live manifest, production root, transaction, generation-link deletion,

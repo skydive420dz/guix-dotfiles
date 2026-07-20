@@ -1065,7 +1065,8 @@ CLOSED: [2026-07-19 Sun]
 :created: 2026-07-19
 :helper_published: 002d1ef05bab80162f6807a5cd31b98d209baa7c
 :realization_checkpoint: 002d1ef05bab80162f6807a5cd31b98d209baa7c
-:blocked_by: published validator correction and successful recovery validators
+:first_validator_published: 99dfdeff36443aad4627fb6bb87dd6c42dcb2e87
+:blocked_by: validated/published second matcher correction and successful recovery validators
 :END:
 
 - Helper evidence: [[file:../../../docs/audits/2026-07-19-p5.2b-d4b-helper-source.org][2026-07-19 P5.2b-D4b source-only helper checkpoint]].
@@ -1100,9 +1101,23 @@ CLOSED: [2026-07-19 Sun]
   =lowered=FALSE= / =realized=FALSE=; the strict repository suite, Org lint,
   whitespace checks, and independent review pass with no open critical,
   high, or medium finding.
-- [ ] Publish a later descendant validator checkpoint that preserves
-  =002d1ef= as the realization/source archive.  Materialize and pin only the
-  corrected loader checker from the later checkpoint.  Wrap only
+- [X] Publish first validator checkpoint =99dfdeff= while preserving
+  =002d1ef= as the realization/source archive.  Its recovery passed boundary
+  and root-backend with empty child stderr, then failed safely at the
+  orchestrator whole-line matcher: the frozen suite emitted =PASS (313
+  checks)= while the matcher expected bare PASS.  Preserve its 0-byte
+  =runtime-recovery.stdout= SHA256
+  =e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855=
+  and 129-byte =runtime-recovery.stderr= SHA256
+  =a29ff114427bca8a4d1bb786a3b77cec9d592b3da2cb37c3d0efbf9f47a670b5=.
+  No artifact semantic check failed and no second realization ran.
+- [ ] Validate and publish a second descendant validator checkpoint that
+  pins the exact frozen whole-line PASS literal for all six production
+  suites.  Candidate loader/runtime/source-gate identities are
+  =6591f029...:18049=, =d4cc2ee0...:61745=, and
+  =11fc5047...:20384=.  Candidate validation and publication are pending.
+  Preserve =002d1ef= as the realization/source archive.  Materialize and pin
+  only the corrected loader checker from the later checkpoint.  Wrap only
   =load-exact-loader-prefix= in =dynamic-wind= with
   =gc-disable= / =gc-enable=, restore normal GC before packets/suites, and
   have the standalone preexisting-module after thunk restore its saved caller
@@ -1118,8 +1133,8 @@ CLOSED: [2026-07-19 Sun]
   validators against the retained result/output; report
   =lowering=NOT-RUN= / =realization=NOT-RUN= / =live-action=NOT-GRANTED=.
   Both gates must refuse any realization acceptance token.  Create
-  =runtime-recovery.stdout= / =runtime-recovery.stderr= with no-clobber
-  semantics and recheck the original channel hashes before and after.
+  =runtime-recovery-2.stdout= / =runtime-recovery-2.stderr= with no-clobber
+  semantics and recheck both preserved failed-channel pairs before and after.
 - [ ] Freeze derivation/output identity, program hash/size, loaded-byte
   provenance, raw results, bounded realization effects, and unchanged selected
   live transaction surfaces; publish and stop.
