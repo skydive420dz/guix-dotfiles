@@ -1,0 +1,201 @@
+#!/bin/sh
+set -eu
+
+umask 077
+LC_ALL=C
+PATH=\
+/gnu/store/z84fzavdzq9ja3lyln3cf9px4h45ybf9-profile/bin:/gnu/store/2p4vnz9y2ndfsbary431rzlf41jhanrs-profile/bin
+export LC_ALL PATH
+
+program_name=guix-system-pruning-d4b-preflight
+expected_host=guixpc
+expected_user=skydive420dz
+expected_uid=1000
+expected_repo=/home/skydive420dz/Projects/guix-dotfiles
+expected_d4a=41e11155f817c8ccf2f8e8b3c9c62af566f53209
+expected_render_sha=\
+95b84e29853a2327bffab857383cf78a30ab41b965144fd298edc384335b9d70
+expected_render_size=956987
+
+fail() {
+    printf '%s: FAIL: %s\n' "$program_name" "$*" >&2
+    exit 1
+}
+
+sha256_file() {
+    if ! sha_line=$(sha256sum "$1"); then
+        fail "cannot hash file: $1"
+    fi
+    sha_digest=${sha_line%% *}
+    [ "${#sha_digest}" -eq 64 ] ||
+        fail "SHA256 command returned an invalid digest: $1"
+    case $sha_digest in
+        *[!0-9a-f]*) fail "SHA256 command returned non-hex output: $1" ;;
+    esac
+    printf '%s\n' "$sha_digest"
+}
+
+run_clean_git() {
+    env -i \
+        HOME=/homeless-shelter \
+        XDG_CONFIG_HOME=/homeless-shelter \
+        USER="$expected_user" \
+        LOGNAME="$expected_user" \
+        PATH="$PATH" \
+        LC_ALL=C \
+        GIT_CONFIG_NOSYSTEM=1 \
+        GIT_OPTIONAL_LOCKS=0 \
+        git \
+        -c core.fsmonitor=false \
+        -c core.untrackedCache=false \
+        "$@"
+}
+
+case $# in
+    0) capture_dir= ;;
+    2)
+        [ "$1" = --capture ] ||
+            fail "the only accepted option is --capture"
+        capture_dir=$2
+        case $capture_dir in
+            /tmp/*) ;;
+            *) fail "capture directory must be beneath /tmp" ;;
+        esac
+        if [ ! -d "$capture_dir" ] || [ -L "$capture_dir" ]; then
+            fail "capture directory is not one direct directory"
+        fi
+        [ "$(readlink -f "$capture_dir")" = "$capture_dir" ] ||
+            fail "capture directory path is not canonical"
+        [ -z "$(find "$capture_dir" -mindepth 1 -maxdepth 1 -print -quit)" ] ||
+            fail "capture directory is not empty"
+        ;;
+    *)
+        printf 'usage: %s [--capture EMPTY-/tmp-DIRECTORY]\n' \
+            "$program_name" >&2
+        exit 64
+        ;;
+esac
+
+[ "$(hostname)" = "$expected_host" ] ||
+    fail "host differs from the accepted GuixPC"
+[ "$(id -un)" = "$expected_user" ] ||
+    fail "user differs from the accepted unprivileged owner"
+[ "$(id -u)" -eq "$expected_uid" ] ||
+    fail "UID differs from the accepted unprivileged owner"
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+[ "$repo" = "$expected_repo" ] ||
+    fail "preflight is outside the accepted checkout"
+script=$(readlink -f "$0" 2>/dev/null || true)
+[ "$script" = "$repo/tests/$program_name" ] ||
+    fail "preflight path is not canonical"
+if [ ! -f "$script" ] || [ -L "$script" ]; then
+    fail "preflight is not one repository-owned regular file"
+fi
+live_snapshot=$repo/tests/guix-system-pruning-d4b-live-snapshot
+if [ ! -f "$live_snapshot" ] ||
+    [ -L "$live_snapshot" ] ||
+    [ ! -x "$live_snapshot" ]; then
+    fail "live-surface helper is not one executable regular file"
+fi
+module_dir=$repo/guix/modules
+if [ ! -d "$module_dir" ] || [ -L "$module_dir" ]; then
+    fail "project module load path is not one direct directory"
+fi
+if [ -n "$(find "$module_dir" -name '*.go' -print -quit)" ]; then
+    fail "project module load path contains a compiled Guile object"
+fi
+
+if ! git_status=$(run_clean_git -C "$repo" status --porcelain); then
+    fail "cannot inspect the preflight checkout state"
+fi
+[ -z "$git_status" ] ||
+    fail "preflight checkout is not clean"
+top=$(run_clean_git -C "$repo" rev-parse --show-toplevel)
+git_dir=$(run_clean_git -C "$repo" rev-parse --absolute-git-dir)
+[ "$top" = "$repo" ] ||
+    fail "clean Git proof resolved another work tree"
+if [ "$git_dir" != "$repo/.git" ] ||
+    [ ! -d "$git_dir" ] ||
+    [ -L "$git_dir" ]; then
+    fail "clean Git proof resolved another Git directory"
+fi
+head=$(run_clean_git -C "$repo" rev-parse HEAD)
+origin=$(run_clean_git -C "$repo" rev-parse origin/main)
+[ "$head" = "$origin" ] ||
+    fail "preflight checkout is not upstream-equal"
+run_clean_git -C "$repo" merge-base --is-ancestor "$expected_d4a" "$head" ||
+    fail "published D4a is not an ancestor of the helper checkpoint"
+
+work=$(mktemp -d /tmp/p52b-d4b-preflight.XXXXXX)
+
+cleanup() {
+    status=$?
+    trap - 0 HUP INT TERM
+    rm -rf -- "$work"
+    exit "$status"
+}
+trap cleanup 0
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+"$live_snapshot" >"$work/live.tsv" 2>"$work/live.stderr"
+[ ! -s "$work/live.stderr" ] || {
+    cat "$work/live.stderr" >&2
+    fail "selected live-surface snapshot emitted diagnostics"
+}
+[ "$(wc -l <"$work/live.tsv" | tr -d ' ')" -eq 19 ] ||
+    fail "selected live-surface snapshot does not contain 19 records"
+
+if ! find /gnu/store -mindepth 1 -maxdepth 1 -printf '%f\n' \
+    >"$work/store-names.unsorted" 2>"$work/store-find.stderr"; then
+    cat "$work/store-find.stderr" >&2
+    fail "cannot inventory top-level store names"
+fi
+[ ! -s "$work/store-find.stderr" ] || {
+    cat "$work/store-find.stderr" >&2
+    fail "top-level store inventory emitted diagnostics"
+}
+if ! LC_ALL=C sort "$work/store-names.unsorted" \
+    >"$work/store-names.txt" 2>"$work/store-sort.stderr"; then
+    cat "$work/store-sort.stderr" >&2
+    fail "cannot sort the top-level store inventory"
+fi
+[ ! -s "$work/store-sort.stderr" ] || {
+    cat "$work/store-sort.stderr" >&2
+    fail "top-level store inventory sort emitted diagnostics"
+}
+
+live_sha=$(sha256_file "$work/live.tsv")
+live_size=$(stat -c '%s' "$work/live.tsv")
+store_sha=$(sha256_file "$work/store-names.txt")
+store_size=$(stat -c '%s' "$work/store-names.txt")
+store_count=$(wc -l <"$work/store-names.txt" | tr -d ' ')
+
+printf '%s\n' \
+    "schema=p5.2b-d4b-preflight/v1" \
+    "helper=$head" \
+    "render=$expected_render_sha:$expected_render_size" \
+    "live=$live_sha:$live_size:19" \
+    "store-names=$store_sha:$store_size:$store_count" \
+    "uid=$expected_uid" \
+    "host=$expected_host" \
+    "system=x86_64-linux" \
+    >"$work/packet"
+snapshot=$(sha256_file "$work/packet")
+token=\
+"p5.2b-d4b-realize/v1|helper=$head|render=$expected_render_sha:$expected_render_size|snapshot=$snapshot|uid=$expected_uid|host=$expected_host|system=x86_64-linux|lower=1|realize-or-confirm=1|substitutes=0|grafts=0|offload=0|root=none|live-action=none"
+
+if [ -n "$capture_dir" ]; then
+    cp "$work/live.tsv" "$capture_dir/live.tsv"
+    cp "$work/store-names.txt" "$capture_dir/store-names.txt"
+    cp "$work/packet" "$capture_dir/packet.txt"
+fi
+
+cat "$work/packet"
+printf '%s\n' \
+    "snapshot=$snapshot" \
+    "authorization=NOT-GRANTED" \
+    "acceptance-token=$token" \
+    "$program_name: PASS"

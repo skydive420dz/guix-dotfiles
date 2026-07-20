@@ -1,0 +1,448 @@
+#!/bin/sh
+set -eu
+
+LC_ALL=C
+export LC_ALL
+
+expected_home_profile=/gnu/store/2p4vnz9y2ndfsbary431rzlf41jhanrs-profile
+expected_system_profile=/gnu/store/z84fzavdzq9ja3lyln3cf9px4h45ybf9-profile
+if [ -d "$expected_system_profile/bin" ] &&
+    [ -d "$expected_home_profile/bin" ]; then
+    PATH=$expected_system_profile/bin:$expected_home_profile/bin
+    export PATH
+fi
+
+program='guix-system-pruning-d4b-source-check'
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+module_dir=$repo/guix/modules
+artifact_module=$module_dir/sk/system-pruning-fused-artifact.scm
+build_expression=$repo/guix/machines/guixpc/p5.2b-d4b-fused-program.scm
+output_reader=\
+$repo/guix/machines/guixpc/p5.2b-d4b-derivation-output.scm
+plan_reader=\
+$repo/guix/machines/guixpc/p5.2b-d4b-derivation-plan.scm
+artifact_test=$repo/tests/guix-system-pruning-fused-artifact-check.scm
+loader_behavior_test=$repo/tests/guix-system-pruning-fused-loader-behavior-check.scm
+runtime_check=$repo/tests/guix-system-pruning-d4b-runtime-check
+checkout_independence=\
+$repo/tests/guix-system-pruning-d4b-checkout-independence
+live_snapshot=$repo/tests/guix-system-pruning-d4b-live-snapshot
+preflight=$repo/tests/guix-system-pruning-d4b-preflight
+realization_gate=$repo/tests/guix-system-pruning-d4b-realize
+expected_checkpoint=41e11155f817c8ccf2f8e8b3c9c62af566f53209
+expected_frontend=/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+expected_guix_program=/gnu/store/0hzhxis25c15rag5412rhm2md38chi6x-guix-command
+expected_guix_revision=a8391f2d7451c2463ba253ffa9872fa6f27485d7
+expected_guild=/gnu/store/8vwbdsni9znrlxvcwqi4n02f23ysc1fa-guile-3.0.11/bin/guild
+expected_artifact_pass='guix-system-pruning-fused-artifact-check: PASS'
+expected_plan_pass='p5.2b-d4b-derivation-plan: PASS: self-check'
+expected_live_snapshot_sha=\
+df7f199f8bc9e61c4c4c7d60c049aea47bba7ec2e611d5b9b3c45e2fc5f6b83b
+expected_live_snapshot_size=3244
+expected_realization_gate_sha=\
+f4287f7ef9d2d2f51ee82350cf7a947757a5c7a967c4d69c0f30a0bd7970bc62
+expected_realization_gate_size=28181
+expected_runtime_gate_sha=\
+bfd4cfb6a51f4651cee9fd03073d817a7e3c8dccc9a92ce9a1f3990ddc7d2a28
+expected_runtime_gate_size=46151
+expected_checkout_independence_sha=\
+88bb197aa74256813effa9616172ed919609d1a048871b6a1ae21fecb3ef64e7
+expected_checkout_independence_size=13058
+frontend=${SK_GUIX_FRONTEND_PROFILE:-${HOME:?}/.config/guix/current}
+frontend_resolved=$(readlink -f "$frontend" 2>/dev/null || true)
+guix=$frontend_resolved/bin/guix
+
+fail() {
+    printf '%s: FAIL: %s\n' "$program" "$*" >&2
+    exit 1
+}
+
+sha256_file() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        if ! sha_line=$(sha256sum "$1"); then
+            fail "cannot hash file: $1"
+        fi
+    elif command -v shasum >/dev/null 2>&1; then
+        if ! sha_line=$(shasum -a 256 "$1"); then
+            fail "cannot hash file: $1"
+        fi
+    else
+        fail "no SHA256 command is available"
+    fi
+    sha_digest=${sha_line%% *}
+    [ "${#sha_digest}" -eq 64 ] ||
+        fail "SHA256 command returned an invalid digest: $1"
+    case $sha_digest in
+        *[!0-9a-f]*) fail "SHA256 command returned non-hex output: $1" ;;
+    esac
+    printf '%s\n' "$sha_digest"
+}
+
+run_clean_git() {
+    env -i \
+        HOME=/homeless-shelter \
+        XDG_CONFIG_HOME=/homeless-shelter \
+        PATH="$PATH" \
+        LC_ALL=C \
+        GIT_CONFIG_NOSYSTEM=1 \
+        GIT_OPTIONAL_LOCKS=0 \
+        git \
+        -c core.fsmonitor=false \
+        -c core.untrackedCache=false \
+        "$@"
+}
+
+case $# in
+    0) ;;
+    *)
+        printf 'usage: %s\n' "$0" >&2
+        exit 64
+        ;;
+esac
+
+for source in \
+    "$artifact_module" \
+    "$build_expression" \
+    "$output_reader" \
+    "$plan_reader" \
+    "$artifact_test" \
+    "$loader_behavior_test" \
+    "$runtime_check" \
+    "$checkout_independence" \
+    "$live_snapshot" \
+    "$preflight" \
+    "$realization_gate"; do
+    if [ ! -f "$source" ] || [ -L "$source" ]; then
+        fail "new D4b source is not one repository-owned regular file: $source"
+    fi
+done
+[ -x "$runtime_check" ] ||
+    fail "D4b runtime checker is not executable"
+[ -x "$checkout_independence" ] ||
+    fail "D4b checkout-independence checker is not executable"
+[ -x "$live_snapshot" ] ||
+    fail "D4b live-snapshot helper is not executable"
+[ -x "$preflight" ] ||
+    fail "D4b preflight helper is not executable"
+[ -x "$realization_gate" ] ||
+    fail "D4b realization gate is not executable"
+if [ ! -d "$module_dir" ] || [ -L "$module_dir" ]; then
+    fail "project module load path is not one direct directory"
+fi
+if [ -n "$(find "$module_dir" -name '*.go' -print -quit)" ]; then
+    fail "project module load path contains a compiled Guile object"
+fi
+
+sh -n "$0" || fail "source gate fails POSIX shell syntax"
+sh -n "$runtime_check" || fail "runtime checker fails POSIX shell syntax"
+sh -n "$checkout_independence" ||
+    fail "checkout-independence checker fails POSIX shell syntax"
+sh -n "$live_snapshot" ||
+    fail "live-snapshot helper fails POSIX shell syntax"
+sh -n "$preflight" ||
+    fail "preflight helper fails POSIX shell syntax"
+sh -n "$realization_gate" ||
+    fail "realization gate fails POSIX shell syntax"
+if ! shellcheck_command=$(command -v shellcheck 2>/dev/null); then
+    fail "ShellCheck is required for the D4b source gate"
+fi
+"$shellcheck_command" \
+    "$0" \
+    "$runtime_check" \
+    "$checkout_independence" \
+    "$live_snapshot" \
+    "$preflight" \
+    "$realization_gate" ||
+    fail "D4b source/runtime shell fails ShellCheck"
+
+[ "$(sha256_file "$live_snapshot")" = "$expected_live_snapshot_sha" ] ||
+    fail "selected-live helper differs from the exact D4a helper"
+[ "$(wc -c <"$live_snapshot" | tr -d ' ')" -eq \
+    "$expected_live_snapshot_size" ] ||
+    fail "selected-live helper size differs from the exact D4a helper"
+[ "$(sha256_file "$realization_gate")" = \
+    "$expected_realization_gate_sha" ] ||
+    fail "realization gate differs from its reviewed closed identity"
+[ "$(wc -c <"$realization_gate" | tr -d ' ')" -eq \
+    "$expected_realization_gate_size" ] ||
+    fail "realization gate size differs from its reviewed closed identity"
+[ "$(sha256_file "$runtime_check")" = "$expected_runtime_gate_sha" ] ||
+    fail "runtime gate differs from its reviewed closed identity"
+[ "$(wc -c <"$runtime_check" | tr -d ' ')" -eq \
+    "$expected_runtime_gate_size" ] ||
+    fail "runtime gate size differs from its reviewed closed identity"
+[ "$(sha256_file "$checkout_independence")" = \
+    "$expected_checkout_independence_sha" ] ||
+    fail "checkout-independence gate differs from its reviewed identity"
+[ "$(wc -c <"$checkout_independence" | tr -d ' ')" -eq \
+    "$expected_checkout_independence_size" ] ||
+    fail "checkout-independence gate size differs from its reviewed identity"
+
+required_realization_literals='env -i
+--derivations
+--no-substitutes
+--no-grafts
+--no-offload
+--max-jobs=1
+--cores=1
+--system=x86_64-linux
+SK_P52B_D4B_ACCEPTANCE_TOKEN'
+printf '%s\n' "$required_realization_literals" |
+    while IFS= read -r literal; do
+        grep -F -- "$literal" "$realization_gate" >/dev/null ||
+            fail "realization gate omits required fixed input: $literal"
+    done
+[ "$(grep -F -c 'run_pinned_guix build' "$realization_gate")" -eq 2 ] ||
+    fail "realization gate does not contain exactly two fixed Guix build phases"
+[ "$(grep -F -c 'run_pinned_guix repl' "$realization_gate")" -eq 2 ] ||
+    fail "realization gate does not contain exactly two fixed reader phases"
+[ "$(grep -F -c 'run_pinned_guix ' "$realization_gate")" -eq 4 ] ||
+    fail "realization gate contains an unreviewed pinned-Guix invocation"
+expected_wrapper_invocation="\"\$expected_guix\" \"\$@\""
+[ "$(grep -F -c "$expected_wrapper_invocation" "$realization_gate")" -eq 1 ] ||
+    fail "realization gate bypasses or duplicates its pinned-Guix wrapper"
+if grep -F -- '--root' "$realization_gate" >/dev/null ||
+    grep -E -- '^[[:space:]]+-r(=|[[:space:]]|$)' \
+        "$realization_gate" >/dev/null; then
+    fail "realization gate contains a result-link/GC-root option"
+fi
+for forbidden in \
+    '/var/guix' \
+    '/boot/' \
+    'guix gc' \
+    'delete-generations' \
+    'system reconfigure' \
+    'home reconfigure' \
+    'add-temp-root' \
+    'add-indirect-root'; do
+    if grep -F -- "$forbidden" "$realization_gate" >/dev/null; then
+        fail "realization gate contains a forbidden live/GC capability: $forbidden"
+    fi
+done
+
+run_clean_git -C "$repo" merge-base --is-ancestor \
+    "$expected_checkpoint" HEAD ||
+    fail "published D4a checkpoint is not an ancestor of HEAD"
+repository_head=$(run_clean_git -C "$repo" rev-parse HEAD)
+
+# This closed path set is the renderer plus the exact 18 inputs frozen by
+# `(sk system-pruning-fused-artifact)'.  New D4b files are intentionally not
+# part of the comparison.
+if ! run_clean_git -C "$repo" diff --quiet "$expected_checkpoint" -- \
+    guix/modules/sk/system-pruning-fused-source.scm \
+    guix/modules/sk/system-pruning-root-backend.scm \
+    guix/modules/sk/system-pruning-boundary.scm \
+    guix/modules/sk/system-pruning-orchestrator.scm \
+    guix/modules/sk/system-pruning-reconciliation.scm \
+    guix/modules/sk/system-pruning-embedded-context.scm \
+    guix/modules/sk/system-pruning-transaction.scm \
+    guix/modules/sk/system-pruning-phase-engine.scm \
+    guix/modules/sk/system-pruning-fixture-runtime.scm \
+    scripts/guix-system-pruning-fused-driver.scm \
+    tests/fixtures/guix-system-pruning-transaction/manifest.tsv \
+    tests/fixtures/guix-system-pruning-transaction/phase-registry.tsv \
+    docs/audits/data/2026-07-19-p5.2b-d2b-retained-grub.cfg \
+    scripts/guix-system-pruning-transaction.scm \
+    scripts/guix-system-pruning-transaction \
+    tests/fixtures/guix-system-pruning-transaction/profile-lock-holder.scm \
+    tests/fixtures/guix-system-pruning-transaction/old-grub.cfg \
+    tests/fixtures/guix-system-pruning-transaction/generation-pins.tsv \
+    tests/fixtures/guix-system-pruning-transaction/efi-sentinel.txt; then
+    run_clean_git -C "$repo" diff --stat "$expected_checkpoint" -- \
+        guix/modules/sk/system-pruning-fused-source.scm \
+        guix/modules/sk/system-pruning-root-backend.scm \
+        guix/modules/sk/system-pruning-boundary.scm \
+        guix/modules/sk/system-pruning-orchestrator.scm \
+        guix/modules/sk/system-pruning-reconciliation.scm \
+        guix/modules/sk/system-pruning-embedded-context.scm \
+        guix/modules/sk/system-pruning-transaction.scm \
+        guix/modules/sk/system-pruning-phase-engine.scm \
+        guix/modules/sk/system-pruning-fixture-runtime.scm \
+        scripts/guix-system-pruning-fused-driver.scm \
+        tests/fixtures/guix-system-pruning-transaction/manifest.tsv \
+        tests/fixtures/guix-system-pruning-transaction/phase-registry.tsv \
+        docs/audits/data/2026-07-19-p5.2b-d2b-retained-grub.cfg \
+        scripts/guix-system-pruning-transaction.scm \
+        scripts/guix-system-pruning-transaction \
+        tests/fixtures/guix-system-pruning-transaction/profile-lock-holder.scm \
+        tests/fixtures/guix-system-pruning-transaction/old-grub.cfg \
+        tests/fixtures/guix-system-pruning-transaction/generation-pins.tsv \
+        tests/fixtures/guix-system-pruning-transaction/efi-sentinel.txt >&2
+    fail "published D4a renderer/input bytes differ from checkpoint"
+fi
+
+# The six production suites later executed through the store artifact are
+# independently frozen to the exact published D4a checkpoint as well.
+if ! run_clean_git -C "$repo" diff --quiet "$expected_checkpoint" -- \
+    tests/guix-system-pruning-boundary-check.scm \
+    tests/guix-system-pruning-root-backend-check.scm \
+    tests/guix-system-pruning-orchestrator-check.scm \
+    tests/guix-system-pruning-reconciliation-check.scm \
+    tests/guix-system-pruning-phase-engine-check.scm \
+    tests/guix-system-pruning-fixture-runtime-check.scm; then
+    run_clean_git -C "$repo" diff --stat "$expected_checkpoint" -- \
+        tests/guix-system-pruning-boundary-check.scm \
+        tests/guix-system-pruning-root-backend-check.scm \
+        tests/guix-system-pruning-orchestrator-check.scm \
+        tests/guix-system-pruning-reconciliation-check.scm \
+        tests/guix-system-pruning-phase-engine-check.scm \
+        tests/guix-system-pruning-fixture-runtime-check.scm >&2
+    fail "published D4a production-suite bytes differ from checkpoint"
+fi
+
+# macOS can run the shell/static half of this gate.  GuixPC alone owns the
+# pinned warning-fatal Scheme compilation and pure constructor evaluation.
+if [ ! -x "$guix" ]; then
+    printf '%s\n' \
+        'SKIP: D4b Scheme source gate (pinned Guix unavailable)'
+    exit 0
+fi
+
+[ "$frontend_resolved" = "$expected_frontend" ] ||
+    fail "Guix frontend differs from the published D4a identity"
+guix_resolved=$(readlink -f "$guix" 2>/dev/null || true)
+[ "$guix_resolved" = "$expected_guix_program" ] ||
+    fail "Guix program differs from the published D4a identity"
+
+if ! guild_command=$(command -v guild 2>/dev/null); then
+    fail "Guild is required for warning-fatal D4b source compilation"
+fi
+guild=$(readlink -f "$guild_command" 2>/dev/null || true)
+[ "$guild" = "$expected_guild" ] ||
+    fail "Guild differs from the published D4a identity"
+[ -x "$guild" ] || fail "pinned Guild is not executable"
+
+home_profile=$(readlink -f \
+    "${SK_GUIX_HOME_PROFILE:-$HOME/.guix-home/profile}" \
+    2>/dev/null || true)
+system_profile=$(readlink -f /run/current-system/profile 2>/dev/null || true)
+[ "$home_profile" = "$expected_home_profile" ] ||
+    fail "Home profile differs from the published D4a identity"
+[ "$system_profile" = "$expected_system_profile" ] ||
+    fail "System profile differs from the published D4a identity"
+
+guix_site=$frontend_resolved/share/guile/site/3.0
+guix_ccache=$frontend_resolved/lib/guile/3.0/site-ccache
+home_site=$home_profile/share/guile/site/3.0
+home_ccache=$home_profile/lib/guile/3.0/site-ccache
+system_site=$system_profile/share/guile/site/3.0
+system_ccache=$system_profile/lib/guile/3.0/site-ccache
+system_extensions=$system_profile/lib/guile/3.0/extensions
+
+for directory in \
+    "$guix_site" \
+    "$guix_ccache" \
+    "$home_site" \
+    "$home_ccache" \
+    "$system_site" \
+    "$system_ccache" \
+    "$system_extensions"; do
+    [ -d "$directory" ] ||
+        fail "pinned Guile dependency path is missing: $directory"
+done
+
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/p52b-d4b-source.XXXXXX")
+
+cleanup() {
+    status=$?
+    trap - 0 HUP INT TERM
+    rm -rf -- "$tmp"
+    exit "$status"
+}
+trap cleanup 0
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+if ! "$guix" describe --format=channels \
+    >"$tmp/channels.scm" 2>"$tmp/describe.stderr"; then
+    cat "$tmp/describe.stderr" >&2
+    fail "cannot query pinned Guix revision"
+fi
+[ ! -s "$tmp/describe.stderr" ] ||
+    fail "pinned Guix revision query emitted diagnostics"
+revision_count=$(grep -F -c "\"$expected_guix_revision\"" \
+    "$tmp/channels.scm" || true)
+[ "$revision_count" -eq 1 ] ||
+    fail "pinned Guix does not report exactly the D4a revision"
+
+compile_index=0
+for source in \
+    "$artifact_module" \
+    "$build_expression" \
+    "$output_reader" \
+    "$plan_reader" \
+    "$artifact_test" \
+    "$loader_behavior_test"; do
+    compile_index=$((compile_index + 1))
+    stdout=$tmp/compile-$compile_index.stdout
+    stderr=$tmp/compile-$compile_index.stderr
+    if ! env \
+        -u GUILE_LOAD_PATH \
+        -u GUILE_LOAD_COMPILED_PATH \
+        -u GUILE_EXTENSIONS_PATH \
+        GUILE_AUTO_COMPILE=0 \
+        GUILE_LOAD_PATH="$home_site:$system_site" \
+        GUILE_LOAD_COMPILED_PATH="$guix_ccache:$home_ccache:$system_ccache" \
+        GUILE_EXTENSIONS_PATH="$system_extensions" \
+        "$guild" compile -W3 \
+        -L "$module_dir" \
+        -L "$guix_site" \
+        -o "$tmp/compile-$compile_index.go" \
+        "$source" >"$stdout" 2>"$stderr"; then
+        cat "$stdout" >&2
+        cat "$stderr" >&2
+        fail "warning-fatal compilation failed: $source"
+    fi
+    if [ -s "$stderr" ]; then
+        cat "$stderr" >&2
+        fail "warning-fatal compilation emitted diagnostics: $source"
+    fi
+done
+
+if ! env \
+    -u GUILE_LOAD_PATH \
+    -u GUILE_LOAD_COMPILED_PATH \
+    -u GUILE_EXTENSIONS_PATH \
+    GUILE_AUTO_COMPILE=0 \
+    "$guix" repl -q -L "$module_dir" -- \
+    "$artifact_test" "$repo" "$repository_head" \
+    >"$tmp/artifact.stdout" 2>"$tmp/artifact.stderr"; then
+    cat "$tmp/artifact.stdout" >&2
+    cat "$tmp/artifact.stderr" >&2
+    fail "pure D4b artifact source checker failed"
+fi
+if [ -s "$tmp/artifact.stderr" ]; then
+    cat "$tmp/artifact.stderr" >&2
+    fail "pure D4b artifact source checker emitted diagnostics"
+fi
+pass_count=$(grep -F -c \
+    "$expected_artifact_pass" "$tmp/artifact.stdout" || true)
+[ "$pass_count" -eq 1 ] ||
+    fail "pure artifact checker did not emit exactly one PASS"
+cat "$tmp/artifact.stdout"
+
+if ! env \
+    -u GUILE_LOAD_PATH \
+    -u GUILE_LOAD_COMPILED_PATH \
+    -u GUILE_EXTENSIONS_PATH \
+    GUILE_AUTO_COMPILE=0 \
+    "$guix" repl -q -- \
+    "$plan_reader" --self-check \
+    >"$tmp/plan-self-check.stdout" 2>"$tmp/plan-self-check.stderr"; then
+    cat "$tmp/plan-self-check.stdout" >&2
+    cat "$tmp/plan-self-check.stderr" >&2
+    fail "derivation build-plan source self-check failed"
+fi
+if [ -s "$tmp/plan-self-check.stderr" ]; then
+    cat "$tmp/plan-self-check.stderr" >&2
+    fail "derivation build-plan source self-check emitted diagnostics"
+fi
+plan_pass_count=$(grep -F -x -c \
+    "$expected_plan_pass" "$tmp/plan-self-check.stdout" || true)
+[ "$plan_pass_count" -eq 1 ] ||
+    fail "derivation build-plan source self-check omitted its exact PASS"
+cat "$tmp/plan-self-check.stdout"
+
+printf '%s\n' \
+    "$program: PASS (lowered=FALSE realized=FALSE)"

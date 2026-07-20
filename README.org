@@ -222,12 +222,12 @@ snapshot is byte-identical, including all =86/17/5= generation tuples,
 profile/runtime pointers, installed GRUB, =bootcfg=, boot ID, top-level store-
 name digest, and absent transaction surfaces.  This is selected-surface
 evidence, not whole-store or whole-machine identity.  D3b evidence is
-published at =b1d6ecb=.  The D4a source/fixture candidate now passes its seven
+published at =b1d6ecb=.  The D4a source/fixture checkpoint passes its seven
 suites, the legacy 98-point matrix, the complete strict gate, and an exact
-19-record selected-surface comparison.  After that checkpoint is published
-and fetched cleanly, D4b is the next bounded gate.  Every store realization
-beyond D4a's temporary compiler outputs and every live mutation remain
-blocked.
+19-record selected-surface comparison; it is published at =41e1115=.  D4b's
+source-only helper candidate must be published and fetched cleanly before its
+commit/state-bound first-realization token can be considered.  Every D4b store
+realization and every live mutation remain blocked.
 
 Decision D-41 requires one fused store-resident Scheme program with no project
 repository read at runtime.  D4c.1 publishes the live manifest without a
@@ -479,21 +479,24 @@ where D3b's first clean compile gate found two generated unused-variable
 diagnostics.  The validated D3a compile-gate correction is published at
 =0601b9d=.  D3b's clean-published compile, standalone matrix, strict gate,
 closed output packet, and selected-surface comparison pass; its evidence is
-published at =b1d6ecb=.  D4a is complete at its source/fixture candidate
-boundary: its seven suites, standalone legacy matrix, strict aggregate gate,
-and selected-surface comparison pass without a store realization or live
-action.  D4b remains the next gate after exact D4a publication and clean
-fetch, followed by D4c.1 live-manifest publication, D4c.2 exact live-program
-evidence, D4c.3 unchanged-state execution-packet acceptance, and separately
-authorized D5 execution.
+published at =b1d6ecb=.  D4a is complete and published at =41e1115=:
+its seven suites, standalone legacy matrix, strict aggregate gate, and
+selected-surface comparison pass without a store realization or live action.
+D4b's separate source-only constructor and runtime-evidence helpers reproduce
+the exact =95b84e2...= / 956,987-byte D4a render without lowering it.  They
+must be published and fetched cleanly before the first explicitly approved
+synthetic realization.  D4c.1 live-manifest publication, D4c.2 exact
+live-program evidence, D4c.3 unchanged-state execution-packet acceptance, and
+separately authorized D5 execution remain later gates.
 P5.3 collection remains separate and unpromoted; no further cleanup is
 authorized.
 
 ** Ready
 
-P5.2b-D4a is evidence-complete at its bounded source/fixture candidate
-boundary.  D4b becomes ready only after the exact D4a checkpoint is committed,
-pushed, fetched, and proven clean and upstream-equal.  P5.2a is complete.
+P5.2b-D4a is evidence-complete and published at =41e1115= at its bounded
+source/fixture boundary.  D4b's source-only helper checkpoint is validated but
+must be committed, pushed, fetched, and proven clean and upstream-equal before
+requesting the exact first lowering/realization grant.  P5.2a is complete.
 P5.2b-D1 is complete at the source and synthetic-fixture boundary;
 P5.2b-D2a is complete at its source and native-fixture boundary, and D2b is
 complete and published at its uninstalled artifact/evidence boundary.  D3a is
@@ -509,15 +512,16 @@ backup/restore implementation is parked as P4.3.
 ** Completed
 
 - [X] P5.2b-D4a: reconciliation and fused-program source/fixtures
-  The candidate implements the closed journal automaton, synthetic root and
-  reconciliation contracts, central pre-phase gate, 3,172-check phase engine,
-  297-check in-memory runtime, and deterministic ten-packet fused renderer.
+  Published checkpoint =41e1115= implements the closed journal automaton,
+  synthetic root and reconciliation contracts, central pre-phase gate,
+  3,172-check phase engine, 297-check in-memory runtime, and deterministic
+  ten-packet fused renderer.
   The complete harness passes seven suites in 168 seconds; the standalone
   =54 + 44 = 98= legacy matrix passes in 162 seconds and the strict aggregate
   gate passes in 445 seconds.  The 19-record selected-live snapshot is
   byte-identical before/after.  No program was realized, no live action ran,
-  and D4b remains blocked until this checkpoint is published and fetched
-  cleanly.
+  and the later D4b source-helper work does not change the renderer or any of
+  its 18 input files.
 
 - [X] P5.2b-D3b: clean-published recovery evidence
   Clean =HEAD == origin/main == GitHub main= at =0601b9d= binds the corrected
@@ -2479,8 +2483,11 @@ found two generated unused-variable diagnostics; the separately validated
 D3a correction is published at =0601b9d=.  D3b's warning-free compiles,
 standalone/strict matrices, closed outputs, and 129-record selected-surface
 equality pass and are published at =b1d6ecb=.  D4a's bounded source/fixture
-candidate now passes its final gates.  D4b is next only after exact D4a
-publication and clean fetch; all realization/live gates remain separate.
+checkpoint passes its final gates and is published at =41e1115=.  D4b's
+source-only helper candidate now prepares the guarded synthetic realization
+and evidence gates; it must itself be published and fetched cleanly before an
+exact first-realization token may be accepted.  All realization/live gates
+remain separate.
 
 * Live symlinks
 

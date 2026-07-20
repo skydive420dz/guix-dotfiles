@@ -1,0 +1,353 @@
+#+title: P5.2b-D4b source-only fused-artifact helper checkpoint
+#+author: Rafael Oliveira
+#+date: 2026-07-19
+#+startup: overview
+#+property: header-args :eval never-export
+#+status: source helpers validated; lowering and realization not authorized
+
+* Outcome
+
+This checkpoint prepares the bounded P5.2b-D4b immutable-artifact operation
+without performing it.  From a clean fetched D4a checkout it adds:
+
+- one closed constructor for the exact published D4a fused-program bytes;
+- one guarded build expression, a one-output derivation reader, and a
+  recursive derivation build-plan reader;
+- one pure, source-only constructor gate;
+- one exact-code behavioral loader probe;
+- one commit/state-bound preflight and two-phase realization gate;
+- one checkout-unavailable proof gate; and
+- one exact-artifact runtime harness, including the registry-bound
+  =54 + 44 = 98= interruption/recovery schedule.
+
+The complete source gate reports =lowered=FALSE= and =realized=FALSE=.  No
+derivation was lowered, no store output was realized or confirmed, and no
+result symlink, GC root, live manifest, live action, collection, activation,
+reconfiguration, or reboot occurred.
+
+* Clean published boundary
+
+The source work began from the disposable GuixPC clone:
+
+| Item | Identity |
+|------+----------|
+| Host | =guixpc= |
+| User / UID | =skydive420dz= / =1000= |
+| D4a =HEAD= | =41e11155f817c8ccf2f8e8b3c9c62af566f53209= |
+| D4a tree | =6da64e30e8f967d827f73f34d4db954e14831da5= |
+| =origin/main= | =41e11155f817c8ccf2f8e8b3c9c62af566f53209= |
+| Ahead / behind | =0 / 0= |
+| Pinned Guix revision | =a8391f2d7451c2463ba253ffa9872fa6f27485d7= |
+| Pinned Guile | =3.0.11= |
+
+The renderer plus its exact 18 fused inputs remain byte-identical to D4a.
+The new source gate compares that closed 19-path set directly with
+=41e11155= before importing or evaluating the constructor.  It separately
+freezes the six D4a production suites that the future artifact gate will run;
+the runtime harness also embeds each suite's exact SHA256 and byte size.
+
+The independent pure render is:
+
+| Item | Value |
+|------+-------|
+| Renderer SHA256 / bytes | =c2b96decd5a85a9764c3c66bb0a72a517599f1b101969f240027a54758f3cb57= / =32,667= |
+| Manifest SHA256 / bytes | =0bf2ce08c06ec4b27053a2f7af3fd5d20c3c37bda2e739a00d0a6c68e6d9ce61= / =6,828= |
+| Rendered source SHA256 | =95b84e29853a2327bffab857383cf78a30ab41b965144fd298edc384335b9d70= |
+| Rendered source bytes | =956,987= |
+| Future output name | =system-pruning-loaded.scm= |
+| Future mode | =0555= |
+
+* Constructor boundary
+
+[[file:../../guix/modules/sk/system-pruning-fused-artifact.scm][=(sk system-pruning-fused-artifact)=]]
+has only one artifact-construction entry point: the repository-taking
+=sk:published-d4a-fused-artifact=.  It revalidates the frozen renderer and
+every input, then independently asserts the final =95b84e2...= / 956,987-byte
+render before constructing one =computed-file=.  The generic input-taking
+constructor is private, so the reviewed build expression cannot be redirected
+to a caller-supplied alternate manifest.
+
+The builder writes the exact rendered string once with UTF-8 encoding and
+changes only the output mode to =0555=.  It does not interpolate its final
+store path into its own contents, so no self-reference cycle exists.
+=#:local-build? #t=, =#:graft? #f=, and =#:substitutable? #f= are explicit.
+
+[[file:../../guix/machines/guixpc/p5.2b-d4b-fused-program.scm][The build-only expression]]
+resolves the repository from its own filename and returns only the closed
+file-like object.  It also refuses an accidental direct =guix build -f=
+without the reviewed acceptance-token schema.  Merely evaluating the separate
+pure checker constructs an inert record; it does not call =lower-object=,
+=gexp->derivation=, a store connection, or a build operation.
+
+* Preflight and realization-gate design
+
+[[file:../../tests/guix-system-pruning-d4b-preflight][The read-only preflight]]
+requires the exact GuixPC host, UID, repository path, clean
+=HEAD == origin/main=, and published D4a ancestry.  It combines:
+
+- the exact 3,244-byte D4a selected-live helper and its 19-row result; and
+- a sorted filesystem inventory of every top-level =/gnu/store= name.
+
+It hashes one canonical packet containing those two identities, the helper
+commit, rendered-program identity, host, UID, and system.  It performs no
+=guix gc= or daemon query and reports =authorization=NOT-GRANTED=.  The
+resulting one-line acceptance token additionally fixes exactly one lowering,
+one realization-or-confirmation, no substitutes, grafts, offload, result/GC
+root, or live action.
+
+[[file:../../tests/guix-system-pruning-d4b-realize][The future realization gate]]
+accepts only that complete token and no pass-through Guix options.  It
+recomputes the packet immediately and refuses stale live/store state before
+lowering.  Before that preflight it exports the exact accepted =HEAD= with
+sanitized Git into a private =/tmp= tree, makes the exported tree read-only,
+and records its Git-archive identity plus reproducible metadata/file-digest
+manifests.  The constructor, module load path, derivation-output reader,
+derivation-plan reader, and failure-time selected-live helper are all
+consumed from that frozen export, rather than from the mutable working tree.
+
+The gate invokes the exact pinned Guix command beneath =env -i= with isolated
+=HOME=, =TMPDIR=, and =XDG_CACHE_HOME=; this excludes inherited
+=GUIX_BUILD_OPTIONS= as well as Guile paths.  Its two fixed phases are:
+
+1. =guix build --derivations -f= of the exact expression; then
+2. =guix build= of that exact derivation path.
+
+The second phase does not reevaluate or relower the expression.  Neither
+phase contains =--root=.  One separate warning-fatal Scheme reader accepts
+only one derivation output named =out=.  A second reader recursively
+enumerates the exact lowered derivation, its outputs, sources, builders, and
+input derivations.  After a future accepted operation, the gate will retain
+raw pre/post live snapshots, store-name inventories, every fixed Guix and
+reader stdout/stderr channel, the final result packet, and exact
+additions/removals under one bounded =/tmp= evidence directory.  Every
+top-level store addition must belong to that exact derivation plan; any
+unrelated addition fails the gate.  The plan is a conservative
+reachable-derivation-graph bound: a matching path is permitted by the exact
+plan, not claimed to have been causally produced by this one invocation.
+
+After the build, a normal commit-bound postflight and a second independent
+snapshot from the frozen selected-live helper plus direct =/gnu/store=
+inventory must agree.  The frozen source manifests and the clean
+=HEAD == origin/main= proof are repeated immediately before PASS.
+
+On failure after lowering starts, the exit trap reuses the already
+independently agreed normal postflight when available.  Otherwise it bypasses
+compound Git preconditions and directly captures selected-live and store
+state.  It persists each phase status, computes additions/removals, and labels
+every addition =DERIVATION-PLAN=, =UNRELATED=, or =UNCLASSIFIED= when a valid
+plan was not yet available.  This also runs after an otherwise successful
+postflight if a later invariant fails.  No part of this gate has run in this
+source checkpoint.
+
+* Exact-code loader proof design
+
+[[file:../../tests/guix-system-pruning-fused-loader-behavior-check.scm][The loader behavior checker]]
+does not alter the artifact and does not require a second store output.  In a
+fresh Guile process it:
+
+1. reads forms directly from the accepted canonical store program;
+2. preserves that real filename on the input port, so the frozen
+   =current-filename= location and ownership guard executes normally;
+3. evaluates only the exact startup/loader prefix;
+4. parses and verifies, but never evaluates, the frozen five-form production
+   tail; and
+5. calls those exact preflight/evaluator/dispatcher procedures with closed
+   canary packets or the frozen production packets.
+
+Once executed against the accepted store program, its four isolated canary
+modes must prove:
+
+- =malformed-final=: a digest-valid final packet declaring the wrong module
+  fails before any initializer or main call;
+- =preexisting-final=: a preexisting expected driver module retains its exact
+  object and marker while every other expected module remains absent;
+- =wrong-digest=: a canonical packet carrying the wrong SHA256 fails at the
+  exact source-digest check before any initializer, main call, or project
+  module exists; and
+- =success=: all ten modules initialize in canonical order, each evaluated
+  module equals its registry object, the caller module is restored, and
+  =sk:main= is invoked exactly once.
+
+Its separate =production-suite= mode must load the actual ten production packets
+from the verified tail, initialize their exact modules, and run one externally
+frozen D4a suite in the same fresh process.  The runtime gate will invoke that
+mode separately for boundary, root backend, orchestrator, reconciliation,
+phase engine, and fixture runtime.  Each suite's SHA256/size is frozen and
+exactly one suite PASS plus one loader PASS is required.  The seventh D4a
+renderer suite remains the source gate because the renderer is deliberately
+not a production module embedded in the artifact.
+
+This is an exact-code behavioral proof around the one accepted artifact, not
+a claim that a separately generated probe is production-equivalent.
+
+* Exact-artifact runtime gate
+
+[[file:../../tests/guix-system-pruning-d4b-runtime-check][The runtime checker]]
+requires the exact GuixPC host, user/UID, immutable System/Home command path,
+canonical store path, and the exact published helper checkpoint.  It requires
+a clean upstream-equal checkout, exports that exact =HEAD= to a private
+read-only tree, and reads every suite, fixture, manifest, registry, and loader
+probe only from that frozen export.  It internally freezes the published D4a
+artifact SHA256 and size before its first artifact execution.  It will then
+require:
+
+- the canonical =realization-result.tsv= from that checkpoint's bounded
+  evidence directory, exactly 24 rows, with the same output path, render,
+  checkpoint, successful phase statuses, unchanged live surfaces, no root,
+  and terminal realization PASS;
+- root ownership, canonical =/gnu/store= location, the exact 32-character
+  store-name shape, executable mode, and no write bit;
+- the artifact's =fixture-identity= tuple and
+  =FIXTURE-ONLY= / =NOT-GRANTED= policy;
+- the six byte-frozen production suites through the exact production module
+  packets;
+- all five D4a runtime/reconciliation actions with byte-identical fixture
+  pre/post state;
+- the same registry-expanded 54 forward and 44 rollback interruption points
+  through the artifact's =legacy-fixture-*= actions;
+- copied-out artifact refusal and external rejection of a symlink supplied as
+  the accepted output path;
+- inherited source, compiled, extension, and auto-compile path isolation;
+- an alternate manifest argument, unsupported live action, and root =/=
+  refusal;
+- the four exact-code canary modes above; and
+- a second direct-load preexisting-module refusal against the production
+  packets.
+
+After the long matrix, the complete frozen metadata/file-digest manifests and
+the sanitized clean =HEAD == origin/main == accepted checkpoint= proof must
+still match before PASS.  The realizer result is copied privately before
+parsing; both the retained source packet and its private copy, plus the store
+program identity, are rechecked after the matrix.  The closed runtime stdout
+reports the exact realizer-result path/SHA256/size, program path/SHA256/size,
+checkpoint, derivation, source archive, and matrix counts.  Its top-level
+stdout/stderr can therefore be frozen as the raw runtime-gate channels
+without depending on the disposable internal fixtures.  An editor save
+during the 98-point schedule cannot silently substitute different external
+test bytes.
+
+[[file:../../tests/guix-system-pruning-d4b-checkout-independence][The separate checkout-independence gate]]
+must run from a clean, published, disposable =/tmp= clone.  It renames that
+clone unavailable, runs =fixture-identity= from an empty working directory
+with poisoned inherited Guile paths, restores the clone under a fail-closed
+restoration trap, and requires the same canonical 24-row realizer result as
+the runtime matrix.  That packet must bind the exact output path, render,
+helper checkpoint, successful phases, unchanged live surfaces, absent result
+root, retained evidence directory, and terminal realization PASS.  The gate
+rechecks the result and exact program after restoring the clone, and its
+closed stdout reports both path/hash/size identities plus the checkpoint.
+
+The original mutable legacy launcher is deliberately not claimed to execute
+through the artifact.  The unchanged original legacy harness remains a
+separate source regression, while the exact registry-bound 98 restart points
+will be repeated through the store program after realization.
+
+Although the shell gates use =/bin/sh= and pass ShellCheck, the runtime,
+preflight, realization, and checkout-independence gates are intentionally
+GuixPC/GNU-userland-specific: they rely on GNU =readlink=, =stat=, =find=,
+=env=, and related behavior.
+
+* Source identities
+
+| File | Bytes | SHA256 |
+|------+-------+--------|
+| =guix/modules/sk/system-pruning-fused-artifact.scm= | 8,535 | =ef991bd741cd8d4d414c23fae1a197046bb1bacbc996ee6dfa3fe116e84dbcfc= |
+| =guix/machines/guixpc/p5.2b-d4b-fused-program.scm= | 1,283 | =0a6e00500be5ff301e651dde9ac1bb2d738c43b6b2e9f31155b494e5e182f2fa= |
+| =guix/machines/guixpc/p5.2b-d4b-derivation-output.scm= | 2,248 | =f6a9b6c43685178be1730df865e99965dfdd5eeb3ced88ed0d9249b327d5a602= |
+| =guix/machines/guixpc/p5.2b-d4b-derivation-plan.scm= | 3,741 | =c769a789ef4c5d048687772acbe96b3056eb195ea140b0b5a2d481163e151bc5= |
+| =tests/guix-system-pruning-fused-artifact-check.scm= | 8,950 | =4b52ecfec3016ab98db6a2456b50de797d70aaa90d164aceaaeda8b2df76d4a1= |
+| =tests/guix-system-pruning-fused-loader-behavior-check.scm= | 17,534 | =379a72400e9c480d929e6c06464d71bbe9700029cbc4cb24799ab2fae896c9e1= |
+| =tests/guix-system-pruning-d4b-source-check= | 17,759 | =95a87b5d41d1e542fc0370d44dc8ddd48daec82eed3f3f45383b6d6470f0607e= |
+| =tests/guix-system-pruning-d4b-runtime-check= | 46,151 | =bfd4cfb6a51f4651cee9fd03073d817a7e3c8dccc9a92ce9a1f3990ddc7d2a28= |
+| =tests/guix-system-pruning-d4b-checkout-independence= | 13,058 | =88bb197aa74256813effa9616172ed919609d1a048871b6a1ae21fecb3ef64e7= |
+| =tests/guix-system-pruning-d4b-live-snapshot= | 3,244 | =df7f199f8bc9e61c4c4c7d60c049aea47bba7ec2e611d5b9b3c45e2fc5f6b83b= |
+| =tests/guix-system-pruning-d4b-preflight= | 6,710 | =3b357052a8e2944a316e53d021912a303da4306cef0742bf62c819077763b177= |
+| =tests/guix-system-pruning-d4b-realize= | 28,181 | =f4287f7ef9d2d2f51ee82350cf7a947757a5c7a967c4d69c0f30a0bd7970bc62= |
+
+These identities bind the pre-publication candidate.  Any correction after
+this record must update the table and rerun the warning-fatal source gate.
+
+* Validation
+
+The clean disposable clone passes:
+
+| Gate | Result |
+|------+--------|
+| D4b aggregate source gate | PASS; exact render; =lowered=FALSE= / =realized=FALSE= |
+| Direct =guild compile -W3= | PASS; six new Scheme sources; zero diagnostics |
+| =sh -n= and ShellCheck | PASS; six new shell gates |
+| Derivation-plan source exercise | PASS; normalization self-check and read-only existing-derivation traversal |
+| Frozen D4a renderer/input diff | PASS; no differences across 19 paths |
+| Frozen D4a production-suite diff | PASS; no differences across six paths |
+| Standalone D4a harness | PASS; seven suites; 544-byte stdout; empty stderr |
+| Standalone legacy oracle | PASS; =forward=54 rollback=44 total=98= |
+| Strict repository aggregate | PASS; =shell-check: PASS= |
+| Whitespace | PASS |
+
+The D4a stdout remains
+=25b5a5a93676e03760a2dedba72c07df30cedd82617a22ce7502347e13067a4b=.
+The legacy stdout remains
+=1c7db5ee57ecc38d9ccd0cbc17f436c83db62ba81e74d3e29a51578d7ae36ca1=.
+Its stderr contains only the expected TERM/KILL fixture diagnostics; PIDs are
+not stable evidence.  Strict stdout is 2,874 bytes with SHA256
+=f3bed9aa45d18722a5dbd7c1135626a214b33df8571faa946bd38acd4475deae=.
+Strict stderr likewise contains only the deliberate restart diagnostics.
+
+* Adversarial review closure
+
+| Finding | Severity before correction | Source-checkpoint disposition |
+|---------+----------------------------+-------------------------------|
+| Nested store builder paths rejected by the plan reader | Blocker | CLOSED; normalize to the containing store item; source self-check plus existing derivation traversal |
+| Failure after lowering could omit post-store classification | Blocker | CLOSED; independent trap capture, additions/removals, three-way classification, phase-status packet |
+| Mutable working-tree inputs could drift during realization or the long runtime matrix | High | CLOSED; exact-HEAD read-only exports for lowering/readers and all runtime external inputs plus terminal source/Git revalidation |
+| Runtime or checkout-independence could accept an identical-byte store path not recorded by the realizer | High | CLOSED; both require a private copy of the exact canonical 24-row realization result and bind its output/checkpoint/render/status/PASS to the program and closed result |
+| Ambient command/Git configuration could forge evidence | Medium | CLOSED on GuixPC; immutable PATH, =env -i= Git/Guix/tar and runtime child processes, exact work-tree/Git-dir checks, status-bearing Git failure handling |
+| A find-to-sort pipeline failure could mint a partial store inventory | Medium | CLOSED; find and sort have separate raw channels and checked statuses |
+| Runtime fixture inventory or per-file hash failures could be masked by downstream commands | Medium | CLOSED; enumeration, sorting, and hashing are separate status-propagating stages |
+| A recreated disposable-checkout path could turn restore into a nested move | Medium | CLOSED; symlink-safe absence guards, fail-closed restoration trap, and canonical restored-checkout validation |
+| Presence-based shell assertions were not a future semantic proof | Medium | CLOSED for this checkpoint by the full realization-helper SHA256/size pin; the literal checks remain defense in depth |
+| Recursive plan includes every reachable output rather than only requested suboutputs | Low | ACCEPTED and documented as a conservative reachable-graph bound, not causal attribution |
+
+Final publication review must show zero open blocker, high, or medium findings
+against the exact identities below.  A later edit to any helper reopens this
+table and requires a new source gate and review.
+
+* Exact nonclaims
+
+This source checkpoint does not claim:
+
+- a lowered derivation or realized/confirmed output;
+- a canonical output path, output hash/size/mode/owner, references, closure,
+  validity, or liveness;
+- loader or runtime success against a store artifact;
+- a quantified whole-store or daemon-database byte delta;
+- a result symlink, temporary root, indirect/direct GC root, or installed
+  program;
+- a live deletion manifest, production transaction/root/lock, attended
+  quiescence observation, or execution packet;
+- authorization for a live action, D4c, D5, collection, activation,
+  reconfiguration, or reboot; or
+- P5.3 readiness.
+
+* Publication and next approval boundary
+
+Publish this helper-only checkpoint and prove
+=HEAD == origin/main == GitHub main= from a fresh clean fetch.  Only then may a
+new explicit approval cover:
+
+#+begin_quote
+The exact token printed by the fresh D4b preflight, covering one unprivileged
+synthetic =computed-file= lowering and realization-or-confirmation, including
+the exact derivation/output identities, bounded top-level store additions, and
+associated Guix daemon/build metadata.  Create no result symlink or
+persistent/direct/indirect GC root; run no live manifest/action, GC
+query/collection, activation, reconfiguration, or reboot.
+#+end_quote
+
+Before that operation, recapture the selected live transaction surfaces and
+the bounded top-level store-name inventory.  Lower and realize once inside one
+captured gate, distinguish =REALIZED= from =ALREADY-PRESENT=, classify every
+store addition, run the runtime/loader matrices against the exact accepted
+output, recapture the selected live surfaces, and publish the final D4b
+evidence.  D4c.1 remains blocked until that evidence is published and fetched
+cleanly.

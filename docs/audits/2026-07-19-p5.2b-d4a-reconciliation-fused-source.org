@@ -313,8 +313,26 @@ After this checkpoint is committed, pushed, fetched, and proven clean at
 3. run the behavioral loader proof above through that exact program;
 4. prove execution with the checkout unavailable and inherited Guile paths
    poisoned;
-5. rerun the D4a and legacy matrices through the realized artifact; and
+5. run the six production-module D4a suites plus all 98 legacy interruption
+   points through the realized artifact, retaining the renderer suite as the
+   byte-frozen source gate; and
 6. recapture selected live surfaces and stop.
 
 D4b must not publish a live deletion manifest, create production roots, run a
 live action, authorize D5, or begin P5.3.
+
+* Publication and D4b helper successor
+
+This D4a checkpoint is published at
+=41e11155f817c8ccf2f8e8b3c9c62af566f53209=.  A clean fetched clone reproduced
+the exact renderer as
+=95b84e29853a2327bffab857383cf78a30ab41b965144fd298edc384335b9d70= /
+956,987 bytes.
+
+The separate
+[[file:2026-07-19-p5.2b-d4b-helper-source.org][D4b source-only helper checkpoint]]
+adds the exact-input =computed-file= constructor, exact-code loader probe, and
+artifact runtime/restart harness without changing this renderer or any of its
+18 inputs.  That successor does not lower a derivation or realize a store
+output.  Its publication and a later explicit bounded-effect grant remain
+prerequisites for the first D4b realization.

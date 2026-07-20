@@ -1,0 +1,1257 @@
+#!/bin/sh
+set -eu
+
+umask 022
+LC_ALL=C
+PATH=\
+/gnu/store/z84fzavdzq9ja3lyln3cf9px4h45ybf9-profile/bin:/gnu/store/2p4vnz9y2ndfsbary431rzlf41jhanrs-profile/bin
+export LC_ALL PATH
+
+program_name=guix-system-pruning-d4b-runtime-check
+expected_host=guixpc
+expected_user=skydive420dz
+expected_uid=1000
+expected_repo=/home/skydive420dz/Projects/guix-dotfiles
+expected_d4a=41e11155f817c8ccf2f8e8b3c9c62af566f53209
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+fixture_source=$repo/tests/fixtures/guix-system-pruning-transaction
+manifest=$fixture_source/manifest.tsv
+registry=$fixture_source/phase-registry.tsv
+old_grub=$fixture_source/old-grub.cfg
+pins=$fixture_source/generation-pins.tsv
+efi=$fixture_source/efi-sentinel.txt
+new_grub=$repo/docs/audits/data/2026-07-19-p5.2b-d2b-retained-grub.cfg
+loader_behavior_check=\
+$repo/tests/guix-system-pruning-fused-loader-behavior-check.scm
+boundary_test=$repo/tests/guix-system-pruning-boundary-check.scm
+root_backend_test=$repo/tests/guix-system-pruning-root-backend-check.scm
+orchestrator_test=$repo/tests/guix-system-pruning-orchestrator-check.scm
+reconciliation_test=$repo/tests/guix-system-pruning-reconciliation-check.scm
+phase_engine_test=$repo/tests/guix-system-pruning-phase-engine-check.scm
+fixture_runtime_test=$repo/tests/guix-system-pruning-fixture-runtime-check.scm
+
+manifest_sha=0bf2ce08c06ec4b27053a2f7af3fd5d20c3c37bda2e739a00d0a6c68e6d9ce61
+registry_sha=bd17a2423d9a0fcea86f3eba23cbb52699379b54853eae510597ed7a160aba86
+new_grub_sha=70965414824c26e1712c6a7a51efd9517633eb3c83f36f88927565c87807496b
+loader_behavior_sha=379a72400e9c480d929e6c06464d71bbe9700029cbc4cb24799ab2fae896c9e1
+loader_behavior_size=17534
+boundary_test_sha=7d8d48c2644c8c1ff5237b418f8cef403da1003710e9688cba56e8137b445065
+boundary_test_size=34760
+root_backend_test_sha=f49671a205487d8413f536fbc7d805a0453d251f648c54043016303711ca2912
+root_backend_test_size=9436
+orchestrator_test_sha=0da94582d348d46165b8499f0b2c6403b00edcf0a7e71bbceebec3e5338d6c51
+orchestrator_test_size=20418
+reconciliation_test_sha=0dcf4f8885ccdc81a7e8a65c260bb9999ddb5399ee7020d141562d7ab72a577f
+reconciliation_test_size=21472
+phase_engine_test_sha=6026036ae3d5dd1e71baddbb0ecc09c9a1d8711b1c4814e6c7ce98f6ce961b63
+phase_engine_test_size=26972
+fixture_runtime_test_sha=b3566139317fd3be145bdd384b2ff03e771929b0c18c58abcb461c10b6db1283
+fixture_runtime_test_size=13784
+expected_program_sha=\
+95b84e29853a2327bffab857383cf78a30ab41b965144fd298edc384335b9d70
+expected_program_size=956987
+store_alphabet=0123456789abcdfghijklmnpqrsvwxyz
+store_suffix=-system-pruning-loaded.scm
+expected_guild=\
+/gnu/store/8vwbdsni9znrlxvcwqi4n02f23ysc1fa-guile-3.0.11/bin/guild
+
+fail() {
+    printf '%s: FAIL: %s\n' "$program_name" "$*" >&2
+    exit 1
+}
+
+usage() {
+    printf '%s\n' \
+        "usage: $program_name EXACT-STORE-PROGRAM EXACT-HELPER-CHECKPOINT EXACT-REALIZATION-RESULT" \
+        >&2
+    exit 64
+}
+
+run_clean_git() {
+    env -i \
+        HOME=/homeless-shelter \
+        XDG_CONFIG_HOME=/homeless-shelter \
+        USER="$expected_user" \
+        LOGNAME="$expected_user" \
+        PATH="$PATH" \
+        LC_ALL=C \
+        GIT_CONFIG_NOSYSTEM=1 \
+        GIT_OPTIONAL_LOCKS=0 \
+        git \
+        -c core.fsmonitor=false \
+        -c core.untrackedCache=false \
+        "$@"
+}
+
+contains() {
+    case $1 in
+        *"$2"*) ;;
+        *) fail "expected output to contain: $2; actual output: $1" ;;
+    esac
+}
+
+result_value() {
+    result_key=$1
+    awk -F = -v key="$result_key" '
+        $1 == key {
+            sub(/^[^=]*=/, "")
+            print
+        }
+    ' "$realization_result"
+}
+
+assert_result_key() {
+    result_key=$1
+    result_count=$(awk -F = -v key="$result_key" '
+        $1 == key { count++ }
+        END { print count + 0 }
+    ' "$realization_result")
+    [ "$result_count" -eq 1 ] ||
+        fail "realization result does not contain one $result_key row"
+}
+
+assert_result_row() {
+    result_key=$1
+    result_expected=$2
+    assert_result_key "$result_key"
+    [ "$(result_value "$result_key")" = "$result_expected" ] ||
+        fail "realization result $result_key differs from the accepted value"
+}
+
+sha256_file() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        if ! sha_line=$(sha256sum "$1"); then
+            fail "cannot hash file: $1"
+        fi
+    elif command -v shasum >/dev/null 2>&1; then
+        if ! sha_line=$(shasum -a 256 "$1"); then
+            fail "cannot hash file: $1"
+        fi
+    else
+        fail "no SHA256 command is available"
+    fi
+    sha_digest=${sha_line%% *}
+    [ "${#sha_digest}" -eq 64 ] ||
+        fail "SHA256 command returned an invalid digest: $1"
+    case $sha_digest in
+        *[!0-9a-f]*) fail "SHA256 command returned non-hex output: $1" ;;
+    esac
+    printf '%s\n' "$sha_digest"
+}
+
+assert_store_program() {
+    candidate=$1
+    case $candidate in
+        /*) ;;
+        *) fail "STORE_PROGRAM is not absolute: $candidate" ;;
+    esac
+    [ -f "$candidate" ] || fail "STORE_PROGRAM is not a regular file"
+    [ ! -L "$candidate" ] || fail "STORE_PROGRAM must not be a symlink"
+    [ -x "$candidate" ] || fail "STORE_PROGRAM is not executable"
+
+    canonical=$(readlink -f "$candidate" 2>/dev/null || true)
+    [ "$canonical" = "$candidate" ] ||
+        fail "STORE_PROGRAM is not its canonical path"
+    [ "$(dirname "$candidate")" = /gnu/store ] ||
+        fail "STORE_PROGRAM is outside /gnu/store"
+
+    name=$(basename "$candidate")
+    [ "${#name}" -eq $((32 + ${#store_suffix})) ] ||
+        fail "STORE_PROGRAM store name has the wrong length"
+    hash=${name%"$store_suffix"}
+    [ "${#hash}" -eq 32 ] ||
+        fail "STORE_PROGRAM store hash has the wrong length"
+    [ "$name" = "$hash$store_suffix" ] ||
+        fail "STORE_PROGRAM suffix differs from $store_suffix"
+    invalid=$(printf '%s' "$hash" | tr -d "$store_alphabet")
+    [ -z "$invalid" ] || fail "STORE_PROGRAM store hash is invalid"
+
+    [ "$(stat -c '%u' "$candidate")" -eq 0 ] ||
+        fail "STORE_PROGRAM is not owned by root"
+    mode=$(stat -c '%a' "$candidate")
+    user_mode=$((mode / 100))
+    group_mode=$(((mode / 10) % 10))
+    other_mode=$((mode % 10))
+    for digit in "$user_mode" "$group_mode" "$other_mode"; do
+        case $digit in
+            0 | 1 | 4 | 5) ;;
+            *) fail "STORE_PROGRAM is writable: mode=$mode" ;;
+        esac
+    done
+}
+
+case $# in
+    3)
+        store_program=$1
+        expected_checkpoint=$2
+        realization_result=$3
+        ;;
+    *) usage ;;
+esac
+
+[ "$(hostname)" = "$expected_host" ] ||
+    fail "runtime gate is outside the accepted GuixPC"
+[ "$(id -un)" = "$expected_user" ] ||
+    fail "runtime gate user differs from the accepted owner"
+[ "$(id -u)" -eq "$expected_uid" ] ||
+    fail "runtime gate UID differs from the accepted owner"
+[ "$repo" = "$expected_repo" ] ||
+    fail "runtime gate is outside the accepted checkout"
+script=$(readlink -f "$0" 2>/dev/null || true)
+[ "$script" = "$repo/tests/$program_name" ] ||
+    fail "runtime gate path is not canonical"
+if [ ! -f "$script" ] || [ -L "$script" ]; then
+    fail "runtime gate is not one repository-owned regular file"
+fi
+[ "${#expected_checkpoint}" -eq 40 ] ||
+    fail "helper checkpoint has the wrong length"
+case $expected_checkpoint in
+    *[!0-9a-f]*) fail "helper checkpoint is not lowercase hexadecimal" ;;
+esac
+
+assert_store_program "$store_program"
+
+program_sha=$(sha256_file "$store_program")
+program_size=$(stat -c '%s' "$store_program")
+[ "$program_sha" = "$expected_program_sha" ] ||
+    fail "STORE_PROGRAM SHA256 differs from the accepted identity"
+[ "$program_size" = "$expected_program_size" ] ||
+    fail "STORE_PROGRAM size differs from the accepted identity"
+
+tmp=$(mktemp -d /tmp/p52b-d4b-runtime-check.XXXXXX)
+
+cleanup() {
+    status=$?
+    trap - 0 HUP INT TERM
+    set +e
+    if [ -d "$tmp/source" ]; then
+        chmod -R u+w "$tmp/source"
+    fi
+    rm -rf -- "$tmp"
+    exit "$status"
+}
+trap cleanup 0
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+expected_realization_evidence=\
+/tmp/p52b-d4b-realization-evidence.$expected_checkpoint
+expected_realization_result=\
+$expected_realization_evidence/realization-result.tsv
+realization_result_source=$realization_result
+[ "$realization_result_source" = "$expected_realization_result" ] ||
+    fail "realization result path differs from the accepted evidence path"
+if [ ! -f "$realization_result_source" ] ||
+    [ -L "$realization_result_source" ]; then
+    fail "realization result is not one direct regular file"
+fi
+[ "$(readlink -f "$realization_result_source")" = \
+    "$realization_result_source" ] ||
+    fail "realization result path is not canonical"
+realization_result_sha=$(sha256_file "$realization_result_source")
+realization_result_size=$(stat -c '%s' "$realization_result_source")
+realization_result=$tmp/realization-result.tsv
+cp "$realization_result_source" "$realization_result"
+chmod a-w "$realization_result"
+[ "$(sha256_file "$realization_result")" = "$realization_result_sha" ] ||
+    fail "private realization-result copy differs from its source"
+[ "$(stat -c '%s' "$realization_result")" -eq \
+    "$realization_result_size" ] ||
+    fail "private realization-result copy has the wrong size"
+cmp -s "$realization_result_source" "$realization_result" ||
+    fail "private realization-result copy is not byte-identical"
+[ "$(wc -l <"$realization_result" | tr -d ' ')" -eq 24 ] ||
+    fail "realization result does not contain the closed 24-row packet"
+
+assert_result_row schema p5.2b-d4b-first-realization/v1
+assert_result_row authorization EXACT-COMMIT-BOUND-TOKEN
+assert_result_row checkpoint "$expected_checkpoint"
+assert_result_row render "$expected_program_sha:$expected_program_size"
+assert_result_row output "$store_program"
+assert_result_row lower-status 0
+assert_result_row output-reader-status 0
+assert_result_row derivation-plan-status 0
+assert_result_row build-status 0
+assert_result_row postflight-status 0
+assert_result_row independent-live-status 0
+assert_result_row independent-store-status 0
+assert_result_row independent-store-sort-status 0
+assert_result_row store-additions-unrelated 0
+assert_result_row store-removals 0
+assert_result_row selected-live-surfaces IDENTICAL
+assert_result_row result-link ABSENT
+assert_result_row evidence "$expected_realization_evidence"
+assert_result_row live-action NOT-GRANTED
+[ "$(tail -n 1 "$realization_result")" = \
+    "guix-system-pruning-d4b-realize: PASS" ] ||
+    fail "realization result omits its exact terminal PASS"
+
+assert_result_key state
+realization_state=$(result_value state)
+case $realization_state in
+    REALIZED | ALREADY-PRESENT) ;;
+    *) fail "realization result contains an invalid state" ;;
+esac
+assert_result_key preflight-snapshot
+preflight_snapshot=$(result_value preflight-snapshot)
+[ "${#preflight_snapshot}" -eq 64 ] ||
+    fail "realization result contains an invalid preflight snapshot"
+case $preflight_snapshot in
+    *[!0-9a-f]*) fail "realization preflight snapshot is not hexadecimal" ;;
+esac
+assert_result_key derivation
+derivation=$(result_value derivation)
+if [ ! -f "$derivation" ] || [ -L "$derivation" ]; then
+    fail "realization result derivation is not one direct regular file"
+fi
+[ "$(dirname "$derivation")" = /gnu/store ] ||
+    fail "realization result derivation is outside /gnu/store"
+case $derivation in
+    /gnu/store/*.drv) ;;
+    *) fail "realization result contains an invalid derivation path" ;;
+esac
+assert_result_key store-additions
+store_additions=$(result_value store-additions)
+case $store_additions in
+    '' | *[!0-9]*) fail "realization result has an invalid addition count" ;;
+esac
+
+if ! git_status=$(run_clean_git -C "$repo" status --porcelain); then
+    fail "cannot inspect the runtime checkout state"
+fi
+[ -z "$git_status" ] ||
+    fail "runtime checkout is not clean"
+top=$(run_clean_git -C "$repo" rev-parse --show-toplevel)
+git_dir=$(run_clean_git -C "$repo" rev-parse --absolute-git-dir)
+[ "$top" = "$repo" ] ||
+    fail "runtime Git proof resolved another work tree"
+if [ "$git_dir" != "$repo/.git" ] ||
+    [ ! -d "$git_dir" ] ||
+    [ -L "$git_dir" ]; then
+    fail "runtime Git proof resolved another Git directory"
+fi
+head=$(run_clean_git -C "$repo" rev-parse HEAD)
+origin=$(run_clean_git -C "$repo" rev-parse origin/main)
+[ "$head" = "$expected_checkpoint" ] ||
+    fail "runtime checkout HEAD differs from the accepted helper checkpoint"
+[ "$origin" = "$expected_checkpoint" ] ||
+    fail "runtime checkout is not upstream-equal"
+run_clean_git -C "$repo" merge-base --is-ancestor "$expected_d4a" "$head" ||
+    fail "published D4a is not an ancestor of the helper checkpoint"
+
+mkdir "$tmp/source" "$tmp/home"
+if ! run_clean_git -C "$repo" archive --format=tar "$head" \
+    >"$tmp/source.tar" 2>"$tmp/source-archive.stderr"; then
+    cat "$tmp/source-archive.stderr" >&2
+    fail "cannot export the accepted runtime checkpoint"
+fi
+[ ! -s "$tmp/source-archive.stderr" ] || {
+    cat "$tmp/source-archive.stderr" >&2
+    fail "accepted runtime checkpoint export emitted diagnostics"
+}
+if ! env -i PATH="$PATH" LC_ALL=C \
+    tar -xf "$tmp/source.tar" -C "$tmp/source" \
+    >"$tmp/source-extract.stdout" 2>"$tmp/source-extract.stderr"; then
+    cat "$tmp/source-extract.stdout" >&2
+    cat "$tmp/source-extract.stderr" >&2
+    fail "cannot extract the accepted runtime checkpoint"
+fi
+[ ! -s "$tmp/source-extract.stdout" ] ||
+    fail "accepted runtime checkpoint extraction emitted stdout"
+[ ! -s "$tmp/source-extract.stderr" ] || {
+    cat "$tmp/source-extract.stderr" >&2
+    fail "accepted runtime checkpoint extraction emitted diagnostics"
+}
+
+frozen_repo=$tmp/source
+fixture_source=$frozen_repo/tests/fixtures/guix-system-pruning-transaction
+manifest=$fixture_source/manifest.tsv
+registry=$fixture_source/phase-registry.tsv
+old_grub=$fixture_source/old-grub.cfg
+pins=$fixture_source/generation-pins.tsv
+efi=$fixture_source/efi-sentinel.txt
+new_grub=\
+$frozen_repo/docs/audits/data/2026-07-19-p5.2b-d2b-retained-grub.cfg
+loader_behavior_check=\
+$frozen_repo/tests/guix-system-pruning-fused-loader-behavior-check.scm
+boundary_test=$frozen_repo/tests/guix-system-pruning-boundary-check.scm
+root_backend_test=\
+$frozen_repo/tests/guix-system-pruning-root-backend-check.scm
+orchestrator_test=\
+$frozen_repo/tests/guix-system-pruning-orchestrator-check.scm
+reconciliation_test=\
+$frozen_repo/tests/guix-system-pruning-reconciliation-check.scm
+phase_engine_test=\
+$frozen_repo/tests/guix-system-pruning-phase-engine-check.scm
+fixture_runtime_test=\
+$frozen_repo/tests/guix-system-pruning-fixture-runtime-check.scm
+chmod -R a-w "$frozen_repo"
+
+snapshot_manifest() {
+    manifest_root=$1
+    manifest_prefix=$2
+    find "$manifest_root" -printf '%P\t%y\t%m\t%l\n' \
+        >"$manifest_prefix.metadata.unsorted"
+    LC_ALL=C sort "$manifest_prefix.metadata.unsorted" \
+        >"$manifest_prefix.metadata"
+    find "$manifest_root" -type f -print \
+        >"$manifest_prefix.files.unsorted"
+    LC_ALL=C sort "$manifest_prefix.files.unsorted" \
+        >"$manifest_prefix.files"
+    : >"$manifest_prefix.sha256"
+    while IFS= read -r file; do
+        relative=${file#"$manifest_root"/}
+        file_sha=$(sha256_file "$file")
+        printf '%s\t%s\n' "$file_sha" "$relative" \
+            >>"$manifest_prefix.sha256"
+    done <"$manifest_prefix.files"
+}
+
+snapshot_manifest "$frozen_repo" "$tmp/source-pre"
+source_archive_sha=$(sha256_file "$tmp/source.tar")
+source_archive_size=$(stat -c '%s' "$tmp/source.tar")
+source_file_count=$(wc -l <"$tmp/source-pre.files" | tr -d ' ')
+source_metadata_sha=$(sha256_file "$tmp/source-pre.metadata")
+source_files_sha=$(sha256_file "$tmp/source-pre.sha256")
+
+for required in \
+    "$manifest" \
+    "$registry" \
+    "$old_grub" \
+    "$pins" \
+    "$efi" \
+    "$new_grub" \
+    "$loader_behavior_check" \
+    "$boundary_test" \
+    "$root_backend_test" \
+    "$orchestrator_test" \
+    "$reconciliation_test" \
+    "$phase_engine_test" \
+    "$fixture_runtime_test"; do
+    [ -f "$required" ] || fail "required fixture input is missing: $required"
+    [ ! -L "$required" ] ||
+        fail "required fixture input must not be a symlink: $required"
+done
+
+[ "$(sha256_file "$manifest")" = "$manifest_sha" ] ||
+    fail "reviewed fixture manifest digest changed"
+[ "$(sha256_file "$registry")" = "$registry_sha" ] ||
+    fail "reviewed crash registry digest changed"
+[ "$(sha256_file "$new_grub")" = "$new_grub_sha" ] ||
+    fail "reviewed retained GRUB digest changed"
+
+assert_source_identity() {
+    label=$1
+    source=$2
+    expected_sha=$3
+    expected_size=$4
+    [ "$(sha256_file "$source")" = "$expected_sha" ] ||
+        fail "published D4a $label suite digest changed"
+    [ "$(stat -c '%s' "$source")" = "$expected_size" ] ||
+        fail "published D4a $label suite size changed"
+}
+
+assert_source_identity \
+    loader-behavior "$loader_behavior_check" \
+    "$loader_behavior_sha" "$loader_behavior_size"
+assert_source_identity \
+    boundary "$boundary_test" "$boundary_test_sha" "$boundary_test_size"
+assert_source_identity \
+    root-backend "$root_backend_test" \
+    "$root_backend_test_sha" "$root_backend_test_size"
+assert_source_identity \
+    orchestrator "$orchestrator_test" \
+    "$orchestrator_test_sha" "$orchestrator_test_size"
+assert_source_identity \
+    reconciliation "$reconciliation_test" \
+    "$reconciliation_test_sha" "$reconciliation_test_size"
+assert_source_identity \
+    phase-engine "$phase_engine_test" \
+    "$phase_engine_test_sha" "$phase_engine_test_size"
+assert_source_identity \
+    fixture-runtime "$fixture_runtime_test" \
+    "$fixture_runtime_test_sha" "$fixture_runtime_test_size"
+pins_sha=$(sha256_file "$pins")
+efi_sha=$(sha256_file "$efi")
+
+tab=$(printf '\t')
+old_grub_sha=$(awk -F "$tab" \
+    '$1 == "installed-grub" { print $3 }' "$manifest")
+old_grub_mode_decimal=$(awk -F "$tab" \
+    '$1 == "installed-grub" { print $5 }' "$manifest")
+old_bootcfg_raw=$(awk -F "$tab" \
+    '$1 == "old-bootcfg" { print $3 }' "$manifest")
+new_bootcfg_raw=$(awk -F "$tab" \
+    '$1 == "new-bootcfg" { print $3 }' "$manifest")
+transaction_base=$(awk -F "$tab" \
+    '$1 == "transaction-base" { print $2 }' "$manifest")
+recovery_base=$(awk -F "$tab" \
+    '$1 == "recovery-base" { print $2 }' "$manifest")
+expected_grub_mode=$(printf '%o' "$old_grub_mode_decimal")
+
+[ "${#old_grub_sha}" -eq 64 ] || fail "old GRUB digest is invalid"
+[ "${#old_bootcfg_raw}" -gt 0 ] || fail "old bootcfg tuple is absent"
+[ "${#new_bootcfg_raw}" -gt 0 ] || fail "new bootcfg tuple is absent"
+
+clean_env() {
+    env -i \
+        HOME="$tmp/home" \
+        USER="$expected_user" \
+        LOGNAME="$expected_user" \
+        PATH="$PATH" \
+        LC_ALL=C \
+        TZ=UTC \
+        "$@"
+}
+
+run_clean_program() {
+    clean_env \
+        GUILE_AUTO_COMPILE=0 \
+        "$store_program" "$@"
+}
+
+identity=$(run_clean_program fixture-identity)
+contains "$identity" \
+    "guix-system-pruning-fused: PASS: action=fixture-identity"
+contains "$identity" "path=$store_program"
+contains "$identity" "program-sha256=$program_sha"
+contains "$identity" "program-size=$program_size"
+contains "$identity" "manifest-sha256=$manifest_sha"
+contains "$identity" "registry-sha256=$registry_sha"
+contains "$identity" "retained-grub-sha256=$new_grub_sha"
+contains "$identity" "mode=FIXTURE-ONLY authorization=NOT-GRANTED"
+
+guile_program=$(printf '%s\n' "$identity" |
+    tr ' ' '\n' |
+    awk -F = '$1 == "guile-program" { print $2 }')
+[ -n "$guile_program" ] || fail "identity omitted the Guile program"
+[ -x "$guile_program" ] || fail "reported Guile program is not executable"
+
+run_production_suite() {
+    label=$1
+    suite=$2
+    expected=$3
+    stdout=$tmp/production-$label.stdout
+    stderr=$tmp/production-$label.stderr
+
+    clean_env \
+        GUILE_AUTO_COMPILE=0 \
+        "$guile_program" --no-auto-compile \
+        "$loader_behavior_check" \
+        "$store_program" \
+        production-suite \
+        "$suite" >"$stdout" 2>"$stderr"
+    [ ! -s "$stderr" ] || {
+        cat "$stderr" >&2
+        fail "exact-production module suite emitted diagnostics: $label"
+    }
+    suite_pass_count=$(grep -F -c "$expected" "$stdout" || true)
+    [ "$suite_pass_count" -eq 1 ] ||
+        fail "exact-production suite did not emit exactly one PASS: $label"
+    loader_pass_count=$(grep -F -x -c \
+        "guix-system-pruning-fused-loader-behavior-check: PASS: mode=production-suite" \
+        "$stdout" || true)
+    [ "$loader_pass_count" -eq 1 ] ||
+        fail "production loader did not emit exactly one PASS: $label"
+}
+
+run_production_suite \
+    boundary \
+    "$boundary_test" \
+    "guix-system-pruning-boundary-check: PASS"
+run_production_suite \
+    root-backend \
+    "$root_backend_test" \
+    "guix-system-pruning-root-backend-check: PASS"
+run_production_suite \
+    orchestrator \
+    "$orchestrator_test" \
+    "guix-system-pruning-orchestrator-check: PASS"
+run_production_suite \
+    reconciliation \
+    "$reconciliation_test" \
+    "guix-system-pruning-reconciliation-check: PASS"
+run_production_suite \
+    phase-engine \
+    "$phase_engine_test" \
+    "guix-system-pruning-phase-engine-check: PASS"
+run_production_suite \
+    fixture-runtime \
+    "$fixture_runtime_test" \
+    "guix-system-pruning-fixture-runtime-check: PASS"
+
+make_fixture() {
+    root=$1
+    mkdir -p \
+        "$root/gnu/store" \
+        "$root/var/guix/profiles" \
+        "$root/var/guix/gcroots" \
+        "$root/boot/grub" \
+        "$root/boot/efi" \
+        "$root/repo"
+
+    printf '%s\n' p5.2b-system-transaction-fixture/v1 \
+        >"$root/.p52b-system-transaction-fixture"
+
+    awk -F "$tab" '
+        $1 == "old-bootcfg" || $1 == "new-bootcfg" {
+            print $4
+            next
+        }
+        $1 == "new-grub-store" {
+            print $2
+            next
+        }
+        $1 == "protected-symlink" {
+            print $4
+            next
+        }
+        $1 == "retain" || $1 == "delete" {
+            print $5
+            next
+        }
+        $1 == "recovery-root" {
+            print $3
+        }
+    ' "$manifest" | LC_ALL=C sort -u |
+        while IFS= read -r logical; do
+            [ -n "$logical" ] || continue
+            physical=$root$logical
+            mkdir -p "$(dirname "$physical")"
+            case $logical in
+                *-grub.cfg) : >"$physical" ;;
+                *) mkdir -p "$physical" ;;
+            esac
+        done
+
+    cp "$old_grub" \
+        "$root/gnu/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-grub.cfg"
+    cp "$new_grub" \
+        "$root/gnu/store/nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn-grub.cfg"
+    cp "$old_grub" "$root/boot/grub/grub.cfg"
+    chmod 0644 "$root/boot/grub/grub.cfg"
+    cp "$pins" "$root/repo/generation-pins.tsv"
+    cp "$efi" "$root/boot/efi/fixture-sentinel.txt"
+
+    awk -F "$tab" '
+        $1 == "retain" || $1 == "delete" {
+            print $3 "\t" $4
+        }
+    ' "$manifest" |
+        while IFS="$tab" read -r logical raw; do
+            mkdir -p "$(dirname "$root$logical")"
+            ln -s "$raw" "$root$logical"
+        done
+
+    awk -F "$tab" '
+        $1 == "protected-symlink" {
+            print $2 "\t" $3
+        }
+    ' "$manifest" |
+        while IFS="$tab" read -r logical raw; do
+            mkdir -p "$(dirname "$root$logical")"
+            ln -s "$raw" "$root$logical"
+        done
+
+    ln -s "$old_bootcfg_raw" "$root/var/guix/gcroots/bootcfg"
+    mkdir -p "$root$transaction_base" "$root$recovery_base"
+    chmod 0700 \
+        "$root/var/guix/profiles" \
+        "$root$transaction_base"
+}
+
+snapshot_fixture() {
+    root=$1
+    output=$2
+    find "$root" -xdev -printf '%P\t%y\t%m\t%U\t%G\t%s\t%l\n' \
+        >"$output.metadata.unsorted"
+    LC_ALL=C sort "$output.metadata.unsorted" >"$output.metadata"
+    find "$root" -xdev -type f -print >"$output.file-list.unsorted"
+    LC_ALL=C sort "$output.file-list.unsorted" >"$output.file-list"
+    : >"$output.files"
+    while IFS= read -r file; do
+        file_sha=$(sha256_file "$file")
+        printf '%s\t%s\n' \
+            "${file#"$root"/}" \
+            "$file_sha" >>"$output.files"
+    done <"$output.file-list"
+}
+
+system_link_count() {
+    root=$1
+    find "$root/var/guix/profiles" -maxdepth 1 \
+        -type l -name 'system-[0-9]*-link' \
+        >"$tmp/system-link-count.paths"
+    awk 'END { print NR + 0 }' "$tmp/system-link-count.paths"
+}
+
+run_action() {
+    action=$1
+    root=$2
+    clean_env \
+        GUILE_AUTO_COMPILE=0 \
+        SK_P52B_D3_STOP_AFTER='' \
+        SK_P52B_D3_STOP_MODE=exit \
+        SK_P52B_D3_HOLD_LOCK_SECONDS=0 \
+    "$store_program" "legacy-$action" "$root"
+}
+
+expect_stop() {
+    action=$1
+    point=$2
+    root=$3
+    output_file=$4
+
+    set +e
+    clean_env \
+        GUILE_AUTO_COMPILE=0 \
+        SK_P52B_D3_STOP_AFTER="$point" \
+        SK_P52B_D3_STOP_MODE=exit \
+        SK_P52B_D3_HOLD_LOCK_SECONDS=0 \
+        "$store_program" "legacy-$action" "$root" \
+        >"$output_file" 2>&1
+    actual_status=$?
+    set -e
+
+    [ "$actual_status" -eq 97 ] ||
+        fail "$action at $point exited $actual_status, expected 97"
+    output=$(cat "$output_file")
+    contains "$output" "STOP: $point"
+}
+
+assert_common_surfaces() {
+    root=$1
+    actual_pins_sha=$(sha256_file "$root/repo/generation-pins.tsv")
+    [ "$actual_pins_sha" = "$pins_sha" ] ||
+        fail "generation pins changed"
+    actual_efi_sha=$(sha256_file "$root/boot/efi/fixture-sentinel.txt")
+    [ "$actual_efi_sha" = "$efi_sha" ] ||
+        fail "EFI sentinel changed"
+    [ "$(sha256_file \
+        "$root/gnu/store/nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn-grub.cfg")" = \
+        "$new_grub_sha" ] ||
+        fail "retained GRUB fixture changed"
+    [ "$(readlink "$root/var/guix/profiles/system")" = system-87-link ] ||
+        fail "System profile pointer changed"
+    [ "$(readlink "$root/run/current-system")" = \
+        ../gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system ] ||
+        fail "current System pointer changed"
+    [ "$(readlink "$root/run/booted-system")" = \
+        ../gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system ] ||
+        fail "booted System pointer changed"
+}
+
+assert_no_recovery_roots() {
+    root=$1
+    if [ -e "$root$recovery_base/$manifest_sha" ] ||
+        [ -L "$root$recovery_base/$manifest_sha" ]; then
+        fail "transaction recovery-root directory remains"
+    fi
+}
+
+assert_prestate() {
+    root=$1
+    output=$(run_action fixture-verify "$root")
+    contains "$output" "state=ROLLED-BACK"
+    for generation in 1 2; do
+        [ -L "$root/var/guix/profiles/system-$generation-link" ] ||
+            fail "candidate generation $generation was not restored"
+    done
+    [ "$(sha256_file "$root/boot/grub/grub.cfg")" = "$old_grub_sha" ] ||
+        fail "precommit recovery did not restore old GRUB"
+    [ "$(stat -c '%a' "$root/boot/grub/grub.cfg")" = \
+        "$expected_grub_mode" ] ||
+        fail "precommit recovery did not restore exact GRUB mode"
+    [ "$(readlink "$root/var/guix/gcroots/bootcfg")" = \
+        "$old_bootcfg_raw" ] ||
+        fail "precommit recovery did not restore old bootcfg"
+    link_count=$(system_link_count "$root")
+    [ "$link_count" -eq 10 ] ||
+        fail "prestate System-link count is $link_count, expected 10"
+    assert_no_recovery_roots "$root"
+    assert_common_surfaces "$root"
+}
+
+assert_complete() {
+    root=$1
+    output=$(run_action fixture-verify "$root")
+    contains "$output" "state=COMPLETE"
+    for generation in 1 2; do
+        if [ -e "$root/var/guix/profiles/system-$generation-link" ] ||
+            [ -L "$root/var/guix/profiles/system-$generation-link" ]; then
+            fail "candidate generation $generation survived committed cleanup"
+        fi
+    done
+    [ "$(sha256_file "$root/boot/grub/grub.cfg")" = "$new_grub_sha" ] ||
+        fail "committed transaction does not contain new GRUB"
+    [ "$(stat -c '%a' "$root/boot/grub/grub.cfg")" = \
+        "$expected_grub_mode" ] ||
+        fail "committed transaction does not contain exact GRUB mode"
+    [ "$(readlink "$root/var/guix/gcroots/bootcfg")" = \
+        "$new_bootcfg_raw" ] ||
+        fail "committed transaction does not contain new bootcfg"
+    link_count=$(system_link_count "$root")
+    [ "$link_count" -eq 8 ] ||
+        fail "complete System-link count is $link_count, expected 8"
+    assert_no_recovery_roots "$root"
+    assert_common_surfaces "$root"
+}
+
+assert_repeat_recovery() {
+    root=$1
+    expected=$2
+    journal=$root$transaction_base/$manifest_sha/journal.tsv
+    before=$(sha256_file "$journal")
+    output=$(run_action fixture-recover "$root")
+    contains "$output" "state=$expected-NO-OP"
+    after=$(sha256_file "$journal")
+    [ "$before" = "$after" ] ||
+        fail "repeat recovery changed terminal journal $expected"
+}
+
+points_root=$tmp/points-root
+make_fixture "$points_root"
+points=$tmp/artifact-points.tsv
+run_action fixture-points "$points_root" >"$points"
+
+d4a_root=$tmp/d4a-runtime
+make_fixture "$d4a_root"
+snapshot_fixture "$d4a_root" "$tmp/d4a-before"
+for d4a_action in \
+    fixture-points \
+    fixture-verify \
+    fixture-apply \
+    fixture-recover \
+    fixture-reconcile; do
+    d4a_output=$(run_clean_program "$d4a_action" "$d4a_root")
+    contains "$d4a_output" "PASS: action=$d4a_action"
+    contains "$d4a_output" "mode=FIXTURE-ONLY"
+    contains "$d4a_output" "authorization=NOT-GRANTED"
+done
+snapshot_fixture "$d4a_root" "$tmp/d4a-after"
+cmp -s "$tmp/d4a-before.metadata" "$tmp/d4a-after.metadata" ||
+    fail "D4a exact-program actions changed fixture metadata"
+cmp -s "$tmp/d4a-before.files" "$tmp/d4a-after.files" ||
+    fail "D4a exact-program actions changed fixture bytes"
+
+awk -F "$tab" '
+    NF != 3 || $1 != "point" ||
+    ($2 != "forward" && $2 != "rollback") ||
+    $3 == "" { bad = 1 }
+    END { exit bad }
+' "$points" || fail "artifact fixture-points emitted an invalid row"
+
+expected_points=$tmp/expected-points.tsv
+: >"$expected_points"
+while IFS="$tab" read -r kind direction label extra; do
+    [ "$kind" = schema ] && continue
+    [ -z "${extra:-}" ] || fail "crash registry has an invalid row"
+    case $kind in
+        point)
+            printf 'point\t%s\t%s\n' "$direction" "$label" \
+                >>"$expected_points"
+            ;;
+        root-point)
+            awk -F "$tab" -v direction="$direction" -v label="$label" '
+                $1 == "recovery-root" {
+                    print "point\t" direction "\t" label ":" $2
+                }
+            ' "$manifest" >>"$expected_points"
+            ;;
+        link-point)
+            awk -F "$tab" -v direction="$direction" -v label="$label" '
+                $1 == "delete" {
+                    print "point\t" direction "\t" label ":" $2
+                }
+            ' "$manifest" >>"$expected_points"
+            ;;
+        *) fail "unknown crash registry row: $kind" ;;
+    esac
+done <"$registry"
+
+cmp -s "$points" "$expected_points" ||
+    fail "artifact points do not exactly expand the reviewed registry"
+[ -z "$(cut -f3 "$points" | LC_ALL=C sort | uniq -d)" ] ||
+    fail "artifact crash-point labels are duplicated"
+forward_count=$(awk -F "$tab" \
+    '$2 == "forward" { count++ } END { print count + 0 }' "$points")
+rollback_count=$(awk -F "$tab" \
+    '$2 == "rollback" { count++ } END { print count + 0 }' "$points")
+[ "$forward_count" -eq 54 ] ||
+    fail "artifact forward point count is $forward_count, expected 54"
+[ "$rollback_count" -eq 44 ] ||
+    fail "artifact rollback point count is $rollback_count, expected 44"
+
+normal_root=$tmp/normal
+make_fixture "$normal_root"
+output=$(run_action fixture-verify "$normal_root")
+contains "$output" "state=PREPARED"
+output=$(run_action fixture-apply "$normal_root")
+contains "$output" "state=COMPLETE"
+assert_complete "$normal_root"
+assert_repeat_recovery "$normal_root" COMPLETE
+
+forward_points=$tmp/forward-points.txt
+awk -F "$tab" '$2 == "forward" { print $3 }' "$points" >"$forward_points"
+forward_case=0
+committed=0
+exec 3<"$forward_points"
+while IFS= read -r point <&3; do
+    forward_case=$((forward_case + 1))
+    root=$tmp/forward-$forward_case
+    make_fixture "$root"
+    if [ "$point" = journal-COMMITTED ]; then
+        committed=1
+    fi
+    expect_stop fixture-apply "$point" "$root" "$tmp/forward-stop.out"
+    output=$(run_action fixture-recover "$root")
+    if [ "$committed" -eq 1 ]; then
+        contains "$output" "state=COMPLETE"
+        assert_complete "$root"
+    else
+        contains "$output" "state=ROLLED-BACK"
+        assert_prestate "$root"
+    fi
+    rm -rf -- "$root"
+done
+exec 3<&-
+[ "$forward_case" -eq "$forward_count" ] ||
+    fail "did not execute every artifact forward point"
+
+rollback_points=$tmp/rollback-points.txt
+awk -F "$tab" '$2 == "rollback" { print $3 }' "$points" >"$rollback_points"
+rollback_case=0
+exec 3<"$rollback_points"
+while IFS= read -r rollback_point <&3; do
+    rollback_case=$((rollback_case + 1))
+    root=$tmp/rollback-$rollback_case
+    make_fixture "$root"
+    expect_stop fixture-apply journal-LINKS-COMMITTED \
+        "$root" "$tmp/rollback-seed.out"
+    case $rollback_point in
+        before-rollback-root-ensure:* | \
+            after-rollback-root-ensure:* | \
+            journal-rollback-root-ensure-done:*)
+            root_name=${rollback_point##*:}
+            rm -f -- "$root$recovery_base/$manifest_sha/$root_name"
+            ;;
+    esac
+    expect_stop fixture-recover "$rollback_point" \
+        "$root" "$tmp/rollback-stop.out"
+    output=$(run_action fixture-recover "$root")
+    contains "$output" "state=ROLLED-BACK"
+    assert_prestate "$root"
+    rm -rf -- "$root"
+done
+exec 3<&-
+[ "$rollback_case" -eq "$rollback_count" ] ||
+    fail "did not execute every artifact rollback point"
+
+poison_root=$tmp/manifest-env-poison
+make_fixture "$poison_root"
+output=$(clean_env \
+    GUILE_AUTO_COMPILE=0 \
+    SK_P52B_D3_MANIFEST_SHA=\
+0000000000000000000000000000000000000000000000000000000000000000 \
+    SK_P52B_D3_STOP_AFTER='' \
+    SK_P52B_D3_STOP_MODE=exit \
+    SK_P52B_D3_HOLD_LOCK_SECONDS=0 \
+    "$store_program" legacy-fixture-verify "$poison_root")
+contains "$output" "state=PREPARED"
+contains "$output" "manifest=$manifest_sha"
+
+expect_program_failure() {
+    expected=$1
+    shift
+    set +e
+    output=$(run_clean_program "$@" 2>&1)
+    status=$?
+    set -e
+    [ "$status" -ne 0 ] ||
+        fail "unsupported artifact invocation unexpectedly succeeded: $*"
+    contains "$output" "$expected"
+}
+
+expect_program_failure "usage:" apply "$normal_root"
+expect_program_failure "live root is forbidden" legacy-fixture-verify /
+expect_program_failure "live root is forbidden" fixture-apply /
+expect_program_failure "usage:" \
+    legacy-fixture-verify "$manifest" "$normal_root"
+
+store_alias=$tmp/store-program-alias
+ln -s "$store_program" "$store_alias"
+set +e
+alias_output=$(assert_store_program "$store_alias" 2>&1)
+alias_status=$?
+set -e
+[ "$alias_status" -ne 0 ] ||
+    fail "runtime store-path guard unexpectedly accepted a symlink"
+contains "$alias_output" "STORE_PROGRAM must not be a symlink"
+
+copy_dir=$tmp/copied-program
+mkdir -p "$copy_dir"
+copied_program=$copy_dir/00000000000000000000000000000000$store_suffix
+cp "$store_program" "$copied_program"
+chmod 0555 "$copied_program"
+set +e
+copy_output=$(clean_env \
+    GUILE_AUTO_COMPILE=0 \
+    "$copied_program" fixture-identity 2>&1)
+copy_status=$?
+set -e
+[ "$copy_status" -ne 0 ] ||
+    fail "copied-out artifact unexpectedly passed its location guard"
+contains "$copy_output" "fused program is outside the canonical store directory"
+
+poison_source=$tmp/poison-source
+poison_compiled=$tmp/poison-compiled
+poison_sentinel=$tmp/poison-loaded
+mkdir -p "$poison_source/gcrypt" "$poison_compiled/gcrypt" "$tmp/empty-cwd"
+printf '%s\n' \
+    '(define-module (gcrypt hash))' \
+    '(call-with-output-file (getenv "SK_D4B_POISON_SENTINEL")' \
+    '  (lambda (port) (display "LOADED\n" port)))' \
+    >"$poison_source/gcrypt/hash.scm"
+
+[ -x "$expected_guild" ] ||
+    fail "pinned Guild is unavailable for the compiled-path isolation control"
+if ! clean_env \
+    GUILE_AUTO_COMPILE=0 \
+    "$expected_guild" compile -W3 \
+    -o "$poison_compiled/gcrypt/hash.go" \
+    "$poison_source/gcrypt/hash.scm" \
+    >"$tmp/poison-compile.stdout" 2>"$tmp/poison-compile.stderr"; then
+    cat "$tmp/poison-compile.stdout" >&2
+    cat "$tmp/poison-compile.stderr" >&2
+    fail "could not compile the inherited-path poison module"
+fi
+[ ! -s "$tmp/poison-compile.stderr" ] ||
+    fail "compiled inherited-path poison emitted diagnostics"
+
+rm -f -- "$poison_sentinel"
+clean_env \
+    GUILE_LOAD_COMPILED_PATH="$poison_compiled" \
+    GUILE_AUTO_COMPILE=0 \
+    SK_D4B_POISON_SENTINEL="$poison_sentinel" \
+    "$guile_program" -c '(use-modules (gcrypt hash))' \
+    >"$tmp/poison-control.stdout" 2>"$tmp/poison-control.stderr"
+[ -f "$poison_sentinel" ] ||
+    fail "compiled inherited-path poison control did not execute"
+rm -f -- "$poison_sentinel"
+
+find "$poison_source" "$poison_compiled" -type f -printf '%p\t%s\n' \
+    >"$tmp/poison-files-before.unsorted"
+LC_ALL=C sort "$tmp/poison-files-before.unsorted" \
+    >"$tmp/poison-files-before.tsv"
+(
+    cd "$tmp/empty-cwd"
+    clean_env \
+        GUILE_LOAD_PATH="$poison_source" \
+        GUILE_LOAD_COMPILED_PATH="$poison_compiled" \
+        GUILE_EXTENSIONS_PATH="$poison_compiled" \
+        GUILE_AUTO_COMPILE=1 \
+        SK_D4B_POISON_SENTINEL="$poison_sentinel" \
+        "$store_program" fixture-identity
+) >"$tmp/poisoned-identity.stdout" 2>"$tmp/poisoned-identity.stderr"
+contains "$(cat "$tmp/poisoned-identity.stdout")" \
+    "guix-system-pruning-fused: PASS: action=fixture-identity"
+[ ! -e "$poison_sentinel" ] ||
+    fail "poisoned inherited Guile path executed inside the artifact"
+find "$poison_source" "$poison_compiled" -type f -printf '%p\t%s\n' \
+    >"$tmp/poison-files-after.unsorted"
+LC_ALL=C sort "$tmp/poison-files-after.unsorted" \
+    >"$tmp/poison-files-after.tsv"
+cmp -s "$tmp/poison-files-before.tsv" "$tmp/poison-files-after.tsv" ||
+    fail "artifact execution changed the poisoned source/cache file set"
+
+for loader_mode in malformed-final preexisting-final wrong-digest success; do
+    loader_stdout=$tmp/loader-$loader_mode.stdout
+    loader_stderr=$tmp/loader-$loader_mode.stderr
+    clean_env \
+        GUILE_LOAD_PATH="$poison_source" \
+        GUILE_LOAD_COMPILED_PATH="$poison_compiled" \
+        GUILE_EXTENSIONS_PATH="$poison_compiled" \
+        GUILE_AUTO_COMPILE=1 \
+        SK_D4B_POISON_SENTINEL="$poison_sentinel" \
+        "$guile_program" --no-auto-compile \
+        "$loader_behavior_check" \
+        "$store_program" \
+        "$loader_mode" \
+        >"$loader_stdout" 2>"$loader_stderr"
+    [ ! -s "$loader_stderr" ] || {
+        cat "$loader_stderr" >&2
+        fail "loader behavior mode emitted diagnostics: $loader_mode"
+    }
+    [ ! -e "$poison_sentinel" ] ||
+        fail "loader behavior mode executed the inherited-path canary"
+done
+
+for negative_mode in malformed-final preexisting-final wrong-digest; do
+    negative_output=$tmp/loader-$negative_mode.stdout
+    [ "$(wc -l <"$negative_output" | tr -d ' ')" -eq 1 ] ||
+        fail "negative loader mode emitted initializer/main output: $negative_mode"
+    contains "$(cat "$negative_output")" \
+        "guix-system-pruning-fused-loader-behavior-check: PASS: mode=$negative_mode"
+done
+
+cat >"$tmp/loader-success.expected" <<'EOF'
+loader-init	1	root-backend-source
+loader-init	2	boundary-source
+loader-init	3	orchestrator-source
+loader-init	4	reconciliation-source
+loader-init	5	embedded-context-source
+loader-init	6	transaction-core-source
+loader-init	7	phase-engine-source
+loader-init	8	fixture-runtime-source
+loader-init	9	embedded-inputs-source
+loader-init	10	fused-driver-source
+loader-main	1
+guix-system-pruning-fused-loader-behavior-check: PASS: mode=success
+EOF
+cmp -s "$tmp/loader-success.expected" "$tmp/loader-success.stdout" ||
+    fail "successful exact-code loader trace drift"
+
+preexisting_test=$tmp/preexisting-module.scm
+printf '%s\n' \
+    '(use-modules (ice-9 format))' \
+    '(define root-module (resolve-module (quote ()) #f))' \
+    '(define (existing-module name)' \
+    '  (nested-ref-module root-module name))' \
+    '(define seeded-module' \
+    '  (resolve-module (quote (sk system-pruning-boundary))))' \
+    '(define seeded-marker (list (quote d4b-seeded-marker)))' \
+    '(module-define! seeded-module (quote sk:d4b-seeded-marker)' \
+    '  seeded-marker)' \
+    '(define caught #f)' \
+    '(catch #t' \
+    '  (lambda () (primitive-load (getenv "SK_D4B_STORE_PROGRAM")))' \
+    '  (lambda (key . arguments)' \
+    '    (set! caught (cons key arguments))))' \
+    '(unless caught' \
+    '  (error "preexisting project module did not stop fused preflight"))' \
+    '(unless (equal?' \
+    '         caught' \
+    '         (quote' \
+    '          (misc-error #f "~A ~S"' \
+    '           ("fused startup provenance failure"' \
+    '            "fused project module already exists")' \
+    '           #f)))' \
+    '  (error "preexisting project module produced the wrong refusal" caught))' \
+    '(unless (eq? seeded-module' \
+    '             (existing-module' \
+    '              (quote (sk system-pruning-boundary))))' \
+    '  (error "seeded project module identity changed during refusal"))' \
+    '(unless (eq? seeded-marker' \
+    '             (module-ref seeded-module' \
+    '                         (quote sk:d4b-seeded-marker)))' \
+    '  (error "seeded project module marker changed during refusal"))' \
+    '(for-each' \
+    ' (lambda (name)' \
+    '   (when (existing-module name)' \
+    '     (error "a non-seeded project module initialized before refusal"' \
+    '            name)))' \
+    ' (quote ((sk system-pruning-root-backend)' \
+    '         (sk system-pruning-orchestrator)' \
+    '         (sk system-pruning-reconciliation)' \
+    '         (sk system-pruning-embedded-context)' \
+    '         (sk system-pruning-transaction)' \
+    '         (sk system-pruning-phase-engine)' \
+    '         (sk system-pruning-fixture-runtime)' \
+    '         (sk system-pruning-embedded-inputs)' \
+    '         (sk system-pruning-fused-driver))))' \
+    '(format #t "preexisting-module: PASS\n")' \
+    >"$preexisting_test"
+
+clean_env \
+    GUILE_AUTO_COMPILE=0 \
+    SK_D4B_STORE_PROGRAM="$store_program" \
+    "$guile_program" --no-auto-compile "$preexisting_test" \
+    >"$tmp/preexisting.stdout" 2>"$tmp/preexisting.stderr"
+[ ! -s "$tmp/preexisting.stderr" ] || {
+    cat "$tmp/preexisting.stderr" >&2
+    fail "preexisting-module isolation emitted diagnostics"
+}
+contains "$(cat "$tmp/preexisting.stdout")" "preexisting-module: PASS"
+
+snapshot_manifest "$frozen_repo" "$tmp/source-post"
+cmp -s "$tmp/source-pre.metadata" "$tmp/source-post.metadata" ||
+    fail "accepted runtime source metadata changed during the matrix"
+cmp -s "$tmp/source-pre.sha256" "$tmp/source-post.sha256" ||
+    fail "accepted runtime source bytes changed during the matrix"
+
+if ! terminal_git_status=$(run_clean_git -C "$repo" status --porcelain); then
+    fail "cannot inspect the terminal runtime checkout state"
+fi
+[ -z "$terminal_git_status" ] ||
+    fail "runtime checkout changed during the matrix"
+terminal_top=$(run_clean_git -C "$repo" rev-parse --show-toplevel)
+terminal_git_dir=$(run_clean_git -C "$repo" rev-parse --absolute-git-dir)
+terminal_head=$(run_clean_git -C "$repo" rev-parse HEAD)
+terminal_origin=$(run_clean_git -C "$repo" rev-parse origin/main)
+[ "$terminal_top" = "$repo" ] ||
+    fail "terminal runtime Git proof resolved another work tree"
+if [ "$terminal_git_dir" != "$repo/.git" ] ||
+    [ ! -d "$terminal_git_dir" ] ||
+    [ -L "$terminal_git_dir" ]; then
+    fail "terminal runtime Git proof resolved another Git directory"
+fi
+[ "$terminal_head" = "$expected_checkpoint" ] ||
+    fail "runtime checkout HEAD changed during the matrix"
+[ "$terminal_origin" = "$expected_checkpoint" ] ||
+    fail "runtime origin/main changed during the matrix"
+
+if [ ! -f "$realization_result_source" ] ||
+    [ -L "$realization_result_source" ]; then
+    fail "source realization result changed type during the matrix"
+fi
+[ "$(readlink -f "$realization_result_source")" = \
+    "$realization_result_source" ] ||
+    fail "source realization result changed path during the matrix"
+[ "$(sha256_file "$realization_result_source")" = \
+    "$realization_result_sha" ] ||
+    fail "source realization result bytes changed during the matrix"
+[ "$(stat -c '%s' "$realization_result_source")" -eq \
+    "$realization_result_size" ] ||
+    fail "source realization result size changed during the matrix"
+cmp -s "$realization_result_source" "$realization_result" ||
+    fail "source and private realization results differ after the matrix"
+[ "$(sha256_file "$realization_result")" = \
+    "$realization_result_sha" ] ||
+    fail "private realization result changed during the matrix"
+
+assert_store_program "$store_program"
+[ "$(sha256_file "$store_program")" = "$program_sha" ] ||
+    fail "STORE_PROGRAM bytes changed during the matrix"
+[ "$(stat -c '%s' "$store_program")" -eq "$program_size" ] ||
+    fail "STORE_PROGRAM size changed during the matrix"
+
+printf '%s\n' \
+    "schema=p5.2b-d4b-runtime-evidence/v1" \
+    "authorization=NOT-GRANTED" \
+    "checkpoint=$expected_checkpoint" \
+    "realization-result=$realization_result_source" \
+    "realization-result-sha256=$realization_result_sha" \
+    "realization-result-size=$realization_result_size" \
+    "realization-state=$realization_state" \
+    "derivation=$derivation" \
+    "program=$store_program" \
+    "program-sha256=$program_sha" \
+    "program-size=$program_size" \
+    "preflight-snapshot=$preflight_snapshot" \
+    "store-additions=$store_additions" \
+    "source-archive=$source_archive_sha:$source_archive_size" \
+    "source-regular-files=$source_file_count" \
+    "source-metadata-sha256=$source_metadata_sha" \
+    "source-file-identities-sha256=$source_files_sha" \
+    "production-suites=6" \
+    "renderer-suite=SOURCE-GATE" \
+    "d4a-actions=5" \
+    "loader-modes=4" \
+    "artifact-forward=$forward_count" \
+    "artifact-rollback=$rollback_count" \
+    "artifact-total=$((forward_count + rollback_count))" \
+    "original-wrapper-regression=NOT-RUN" \
+    "mode=FIXTURE-ONLY" \
+    "live-action=NOT-GRANTED" \
+    "$program_name: PASS"

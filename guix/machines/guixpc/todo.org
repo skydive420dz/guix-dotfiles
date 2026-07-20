@@ -1023,6 +1023,7 @@ CLOSED: [2026-07-19 Sun]
 :PROPERTIES:
 :created: 2026-07-19
 :blocked_by: none; source/fixture work only
+:published: 41e11155f817c8ccf2f8e8b3c9c62af566f53209
 :END:
 
 - Design: [[file:../../../docs/audits/2026-07-19-p5.2b-d4-production-boundary-design.org][2026-07-19 P5.2b-D4 production-boundary safety decomposition]].
@@ -1062,16 +1063,26 @@ CLOSED: [2026-07-19 Sun]
 ** BACKLOG P5.2b-D4b clean-published synthetic fused-program evidence
 :PROPERTIES:
 :created: 2026-07-19
-:blocked_by: published D4a source checkpoint
+:blocked_by: published D4b helper checkpoint and exact realization grant
 :END:
 
-- [ ] Fetch exact published D4a into a clean upstream-equal checkout and build
-  one unprivileged synthetic fixture-policy fused Scheme program.
+- [X] Fetch exact published D4a =41e1115= into a clean upstream-equal checkout
+  and add a separate source-only exact-input constructor, exact-code loader
+  probe, six byte-frozen production-suite paths, checkout-unavailable probe,
+  artifact 54+44 restart harness, and commit/live/store-state-bound two-phase
+  realization gate.  The pure gate reproduces =95b84e2...= / 956,987 bytes
+  and reports =lowered=FALSE= / =realized=FALSE=.
+- [ ] Commit and publish the helper-only checkpoint, fetch it cleanly, then
+  request an exact grant covering one unprivileged synthetic =computed-file=
+  lowering/realization or confirmation and its bounded immutable-store
+  metadata.  Do not create a result symlink or GC root.
 - [ ] Prove the exact program runs with the checkout unavailable, ignores
   poisoned Guile paths after realization, embeds the reviewed bytes, rejects a
-  mutable copy and every live action, and passes the full D4a plus 98-point
-  matrices.  The external evidence gate rejects an unrecorded alternate store
-  output; the program does not embed its self-referential final path/hash.
+  mutable copy and every live action, and passes the six production-module D4a
+  suites plus all 98 interruption points.  Keep the renderer suite as the
+  byte-frozen source gate.  The external evidence gate rejects an unrecorded
+  alternate store output; the program does not embed its self-referential
+  final path/hash.
 - [ ] Freeze derivation/output identity, program hash/size, loaded-byte
   provenance, raw results, bounded realization effects, and unchanged selected
   live transaction surfaces; publish and stop.

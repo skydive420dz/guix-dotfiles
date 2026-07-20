@@ -1,0 +1,359 @@
+#!/bin/sh
+set -eu
+
+LC_ALL=C
+PATH=\
+/gnu/store/z84fzavdzq9ja3lyln3cf9px4h45ybf9-profile/bin:/gnu/store/2p4vnz9y2ndfsbary431rzlf41jhanrs-profile/bin
+export LC_ALL PATH
+
+program_name=guix-system-pruning-d4b-checkout-independence
+expected_program_sha=\
+95b84e29853a2327bffab857383cf78a30ab41b965144fd298edc384335b9d70
+expected_program_size=956987
+
+fail() {
+    printf '%s: FAIL: %s\n' "$program_name" "$*" >&2
+    exit 1
+}
+
+sha256_file() {
+    if ! sha_line=$(sha256sum "$1"); then
+        fail "cannot hash file: $1"
+    fi
+    sha_digest=${sha_line%% *}
+    [ "${#sha_digest}" -eq 64 ] ||
+        fail "SHA256 command returned an invalid digest: $1"
+    case $sha_digest in
+        *[!0-9a-f]*) fail "SHA256 command returned non-hex output: $1" ;;
+    esac
+    printf '%s\n' "$sha_digest"
+}
+
+result_value() {
+    result_key=$1
+    awk -F = -v key="$result_key" '
+        $1 == key {
+            sub(/^[^=]*=/, "")
+            print
+        }
+    ' "$realization_result"
+}
+
+assert_result_row() {
+    result_key=$1
+    result_expected=$2
+    result_count=$(awk -F = -v key="$result_key" '
+        $1 == key { count++ }
+        END { print count + 0 }
+    ' "$realization_result")
+    [ "$result_count" -eq 1 ] ||
+        fail "realization result does not contain one $result_key row"
+    [ "$(result_value "$result_key")" = "$result_expected" ] ||
+        fail "realization result $result_key differs from the accepted value"
+}
+
+assert_result_key() {
+    result_key=$1
+    result_count=$(awk -F = -v key="$result_key" '
+        $1 == key { count++ }
+        END { print count + 0 }
+    ' "$realization_result")
+    [ "$result_count" -eq 1 ] ||
+        fail "realization result does not contain one $result_key row"
+}
+
+run_clean_git() {
+    env -i \
+        HOME=/homeless-shelter \
+        XDG_CONFIG_HOME=/homeless-shelter \
+        USER=skydive420dz \
+        LOGNAME=skydive420dz \
+        PATH="$PATH" \
+        LC_ALL=C \
+        GIT_CONFIG_NOSYSTEM=1 \
+        GIT_OPTIONAL_LOCKS=0 \
+        git \
+        -c core.fsmonitor=false \
+        -c core.untrackedCache=false \
+        "$@"
+}
+
+usage() {
+    printf '%s\n' \
+        "usage: $program_name EXACT-STORE-PROGRAM DISPOSABLE-CHECKOUT CHECKPOINT EXACT-REALIZATION-RESULT" \
+        >&2
+    exit 64
+}
+
+case $# in
+    4)
+        store_program=$1
+        checkout=$2
+        expected_checkpoint=$3
+        realization_result=$4
+        ;;
+    *) usage ;;
+esac
+
+[ "$(hostname)" = guixpc ] ||
+    fail "checkout-independence is outside the accepted GuixPC"
+[ "$(id -un)" = skydive420dz ] ||
+    fail "checkout-independence user differs from the accepted owner"
+[ "$(id -u)" -eq 1000 ] ||
+    fail "checkout-independence UID differs from the accepted owner"
+[ "${#expected_checkpoint}" -eq 40 ] ||
+    fail "helper checkpoint has the wrong length"
+case $expected_checkpoint in
+    *[!0-9a-f]*) fail "helper checkpoint is not lowercase hexadecimal" ;;
+esac
+
+case $checkout in
+    /tmp/*) ;;
+    *) fail "checkout-independence requires a disposable /tmp checkout" ;;
+esac
+
+script_repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+checkout_canonical=$(readlink -f "$checkout" 2>/dev/null || true)
+[ "$checkout_canonical" = "$checkout" ] ||
+    fail "disposable checkout path is not canonical"
+[ "$script_repo" = "$checkout_canonical" ] ||
+    fail "script is not running from the supplied disposable checkout"
+[ -d "$checkout/.git" ] ||
+    fail "disposable checkout has no Git metadata"
+if ! git_status=$(run_clean_git -C "$checkout" status --porcelain); then
+    fail "cannot inspect the disposable checkout state"
+fi
+[ -z "$git_status" ] ||
+    fail "disposable checkout is not clean"
+top=$(run_clean_git -C "$checkout" rev-parse --show-toplevel)
+git_dir=$(run_clean_git -C "$checkout" rev-parse --absolute-git-dir)
+[ "$top" = "$checkout" ] ||
+    fail "clean Git proof resolved another work tree"
+if [ "$git_dir" != "$checkout/.git" ] ||
+    [ ! -d "$git_dir" ] ||
+    [ -L "$git_dir" ]; then
+    fail "clean Git proof resolved another Git directory"
+fi
+head=$(run_clean_git -C "$checkout" rev-parse HEAD)
+origin=$(run_clean_git -C "$checkout" rev-parse origin/main)
+[ "$head" = "$expected_checkpoint" ] ||
+    fail "disposable checkout HEAD differs from the accepted checkpoint"
+[ "$origin" = "$expected_checkpoint" ] ||
+    fail "disposable checkout origin/main differs from the accepted checkpoint"
+
+work=$(mktemp -d /tmp/p52b-d4b-checkout-independence.XXXXXX)
+hidden=$checkout.unavailable.$$
+restored=0
+if [ -e "$hidden" ] || [ -L "$hidden" ]; then
+    fail "temporary unavailable-checkout path already exists"
+fi
+
+cleanup() {
+    status=$?
+    trap - 0 HUP INT TERM
+    if [ "$restored" -eq 0 ] &&
+        { [ -e "$hidden" ] || [ -L "$hidden" ]; }; then
+        if [ -e "$checkout" ] || [ -L "$checkout" ]; then
+            printf '%s: FAIL: checkout path was recreated before restore\n' \
+                "$program_name" >&2
+            status=1
+        elif ! mv "$hidden" "$checkout"; then
+            printf '%s: FAIL: could not restore disposable checkout\n' \
+                "$program_name" >&2
+            status=1
+        fi
+    fi
+    rm -rf -- "$work"
+    exit "$status"
+}
+trap cleanup 0
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+expected_evidence=/tmp/p52b-d4b-realization-evidence.$expected_checkpoint
+expected_result=$expected_evidence/realization-result.tsv
+realization_result_source=$realization_result
+[ "$realization_result_source" = "$expected_result" ] ||
+    fail "realization result path differs from the accepted evidence path"
+if [ ! -f "$realization_result_source" ] ||
+    [ -L "$realization_result_source" ]; then
+    fail "realization result is not one direct regular file"
+fi
+[ "$(readlink -f "$realization_result_source")" = \
+    "$realization_result_source" ] ||
+    fail "realization result path is not canonical"
+realization_result_sha=$(sha256_file "$realization_result_source")
+realization_result_size=$(stat -c '%s' "$realization_result_source")
+realization_result=$work/realization-result.tsv
+cp "$realization_result_source" "$realization_result"
+chmod a-w "$realization_result"
+[ "$(sha256_file "$realization_result")" = "$realization_result_sha" ] ||
+    fail "private realization-result copy differs from its source"
+[ "$(stat -c '%s' "$realization_result")" -eq \
+    "$realization_result_size" ] ||
+    fail "private realization-result copy has the wrong size"
+cmp -s "$realization_result_source" "$realization_result" ||
+    fail "private realization-result copy is not byte-identical"
+[ "$(wc -l <"$realization_result" | tr -d ' ')" -eq 24 ] ||
+    fail "realization result does not contain the closed 24-row packet"
+
+if [ ! -f "$store_program" ] || [ -L "$store_program" ]; then
+    fail "store program is not one direct regular file"
+fi
+[ "$(readlink -f "$store_program")" = "$store_program" ] ||
+    fail "store program path is not canonical"
+[ "$(dirname "$store_program")" = /gnu/store ] ||
+    fail "store program is outside /gnu/store"
+[ "$(sha256_file "$store_program")" = \
+    "$expected_program_sha" ] ||
+    fail "store program SHA256 differs from the frozen D4a render"
+[ "$(stat -c '%s' "$store_program")" = "$expected_program_size" ] ||
+    fail "store program size differs from the frozen D4a render"
+
+assert_result_row schema p5.2b-d4b-first-realization/v1
+assert_result_row authorization EXACT-COMMIT-BOUND-TOKEN
+assert_result_row checkpoint "$expected_checkpoint"
+assert_result_row render "$expected_program_sha:$expected_program_size"
+assert_result_row output "$store_program"
+assert_result_row lower-status 0
+assert_result_row output-reader-status 0
+assert_result_row derivation-plan-status 0
+assert_result_row build-status 0
+assert_result_row postflight-status 0
+assert_result_row independent-live-status 0
+assert_result_row independent-store-status 0
+assert_result_row independent-store-sort-status 0
+assert_result_row store-additions-unrelated 0
+assert_result_row store-removals 0
+assert_result_row selected-live-surfaces IDENTICAL
+assert_result_row result-link ABSENT
+assert_result_row evidence "$expected_evidence"
+assert_result_row live-action NOT-GRANTED
+[ "$(tail -n 1 "$realization_result")" = \
+    "guix-system-pruning-d4b-realize: PASS" ] ||
+    fail "realization result omits its exact terminal PASS"
+assert_result_key state
+case $(result_value state) in
+    REALIZED | ALREADY-PRESENT) ;;
+    *) fail "realization result contains an invalid state" ;;
+esac
+assert_result_key preflight-snapshot
+preflight_snapshot=$(result_value preflight-snapshot)
+[ "${#preflight_snapshot}" -eq 64 ] ||
+    fail "realization result contains an invalid preflight snapshot"
+case $preflight_snapshot in
+    *[!0-9a-f]*) fail "realization preflight snapshot is not hexadecimal" ;;
+esac
+assert_result_key derivation
+derivation=$(result_value derivation)
+if [ ! -f "$derivation" ] || [ -L "$derivation" ]; then
+    fail "realization result derivation is not one direct regular file"
+fi
+[ "$(dirname "$derivation")" = /gnu/store ] ||
+    fail "realization result derivation is outside /gnu/store"
+case $derivation in
+    /gnu/store/*.drv) ;;
+    *) fail "realization result contains an invalid derivation path" ;;
+esac
+assert_result_key store-additions
+store_additions=$(result_value store-additions)
+case $store_additions in
+    '' | *[!0-9]*) fail "realization result has an invalid addition count" ;;
+esac
+
+program_sha=$(sha256_file "$store_program")
+program_size=$(stat -c '%s' "$store_program")
+
+mkdir -p "$work/empty-cwd" "$work/home" "$work/inherited/gcrypt"
+sentinel=$work/inherited-path-loaded
+printf '%s\n' \
+    '(define-module (gcrypt hash))' \
+    '(call-with-output-file (getenv "SK_D4B_POISON_SENTINEL")' \
+    '  (lambda (port) (display "LOADED\n" port)))' \
+    >"$work/inherited/gcrypt/hash.scm"
+
+mv "$checkout" "$hidden"
+if [ -e "$checkout" ] || [ -L "$checkout" ]; then
+    fail "disposable checkout remained available after rename"
+fi
+
+(
+    cd "$work/empty-cwd"
+    env -i \
+        HOME="$work/home" \
+        USER=skydive420dz \
+        LOGNAME=skydive420dz \
+        PATH="$PATH" \
+        LC_ALL=C \
+        TZ=UTC \
+        GUILE_LOAD_PATH="$work/inherited" \
+        GUILE_LOAD_COMPILED_PATH="$work/inherited" \
+        GUILE_EXTENSIONS_PATH="$work/inherited" \
+        GUILE_AUTO_COMPILE=1 \
+        SK_D4B_POISON_SENTINEL="$sentinel" \
+        "$store_program" fixture-identity
+) >"$work/identity.stdout" 2>"$work/identity.stderr"
+
+[ ! -s "$work/identity.stderr" ] || {
+    cat "$work/identity.stderr" >&2
+    fail "checkout-independent identity emitted diagnostics"
+}
+[ ! -e "$sentinel" ] ||
+    fail "inherited path executed while checkout was unavailable"
+grep -F \
+    "guix-system-pruning-fused: PASS: action=fixture-identity path=$store_program" \
+    "$work/identity.stdout" >/dev/null ||
+    fail "store program did not pass with its checkout unavailable"
+
+if [ -e "$checkout" ] || [ -L "$checkout" ]; then
+    fail "disposable checkout path was recreated before restore"
+fi
+mv "$hidden" "$checkout"
+if [ -e "$hidden" ] || [ -L "$hidden" ]; then
+    fail "temporary unavailable-checkout path remains after restore"
+fi
+if [ ! -d "$checkout" ] || [ -L "$checkout" ]; then
+    fail "restored disposable checkout is not one direct directory"
+fi
+[ "$(readlink -f "$checkout")" = "$checkout" ] ||
+    fail "restored disposable checkout path is not canonical"
+restored=1
+[ "$(run_clean_git -C "$checkout" rev-parse HEAD)" = \
+    "$expected_checkpoint" ] ||
+    fail "restored disposable checkout identity drift"
+if ! restored_status=$(run_clean_git -C "$checkout" status --porcelain); then
+    fail "cannot inspect the restored disposable checkout state"
+fi
+[ -z "$restored_status" ] ||
+    fail "restored disposable checkout is not clean"
+
+[ "$(sha256_file "$realization_result_source")" = \
+    "$realization_result_sha" ] ||
+    fail "source realization result changed during checkout-independence proof"
+[ "$(stat -c '%s' "$realization_result_source")" -eq \
+    "$realization_result_size" ] ||
+    fail "source realization result size changed during proof"
+cmp -s "$realization_result_source" "$realization_result" ||
+    fail "source and private realization results differ after proof"
+[ "$(sha256_file "$realization_result")" = \
+    "$realization_result_sha" ] ||
+    fail "private realization result changed during proof"
+[ "$(sha256_file "$store_program")" = "$program_sha" ] ||
+    fail "store program changed during checkout-independence proof"
+[ "$(stat -c '%s' "$store_program")" -eq "$program_size" ] ||
+    fail "store program size changed during checkout-independence proof"
+
+printf '%s\n' \
+    "schema=p5.2b-d4b-checkout-independence/v1" \
+    "authorization=NOT-GRANTED" \
+    "checkpoint=$expected_checkpoint" \
+    "realization-result=$realization_result_source" \
+    "realization-result-sha256=$realization_result_sha" \
+    "realization-result-size=$realization_result_size" \
+    "program=$store_program" \
+    "program-sha256=$program_sha" \
+    "program-size=$program_size" \
+    "checkout=RENAMED-AND-RESTORED" \
+    "mode=FIXTURE-ONLY" \
+    "$program_name: PASS"

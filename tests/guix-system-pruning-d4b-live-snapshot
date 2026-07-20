@@ -1,0 +1,101 @@
+#!/bin/sh
+set -eu
+
+LC_ALL=C
+export LC_ALL
+
+sha256_file() {
+    sha256sum "$1" | awk '{ print $1 }'
+}
+
+path_kind() {
+    path=$1
+    if [ -L "$path" ]; then
+        printf '%s' symlink
+    elif [ -d "$path" ]; then
+        printf '%s' directory
+    elif [ -f "$path" ]; then
+        printf '%s' regular
+    elif [ -e "$path" ]; then
+        printf '%s' other
+    else
+        printf '%s' absent
+    fi
+}
+
+symlink_tuple() {
+    label=$1
+    path=$2
+    if [ -L "$path" ]; then
+        raw=$(readlink "$path")
+        canonical=$(readlink -f "$path" 2>/dev/null || printf '%s' DANGLING)
+        printf 'symlink\t%s\t%s\t%s\t%s\n' \
+            "$label" "$path" "$raw" "$canonical"
+    else
+        printf 'symlink\t%s\t%s\t%s\t-\n' \
+            "$label" "$path" "$(path_kind "$path")"
+    fi
+}
+
+link_count() {
+    directory=$1
+    pattern=$2
+    find "$directory" -maxdepth 1 -type l -name "$pattern" -print |
+        wc -l |
+        tr -d ' '
+}
+
+direct_roots=$(
+    find /var/guix/gcroots -maxdepth 1 \
+        -name 'p52b-system-prune-program-*' -printf '%f\t%l\n' |
+        sort
+)
+direct_root_count=$(
+    if [ -n "$direct_roots" ]; then
+        printf '%s\n' "$direct_roots" | wc -l | tr -d ' '
+    else
+        printf '%s' 0
+    fi
+)
+direct_root_sha=$(
+    if [ -n "$direct_roots" ]; then
+        printf '%s\n' "$direct_roots" | sha256sum | awk '{ print $1 }'
+    else
+        printf '' | sha256sum | awk '{ print $1 }'
+    fi
+)
+
+printf 'schema\tp5.2b-d4a-live-surfaces/v1\n'
+printf 'boot-id\t%s\n' "$(tr -d '\n' </proc/sys/kernel/random/boot_id)"
+printf 'generation-count\tsystem\t%s\n' \
+    "$(link_count /var/guix/profiles 'system-[0-9]*-link')"
+printf 'generation-count\thome\t%s\n' \
+    "$(link_count /var/guix/profiles/per-user/skydive420dz 'guix-home-[0-9]*-link')"
+printf 'generation-count\tpull\t%s\n' \
+    "$(link_count /var/guix/profiles/per-user/skydive420dz 'current-guix-[0-9]*-link')"
+symlink_tuple system-profile /var/guix/profiles/system
+symlink_tuple home-profile /var/guix/profiles/per-user/skydive420dz/guix-home
+symlink_tuple pull-profile /var/guix/profiles/per-user/skydive420dz/current-guix
+symlink_tuple current-system /run/current-system
+symlink_tuple booted-system /run/booted-system
+symlink_tuple bootcfg /var/guix/gcroots/bootcfg
+printf 'grub\t/boot/grub/grub.cfg\t%s\t%s\t%s\t%s\t%s\n' \
+    "$(sha256_file /boot/grub/grub.cfg)" \
+    "$(stat -c '%s' /boot/grub/grub.cfg)" \
+    "$(stat -c '%a' /boot/grub/grub.cfg)" \
+    "$(stat -c '%u' /boot/grub/grub.cfg)" \
+    "$(stat -c '%g' /boot/grub/grub.cfg)"
+printf 'surface\ttransaction-base\t%s\n' \
+    "$(path_kind /var/guix/profiles/.p52b-system-prune-transactions)"
+printf 'surface\trecovery-root-base\t%s\n' \
+    "$(path_kind /var/guix/gcroots/p52b-system-prune)"
+printf 'surface\tobsolete-program-root-directory\t%s\n' \
+    "$(path_kind /var/guix/gcroots/p52b-system-prune-program)"
+printf 'surface\tdirect-program-roots\t%s\t%s\n' \
+    "$direct_root_count" "$direct_root_sha"
+printf 'surface\tsystem-lock\t%s\n' \
+    "$(path_kind /var/guix/profiles/system.lock)"
+printf 'surface\tgrub-temporary\t%s\n' \
+    "$(path_kind /boot/grub/grub.cfg.p52b-new)"
+printf 'surface\tbootcfg-temporary\t%s\n' \
+    "$(path_kind /var/guix/gcroots/bootcfg.p52b-new)"

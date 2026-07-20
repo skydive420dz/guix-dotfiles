@@ -1,0 +1,764 @@
+#!/bin/sh
+set -eu
+
+umask 077
+LC_ALL=C
+PATH=\
+/gnu/store/z84fzavdzq9ja3lyln3cf9px4h45ybf9-profile/bin:/gnu/store/2p4vnz9y2ndfsbary431rzlf41jhanrs-profile/bin
+export LC_ALL PATH
+
+program_name=guix-system-pruning-d4b-realize
+expected_host=guixpc
+expected_user=skydive420dz
+expected_uid=1000
+expected_repo=/home/skydive420dz/Projects/guix-dotfiles
+expected_d4a=41e11155f817c8ccf2f8e8b3c9c62af566f53209
+expected_guix=\
+/gnu/store/0hzhxis25c15rag5412rhm2md38chi6x-guix-command
+expected_render_sha=\
+95b84e29853a2327bffab857383cf78a30ab41b965144fd298edc384335b9d70
+expected_render_size=956987
+
+fail() {
+    printf '%s: FAIL: %s\n' "$program_name" "$*" >&2
+    exit 1
+}
+
+sha256_file() {
+    if ! sha_line=$(sha256sum "$1"); then
+        fail "cannot hash file: $1"
+    fi
+    sha_digest=${sha_line%% *}
+    [ "${#sha_digest}" -eq 64 ] ||
+        fail "SHA256 command returned an invalid digest: $1"
+    case $sha_digest in
+        *[!0-9a-f]*) fail "SHA256 command returned non-hex output: $1" ;;
+    esac
+    printf '%s\n' "$sha_digest"
+}
+
+run_clean_git() {
+    env -i \
+        HOME=/homeless-shelter \
+        XDG_CONFIG_HOME=/homeless-shelter \
+        USER="$expected_user" \
+        LOGNAME="$expected_user" \
+        PATH="$PATH" \
+        LC_ALL=C \
+        GIT_CONFIG_NOSYSTEM=1 \
+        GIT_OPTIONAL_LOCKS=0 \
+        git \
+        -c core.fsmonitor=false \
+        -c core.untrackedCache=false \
+        "$@"
+}
+
+usage() {
+    printf 'usage: %s EXACT-COMMIT-BOUND-ACCEPTANCE-TOKEN\n' \
+        "$program_name" >&2
+    exit 64
+}
+
+case $# in
+    1) acceptance_token=$1 ;;
+    *) usage ;;
+esac
+
+[ "$(hostname)" = "$expected_host" ] ||
+    fail "host differs from the accepted GuixPC"
+[ "$(id -un)" = "$expected_user" ] ||
+    fail "user differs from the accepted unprivileged owner"
+[ "$(id -u)" -eq "$expected_uid" ] ||
+    fail "UID differs from the accepted unprivileged owner"
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+[ "$repo" = "$expected_repo" ] ||
+    fail "realization gate is outside the accepted checkout"
+script=$(readlink -f "$0" 2>/dev/null || true)
+[ "$script" = "$repo/tests/$program_name" ] ||
+    fail "realization gate path is not canonical"
+if [ ! -f "$script" ] || [ -L "$script" ]; then
+    fail "realization gate is not one repository-owned regular file"
+fi
+
+module_dir=$repo/guix/modules
+build_expression=\
+$repo/guix/machines/guixpc/p5.2b-d4b-fused-program.scm
+output_reader=\
+$repo/guix/machines/guixpc/p5.2b-d4b-derivation-output.scm
+plan_reader=\
+$repo/guix/machines/guixpc/p5.2b-d4b-derivation-plan.scm
+preflight=$repo/tests/guix-system-pruning-d4b-preflight
+live_snapshot=$repo/tests/guix-system-pruning-d4b-live-snapshot
+for source in \
+    "$build_expression" \
+    "$output_reader" \
+    "$plan_reader" \
+    "$preflight" \
+    "$live_snapshot"; do
+    if [ ! -f "$source" ] || [ -L "$source" ]; then
+        fail "realization input is not one repository-owned regular file: $source"
+    fi
+done
+[ -x "$preflight" ] ||
+    fail "preflight helper is not executable"
+[ -x "$live_snapshot" ] ||
+    fail "selected-live helper is not executable"
+if [ ! -d "$module_dir" ] || [ -L "$module_dir" ]; then
+    fail "project module load path is not one direct directory"
+fi
+if [ -n "$(find "$module_dir" -name '*.go' -print -quit)" ]; then
+    fail "project module load path contains a compiled Guile object"
+fi
+if [ ! -x "$expected_guix" ] || [ -L "$expected_guix" ]; then
+    fail "pinned Guix command is unavailable"
+fi
+
+if ! git_status=$(run_clean_git -C "$repo" status --porcelain); then
+    fail "cannot inspect the accepted checkout state"
+fi
+[ -z "$git_status" ] ||
+    fail "accepted checkout is not clean"
+top=$(run_clean_git -C "$repo" rev-parse --show-toplevel)
+git_dir=$(run_clean_git -C "$repo" rev-parse --absolute-git-dir)
+[ "$top" = "$repo" ] ||
+    fail "clean Git proof resolved another work tree"
+if [ "$git_dir" != "$repo/.git" ] ||
+    [ ! -d "$git_dir" ] ||
+    [ -L "$git_dir" ]; then
+    fail "clean Git proof resolved another Git directory"
+fi
+head=$(run_clean_git -C "$repo" rev-parse HEAD)
+origin=$(run_clean_git -C "$repo" rev-parse origin/main)
+[ "$head" = "$origin" ] ||
+    fail "checkout HEAD differs from origin/main"
+run_clean_git -C "$repo" merge-base --is-ancestor "$expected_d4a" "$head" ||
+    fail "published D4a is not an ancestor of the accepted checkpoint"
+
+work=$(mktemp -d /tmp/p52b-d4b-realize.XXXXXX)
+evidence=
+mutation_started=0
+postflight_completed=0
+plan_valid=0
+lower_status=NOT-RUN
+reader_status=NOT-RUN
+plan_status=NOT-RUN
+build_status=NOT-RUN
+postflight_status=NOT-RUN
+independent_live_status=NOT-RUN
+independent_store_status=NOT-RUN
+independent_sort_status=NOT-RUN
+
+cleanup() {
+    status=$?
+    trap - 0 HUP INT TERM
+    set +e
+    if [ "$status" -ne 0 ] &&
+        [ "$mutation_started" -eq 1 ] &&
+        [ -n "$evidence" ] &&
+        [ -d "$evidence" ]; then
+        failure_capture_mode=DIRECT
+        failure_live_status=UNKNOWN
+        failure_store_status=UNKNOWN
+        failure_sort_status=UNKNOWN
+        failure_additions=UNKNOWN
+        failure_removals=UNKNOWN
+        failure_plan=UNAVAILABLE
+        failure_plan_paths=0
+        failure_unrelated=0
+        failure_unclassified=0
+
+        if [ "$postflight_completed" -eq 1 ] &&
+            [ -f "$evidence/post-live.tsv" ] &&
+            [ -f "$evidence/post-store-names.txt" ]; then
+            failure_capture_mode=NORMAL-POSTFLIGHT
+            failure_live_status=0
+            failure_store_status=0
+            failure_sort_status=0
+            failure_live=$evidence/post-live.tsv
+            failure_store=$evidence/post-store-names.txt
+        else
+            failure_live=$evidence/failure-post-live.tsv
+            failure_store=$evidence/failure-post-store-names.txt
+            "$frozen_live_snapshot" \
+                >"$failure_live" \
+                2>"$evidence/failure-post-live.stderr"
+            failure_live_status=$?
+            find /gnu/store -mindepth 1 -maxdepth 1 -printf '%f\n' \
+                >"$evidence/failure-post-store-names.unsorted" \
+                2>"$evidence/failure-post-store-names.stderr"
+            failure_store_status=$?
+            if [ "$failure_store_status" -eq 0 ]; then
+                LC_ALL=C sort \
+                    "$evidence/failure-post-store-names.unsorted" \
+                    >"$failure_store" \
+                    2>"$evidence/failure-post-store-sort.stderr"
+                failure_sort_status=$?
+            fi
+        fi
+
+        if [ "$failure_store_status" -eq 0 ] &&
+            [ "$failure_sort_status" -eq 0 ] &&
+            [ -f "$failure_store" ]; then
+            comm -13 \
+                "$evidence/pre-store-names.txt" \
+                "$failure_store" \
+                >"$evidence/failure-store-additions.txt"
+            failure_additions_status=$?
+            comm -23 \
+                "$evidence/pre-store-names.txt" \
+                "$failure_store" \
+                >"$evidence/failure-store-removals.txt"
+            failure_removals_status=$?
+            if [ "$failure_additions_status" -eq 0 ] &&
+                [ "$failure_removals_status" -eq 0 ]; then
+                failure_additions=$(
+                    wc -l <"$evidence/failure-store-additions.txt" |
+                        tr -d ' '
+                )
+                failure_removals=$(
+                    wc -l <"$evidence/failure-store-removals.txt" |
+                        tr -d ' '
+                )
+                : >"$evidence/failure-store-addition-classification.tsv"
+                if [ "$plan_valid" -eq 1 ] &&
+                    [ -f "$evidence/derivation-plan.stdout" ]; then
+                    failure_plan=VALID
+                fi
+                while IFS= read -r name; do
+                    [ -n "$name" ] || continue
+                    path=/gnu/store/$name
+                    if [ "$failure_plan" = VALID ]; then
+                        if grep -F -x "$path" \
+                            "$evidence/derivation-plan.stdout" \
+                            >/dev/null; then
+                            classification=DERIVATION-PLAN
+                            failure_plan_paths=$((failure_plan_paths + 1))
+                        else
+                            classification=UNRELATED
+                            failure_unrelated=$((failure_unrelated + 1))
+                        fi
+                    else
+                        classification=UNCLASSIFIED
+                        failure_unclassified=$((failure_unclassified + 1))
+                    fi
+                    printf '%s\t%s\n' "$classification" "$path" \
+                        >>"$evidence/failure-store-addition-classification.tsv"
+                done <"$evidence/failure-store-additions.txt"
+            fi
+        fi
+
+        printf '%s\n' \
+            "schema=p5.2b-d4b-failure-evidence/v1" \
+            "checkpoint=$head" \
+            "original-exit-status=$status" \
+            "lower-status=$lower_status" \
+            "output-reader-status=$reader_status" \
+            "derivation-plan-status=$plan_status" \
+            "build-status=$build_status" \
+            "postflight-status=$postflight_status" \
+            "independent-live-status=$independent_live_status" \
+            "independent-store-status=$independent_store_status" \
+            "independent-store-sort-status=$independent_sort_status" \
+            "capture-mode=$failure_capture_mode" \
+            "post-live-status=$failure_live_status" \
+            "post-store-status=$failure_store_status" \
+            "post-store-sort-status=$failure_sort_status" \
+            "store-additions=$failure_additions" \
+            "store-removals=$failure_removals" \
+            "derivation-plan=$failure_plan" \
+            "store-additions-derivation-plan=$failure_plan_paths" \
+            "store-additions-unrelated=$failure_unrelated" \
+            "store-additions-unclassified=$failure_unclassified" \
+            >"$evidence/failure-result.tsv"
+    fi
+    if [ -d "$work/source" ]; then
+        chmod -R u+w "$work/source"
+    fi
+    rm -rf -- "$work"
+    exit "$status"
+}
+trap cleanup 0
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+mkdir -p \
+    "$work/home" \
+    "$work/cache" \
+    "$work/tmp" \
+    "$work/cwd" \
+    "$work/pre" \
+    "$work/post" \
+    "$work/source"
+
+if ! run_clean_git -C "$repo" archive --format=tar "$head" \
+    >"$work/source.tar" 2>"$work/source-archive.stderr"; then
+    cat "$work/source-archive.stderr" >&2
+    fail "cannot export the accepted helper checkpoint"
+fi
+[ ! -s "$work/source-archive.stderr" ] || {
+    cat "$work/source-archive.stderr" >&2
+    fail "accepted helper checkpoint export emitted diagnostics"
+}
+if ! env -i PATH="$PATH" LC_ALL=C \
+    tar -xf "$work/source.tar" -C "$work/source" \
+    >"$work/source-extract.stdout" 2>"$work/source-extract.stderr"; then
+    cat "$work/source-extract.stdout" >&2
+    cat "$work/source-extract.stderr" >&2
+    fail "cannot extract the accepted helper checkpoint"
+fi
+[ ! -s "$work/source-extract.stdout" ] ||
+    fail "accepted helper checkpoint extraction emitted stdout"
+[ ! -s "$work/source-extract.stderr" ] || {
+    cat "$work/source-extract.stderr" >&2
+    fail "accepted helper checkpoint extraction emitted diagnostics"
+}
+
+frozen_repo=$work/source
+frozen_module_dir=$frozen_repo/guix/modules
+frozen_build_expression=\
+$frozen_repo/guix/machines/guixpc/p5.2b-d4b-fused-program.scm
+frozen_output_reader=\
+$frozen_repo/guix/machines/guixpc/p5.2b-d4b-derivation-output.scm
+frozen_plan_reader=\
+$frozen_repo/guix/machines/guixpc/p5.2b-d4b-derivation-plan.scm
+frozen_live_snapshot=\
+$frozen_repo/tests/guix-system-pruning-d4b-live-snapshot
+for source in \
+    "$frozen_build_expression" \
+    "$frozen_output_reader" \
+    "$frozen_plan_reader" \
+    "$frozen_live_snapshot"; do
+    if [ ! -f "$source" ] || [ -L "$source" ]; then
+        fail "checkpoint export contains an invalid realization input: $source"
+    fi
+done
+[ -x "$frozen_live_snapshot" ] ||
+    fail "checkpoint export contains a non-executable live helper"
+if [ ! -d "$frozen_module_dir" ] || [ -L "$frozen_module_dir" ]; then
+    fail "checkpoint export contains an invalid module directory"
+fi
+if [ -n "$(find "$frozen_module_dir" -name '*.go' -print -quit)" ]; then
+    fail "checkpoint export contains a compiled Guile object"
+fi
+chmod -R a-w "$frozen_repo"
+
+snapshot_manifest() {
+    manifest_root=$1
+    manifest_prefix=$2
+    find "$manifest_root" -printf '%P\t%y\t%m\t%l\n' \
+        >"$manifest_prefix.metadata.unsorted"
+    LC_ALL=C sort "$manifest_prefix.metadata.unsorted" \
+        >"$manifest_prefix.metadata"
+    find "$manifest_root" -type f -print \
+        >"$manifest_prefix.files.unsorted"
+    LC_ALL=C sort "$manifest_prefix.files.unsorted" \
+        >"$manifest_prefix.files"
+    : >"$manifest_prefix.sha256"
+    while IFS= read -r file; do
+        relative=${file#"$manifest_root"/}
+        file_sha=$(sha256_file "$file")
+        printf '%s\t%s\n' "$file_sha" "$relative" \
+            >>"$manifest_prefix.sha256"
+    done <"$manifest_prefix.files"
+}
+
+snapshot_manifest "$frozen_repo" "$work/source-pre"
+source_archive_sha=$(sha256_file "$work/source.tar")
+source_archive_size=$(stat -c '%s' "$work/source.tar")
+source_file_count=$(wc -l <"$work/source-pre.files" | tr -d ' ')
+source_metadata_sha=$(sha256_file "$work/source-pre.metadata")
+source_files_sha=$(sha256_file "$work/source-pre.sha256")
+printf '%s\n' \
+    "schema=p5.2b-d4b-source-snapshot/v1" \
+    "checkpoint=$head" \
+    "archive=$source_archive_sha:$source_archive_size" \
+    "regular-files=$source_file_count" \
+    "metadata-sha256=$source_metadata_sha" \
+    "file-identities-sha256=$source_files_sha" \
+    >"$work/source-snapshot.tsv"
+
+set +e
+"$preflight" --capture "$work/pre" \
+    >"$work/preflight.stdout" 2>"$work/preflight.stderr"
+preflight_status=$?
+set -e
+[ "$preflight_status" -eq 0 ] || {
+    cat "$work/preflight.stderr" >&2
+    cat "$work/preflight.stdout" >&2
+    fail "fresh bounded preflight failed"
+}
+[ ! -s "$work/preflight.stderr" ] || {
+    cat "$work/preflight.stderr" >&2
+    fail "fresh bounded preflight emitted diagnostics"
+}
+expected_token=$(awk -F = '$1 == "acceptance-token" {
+        sub(/^acceptance-token=/, "")
+        print
+    }' "$work/preflight.stdout")
+[ -n "$expected_token" ] ||
+    fail "fresh bounded preflight omitted its exact acceptance token"
+[ "$acceptance_token" = "$expected_token" ] ||
+    fail "exact fresh D4b realization acceptance token is absent or stale"
+snapshot=$(awk -F = '$1 == "snapshot" { print $2 }' \
+    "$work/preflight.stdout")
+[ "${#snapshot}" -eq 64 ] ||
+    fail "fresh bounded preflight snapshot digest is invalid"
+
+evidence=/tmp/p52b-d4b-realization-evidence.$head
+if [ -e "$evidence" ] || [ -L "$evidence" ]; then
+    fail "bounded realization evidence directory already exists"
+fi
+mkdir "$evidence"
+cp "$work/pre/live.tsv" "$evidence/pre-live.tsv"
+cp "$work/pre/store-names.txt" "$evidence/pre-store-names.txt"
+cp "$work/pre/packet.txt" "$evidence/pre-packet.txt"
+cp "$work/preflight.stdout" "$evidence/preflight.stdout"
+cp "$work/preflight.stderr" "$evidence/preflight.stderr"
+cp "$work/source-archive.stderr" "$evidence/source-archive.stderr"
+cp "$work/source-extract.stdout" "$evidence/source-extract.stdout"
+cp "$work/source-extract.stderr" "$evidence/source-extract.stderr"
+cp "$work/source-snapshot.tsv" "$evidence/source-snapshot.tsv"
+cp "$work/source-pre.metadata" "$evidence/source-pre.metadata"
+cp "$work/source-pre.sha256" "$evidence/source-pre.sha256"
+
+run_pinned_guix() {
+    env -i \
+        HOME="$work/home" \
+        USER="$expected_user" \
+        LOGNAME="$expected_user" \
+        PATH="$PATH" \
+        LC_ALL=C \
+        TZ=UTC \
+        GUILE_AUTO_COMPILE=0 \
+        SK_P52B_D4B_ACCEPTANCE_TOKEN="$acceptance_token" \
+        TMPDIR="$work/tmp" \
+        XDG_CACHE_HOME="$work/cache" \
+        "$expected_guix" "$@"
+}
+
+cd "$work/cwd"
+[ ! -e result ] || fail "isolated build directory already has a result link"
+
+mutation_started=1
+lower_status=RUNNING
+set +e
+run_pinned_guix build \
+    --derivations \
+    --no-substitutes \
+    --no-grafts \
+    --no-offload \
+    --max-jobs=1 \
+    --cores=1 \
+    --system=x86_64-linux \
+    -L "$frozen_module_dir" \
+    -f "$frozen_build_expression" \
+    >"$work/lower.stdout" 2>"$work/lower.stderr"
+lower_status=$?
+set -e
+cp "$work/lower.stdout" "$evidence/lower.stdout"
+cp "$work/lower.stderr" "$evidence/lower.stderr"
+[ "$lower_status" -eq 0 ] || {
+    cat "$work/lower.stdout" >&2
+    cat "$work/lower.stderr" >&2
+    fail "the one accepted derivation lowering failed"
+}
+[ "$(wc -l <"$work/lower.stdout" | tr -d ' ')" -eq 1 ] ||
+    fail "lowering did not return exactly one derivation"
+derivation=$(sed -n '1p' "$work/lower.stdout")
+if [ ! -f "$derivation" ] || [ -L "$derivation" ]; then
+    fail "lowering did not return one direct derivation file"
+fi
+[ "$(readlink -f "$derivation")" = "$derivation" ] ||
+    fail "lowered derivation path is not canonical"
+[ "$(dirname "$derivation")" = /gnu/store ] ||
+    fail "lowered derivation is outside /gnu/store"
+case $derivation in
+    *.drv) ;;
+    *) fail "lowered path is not a derivation" ;;
+esac
+
+set +e
+reader_status=RUNNING
+run_pinned_guix repl -q -- \
+    "$frozen_output_reader" "$derivation" \
+    >"$work/output-reader.stdout" 2>"$work/output-reader.stderr"
+reader_status=$?
+set -e
+cp "$work/output-reader.stdout" "$evidence/output-reader.stdout"
+cp "$work/output-reader.stderr" "$evidence/output-reader.stderr"
+[ "$reader_status" -eq 0 ] || {
+    cat "$work/output-reader.stdout" >&2
+    cat "$work/output-reader.stderr" >&2
+    fail "cannot read the one lowered output"
+}
+[ ! -s "$work/output-reader.stderr" ] || {
+    cat "$work/output-reader.stderr" >&2
+    fail "derivation output reader emitted diagnostics"
+}
+[ "$(wc -l <"$work/output-reader.stdout" | tr -d ' ')" -eq 1 ] ||
+    fail "lowered derivation did not report exactly one output"
+output=$(sed -n '1p' "$work/output-reader.stdout")
+[ "$(dirname "$output")" = /gnu/store ] ||
+    fail "lowered output is outside /gnu/store"
+case $output in
+    *-system-pruning-loaded.scm) ;;
+    *) fail "lowered output has the wrong artifact name" ;;
+esac
+
+set +e
+plan_status=RUNNING
+run_pinned_guix repl -q -- \
+    "$frozen_plan_reader" "$derivation" \
+    >"$work/derivation-plan.stdout" 2>"$work/derivation-plan.stderr"
+plan_status=$?
+set -e
+cp "$work/derivation-plan.stdout" "$evidence/derivation-plan.stdout"
+cp "$work/derivation-plan.stderr" "$evidence/derivation-plan.stderr"
+[ "$plan_status" -eq 0 ] || {
+    cat "$work/derivation-plan.stdout" >&2
+    cat "$work/derivation-plan.stderr" >&2
+    fail "cannot enumerate the lowered derivation build plan"
+}
+[ ! -s "$work/derivation-plan.stderr" ] || {
+    cat "$work/derivation-plan.stderr" >&2
+    fail "derivation build-plan reader emitted diagnostics"
+}
+[ -s "$work/derivation-plan.stdout" ] ||
+    fail "derivation build-plan reader returned no paths"
+LC_ALL=C sort -u "$work/derivation-plan.stdout" \
+    >"$work/derivation-plan.sorted"
+cmp -s "$work/derivation-plan.stdout" "$work/derivation-plan.sorted" ||
+    fail "derivation build-plan paths are not unique and sorted"
+grep -F -x "$derivation" "$work/derivation-plan.stdout" >/dev/null ||
+    fail "derivation build plan omits the accepted derivation"
+grep -F -x "$output" "$work/derivation-plan.stdout" >/dev/null ||
+    fail "derivation build plan omits the accepted output"
+plan_valid=1
+
+if [ -e "$output" ]; then
+    realization_state=ALREADY-PRESENT
+else
+    realization_state=REALIZED
+fi
+
+set +e
+build_status=RUNNING
+run_pinned_guix build \
+    --no-substitutes \
+    --no-grafts \
+    --no-offload \
+    --max-jobs=1 \
+    --cores=1 \
+    --system=x86_64-linux \
+    "$derivation" \
+    >"$work/build.stdout" 2>"$work/build.stderr"
+build_status=$?
+set -e
+cp "$work/build.stdout" "$evidence/build.stdout"
+cp "$work/build.stderr" "$evidence/build.stderr"
+[ "$build_status" -eq 0 ] || {
+    cat "$work/lower.stderr" >&2
+    cat "$work/build.stdout" >&2
+    cat "$work/build.stderr" >&2
+    fail "the accepted realization or confirmation failed"
+}
+[ "$(wc -l <"$work/build.stdout" | tr -d ' ')" -eq 1 ] ||
+    fail "realization did not return exactly one output"
+built_output=$(sed -n '1p' "$work/build.stdout")
+[ "$built_output" = "$output" ] ||
+    fail "built output differs from the lowered derivation output"
+if [ ! -f "$output" ] || [ -L "$output" ]; then
+    fail "realization did not produce one direct regular file"
+fi
+[ "$(sha256_file "$output")" = \
+    "$expected_render_sha" ] ||
+    fail "realized program differs from the published D4a render"
+[ "$(stat -c '%s' "$output")" -eq "$expected_render_size" ] ||
+    fail "realized program size differs from the published D4a render"
+[ -z "$(find . -maxdepth 1 -name 'result*' -print -quit)" ] ||
+    fail "Guix unexpectedly created a result link or root"
+
+set +e
+postflight_status=RUNNING
+"$preflight" --capture "$work/post" \
+    >"$work/postflight.stdout" 2>"$work/postflight.stderr"
+postflight_status=$?
+set -e
+cp "$work/postflight.stdout" "$evidence/postflight.stdout"
+cp "$work/postflight.stderr" "$evidence/postflight.stderr"
+[ "$postflight_status" -eq 0 ] || {
+    cat "$work/postflight.stderr" >&2
+    cat "$work/postflight.stdout" >&2
+    fail "bounded postflight capture failed"
+}
+[ ! -s "$work/postflight.stderr" ] || {
+    cat "$work/postflight.stderr" >&2
+    fail "bounded postflight emitted diagnostics"
+}
+cp "$work/post/live.tsv" "$evidence/post-live.tsv"
+cp "$work/post/store-names.txt" "$evidence/post-store-names.txt"
+cp "$work/post/packet.txt" "$evidence/post-packet.txt"
+independent_live_status=RUNNING
+set +e
+"$frozen_live_snapshot" \
+    >"$work/post-live-independent.tsv" \
+    2>"$work/post-live-independent.stderr"
+independent_live_status=$?
+set -e
+cp "$work/post-live-independent.tsv" \
+    "$evidence/post-live-independent.tsv"
+cp "$work/post-live-independent.stderr" \
+    "$evidence/post-live-independent.stderr"
+[ "$independent_live_status" -eq 0 ] || {
+    cat "$work/post-live-independent.stderr" >&2
+    cat "$work/post-live-independent.tsv" >&2
+    fail "independent terminal live snapshot failed"
+}
+[ ! -s "$work/post-live-independent.stderr" ] || {
+    cat "$work/post-live-independent.stderr" >&2
+    fail "independent terminal live snapshot emitted diagnostics"
+}
+independent_store_status=RUNNING
+set +e
+find /gnu/store -mindepth 1 -maxdepth 1 -printf '%f\n' \
+    >"$work/post-store-independent.unsorted" \
+    2>"$work/post-store-independent-find.stderr"
+independent_store_status=$?
+set -e
+cp "$work/post-store-independent.unsorted" \
+    "$evidence/post-store-independent.unsorted"
+cp "$work/post-store-independent-find.stderr" \
+    "$evidence/post-store-independent-find.stderr"
+[ "$independent_store_status" -eq 0 ] || {
+    cat "$work/post-store-independent-find.stderr" >&2
+    fail "independent terminal store inventory failed"
+}
+[ ! -s "$work/post-store-independent-find.stderr" ] || {
+    cat "$work/post-store-independent-find.stderr" >&2
+    fail "independent terminal store inventory emitted diagnostics"
+}
+independent_sort_status=RUNNING
+set +e
+LC_ALL=C sort "$work/post-store-independent.unsorted" \
+    >"$work/post-store-independent.txt" \
+    2>"$work/post-store-independent-sort.stderr"
+independent_sort_status=$?
+set -e
+cp "$work/post-store-independent.txt" \
+    "$evidence/post-store-independent.txt"
+cp "$work/post-store-independent-sort.stderr" \
+    "$evidence/post-store-independent-sort.stderr"
+[ "$independent_sort_status" -eq 0 ] || {
+    cat "$work/post-store-independent-sort.stderr" >&2
+    fail "independent terminal store inventory sort failed"
+}
+[ ! -s "$work/post-store-independent-sort.stderr" ] || {
+    cat "$work/post-store-independent-sort.stderr" >&2
+    fail "independent terminal store inventory sort emitted diagnostics"
+}
+cmp -s "$evidence/post-live.tsv" \
+    "$evidence/post-live-independent.tsv" ||
+    fail "preflight and independent terminal live snapshots differ"
+cmp -s "$evidence/post-store-names.txt" \
+    "$evidence/post-store-independent.txt" ||
+    fail "preflight and independent terminal store inventories differ"
+postflight_completed=1
+cmp -s "$evidence/pre-live.tsv" "$evidence/post-live.tsv" ||
+    fail "selected live transaction surfaces changed during realization"
+comm -13 \
+    "$evidence/pre-store-names.txt" \
+    "$evidence/post-store-names.txt" \
+    >"$evidence/store-additions.txt"
+comm -23 \
+    "$evidence/pre-store-names.txt" \
+    "$evidence/post-store-names.txt" \
+    >"$evidence/store-removals.txt"
+[ ! -s "$evidence/store-removals.txt" ] ||
+    fail "top-level store names disappeared during realization"
+additions=$(wc -l <"$evidence/store-additions.txt" | tr -d ' ')
+grep -F -x "$(basename "$derivation")" \
+    "$evidence/post-store-names.txt" >/dev/null ||
+    fail "lowered derivation is absent from the post-store inventory"
+grep -F -x "$(basename "$output")" \
+    "$evidence/post-store-names.txt" >/dev/null ||
+    fail "realized output is absent from the post-store inventory"
+
+unrelated=0
+: >"$evidence/store-addition-classification.tsv"
+while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    path=/gnu/store/$name
+    if grep -F -x "$path" \
+        "$evidence/derivation-plan.stdout" >/dev/null; then
+        classification=DERIVATION-PLAN
+    else
+        classification=UNRELATED
+        unrelated=$((unrelated + 1))
+    fi
+    printf '%s\t%s\n' "$classification" "$path" \
+        >>"$evidence/store-addition-classification.tsv"
+done <"$evidence/store-additions.txt"
+[ "$unrelated" -eq 0 ] ||
+    fail "top-level store additions escape the accepted derivation build plan"
+
+snapshot_manifest "$frozen_repo" "$work/source-post"
+cp "$work/source-post.metadata" "$evidence/source-post.metadata"
+cp "$work/source-post.sha256" "$evidence/source-post.sha256"
+cmp -s "$work/source-pre.metadata" "$work/source-post.metadata" ||
+    fail "accepted checkpoint export metadata changed during realization"
+cmp -s "$work/source-pre.sha256" "$work/source-post.sha256" ||
+    fail "accepted checkpoint export bytes changed during realization"
+
+if ! terminal_git_status=$(run_clean_git -C "$repo" status --porcelain); then
+    fail "cannot inspect the terminal checkout state"
+fi
+[ -z "$terminal_git_status" ] ||
+    fail "accepted checkout changed during realization"
+terminal_top=$(run_clean_git -C "$repo" rev-parse --show-toplevel)
+terminal_git_dir=$(run_clean_git -C "$repo" rev-parse --absolute-git-dir)
+terminal_head=$(run_clean_git -C "$repo" rev-parse HEAD)
+terminal_origin=$(run_clean_git -C "$repo" rev-parse origin/main)
+[ "$terminal_top" = "$repo" ] ||
+    fail "terminal Git proof resolved another work tree"
+if [ "$terminal_git_dir" != "$repo/.git" ] ||
+    [ ! -d "$terminal_git_dir" ] ||
+    [ -L "$terminal_git_dir" ]; then
+    fail "terminal Git proof resolved another Git directory"
+fi
+[ "$terminal_head" = "$head" ] ||
+    fail "accepted checkout HEAD changed during realization"
+[ "$terminal_origin" = "$head" ] ||
+    fail "origin/main changed during realization"
+
+cat "$work/lower.stderr" >&2
+cat "$work/build.stderr" >&2
+printf '%s\n' \
+    "schema=p5.2b-d4b-first-realization/v1" \
+    "authorization=EXACT-COMMIT-BOUND-TOKEN" \
+    "checkpoint=$head" \
+    "render=$expected_render_sha:$expected_render_size" \
+    "preflight-snapshot=$snapshot" \
+    "derivation=$derivation" \
+    "output=$output" \
+    "state=$realization_state" \
+    "lower-status=$lower_status" \
+    "output-reader-status=$reader_status" \
+    "derivation-plan-status=$plan_status" \
+    "build-status=$build_status" \
+    "postflight-status=$postflight_status" \
+    "independent-live-status=$independent_live_status" \
+    "independent-store-status=$independent_store_status" \
+    "independent-store-sort-status=$independent_sort_status" \
+    "store-additions=$additions" \
+    "store-additions-unrelated=0" \
+    "store-removals=0" \
+    "selected-live-surfaces=IDENTICAL" \
+    "result-link=ABSENT" \
+    "evidence=$evidence" \
+    "live-action=NOT-GRANTED" \
+    "$program_name: PASS" \
+    >"$work/realization-result.tsv"
+cp "$work/realization-result.tsv" "$evidence/realization-result.tsv"
+cat "$work/realization-result.tsv"

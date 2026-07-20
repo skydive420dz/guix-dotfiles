@@ -3,7 +3,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:design:
-#+status: accepted design checkpoint; D4a implementation not started
+#+status: accepted design; D4a published; D4b helper source not yet published
 
 * Outcome
 
@@ -293,7 +293,9 @@ The evidence must prove:
 - it rejects an alternate manifest, copied-out program, wrong embedded hash,
   and unsupported live action; the external gate rejects an unrecorded
   alternate store output;
-- the full D4a and legacy 98-point matrices pass through that exact program;
+- the six D4a production-module suites and all legacy 98 interruption points
+  pass through that exact program, while the renderer suite remains the
+  byte-frozen source gate;
 - raw channels, closed result, derivation/output identities, program hash and
   size, and loaded-byte provenance are frozen; and
 - selected live transaction surfaces remain unchanged.
@@ -624,5 +626,10 @@ The bounded D4a source/fixture implementation and final validation are recorded
 in [[file:2026-07-19-p5.2b-d4a-reconciliation-fused-source.org][the P5.2b-D4a reconciliation and fused-program source checkpoint]].
 
 That successor realizes no store program and authorizes no D4b or live action.
-D4b remains blocked until the exact D4a checkpoint is published, fetched, and
-proven clean.
+D4a is now published at
+=41e11155f817c8ccf2f8e8b3c9c62af566f53209=.  The subsequent
+[[file:2026-07-19-p5.2b-d4b-helper-source.org][D4b source-only helper checkpoint]]
+prepares the exact-input constructor and runtime evidence gates while
+deliberately performing no lowering or realization.  D4b's one permitted
+synthetic realization remains blocked until that helper checkpoint is
+published, fetched cleanly, and covered by an explicit bounded-effect grant.
