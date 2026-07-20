@@ -3,7 +3,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:testing:
-#+status: source/fixture checkpoint complete at 41e1115; D4b evidence published at 9577e1d; D4c.1 next
+#+status: source/fixture checkpoint complete at 41e1115; D4b evidence published at 9577e1d; D4c.1a next
 
 * Outcome
 
@@ -343,4 +343,5 @@ lower a derivation or realize a store output.  It was later published at
 synthetic artifact was realized.  Runtime-v4 and checkout-independence later
 passed from published validator checkpoint =cdd4bd4=.  The runtime proof is
 complete, and its final docs/data evidence is published with clean upstream
-equality at =9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1 is next.
+equality at =9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1a
+production source/schema/fixture work is next; live capture remains D4c.1b.

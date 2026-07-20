@@ -4,7 +4,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:runtime:recovery:evidence:
-#+status: D4b evidence complete; published at 9577e1d; D4c.1 next
+#+status: D4b evidence complete; published at 9577e1d; D4c.1a next
 
 * Outcome
 
@@ -54,8 +54,9 @@ The source-only harness correction was later published with clean equality at
 =cdd4bd489313f36c325ea0841ad7586b6d152904=.  Its third recovery completed
 the exact runtime-v4 and checkout-independence gates.  The bounded runtime
 proof is complete, and its docs/data evidence is published with clean upstream
-equality at =9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1 fresh
-live-state review is now eligible.
+equality at =9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1a production
+source/schema/fixture work is now eligible; D4c.1b live-state capture remains
+later.
 
 * Retained realization
 
@@ -371,8 +372,9 @@ was created or run.  The failed runtime attempts remain exact historical
 evidence rather than being discarded or overwritten.
 
 The D4b evidence is complete and published with clean upstream equality at
-=9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1 may now begin only as a
-fresh, read-only live-state review and manifest-publication gate.
+=9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1a may now begin only as
+source/schema/fixture work; the fresh read-only live-state review and
+manifest-publication gate remains D4c.1b.
 
 * Exact nonclaims
 

@@ -1,0 +1,153 @@
+#+title: P5.2b-D4c.1a live-manifest protocol and production-source gap
+#+date: 2026-07-20
+#+startup: overview
+#+category: guixpc
+#+filetags: :guixpc:guix:scheme:grub:recovery:source:
+#+status: bounded protocol checkpoint; D4c.1a remains open
+
+* Outcome
+
+The source/publication order is now explicit:
+
+1. D4c.1a publishes the complete production source contract.
+2. D4c.1b captures and publishes the live manifest from that exact source.
+3. D4c.2 changes no semantic source; it only builds and verifies the exact
+   manifest-specific program.
+
+The first bounded D4c.1a implementation adds:
+
+- [[file:../../guix/modules/sk/system-pruning-live-manifest.scm][the additive pure live-manifest module]]; and
+- [[file:../../tests/guix-system-pruning-live-manifest-check.scm][its positive and adversarial protocol fixture]].
+
+The historical D3/D4a/D4b fixture/source, artifact, and machine-readable
+evidence inputs remain byte-preserved.  Their narrative Org audits receive
+roadmap-only status and handoff corrections in this checkpoint.
+
+This is not D4c.1a completion.  The deterministic collector, live-specific
+boundary/journal/reconciliation core, exact D5 grant-token grammar, production
+runtime adapter, fused renderer/driver, and their complete synthetic gates
+remain required before any live manifest may be captured.
+
+* Why the extra source checkpoint is required
+
+The previous roadmap said that D4c.1 should both use a reviewed collector and
+publish a manifest that binds the program-source checkpoint.  No production
+collector or consumer existed.  Generating the manifest from uncommitted
+source would violate clean-published provenance; committing source and
+manifest together would make the source-checkpoint binding circular.
+
+The corrected D4c.1a -> D4c.1b ordering removes that cycle.  The manifest will
+bind an already published source checkpoint and exact regular-file
+SHA256/size identities.  Its bytes still omit its own SHA256, the future
+program store path/hash, and the final direct program-root target.
+
+* Bounded protocol currently enforced
+
+The current schema is =p5.2b-system-prune-live-manifest/v1=.  It requires
+canonical ordered TSV with a final newline and fixes:
+
+- =mode LIVE-REVIEW-ONLY=, =status REVIEW-ONLY=, and
+  =authorization NOT-GRANTED=;
+- source, D4b evidence, D4b validator, pinned Guix, and pinned Guile
+  identities;
+- exact program-source path/SHA256/size records;
+- every System/Home/Pull generation raw/canonical tuple and every profile or
+  runtime pointer;
+- the D-34 selected/retained System partition, exact pin tuples, and exact
+  count transition;
+- the pin-file identity, installed GRUB, retained-only GRUB, old/new
+  =bootcfg=, and successful forward =COMPLETE= expected postflight;
+- a non-following EFI-tree inventory, selected boot-variable records, and
+  explicit one-shot-variable absence;
+- absent transaction/root/lock/temporary prestates and manifest-hash formulas;
+- one recovery-root declaration per selected System link plus old/new
+  =bootcfg=;
+- the exact zero-argument =live-verify=, =live-apply=, and =live-recover=
+  interface;
+- absent execution and recovery grant tokens;
+- the currently declared successful-forward
+  journal/root/lock/transaction policy; and
+- explicit prohibitions plus =program-build/lowering/realization NOT-RUN= and
+  =live-action NOT-GRANTED=.
+
+The validator rejects unknown, missing, duplicated, reordered, malformed, or
+unsafe records; partition/count/root drift; manifest self-reference; a future
+program target; formula expansion; incomplete EFI or declared forward
+postflight policy; action or grant widening; and any effect claim.
+
+This bounded checkpoint does not yet freeze the final production
+=source-input= label/path inventory or exact retained-GRUB artifact path:
+several required adapter, collector, and driver files do not exist yet.  The
+current validator closes record shape/uniqueness/order only.  D4c.1a must
+freeze the complete exact inventory after those additive sources exist and
+before D4c.1b captures a manifest.
+
+Likewise, the declared postflight rows describe only a successful forward
+=COMPLETE= transaction.  The complete =ROLLED-BACK= postflight branch and the
+terminal disposition of =/var/guix/gcroots/p52b-system-prune= remain open
+production-adapter decisions.  They must be frozen and tested before D4c.1a
+closes; D4c.1b remains blocked in the meantime.
+
+* Fresh read-only design inventory
+
+A repeated read-only GuixPC audit began and ended at clean
+=HEAD == origin/main == direct GitHub main=
+=528235bcffbc30eb246ef63409847146c29377c8=.  Boot ID remained
+=64140768-9522-4cad-8021-9db54e070e8a=.
+
+The audit freshly measured, rather than assumed:
+
+- System/Home/Pull counts =86/17/5=;
+- 78 selected and eight retained System links;
+- current and booted System generation 87;
+- all 26 pins matching their live links;
+- the installed GRUB and old =bootcfg= identities;
+- the retained-only D2b store target and tracked bytes still exact at SHA256
+  =70965414824c26e1712c6a7a51efd9517633eb3c83f36f88927565c87807496b=
+  and 5,163 bytes;
+- all reserved transaction, root, lock, and temporary surfaces absent; and
+- stable readable EFI-tree and selected boot-variable inventories.
+
+These observations are design evidence only.  They are not the D4c.1b
+manifest and do not freeze the live machine.  D4c.1b must recompute them with
+the exact published collector.
+
+* Production-source gap
+
+The adapter review stopped safely because the existing D4a interfaces are
+deliberately closed over the synthetic fixture:
+
+- =(sk system-pruning-boundary)= rejects any mode other than =FIXTURE-ONLY=
+  and emits a fixture-only journal header;
+- =(sk system-pruning-phase-engine)= calls that validator unconditionally;
+- =(sk system-pruning-reconciliation)= requires =FIXTURE-ONLY=,
+  =NOT-GRANTED=, a non-root sentinel fixture, and fixture-root descendants,
+  and exports only =sk:reconcile-synthetic!=; and
+- the design describes D5 grant semantics but has no exact token byte
+  encoding/parser.
+
+The correct successor is additive live-specific source.  It must preserve the
+frozen fixture files, define the live boundary/journal/reconciliation and
+grant grammar, implement the injected production adapter, then add the
+collector and fused renderer/driver.  It must also freeze the complete
+source-input inventory, =ROLLED-BACK= postflight branch, and recovery-root-base
+terminal disposition.  D4c.1a remains BACKLOG until those gates are complete
+and published.
+
+* Validation and nonclaims
+
+The pure manifest fixture currently passes 90 checks.  Final checkpoint
+validation must additionally include warning-fatal compilation, independent
+review, =git diff --check=, Org lint, and the unchanged D4a/D4b regression
+gates before publication.
+
+This checkpoint ran no Guix lowering or build, created no result or GC root,
+captured no live manifest, opened no transaction, wrote no GRUB/=bootcfg=/EFI
+surface, deleted no generation, ran no GC, activated or reconfigured nothing,
+and did not reboot.
+
+* Next
+
+Publish this bounded protocol checkpoint, prove clean upstream equality, and
+continue D4c.1a with the additive live boundary/grant/runtime source.  D4c.1b
+remains blocked until the complete D4c.1a source contract is published.

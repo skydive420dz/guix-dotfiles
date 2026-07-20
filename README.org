@@ -172,10 +172,10 @@ clean-published evidence now passes direct warning-free compilation, the
 standalone and strict 98-point matrices, and an exact 129-record selected-live-
 surface comparison.  That evidence is published at =b1d6ecb=.  Accepted
 decision D-41 now separates D4a source/fixtures, D4b clean-published synthetic
-fused-program evidence, D4c.1 live-manifest publication, D4c.2 exact live
-fused-program evidence, D4c.3 unchanged-state execution-packet acceptance and
-stop, and the separately authorized D5 transaction.  Every live action remains
-blocked.
+fused-program evidence, D4c.1a production source/schema/fixture publication,
+D4c.1b live-manifest publication, D4c.2 exact live fused-program evidence,
+D4c.3 unchanged-state execution-packet acceptance and stop, and the separately
+authorized D5 transaction.  Every live action remains blocked.
 
 P5.2b-D3a is complete at the source-and-fixture checkpoint, not as an accepted
 live transaction.  Its fixture-only Scheme engine declares 98 interruption points
@@ -257,15 +257,19 @@ published with clean upstream equality at =9577e1d=.  Every live mutation
 remains blocked behind D4c and D5.
 
 Decision D-41 requires one fused store-resident Scheme program with no project
-repository read at runtime.  D4c.1 publishes the live manifest without a
-self-referential future program path; D4c.2 then binds that manifest SHA256 to
-the resulting program store path, file SHA256/size, and pinned runtime.
-D4c.3 accepts a packet naming both identities while execution remains
-=NOT-GRANTED=.  D5 requires a separate exact execution grant after unchanged
-initial preflight; restart recovery instead requires one accepted
-manifest-declared transition and a fresh state-specific continuation grant.
-The program receives its own durable D5 recovery root, removed last only after
-=COMPLETE= or =ROLLED-BACK= and terminal postflight are durable.
+repository read at runtime.  D4c.1a first publishes the additive production
+manifest schema, deterministic read-only collector/verifier, exact live
+renderer/driver/root-adapter source, and synthetic fixtures while retaining
+=authorization NOT-GRANTED=.  D4c.1b then publishes the fresh live manifest
+binding that exact source checkpoint without a self-referential future program
+path.  D4c.2 binds the manifest SHA256 to the resulting program store path,
+file SHA256/size, and pinned runtime without changing semantic source.  D4c.3
+accepts a packet naming both identities while execution remains =NOT-GRANTED=.
+D5 requires a separate exact execution grant after unchanged initial
+preflight; restart recovery instead requires one accepted manifest-declared
+transition and a fresh state-specific continuation grant.  The program
+receives its own durable D5 recovery root, removed last only after =COMPLETE=
+or =ROLLED-BACK= and terminal postflight are durable.
 
 The effects of Guix permitting one local build job and reporting/allowing up
 to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
@@ -369,10 +373,10 @@ compilation, standalone and strict 98-point results, exact 129-record
 selected-surface equality, exact =b1d6ecb= publication, and explicit
 non-claims.
 [[file:docs/audits/2026-07-19-p5.2b-d4-production-boundary-design.org][The P5.2b-D4 production-boundary design]] owns accepted decision D-41,
-the D4a/D4b/D4c.1/D4c.2/D4c.3/D5 safety decomposition, conservative
-reconciliation contract, one fused store-program requirement, non-circular
-manifest/program binding, production-root lifecycle, and exact stop/nonclaim
-gates.
+the D4a/D4b/D4c.1a/D4c.1b/D4c.2/D4c.3/D5 safety decomposition,
+conservative reconciliation contract, one fused store-program requirement,
+non-circular source/manifest/program binding, production-root lifecycle, and
+exact stop/nonclaim gates.
 [[file:docs/audits/2026-07-19-p5.2b-d4a-reconciliation-fused-source.org][The P5.2b-D4a source checkpoint]] owns the closed journal automaton,
 root/orchestrator/reconciliation contracts, phase engine and in-memory runtime,
 ten-packet fused-source renderer, loader integration correction, seven-suite
@@ -549,9 +553,10 @@ production suites, five D4a actions, 11 empty nested-loader sites, and all
 =54 + 44 = 98= artifact points.  The checkout is restored; all failed
 channels, the result/artifact, and the 19-record live snapshot remain exact.
 D4b evidence is complete and published with clean upstream equality at
-=9577e1d=.  D4c.1 live-manifest publication is the next gate; D4c.2 exact
-live-program evidence, D4c.3 unchanged-state execution-packet acceptance, and
-separately authorized D5 execution remain later gates.
+=9577e1d=.  D4c.1a source-only production contract is the next gate; D4c.1b
+live-manifest publication, D4c.2 exact live-program evidence, D4c.3
+unchanged-state execution-packet acceptance, and separately authorized D5
+execution remain later gates.
 P5.3 collection remains separate and unpromoted; no further cleanup is
 authorized.
 
@@ -567,13 +572,26 @@ fixture root failed the artifact's exact capability guard.  Third validator
 checkpoint =cdd4bd4= is published and equal; its exact runtime-v4 and
 checkout-independence packets pass with empty stderr and restored checkout.
 The final D4b docs/data evidence is published with clean upstream equality at
-=9577e1d=.  The current ready action is D4c.1 fresh read-only live-state
-review and manifest publication.  No live program, root, execution, garbage
-collection, activation, reconfiguration, or reboot is authorized.
+=9577e1d=.  The current ready action is D4c.1a additive source-only work for
+the production manifest contract, deterministic read-only collector/verifier,
+live fused-program adapter, and synthetic fixtures.  It must publish cleanly
+and stop without capturing a live manifest, lowering or building a program,
+creating a root, or running a live action.
 
-- [ ] P5.2b-D4c.1: recompute and publish the fresh closed live-state review
-  manifest with =authorization NOT-GRANTED=, then prove upstream equality and
-  stop without a program build, root, or transaction mutation.
+- The first bounded D4c.1a protocol checkpoint adds a pure canonical
+  live-manifest protocol and adversarial fixtures while documenting the exact
+  production-source gap.  Its postflight rows cover only successful forward
+  =COMPLETE=.  D4c.1a remains open for additive live
+  boundary/journal/reconciliation, grant grammar, runtime adapter, collector,
+  fused renderer/driver source, the final exact source-input inventory, the
+  =ROLLED-BACK= postflight branch, and the recovery-root-base terminal
+  disposition.
+- [ ] P5.2b-D4c.1a: publish the closed production source/schema/fixture
+  contract with =authorization NOT-GRANTED= and prove upstream equality.
+- [ ] P5.2b-D4c.1b, only afterward: recompute and publish the fresh closed
+  live-state review manifest binding the exact D4c.1a source checkpoint, prove
+  upstream equality, and stop without a program build, root, authorization, or
+  transaction mutation.
 P5.2a is complete.
 P5.2b-D1 is complete at the source and synthetic-fixture boundary;
 P5.2b-D2a is complete at its source and native-fixture boundary, and D2b is
@@ -582,9 +600,9 @@ published at =676b430=; its first D3b compile gate found two warnings.  The
 minimal D3a correction is published at =0601b9d=.  D3b is evidence-complete
 and published at =b1d6ecb=.  D4b's successful third validator is published
 at =cdd4bd4=; D4b evidence is complete and published with clean upstream
-equality at =9577e1d=.  Live P5.2b remains blocked on D4c.1/D4c.2
-manifest/program publication, D4c.3 packet acceptance, and a separate exact
-D5 execution grant.
+equality at =9577e1d=.  Live P5.2b remains blocked on D4c.1a source-contract,
+D4c.1b manifest, and D4c.2 program publication, D4c.3 packet acceptance, and a
+separate exact D5 execution grant.
 P4.O1 private Org sync/history remains a selectable non-destructive successor.
 P5.3 is not ready, P5.S1 storage reorganization remains parked, and
 backup/restore implementation is parked as P4.3.
@@ -2532,9 +2550,10 @@ The historical live menu contained all 78 candidates twice, so deleting links
 without a new menu would have left 156 stale path occurrences.  The reviewed
 =bootcfg= had only six direct forward references and did not retain every old
 System closure.  The retained-only GRUB artifact and D4b evidence are already
-published.  Live P5.2b still requires D4c.1/D4c.2 manifest/program
-publication, D4c.3 packet acceptance, and the separately granted attended D5
-transaction.  P5.3 remains separate and held.
+published.  Live P5.2b still requires D4c.1a production source-contract,
+D4c.1b manifest, and D4c.2 program publication, D4c.3 packet acceptance, and
+the separately granted attended D5 transaction.  P5.3 remains separate and
+held.
 
 P5.2b-D2a adds =scripts/guix-system-retained-bootcfg= and the Scheme module
 =(sk system-retained-bootcfg)=.  The stage-only input binds the pinned Guix,

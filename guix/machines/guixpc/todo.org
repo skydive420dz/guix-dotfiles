@@ -882,7 +882,7 @@ CLOSED: [2026-07-18 Sat]
 * BACKLOG P5.2b System generation deletion and custom-GRUB boundary
 :PROPERTIES:
 :created: 2026-07-18
-:blocked_by: D4c.1/D4c.2 live manifest/program publication; D4c.3 packet acceptance; separate D5 execution grant
+:blocked_by: D4c.1a production source contract; D4c.1b/D4c.2 live manifest/program publication; D4c.3 packet acceptance; separate D5 execution grant
 :END:
 
 - Evidence: [[file:../../../docs/audits/2026-07-18-p5.2b-custom-grub-safe-system-pruning-design.org][2026-07-18 P5.2b custom-GRUB-safe System-pruning design]].
@@ -1180,31 +1180,74 @@ CLOSED: [2026-07-20 Mon]
   =HEAD == origin/main == GitHub main=, record the publication identity, and
   stop.
 
-** BACKLOG P5.2b-D4c.1 fresh live-state manifest publication
+** BACKLOG P5.2b-D4c.1a production source/schema/fixture contract
 :PROPERTIES:
 :created: 2026-07-19
 :ready_after: 9577e1daac3d5258222d1cbf186facba809d10fb
 :END:
 
+- Protocol checkpoint: [[file:../../../docs/audits/2026-07-20-p5.2b-d4c1a-live-manifest-protocol.org][2026-07-20 D4c.1a live-manifest protocol and production-source gap]].
+- [X] Correct the source/publication ordering and add the first bounded pure,
+  canonical live-manifest protocol/parser/renderer with positive and
+  adversarial fixtures.  Preserve every frozen D3/D4a/D4b source, artifact,
+  fixture, and machine-readable evidence input; limit historical narrative Org
+  changes to roadmap/status corrections.  Do not confuse this checkpoint with
+  the complete production contract.
+- [ ] Add the live-specific boundary/journal/reconciliation contract and exact
+  initial/recovery grant-token grammar.  The existing D4a phase/reconciliation
+  APIs are intentionally =FIXTURE-ONLY= and cannot be widened without
+  invalidating their byte-frozen evidence.
+- [ ] Complete the bounded live-review manifest protocol, deterministic
+  read-only collector/verifier, exact production renderer/driver/root-adapter
+  source, final exact source-input label/path inventory, exact retained-GRUB
+  artifact path, and the remaining synthetic positive/negative fixtures.  Do
+  not widen or rewrite the frozen D3/D4a =FIXTURE-ONLY= contracts.
+- [ ] Implement the declared =live-verify=, =live-apply=, and =live-recover=
+  zero-argument action interface in the production adapter.  The latter two
+  must fail closed without their distinct future exact D5 grants; no external
+  manifest, selector, program path, or arbitrary action argument is accepted.
+- [ ] Bind complete forward and rollback terminal semantics: persistent
+  transaction base, lock inodes, manifest transaction directory, exact
+  =COMPLETE=/=ROLLED-BACK= postflight branches, old-GRUB backup, and the
+  recovery-root-base disposition; removed quarantine, temporaries,
+  candidate/bootcfg roots and namespace; durable program root removed last.
+- [ ] Pass source-only compile/static/fixture, selector, retained-GRUB drift,
+  EFI-inventory, prestate, root/formula, terminal-policy, action/grant,
+  regression, selected-live nonmutation, whitespace, and Org gates.  Publish
+  and prove clean upstream equality, then stop without a live manifest capture,
+  lowering, program build, root, authorization, or live action.
+
+** BACKLOG P5.2b-D4c.1b fresh live-state manifest publication
+:PROPERTIES:
+:created: 2026-07-19
+:blocked_by: published D4c.1a production source/schema/fixture contract
+:END:
+
 - [ ] Recompute every candidate, retained, protected, GRUB/=bootcfg=/EFI,
   transaction-prestate, expected-poststate, candidate/bootcfg root tuple, and
   direct program-root name formula without assuming the historical
-  =86/17/5= or 78-candidate snapshot remains current.
+  =86/17/5= or 78-candidate snapshot remains current.  Use only the exact
+  published D4c.1a collector and validator.
 - [ ] Publish the closed live-state review manifest with
-  =authorization NOT-GRANTED=.  It binds fused-program source inputs but does
-  not contain a self-referential future program path/hash or exact
-  program-root target tuple.
+  =authorization NOT-GRANTED=.  It binds the D4c.1a checkpoint and exact
+  fused-program source inputs but does not contain a self-referential future
+  program path/hash or exact program-root target tuple.
+- [ ] Reuse the D2b retained-only GRUB store target only if the fresh retained
+  partition, pure projection, semantic validation, SHA256/size, and existing
+  store bytes remain exact.  Otherwise stop for a separately published
+  D2b-style immutable restage; do not invent or realize a replacement here.
 - [ ] Re-establish clean upstream equality and stop without a program build,
   root, authorization, or transaction mutation.
 
 ** BACKLOG P5.2b-D4c.2 exact live fused-program build/evidence
 :PROPERTIES:
 :created: 2026-07-19
-:blocked_by: published D4c.1 manifest
+:blocked_by: published D4c.1a source contract and D4c.1b manifest
 :END:
 
-- [ ] Build one fused program embedding the exact published D4c.1 manifest and
-  freeze the non-circular tuple of manifest SHA256, canonical program store
+- [ ] Without changing semantic source, build one fused program from the exact
+  published D4c.1a source and embedding the exact published D4c.1b manifest.
+  Freeze the non-circular tuple of manifest SHA256, canonical program store
   path, program SHA256/size, and pinned Guix/Guile identities.
 - [ ] Repass loader-isolation gates and the read-only live verifier, publish
   the exact evidence, and stop without production roots or a live action.

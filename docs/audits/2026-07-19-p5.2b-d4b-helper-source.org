@@ -3,7 +3,7 @@
 #+date: 2026-07-19
 #+startup: overview
 #+property: header-args :eval never-export
-#+status: helper published at 002d1ef; D4b evidence published at 9577e1d; D4c.1 next
+#+status: helper published at 002d1ef; D4b evidence published at 9577e1d; D4c.1a next
 
 * Outcome
 
@@ -455,5 +455,6 @@ unchanged.
 
 The D4b runtime proof is complete, and its docs/data evidence is published
 with clean upstream equality at
-=9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1 fresh live-state review
-and manifest publication are next; no live action is implicitly authorized.
+=9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1a production
+source/schema/fixture work is next; D4c.1b live-state review and manifest
+publication remain later, and no live action is implicitly authorized.

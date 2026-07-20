@@ -3,7 +3,7 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:design:
-#+status: accepted design; D4b evidence complete and published at 9577e1d; D4c.1 next
+#+status: accepted design; D4b evidence complete and published at 9577e1d; D4c.1a source contract next
 
 * Outcome
 
@@ -14,14 +14,15 @@ into independently published, fail-closed checkpoints:
 |------------+-------+---------------|
 | D4a | conservative reconciliation plus fused-program source and synthetic fixtures | no store build and no live action |
 | D4b | clean-published synthetic fused-program build and evidence | no live manifest or live-target program |
-| D4c.1 | fresh live-state review manifest and publication | authorization remains =NOT-GRANTED= |
+| D4c.1a | additive production schema, collector/verifier, renderer/driver/root-adapter source, and synthetic fixtures | no live manifest capture, store build, root, or live action |
+| D4c.1b | fresh live-state review manifest and publication from the exact D4c.1a source | authorization remains =NOT-GRANTED= |
 | D4c.2 | exact live manifest-specific fused-program build, evidence, and publication | no live transaction mutation |
 | D4c.3 | unchanged-state revalidation and exact attended execution-packet acceptance | execution remains =NOT-GRANTED=; stop |
 | D5 | separate exact execution grant, attended transaction, and exact postflight | stop without GC or P5.3 |
 
-The split makes source review, immutable realization, live-state review,
-authorization, and execution distinct gates.  Neither an implementation
-commit nor an immutable artifact can authorize the next gate.
+The split makes production source review, live-state review, immutable
+realization, authorization, and execution distinct gates.  Neither an
+implementation commit nor an immutable artifact can authorize the next gate.
 
 This document changes roadmap ownership only.  It implements no transaction
 source, builds no new store output, creates no recovery root, and changes no
@@ -191,13 +192,16 @@ A live manifest cannot contain the final fused-program store path when that
 same program embeds the manifest: changing the path would change the manifest,
 which would change the program output again.
 
-D-41 resolves the cycle with two independently published identities:
+D-41 resolves the cycle with three independently published checkpoints:
 
-1. D4c.1 publishes the exact live-state manifest.  It binds the program-source
-   checkpoint and every semantic/runtime input, but does not claim its own
-   future program output path.
-2. D4c.2 builds a program embedding those exact published manifest bytes.  Its
-   evidence binds the tuple:
+1. D4c.1a publishes the complete production program-source contract, including
+   the closed live-review schema, deterministic read-only collector/verifier,
+   production renderer/driver/root adapter, and synthetic fixtures.
+2. D4c.1b publishes the exact live-state manifest.  It binds the published
+   D4c.1a checkpoint and every semantic/runtime input, but does not claim its
+   own future publication commit or program output path.
+3. D4c.2 builds a program from the exact D4c.1a source while embedding those
+   exact published D4c.1b manifest bytes.  Its evidence binds the tuple:
 
    #+begin_example
    manifest SHA256
@@ -206,12 +210,13 @@ D-41 resolves the cycle with two independently published identities:
    pinned Guix/Guile identities
    #+end_example
 
-D4c.3's accepted execution packet must name both the manifest SHA256 and the exact
-fused-program identity.  The program discovers and validates its canonical
-store location and embedded manifest hash; it does not embed a
-self-referential expected output path or accept a mutable external manifest.
-The D4c.2/D4c.3 external gate, not an embedded constant, compares the actual
-canonical program path, whole-file hash, and size with the published tuple.
+D4c.3's accepted execution packet must name the D4c.1a source checkpoint, the
+full D4c.1b manifest SHA256, and the exact fused-program identity.  The program
+discovers and validates its canonical store location and embedded manifest
+hash; it does not embed a self-referential expected output path or accept a
+mutable external manifest.  The D4c.2/D4c.3 external gate, not an embedded
+constant, compares the actual canonical program path, whole-file hash, and
+size with the published tuple.
 
 ** Pre-phase revalidation and observed quiescence
 
@@ -396,13 +401,102 @@ All three failed channel pairs, the realization result, artifact, and exact
 =realization=NOT-RUN=, and =live-action=NOT-GRANTED=.  No result link,
 artifact root, or live change occurred.  The D4b runtime proof is complete,
 and its docs/data evidence is published with clean upstream equality at
-=9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1 is now eligible.
+=9577e1daac3d5258222d1cbf186facba809d10fb=.  The bounded D4c.1a
+source-contract checkpoint is now eligible.
 
-* D4c.1: fresh live-state review manifest publication
+* D4c.1a: production source/schema/fixture contract
 
-D4c.1 begins only from published, clean D4b equality.  It must use reviewed
-non-mutating discovery only; it must not assume that the historical
-=86/17/5= link counts or 78 System candidates remain current.
+D4c.1a begins only from published, clean D4b equality.  It must add a separate
+closed live-review manifest schema, deterministic read-only collector and
+validator, exact production renderer/driver/root-adapter source, and synthetic
+positive and negative fixtures.  It must not widen or rewrite the historical
+D3/D4a =FIXTURE-ONLY= parser, manifest, renderer, driver, artifact, or evidence.
+
+The source contract must freeze three zero-positional-argument program actions:
+
+| Action | Scope before D5 |
+|--------+-----------------|
+| =live-verify= | D4c.2 read-only manifest/state verification only |
+| =live-apply= | fail closed without the distinct exact future D5 initial-execution grant |
+| =live-recover= | fail closed without the distinct exact future D5 recovery-continuation grant |
+
+No action accepts an external manifest, selector, program path, or arbitrary
+extra argument.  D4c.1a/D4c.1b/D4c.2 must reject either D5 grant being present
+where it is not permitted.  The exact production semantic source must be
+published before capture: a D4c.2 or D5 source edit would otherwise escape the
+manifest's source-input binding.
+
+The closed schema and fixtures must enforce:
+
+- the D-34 retention selector: current closure/link; distinct booted closure;
+  five newest additional distinct closures by their greatest generation; and
+  every exact pinned generation/closure without replacing the independent
+  recency calculation.  A retained closure keeps its newest link as the
+  closure survivor, with exact current and pinned links also retained; every
+  link to an ambiguous distinct booted closure is retained rather than guessed.
+  Every other System link, including other duplicates of a retained closure,
+  is selected; Home and Pull remain protected only;
+- raw and canonical link tuples, exact counts, no retained/selected overlap,
+  and one recovery-root declaration per selected target plus old/new
+  =bootcfg=;
+- a deterministic, non-following, same-filesystem =/boot/efi= tree inventory,
+  plus the selected global-GUID =Boot####=, =BootCurrent=,
+  =BootOptionSupport=, =BootOrder=, =OsIndications=, and =Timeout= variables
+  and explicit =BootNext= and =LoaderEntryOneShot= absence.  Broader firmware
+  variables remain evidence-only, and every EFI or firmware mutation remains
+  forbidden;
+- exact absent initial transaction/root/lock/temporary state using non-following
+  inspection, so a dangling or mistyped pathname is occupied rather than
+  absent;
+- literal manifest-hash formulas for candidate/bootcfg and direct program-root
+  names, without the manifest's own SHA256, future program path/hash, or
+  program-root target;
+- persistent terminal transaction base, lock path/inodes, manifest transaction
+  directory, terminal journal, and exact old-GRUB backup; removed quarantine,
+  temporaries, candidate/bootcfg roots and namespace; and the durable program
+  root removed last; and
+- =authorization NOT-GRANTED= plus explicit rejection of lowering, build,
+  root, transaction, GC, activation, reconfiguration, and reboot effects.
+
+D4c.1a closes only after source-only compilation, static/capability checks,
+schema/selector/GRUB/EFI/prestate/root/formula/terminal/action/grant fixtures,
+the unchanged historical regression gates, selected-live nonmutation,
+whitespace and Org gates, publication, and clean upstream equality all pass.
+Those are acceptance requirements, not current result claims.  D4c.1a stops
+without capturing or publishing the live manifest, constructing or lowering a
+program, creating a root, or running a live action.
+
+** D4c.1a protocol checkpoint and source gap
+
+The first bounded D4c.1a checkpoint corrects the source/publication order and
+adds the separate pure live-manifest schema, canonical renderer/parser, and
+positive/negative protocol fixtures.  It does not close D4c.1a.
+
+The implementation review proved that the frozen D4a modules cannot honestly
+serve as the live adapter:
+
+- =sk:assert-boundary-manifest= and its journal header require
+  =FIXTURE-ONLY=;
+- the phase engine invokes that boundary validator unconditionally;
+- the reconciliation module requires the synthetic sentinel-rooted filesystem
+  and exports only =sk:reconcile-synthetic!=; and
+- no exact D5 initial/recovery grant-token byte grammar has yet been frozen.
+
+Widening those historical files would invalidate the D4a/D4b byte-frozen
+evidence.  D4c.1a therefore remains open for additive live-specific
+boundary/journal/reconciliation and grant contracts, the production runtime
+adapter, deterministic collector/verifier, fused renderer/driver, and their
+synthetic/adversarial gates.  The complete exact source-input label/path
+inventory, rollback postflight branch, and recovery-root-base terminal
+disposition also remain open.  D4c.1b remains blocked.  No live manifest,
+program, root, or action is implied by this protocol checkpoint.
+
+* D4c.1b: fresh live-state review manifest publication
+
+D4c.1b begins only from clean published equality of D4b and D4c.1a.  It must
+use only the exact published D4c.1a collector and validator with reviewed
+non-mutating discovery; it must not assume that the historical =86/17/5= link
+counts or 78 System candidates remain current.
 
 The closed manifest must freeze at least:
 
@@ -424,19 +518,25 @@ The closed manifest must freeze at least:
   explicit mutation prohibitions; and
 - =authorization NOT-GRANTED=.
 
+The historical D2b retained-only GRUB store target is eligible only if the
+fresh retained partition, pure projection, semantic validation, SHA256/size,
+and existing store bytes remain exact.  Any difference stops D4c.1b with a
+separate D2b-style immutable restage required; D4c.1b must not invent or realize
+a replacement target.
+
 “Fresh” describes the capture time.  Publication makes the manifest bytes
 immutable; it does not freeze the live machine.  Any protected drift makes
 the manifest stale and requires regeneration, publication, and review.
 
-D4c.1 stops after publication and clean upstream equality.  It creates no
+D4c.1b stops after publication and clean upstream equality.  It creates no
 root, program, authorization, or transaction mutation.
 
 * D4c.2: exact live fused-program build and evidence
 
-D4c.2 builds one fused program from the exact published D4c.1 manifest.  It
-must freeze and publish the non-circular manifest/program identity tuple,
-recheck the D4b loader-isolation gates, and run only its read-only live
-verification action.
+D4c.2 changes no semantic source.  It builds one fused program from the exact
+published D4c.1a source and exact published D4c.1b manifest.  It must freeze
+and publish the non-circular manifest/program identity tuple, recheck the D4b
+loader-isolation gates, and run only =live-verify=.
 
 The live verification must prove the manifest still describes the selected
 surfaces exactly, but it cannot claim roots that do not yet exist are
@@ -448,7 +548,7 @@ and without creating a persistent or temporary production root.
 Immediately before requesting packet acceptance, D4c.3 must re-establish:
 
 - clean repository, local-origin, and GitHub equality;
-- exact D4c.1 manifest and D4c.2 fused-program identities;
+- exact D4c.1a source, D4c.1b manifest, and D4c.2 fused-program identities;
 - unchanged boot ID and every protected manifest surface;
 - absent transaction, lock, direct program-root, and candidate/bootcfg
   root-namespace state;
@@ -571,7 +671,8 @@ clean process exit.  Therefore:
 * D5: separately authorized attended transaction
 
 D5 owns the first live production action.  It must consume only the exact
-D4c.1 manifest and D4c.2 fused program named by the accepted D4c.3 packet.
+D4c.1a source, D4c.1b manifest, and D4c.2 fused program named by the accepted
+D4c.3 packet.
 
 ** Initial-apply entry
 
@@ -691,8 +792,8 @@ This D-41 checkpoint is complete when repository documentation:
 
 - records D3a.1 publication at =0601b9d8537afb36b9e3589c6227e8cf652336e1=;
 - records D3b publication at =b1d6ecb38c495089ab22e4e648a1fce9cd48bc1b=;
-- replaces the monolithic D4 work item with D4a, D4b, D4c.1, D4c.2, D4c.3,
-  and D5;
+- replaces the monolithic D4 work item with D4a, D4b, D4c.1a, D4c.1b, D4c.2,
+  D4c.3, and D5;
 - corrects the recovery-root temporal contradiction;
 - records the fused-program identity-cycle resolution and program-root
   lifecycle; and
@@ -734,5 +835,5 @@ third D4a/legacy fixture-topology correction is published at =cdd4bd4= and
 its exact runtime-v4 plus checkout-independence gates pass.  All failed
 channels are retained, no second realization occurred, and the D4b runtime
 proof is complete.  Its docs/data evidence is published with clean upstream
-equality at =9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1 fresh
-live-state review is next.
+equality at =9577e1daac3d5258222d1cbf186facba809d10fb=.  D4c.1a fresh
+source/schema/fixture work is next; live-state capture remains D4c.1b.
