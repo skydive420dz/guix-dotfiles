@@ -879,11 +879,21 @@ CLOSED: [2026-07-18 Sat]
   package, configuration, activation, disk, bootloader, backup, boot state, or
   existing persistent process/session/service state.
 
-* BACKLOG P5.2b System generation deletion and custom-GRUB boundary
+* PARKED P5.2b System generation deletion and custom-GRUB boundary :frozen:
 :PROPERTIES:
 :created: 2026-07-18
 :blocked_by: D4c.1a production source contract; D4c.1b/D4c.2 live manifest/program publication; D4c.3 packet acceptance; separate D5 execution grant
+:frozen: 2026-07-20
+:frozen_by: Rafael Oliveira
+:reason: irrelevant to objective purpose
+:resume_only_by: explicit new user direction reversing this freeze
 :END:
+
+FROZEN BY EXPLICIT USER DIRECTION.  P5.2b-D1 through D5 are historical,
+inactive work.  Do not resume, extend, refactor, validate, publish, activate,
+or treat any descendant as a current prerequisite, blocker, or next action.
+The existing commits and evidence remain untouched; this freeze authorizes no
+source removal, history rewrite, pruning, garbage collection, or live action.
 
 - Evidence: [[file:../../../docs/audits/2026-07-18-p5.2b-custom-grub-safe-system-pruning-design.org][2026-07-18 P5.2b custom-GRUB-safe System-pruning design]].
 - Production-boundary design: [[file:../../../docs/audits/2026-07-19-p5.2b-d4-production-boundary-design.org][2026-07-19 P5.2b-D4 production-boundary safety decomposition]].

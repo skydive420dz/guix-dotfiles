@@ -2,6 +2,22 @@
 
 Source of truth for the guixpc experiment machine.
 
+* User scope override — 2026-07-20
+
+Rafael explicitly froze the entire custom P5.2b System-pruning experiment,
+from D1 through D5, as irrelevant to his objective purpose.  Its commits,
+source, tests, evidence, and narrative remain historical and inactive.  They
+are not a current roadmap item, prerequisite, blocker, or recommended next
+action.  Do not resume, extend, refactor, validate, publish, activate, or use
+this experiment to choose subsequent work without new explicit direction from
+Rafael that specifically reverses this freeze.
+
+This scope override supersedes every =READY=, =BACKLOG=, =Next=, or remaining-
+work statement about P5.2b-D1 through D5 elsewhere in this historical file.
+It does not freeze Rafael's original goals of practical Guix housekeeping,
+garbage collection, Home/Git hygiene, EXWM/system polish, Lisp-native tools,
+or a Scheme learning workflow.
+
 * Current progress
 
 The numbered stabilization pass is complete through Slice 19.  The later dated
@@ -560,7 +576,10 @@ execution remain later gates.
 P5.3 collection remains separate and unpromoted; no further cleanup is
 authorized.
 
-** Ready
+** Frozen P5.2b historical record
+
+The following subsection is retained only as provenance for the frozen
+experiment.  None of its incomplete items is ready or actionable.
 
 P5.2b-D4a is evidence-complete and published at =41e1115= at its bounded
 source/fixture boundary.  D4b's helper is published at =002d1ef= and its one
@@ -572,12 +591,10 @@ fixture root failed the artifact's exact capability guard.  Third validator
 checkpoint =cdd4bd4= is published and equal; its exact runtime-v4 and
 checkout-independence packets pass with empty stderr and restored checkout.
 The final D4b docs/data evidence is published with clean upstream equality at
-=9577e1d=.  D4c.1a remains additive source-only work.  Its current ready scope
-is the deterministic read-only collector/verifier, production adapter,
-boundary-derived canonical execution plan, fused renderer/driver, durable-
-journal and terminal policy, final inventory, and remaining synthetic gates.
-It must publish cleanly and stop without capturing a live manifest, lowering
-or building a program, creating a root, or running a live action.
+=9577e1d=.  D4c.1a stopped as incomplete additive source-only work.  Its
+formerly proposed collector, production adapter, execution plan,
+renderer/driver, durable-journal policy, terminal policy, final inventory, and
+remaining gates are frozen by the user scope override above.
 
 - The first bounded D4c.1a protocol source checkpoint =79a361a= and
   documentation closure =0d97e5d= are published with clean GuixPC/origin/direct
