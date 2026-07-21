@@ -9,7 +9,14 @@
   (setq evil-want-C-i-jump nil)
   :config
   (evil-mode 1)
-  (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
+  (dolist (map (list evil-normal-state-map
+                     evil-motion-state-map
+                     evil-insert-state-map
+                     evil-replace-state-map
+                     evil-visual-state-map
+                     evil-operator-state-map))
+    (define-key map (kbd "C-g") #'sk/keyboard-quit-dwim)
+    (define-key map (kbd "<escape>") #'sk/keyboard-quit-dwim))
   (define-key evil-insert-state-map (kbd "C-h") 'evil-delete-backward-char-and-join)
 
   ;; Use visual line motions even outside of visual-line-mode buffers.

@@ -48,6 +48,44 @@
 
 (fset #'yes-or-no-p #'y-or-n-p)
 
+(defconst sk/keyboard-quit-helper-modes
+  '(help-mode helpful-mode completion-list-mode apropos-mode Info-mode Man-mode)
+  "Ephemeral documentation modes closed by `sk/keyboard-quit-dwim'.")
+
+(defun sk/keyboard-quit-helper-p ()
+  "Return non-nil when the current buffer is a reviewed quit-able helper."
+  (apply #'derived-mode-p sk/keyboard-quit-helper-modes))
+
+(defun sk/keyboard-quit-dwim ()
+  "Cancel the innermost active interaction without guessing beyond it.
+
+Minibuffers and Evil editing states keep their native cancellation behavior.
+An active non-Evil region is deactivated, a visible completion or reviewed
+documentation helper is dismissed, and an otherwise idle Evil buffer remains
+in normal state.  All other contexts fall back to `keyboard-quit'.  X clients
+receive a literal global key through the explicit EXWM send-next command."
+  (interactive)
+  (cond
+   ((minibufferp)
+    (if (fboundp 'minibuffer-keyboard-quit)
+        (minibuffer-keyboard-quit)
+      (abort-recursive-edit)))
+   ((and (bound-and-true-p evil-local-mode)
+         (boundp 'evil-state)
+         (memq evil-state '(insert replace visual operator)))
+    (evil-force-normal-state))
+   ((region-active-p)
+    (deactivate-mark))
+   ((get-buffer-window "*Completions*" 0)
+    (quit-window nil (get-buffer-window "*Completions*" 0)))
+   ((sk/keyboard-quit-helper-p)
+    (quit-window))
+   ((and (bound-and-true-p evil-local-mode)
+         (fboundp 'evil-force-normal-state))
+    (evil-force-normal-state))
+   (t
+    (keyboard-quit))))
+
 (defvar sk/log-timestamp-format "[%Y-%m-%d %H:%M:%S] "
   "Timestamp format used in Emacs log buffers.")
 

@@ -1,5 +1,7 @@
 ;;; sk-keys.el --- Global and leader keys -*- lexical-binding: t; -*-
 
+(global-set-key (kbd "C-g") #'sk/keyboard-quit-dwim)
+(global-set-key (kbd "<escape>") #'sk/keyboard-quit-dwim)
 (global-set-key (kbd "C-c e") #'sk/window-open-eshell)
 (global-set-key (kbd "C-c t") #'sk/window-open-term)
 

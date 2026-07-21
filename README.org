@@ -256,37 +256,62 @@ learning environment, and small Lisp-native tools where they improve daily
 use.  It is not a framework-adoption, language-collection, or operating-system
 research plan.
 
-Each slice is separately authorized.  Acceptance of this roadmap does not
-authorize C1 or any later implementation.  C0 is the current documentation
-slice; C1 is only the next candidate after C0 is reviewed and published.
+Each slice is separately authorized.  C0 is closed at published checkpoint
+=e8ce8b2=.  C1 is the current authorized source slice; its runtime reload and
+hand test wait for a reviewed, published source checkpoint.  C2 and later work
+remain unauthorized.
 
 ** C0 — Establish the human roadmap
 
 - Result: this README and the editable Org agenda present one C0--C16 plan,
   explicit outcomes, boundaries, reference policy, and parked work.
 - Boundary: documentation only.  Do not build, activate, reconfigure, reboot,
-  revive P5.2b, or alter the frozen branch.  C0 closes after both documents are
-  reviewed and the repository checkpoint is published.
+  revive P5.2b, or alter the frozen branch.  C0 closed after both documents
+  were reviewed and the repository checkpoint was published.
+- State: closed and published at =e8ce8b2=.
 
 ** C1 — Make EXWM input, cancellation, and launching predictable
 
 - Result: context-aware escape/cancel behavior works across regions,
   minibuffers, transient helpers, Evil, terminals, REPLs, and EXWM; sending the
   next key to an X client remains explicit; launcher behavior is consistent
-  and discoverable.
-- Boundary: hand-test the accepted key matrix.  Do not rewrite completion,
-  tabs, workspaces, or the window manager, and do not add client history or
-  desktop-file machinery until the basic launcher passes.
+  and discoverable.  Existing Super bindings remain, while the physical
+  34-key keyboard's Ctrl+Alt layer is the canonical action vocabulary and
+  agrees with the macOS AeroSpace implementation.  The existing MSI/NixOS
+  configuration is a partial reference whose parity gaps are recorded rather
+  than copied into GuixPC.  Workspaces 6--10 are created only when first
+  requested, so the accepted five-frame startup is unchanged.  The Ctrl+Alt
+  aliases are deliberately EXWM-global, including inside Emacs buffers: the
+  physical WM layer controls the whole session and therefore occupies those
+  corresponding =C-M= editing chords.
+- Reference: the exact physical source is
+  =yivu-corne-v4/validation/2026-07-20-lp-34-rgb-off-left-final/stock-layout.vil=
+  at content digest =afe26819eef3= (from =git hash-object=).  Cross-host
+  semantics were compared with =nixos-macos/darwin/modules/aerospace.nix= at
+  commit =b2ea774= and =nixos-dotfiles/config/hypr/hyprland.lua= at commit
+  =73e2bd8=.  AeroSpace is the complete semantic reference.  NixOS currently
+  differs for browser/Code, Shift+move, fullscreen, and reload; those are
+  cross-host parity debts, not GuixPC C1 work.  Neither reference repository is
+  modified by this slice.
+- Boundary: hand-test the cancel/pass-through and 34-key matrices.  Do not
+  rewrite completion, tabs, or the window manager; do not add launcher history,
+  ranking, or a separate desktop-entry database.  C1 covers launch Terminal,
+  Emacs home, Code/VSCodium, browser, files, and app picker; focus and move;
+  close, fullscreen, and reload; and workspace switch/move 1--10.  Shift is
+  explicit for every move action.  Float/tile, layout, and resize belong to C2,
+  while clipboard and screenshot actions belong to C3.
 
 ** C2 — Normalize EXWM windows, helpers, dialogs, and recovery
 
 - Result: Help and documentation, Dired/Ibuffer/Treemacs/Magit, compilation
   and diagnostics, warnings and backtraces, Geiser/SLY helpers, transients, X
   dialogs, fullscreen windows, startup, and winner restoration have deliberate
-  placement and focus behavior.  Add one recovery command only if the tests
-  demonstrate a real need.
-- Boundary: the representative window matrix and recovery hand test pass.  Do
-  not introduce Beframe, Bufferlo, tab workspaces, or a master-stack rewrite.
+  placement and focus behavior.  The reserved 34-key float/tile, layout, and
+  resize actions have deliberate EXWM behavior.  Add one recovery command only
+  if the tests demonstrate a real need.
+- Boundary: the representative window matrix, reserved-action matrix, and
+  recovery hand test pass.  Do not introduce Beframe, Bufferlo, tab workspaces,
+  or a master-stack rewrite.
 
 ** C3 — Complete desktop integration and attention handling
 

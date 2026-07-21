@@ -35,22 +35,68 @@
       (error "EXWM policy requires reviewed EXWM %s APIs; found %s"
              sk/exwm-reviewed-version (or version "unknown")))))
 
-(defun sk/exwm-launch-app ()
+(defvar sk/exwm-launcher-cache nil
+  "Cached desktop-file signature, candidates, and validated launch specs.")
+
+(defun sk/exwm-clear-launcher-cache ()
+  "Discard validated desktop launch specifications."
   (interactive)
+  (setq sk/exwm-launcher-cache nil)
+  (when (called-interactively-p 'interactive)
+    (message "EXWM launcher cache cleared")))
+
+(defun sk/exwm-desktop-files-signature (desktop-files)
+  "Return a cheap invalidation signature for DESKTOP-FILES and `exec-path'."
+  (list
+   (copy-sequence exec-path)
+   (mapcar
+    (lambda (entry)
+      (let ((attributes (ignore-errors
+                          (file-attributes (cdr entry) 'string))))
+        (list (car entry)
+              (cdr entry)
+              (and attributes (file-attribute-size attributes))
+              (and attributes
+                   (file-attribute-modification-time attributes)))))
+    desktop-files)))
+
+(defun sk/exwm-launcher-state ()
+  "Return cached visible candidates and validated direct-launch specs."
   (require 'counsel)
   (let* ((desktop-files (counsel-linux-apps-list-desktop-files))
-         (candidates
-          (seq-filter
-           (lambda (candidate)
-             (sk/exwm-supported-desktop-entry-p candidate desktop-files))
-           (counsel-linux-apps-list))))
+         (signature (sk/exwm-desktop-files-signature desktop-files)))
+    (if (equal signature (plist-get sk/exwm-launcher-cache :signature))
+        sk/exwm-launcher-cache
+      (let ((specs (make-hash-table :test #'equal))
+            candidates)
+        (dolist (candidate (counsel-linux-apps-list))
+          (when (get-text-property 0 'visible (car candidate))
+            (condition-case nil
+                (let ((spec (sk/exwm-desktop-launch-spec
+                             (cdr candidate) desktop-files)))
+                  (puthash (cdr candidate) spec specs)
+                  (push candidate candidates))
+              (error nil))))
+        (setq sk/exwm-launcher-cache
+              (list :signature signature
+                    :candidates (nreverse candidates)
+                    :specs specs))))))
+
+(defun sk/exwm-launch-app ()
+  "Select and launch one validated desktop application in the current stack."
+  (interactive)
+  (let* ((state (sk/exwm-launcher-state))
+         (candidates (plist-get state :candidates))
+         (specs (plist-get state :specs)))
+    (unless candidates
+      (user-error "No directly launchable desktop applications are available"))
     (ivy-read "Run application: " candidates
               :require-match t
               :action
               (lambda (desktop-shortcut)
-                (sk/exwm-launch-spec-in-stack
-                 (sk/exwm-desktop-launch-spec
-                  (cdr desktop-shortcut) desktop-files)))
+                (if-let ((spec (gethash (cdr desktop-shortcut) specs)))
+                    (sk/exwm-launch-spec-in-stack spec)
+                  (user-error "Launcher cache is stale; reopen the launcher")))
               :caller 'sk/exwm-launch-app)))
 
 (defun sk/exwm-supported-desktop-entry-p (desktop-shortcut &optional desktop-files)
@@ -80,20 +126,18 @@
           (cdr (assoc desktop-id
                       (or desktop-files
                           (counsel-linux-apps-list-desktop-files)))))
-         (exec (and desktop-file (sk/desktop-entry-value desktop-file "Exec")))
+         (fields (and desktop-file
+                      (file-readable-p desktop-file)
+                      (sk/desktop-entry-fields desktop-file)))
+         (exec (cdr (assoc "Exec" fields)))
          (startup-class
-          (and desktop-file
-               (sk/desktop-entry-value desktop-file "StartupWMClass")))
+          (cdr (assoc "StartupWMClass" fields)))
          (application-name
-          (and desktop-file (sk/desktop-entry-value desktop-file "Name")))
-         (hidden (and desktop-file
-                      (sk/desktop-entry-value desktop-file "Hidden")))
-         (no-display (and desktop-file
-                          (sk/desktop-entry-value desktop-file "NoDisplay")))
+          (cdr (assoc "Name" fields)))
+         (hidden (cdr (assoc "Hidden" fields)))
+         (no-display (cdr (assoc "NoDisplay" fields)))
          (terminal (string-equal
-                    (downcase (or (and desktop-file
-                                       (sk/desktop-entry-value desktop-file "Terminal"))
-                                  "false"))
+                    (downcase (or (cdr (assoc "Terminal" fields)) "false"))
                     "true"))
          args
          command matchers)
@@ -141,19 +185,28 @@
   "Compatibility entrypoint for a validated direct DESKTOP-ID launch."
   (sk/exwm-launch-spec-in-stack (sk/exwm-desktop-launch-spec desktop-id)))
 
-(defun sk/desktop-entry-value (desktop-file key)
+(defun sk/desktop-entry-fields (desktop-file)
+  "Read DESKTOP-FILE once and return its unlocalized Desktop Entry fields."
   (with-temp-buffer
     (insert-file-contents desktop-file)
     (goto-char (point-min))
-    (when (re-search-forward "^\\[Desktop Entry\\]$" nil t)
+    (when (re-search-forward "^\\[Desktop Entry\\][[:space:]]*$" nil t)
       (let ((limit (save-excursion
-                     (or (and (re-search-forward "^\\[" nil t)
+                     (or (and (re-search-forward "^\\[[^]]+\\]" nil t)
                               (match-beginning 0))
-                         (point-max)))))
-        (when (re-search-forward
-               (format "^%s *= *\\(.+\\)$" (regexp-quote key))
-               limit t)
-          (match-string 1))))))
+                         (point-max))))
+            fields)
+        (while (re-search-forward
+                "^\\([[:alnum:]-]+\\)[[:space:]]*=[[:space:]]*\\(.*\\)$"
+                limit t)
+          (push (cons (match-string-no-properties 1)
+                      (string-trim (match-string-no-properties 2)))
+                fields))
+        (nreverse fields)))))
+
+(defun sk/desktop-entry-value (desktop-file key)
+  "Return unlocalized KEY from DESKTOP-FILE."
+  (cdr (assoc key (sk/desktop-entry-fields desktop-file))))
 
 (defun sk/desktop-entry-clean-exec (exec)
   (let ((clean (replace-regexp-in-string "%%" "__SK_PERCENT__" exec t t)))
@@ -424,6 +477,21 @@ applications whose new window belongs to an existing process."
                 index))
   (nth index exwm-workspace--list))
 
+(defun sk/exwm-ensure-workspace-frame (index)
+  "Return workspace frame INDEX, creating it on demand without retaining focus."
+  (or (and (boundp 'exwm-workspace--list)
+           (frame-live-p (nth index exwm-workspace--list))
+           (nth index exwm-workspace--list))
+      (let ((source-workspace exwm-workspace--current)
+            target-frame)
+        (unwind-protect
+            (progn
+              (exwm-workspace-switch-create index)
+              (setq target-frame (sk/exwm-workspace-frame index)))
+          (when (frame-live-p source-workspace)
+            (exwm-workspace-switch-create source-workspace)))
+        target-frame)))
+
 (defun sk/exwm-switch-workspace (number)
   (exwm-workspace-switch-create (sk/exwm-workspace-index number)))
 
@@ -432,7 +500,7 @@ applications whose new window belongs to an existing process."
     (user-error "Current buffer is not an EXWM window"))
   (let* ((buffer (current-buffer))
          (target-index (sk/exwm-workspace-index number))
-         (target-frame (sk/exwm-workspace-frame target-index))
+         (target-frame (sk/exwm-ensure-workspace-frame target-index))
          (target-buffers (and target-frame
                               (delq buffer (sk/window-buffer-list target-frame))))
          (target-master (car target-buffers))
@@ -448,12 +516,22 @@ applications whose new window belongs to an existing process."
 (defun sk/exwm-switch-workspace-3 () (interactive) (sk/exwm-switch-workspace 3))
 (defun sk/exwm-switch-workspace-4 () (interactive) (sk/exwm-switch-workspace 4))
 (defun sk/exwm-switch-workspace-5 () (interactive) (sk/exwm-switch-workspace 5))
+(defun sk/exwm-switch-workspace-6 () (interactive) (sk/exwm-switch-workspace 6))
+(defun sk/exwm-switch-workspace-7 () (interactive) (sk/exwm-switch-workspace 7))
+(defun sk/exwm-switch-workspace-8 () (interactive) (sk/exwm-switch-workspace 8))
+(defun sk/exwm-switch-workspace-9 () (interactive) (sk/exwm-switch-workspace 9))
+(defun sk/exwm-switch-workspace-10 () (interactive) (sk/exwm-switch-workspace 10))
 
 (defun sk/exwm-move-window-to-workspace-1 () (interactive) (sk/exwm-move-window-to-workspace 1))
 (defun sk/exwm-move-window-to-workspace-2 () (interactive) (sk/exwm-move-window-to-workspace 2))
 (defun sk/exwm-move-window-to-workspace-3 () (interactive) (sk/exwm-move-window-to-workspace 3))
 (defun sk/exwm-move-window-to-workspace-4 () (interactive) (sk/exwm-move-window-to-workspace 4))
 (defun sk/exwm-move-window-to-workspace-5 () (interactive) (sk/exwm-move-window-to-workspace 5))
+(defun sk/exwm-move-window-to-workspace-6 () (interactive) (sk/exwm-move-window-to-workspace 6))
+(defun sk/exwm-move-window-to-workspace-7 () (interactive) (sk/exwm-move-window-to-workspace 7))
+(defun sk/exwm-move-window-to-workspace-8 () (interactive) (sk/exwm-move-window-to-workspace 8))
+(defun sk/exwm-move-window-to-workspace-9 () (interactive) (sk/exwm-move-window-to-workspace 9))
+(defun sk/exwm-move-window-to-workspace-10 () (interactive) (sk/exwm-move-window-to-workspace 10))
 
 (defun sk/set-keyboard-repeat ()
   (interactive)
@@ -580,14 +658,83 @@ applications whose new window belongs to an existing process."
     (start-process "xwallpaper" nil
                    "xwallpaper" "--zoom" sk/wallpaper-file)))
 
+(defun sk/exwm-send-next-key ()
+  "Send the next key to an X client, or quote it in an Emacs buffer."
+  (interactive)
+  (if (derived-mode-p 'exwm-mode)
+      (call-interactively #'exwm-input-send-next-key)
+    (call-interactively #'quoted-insert)))
+
+(defconst sk/exwm-input-help-text
+  "GuixPC EXWM input
+
+Cancel and pass-through
+  C-g       cancel the current Emacs interaction or leave an Evil state
+  Escape    same contextual cancel inside Emacs
+  C-q KEY   send KEY literally to the current X client
+            (standard quoted-insert in an Emacs buffer)
+
+34-key WM layer
+The keyboard emits Ctrl+Alt; Emacs displays Alt as Meta (C-M).
+These chords are EXWM-global, including inside Emacs buffers, so the same
+physical WM layer controls the session in every application.
+
+  Return    Kitty                 T        Emacs home
+  C         Code / VSCodium (when installed)
+  B         Chromium              E        Dired at home
+  Space     application launcher
+  H J K L   focus left/down/up/right
+  Shift+H/J/K/L                   move left/down/up/right
+  Q         close                 F        fullscreen
+  R         reload EXWM policy
+  1..0      workspace 1..10 (6..10 are created on first use)
+  Shift+1..0                      move to workspace and follow
+
+Missing Code / VSCodium is reported clearly rather than failing silently.
+
+Reserved for later accepted slices
+  V         float/tile            /        layout
+  - / =     resize                X        clipboard
+  S         screenshot
+
+Existing Super bindings remain available.  Run this help with
+M-x sk/exwm-input-help or Super+/.
+"
+  "Human-readable input contract for the EXWM session.")
+
+(defun sk/exwm-input-help ()
+  "Show the GuixPC EXWM cancel, pass-through, and 34-key contract."
+  (interactive)
+  (with-help-window "*GuixPC EXWM Input*"
+    (princ sk/exwm-input-help-text)))
+
+(defun sk/exwm-enter-emacs ()
+  "Replace the selected window with the Emacs home buffer."
+  (interactive)
+  (sk/dashboard))
+
 (defun sk/exwm-launch-kitty ()
   (interactive)
   (sk/exwm-launch-command-in-stack "kitty" "kitty" nil '("kitty")))
+
+(defun sk/exwm-launch-code ()
+  "Launch Code or VSCodium when either executable is installed."
+  (interactive)
+  (if-let ((program (seq-find #'executable-find '("code" "codium"))))
+      (sk/exwm-launch-command-in-stack
+       program program nil '("code" "visualstudiocode" "vscodium" "codium"))
+    (user-error "Neither code nor codium is installed; use the app launcher")))
 
 (defun sk/exwm-launch-browser ()
   (interactive)
   (sk/exwm-launch-command-in-stack
    "browser" "chromium" nil '("chromium" "chromium-browser") t))
+
+(defun sk/exwm-open-files ()
+  "Open Dired at the user's home directory."
+  (interactive)
+  (let ((default-directory (expand-file-name "~/")))
+    (sk/window-open-dired)))
 
 (defun sk/exwm-reload ()
   (interactive)
@@ -598,6 +745,7 @@ applications whose new window belongs to an existing process."
 (defun sk/exwm-complete-reload ()
   "Activate a successfully loaded EXWM policy, then clear old launch intents."
   (sk/exwm-start)
+  (sk/exwm-clear-launcher-cache)
   (sk/exwm-clear-launch-intents "canceled by successful EXWM reload"))
 
 (defun sk/exwm-update-title ()
@@ -608,37 +756,99 @@ applications whose new window belongs to an existing process."
             (if (and exwm-title (not (string-empty-p exwm-title))) ": " "")
             (or exwm-title "")))))
 
+(defconst sk/exwm-global-key-contract
+  '(("C-q" . sk/exwm-send-next-key)
+    ("C-g" . sk/keyboard-quit-dwim)
+    ("s-SPC" . sk/exwm-launch-app)
+    ("s-/" . sk/exwm-input-help)
+    ("s-h" . sk/window-left)
+    ("s-j" . sk/window-down)
+    ("s-k" . sk/window-up)
+    ("s-l" . sk/window-right)
+    ("s-H" . windmove-swap-states-left)
+    ("s-J" . windmove-swap-states-down)
+    ("s-K" . windmove-swap-states-up)
+    ("s-L" . windmove-swap-states-right)
+    ("s-q" . sk/exwm-close-current)
+    ("s-b" . sk/exwm-switch-buffer)
+    ("s-f" . sk/exwm-toggle-fullscreen)
+    ("s-m" . sk/window-promote-to-master)
+    ("s-M" . sk/window-normalize-master-stack)
+    ("s-1" . sk/exwm-switch-workspace-1)
+    ("s-2" . sk/exwm-switch-workspace-2)
+    ("s-3" . sk/exwm-switch-workspace-3)
+    ("s-4" . sk/exwm-switch-workspace-4)
+    ("s-5" . sk/exwm-switch-workspace-5)
+    ("s-6" . sk/exwm-switch-workspace-6)
+    ("s-7" . sk/exwm-switch-workspace-7)
+    ("s-8" . sk/exwm-switch-workspace-8)
+    ("s-9" . sk/exwm-switch-workspace-9)
+    ("s-0" . sk/exwm-switch-workspace-10)
+    ("s-!" . sk/exwm-move-window-to-workspace-1)
+    ("s-@" . sk/exwm-move-window-to-workspace-2)
+    ("s-#" . sk/exwm-move-window-to-workspace-3)
+    ("s-$" . sk/exwm-move-window-to-workspace-4)
+    ("s-%" . sk/exwm-move-window-to-workspace-5)
+    ("s-^" . sk/exwm-move-window-to-workspace-6)
+    ("s-&" . sk/exwm-move-window-to-workspace-7)
+    ("s-*" . sk/exwm-move-window-to-workspace-8)
+    ("s-(" . sk/exwm-move-window-to-workspace-9)
+    ("s-)" . sk/exwm-move-window-to-workspace-10)
+    ("s-<return>" . sk/exwm-launch-kitty)
+    ("s-w" . sk/exwm-launch-browser)
+    ("s-r" . sk/exwm-reload)
+    ;; The physical 34-key WM layer emits Left Ctrl+Alt.  X presents Alt to
+    ;; Emacs as Meta, so these C-M chords are the host side of that contract.
+    ("C-M-<return>" . sk/exwm-launch-kitty)
+    ("C-M-t" . sk/exwm-enter-emacs)
+    ("C-M-c" . sk/exwm-launch-code)
+    ("C-M-b" . sk/exwm-launch-browser)
+    ("C-M-e" . sk/exwm-open-files)
+    ("C-M-SPC" . sk/exwm-launch-app)
+    ("C-M-h" . sk/window-left)
+    ("C-M-j" . sk/window-down)
+    ("C-M-k" . sk/window-up)
+    ("C-M-l" . sk/window-right)
+    ("C-M-S-h" . windmove-swap-states-left)
+    ("C-M-S-j" . windmove-swap-states-down)
+    ("C-M-S-k" . windmove-swap-states-up)
+    ("C-M-S-l" . windmove-swap-states-right)
+    ("C-M-q" . sk/exwm-close-current)
+    ("C-M-f" . sk/exwm-toggle-fullscreen)
+    ("C-M-r" . sk/exwm-reload)
+    ("C-M-1" . sk/exwm-switch-workspace-1)
+    ("C-M-2" . sk/exwm-switch-workspace-2)
+    ("C-M-3" . sk/exwm-switch-workspace-3)
+    ("C-M-4" . sk/exwm-switch-workspace-4)
+    ("C-M-5" . sk/exwm-switch-workspace-5)
+    ("C-M-6" . sk/exwm-switch-workspace-6)
+    ("C-M-7" . sk/exwm-switch-workspace-7)
+    ("C-M-8" . sk/exwm-switch-workspace-8)
+    ("C-M-9" . sk/exwm-switch-workspace-9)
+    ("C-M-0" . sk/exwm-switch-workspace-10)
+    ;; XKB resolves Shift+digits to punctuation before Emacs sees the event.
+    ("C-M-!" . sk/exwm-move-window-to-workspace-1)
+    ("C-M-@" . sk/exwm-move-window-to-workspace-2)
+    ("C-M-#" . sk/exwm-move-window-to-workspace-3)
+    ("C-M-$" . sk/exwm-move-window-to-workspace-4)
+    ("C-M-%" . sk/exwm-move-window-to-workspace-5)
+    ("C-M-^" . sk/exwm-move-window-to-workspace-6)
+    ("C-M-&" . sk/exwm-move-window-to-workspace-7)
+    ("C-M-*" . sk/exwm-move-window-to-workspace-8)
+    ("C-M-(" . sk/exwm-move-window-to-workspace-9)
+    ("C-M-)" . sk/exwm-move-window-to-workspace-10)
+    ("<XF86AudioRaiseVolume>" . sk/volume-raise)
+    ("<XF86AudioLowerVolume>" . sk/volume-lower))
+  "Repository-owned EXWM global keys as (KEY-DESCRIPTION . COMMAND).")
+
+(defun sk/exwm-key-bindings ()
+  "Return parsed key sequences for `sk/exwm-global-key-contract'."
+  (mapcar (lambda (entry) (cons (kbd (car entry)) (cdr entry)))
+          sk/exwm-global-key-contract))
+
 (defun sk/exwm-bind-keys ()
-  (exwm-input-set-key (kbd "C-q") #'exwm-input-send-next-key)
-  (exwm-input-set-key (kbd "s-SPC") #'sk/exwm-launch-app)
-  (exwm-input-set-key (kbd "s-h") #'sk/window-left)
-  (exwm-input-set-key (kbd "s-j") #'sk/window-down)
-  (exwm-input-set-key (kbd "s-k") #'sk/window-up)
-  (exwm-input-set-key (kbd "s-l") #'sk/window-right)
-  (exwm-input-set-key (kbd "s-H") #'windmove-swap-states-left)
-  (exwm-input-set-key (kbd "s-J") #'windmove-swap-states-down)
-  (exwm-input-set-key (kbd "s-K") #'windmove-swap-states-up)
-  (exwm-input-set-key (kbd "s-L") #'windmove-swap-states-right)
-  (exwm-input-set-key (kbd "s-q") #'sk/exwm-close-current)
-  (exwm-input-set-key (kbd "s-b") #'sk/exwm-switch-buffer)
-  (exwm-input-set-key (kbd "s-f") #'sk/exwm-toggle-fullscreen)
-  (exwm-input-set-key (kbd "s-m") #'sk/window-promote-to-master)
-  (exwm-input-set-key (kbd "s-M") #'sk/window-normalize-master-stack)
-  (exwm-input-set-key (kbd "s-1") #'sk/exwm-switch-workspace-1)
-  (exwm-input-set-key (kbd "s-2") #'sk/exwm-switch-workspace-2)
-  (exwm-input-set-key (kbd "s-3") #'sk/exwm-switch-workspace-3)
-  (exwm-input-set-key (kbd "s-4") #'sk/exwm-switch-workspace-4)
-  (exwm-input-set-key (kbd "s-5") #'sk/exwm-switch-workspace-5)
-  (exwm-input-set-key (kbd "s-!") #'sk/exwm-move-window-to-workspace-1)
-  (exwm-input-set-key (kbd "s-@") #'sk/exwm-move-window-to-workspace-2)
-  (exwm-input-set-key (kbd "s-#") #'sk/exwm-move-window-to-workspace-3)
-  (exwm-input-set-key (kbd "s-$") #'sk/exwm-move-window-to-workspace-4)
-  (exwm-input-set-key (kbd "s-%") #'sk/exwm-move-window-to-workspace-5)
-  (exwm-input-set-key (kbd "s-<return>") #'sk/exwm-launch-kitty)
-  (exwm-input-set-key (kbd "s-w") #'sk/exwm-launch-browser)
-  (exwm-input-set-key (kbd "s-r") #'sk/exwm-reload)
-  (exwm-input-set-key (kbd "<XF86AudioRaiseVolume>") #'sk/volume-raise)
-  (exwm-input-set-key (kbd "<XF86AudioLowerVolume>") #'sk/volume-lower))
+  "Install the complete repository-owned EXWM key contract idempotently."
+  (customize-set-variable 'exwm-input-global-keys (sk/exwm-key-bindings)))
 
 (defun sk/volume-raise ()
   (interactive)

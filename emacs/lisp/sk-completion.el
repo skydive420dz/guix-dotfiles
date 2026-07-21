@@ -97,7 +97,11 @@
   ;; Counsel installs its own "^" default after Ivy loads.  Remove it here so
   ;; M-x remains contains/ignore-order search instead of prefix-only search.
   (setq ivy-initial-inputs-alist
-        (assq-delete-all 'counsel-M-x ivy-initial-inputs-alist)))
+        (assq-delete-all 'counsel-M-x ivy-initial-inputs-alist))
+  ;; Desktop launchers should show application names and descriptions, not
+  ;; Guix store paths reconstructed from their Exec lines.
+  (setq counsel-linux-app-format-function
+        #'counsel-linux-app-format-function-name-pretty))
 
 ;; Helpful is the richer documentation UI for Emacs Lisp symbols and keys.
 (use-package helpful
