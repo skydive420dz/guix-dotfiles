@@ -247,33 +247,257 @@ The source checkpoint branch is not a backup of mutable documents, secrets,
 keys, browser data, or other local state.  Backup and storage policy remains a
 separate parked decision.
 
-* Active direction
+* Accepted implementation roadmap
 
-There is currently no approved implementation slice.  The next approved task
-is to reconcile the documentation and build a new roadmap from the live
-machine and Rafael's actual priorities.
+This is the current outcome-based plan for =guixpc=.  EXWM is the permanent
+desktop direction.  The target is a predictable, coherent workstation with
+clear ownership, useful recovery paths, safe maintenance, a practical Scheme
+learning environment, and small Lisp-native tools where they improve daily
+use.  It is not a framework-adoption, language-collection, or operating-system
+research plan.
 
-The planning pass will distinguish completed work, current gaps, parked
-decisions, frozen artifacts, and optional ideas.  It will cover, without
-pre-authorizing implementation:
+Each slice is separately authorized.  Acceptance of this roadmap does not
+authorize C1 or any later implementation.  C0 is the current documentation
+slice; C1 is only the next candidate after C0 is reviewed and published.
 
-- Guix and EXWM reliability, startup, responsiveness, and hardware behavior;
-- coherent GTK, Qt, Emacs, terminal, font, icon, cursor, and color ownership;
-- SSH and terminal behavior;
-- safe garbage collection and understandable generation maintenance;
-- Home-directory and Git hygiene;
-- Scheme-native Bluetooth, network, and sound tools;
-- a practical Scheme learning and development environment;
-- security, recovery, observability, accessibility, data continuity, and
-  other gaps discovered by the audit.
+** C0 — Establish the human roadmap
 
-Candidate gaps will be ranked by practical value and presented to Rafael for
-selection.  Presence in this list is not approval to build them.
+- Result: this README and the editable Org agenda present one C0--C16 plan,
+  explicit outcomes, boundaries, reference policy, and parked work.
+- Boundary: documentation only.  Do not build, activate, reconfigure, reboot,
+  revive P5.2b, or alter the frozen branch.  C0 closes after both documents are
+  reviewed and the repository checkpoint is published.
 
-The existing machine ledger,
-[[file:guix/machines/guixpc/todo.org][guix/machines/guixpc/todo.org]], still
-contains historical statuses and must not be treated as an active queue until
-that reconciliation is complete.
+** C1 — Make EXWM input, cancellation, and launching predictable
+
+- Result: context-aware escape/cancel behavior works across regions,
+  minibuffers, transient helpers, Evil, terminals, REPLs, and EXWM; sending the
+  next key to an X client remains explicit; launcher behavior is consistent
+  and discoverable.
+- Boundary: hand-test the accepted key matrix.  Do not rewrite completion,
+  tabs, workspaces, or the window manager, and do not add client history or
+  desktop-file machinery until the basic launcher passes.
+
+** C2 — Normalize EXWM windows, helpers, dialogs, and recovery
+
+- Result: Help and documentation, Dired/Ibuffer/Treemacs/Magit, compilation
+  and diagnostics, warnings and backtraces, Geiser/SLY helpers, transients, X
+  dialogs, fullscreen windows, startup, and winner restoration have deliberate
+  placement and focus behavior.  Add one recovery command only if the tests
+  demonstrate a real need.
+- Boundary: the representative window matrix and recovery hand test pass.  Do
+  not introduce Beframe, Bufferlo, tab workspaces, or a master-stack rewrite.
+
+** C3 — Complete desktop integration and attention handling
+
+- Result: clipboard and primary selection work across Emacs, Kitty, a browser,
+  and GTK; screenshots, notifications, focus requests, MIME handlers, default
+  applications, and Polkit each have one understood owner.
+- Boundary: test the actual applications.  Clipboard history waits for a
+  privacy decision, and Qt theming waits for a real daily-use Qt application.
+
+** C4 — Simplify and accept the existing Org workflow
+
+- Result: capture, clarification, refile, agenda, daily review, and weekly
+  review each have one obvious command and a short help surface.  Redundancy is
+  removed only when it is confusing, completed-task handling is decided
+  explicitly, and normal editing is free of Org lint failures.
+- Boundary: Rafael completes one full representative workflow by hand.  Do not
+  replace the current Org system or automatically refile DONE tasks by default.
+
+** C5 — Give Home and XDG state explicit ownership
+
+- Result: relevant Home paths are classified as declarative configuration,
+  durable synchronized data, durable local data, secrets, logs, rebuildable
+  cache, runtime state, or unknown.  One reviewed batch then moves, declares,
+  quarantines, or leaves items with a rollback path.
+- Boundary: no unknown file is deleted.  Inventory and approve the batch before
+  changing it; do not turn hygiene into an unbounded home-directory rewrite.
+
+** C6 — Add one Lisp-native system health view
+
+- Result: a versioned Guile =sk-status= expression reports System, Home, and
+  Pull generations; EXWM/Emacs; session D-Bus and Home Shepherd; PipeWire and
+  WirePlumber; Bluetooth; NetworkManager; relevant errors; and recovery hints.
+  An Emacs view renders the same state.
+- Boundary: read-only inspection only.  Do not add a daemon, database,
+  telemetry collector, or a parallel source of machine truth.
+
+** C7 — Make Git, SSH, and GPG behavior declarative and testable
+
+- Result: Guix Home owns accepted global identity and defaults; commit-signing
+  policy is explicit; agent and pinentry behavior works locally and over SSH;
+  truthful =xterm-kitty= remains intact; and a read-only Guile repository audit
+  reports hygiene without mutating repositories.
+- Boundary: a local and SSH signed-commit test plus =emacsclient -t= pass.  No
+  automatic cleaning, history rewriting, or repository mutation.
+
+** C8 — Give Org notes private synchronization and history
+
+- Result: a selected private remote has explicit included trees, exclusions,
+  pull-before-edit and conflict rules, attachment/archive policy, and a tested
+  fresh-clone, conflict, and restore workflow.
+- Boundary: synchronization and version history are not described as a full
+  backup.  Do not enroll secrets or unrelated mutable data implicitly.
+
+** C9 — Rehearse security, updates, and rollback
+
+- Result: listeners and firewall ownership, SSH policy, clock state, key
+  permission metadata, Polkit, and channel cadence are understood.  Candidate
+  build, activation, reboot, and rollback are rehearsed as separate stages.
+- Boundary: every listener has an owner and the update rehearsal succeeds.
+  The accepted trusted-residence/no-lock policy remains unless Rafael changes
+  it.
+
+** C10 — Promote only supported Guix garbage collection
+
+- Result: the existing estimator protects current, booted-when-different, five
+  additional distinct generations, and explicit pins; any collection requires
+  exact authorization, before/after evidence, and post-action verification.
+- Boundary: perform a second independent rehearsal before considering a
+  schedule.  No System-generation deletion, custom GRUB repair, P5.2b
+  dependency, or claim that estimated bytes equal reclaimed bytes.
+
+** C11 — Make storage health, capacity, and TRIM visible
+
+- Result: supported SMART health where safe, capacity thresholds, periodic
+  TRIM, and recovery guidance are visible through the health surface.
+- Boundary: the second SSD remains unmounted and undeclared.  No repartition,
+  migration, hardware purchase, or backup project is implied.
+
+** C12 — Build a focused Scheme learning studio
+
+- Result: one command opens an exercise, Geiser REPL, tests, documentation, and
+  progress state in a pinned Guix environment.  The first curriculum supports
+  create, evaluate, test, reset, hint, next, and progress without hiding normal
+  Emacs and Scheme skills.
+- Boundary: Emacs and the test runner are the terminal interface; project or
+  XDG state is explicit.  Start with Geiser and add Ares/AREI only for a
+  demonstrated need.
+
+** C12-E — Optional Emacs Lisp and EXWM literacy companion
+
+- Result: a small offline path uses Emacs Lisp Elements, fixtures, and selected
+  =sk-*= examples to explain the configuration Rafael already operates.
+- Boundary: optional and non-blocking; it follows C12 and is not a prerequisite
+  for any operational slice.
+
+** C13 — Replace Bluetooth-manager friction vertically
+
+- Result: a Guile BlueZ D-Bus layer plus Emacs UI handles power, scan, pair,
+  trust, connect, disconnect, profile, timeouts, errors, auto-enable,
+  reconnect, and the observed adapter/device power-order case.
+- Boundary: retain Blueman until repeated real-device parity, recovery, and
+  error handling pass.  Do not replace BlueZ.
+
+** C14 — Add a Lisp-native sound control surface
+
+- Result: a Guile interface to WirePlumber/PipeWire, or narrowly to =wpctl=,
+  and an Emacs UI expose endpoints, streams, media keys, the Creative GS3, and
+  Bluetooth audio coherently.
+- Boundary: retain the current mixer until parity passes.  HDMI audio is not a
+  required acceptance device because Rafael does not use it; do not replace
+  PipeWire or WirePlumber.
+
+** C15 — Add a safe Lisp-native network control surface
+
+- Result: a Guile NetworkManager D-Bus layer plus Emacs UI covers ordinary
+  status and connection actions, with credentials delegated to an appropriate
+  secret agent and with useful failure and recovery messages.
+- Boundary: no secret appears in arguments, logs, or history.  Keep
+  NetworkManager and the existing UI until local connectivity and recovery
+  tests pass; do not replace NetworkManager.
+
+** C16 — Close with a usable operator manual and bootstrap rehearsal
+
+- Result: an indexed Org manual covers tty1, generation, EXWM, services,
+  network, channel, and rollback recovery; every custom tool exposes source or
+  help; a daily-use hand test and an installed-machine fresh-checkout/bootstrap
+  rehearsal pass; uncovered mutable data is stated honestly.
+- Boundary: documentation and proof only.  C16 introduces no new feature.
+
+** Implementation discipline
+
+Before a slice starts, record its objective, observable result, affected files
+and live surfaces, non-goals, focused checks, build/activation/reboot and hand
+test requirements, rollback, and stopping point.  Then:
+
+1. verify the live host, checkout, declaration links, and relevant runtime;
+2. make the smallest source change on =main=;
+3. run focused tests for the changed surface;
+4. create a bounded checkpoint for Rafael to review and publish;
+5. build only the Guix layer that changed;
+6. activate only after the source checkpoint is published;
+7. complete runtime and human acceptance where required;
+8. record the result and stop.
+
+Stop and reassess before continuing when a second unexpected prerequisite
+appears, the promised user outcome changes, or more than one correction
+checkpoint is needed.  Tests and evidence support a slice; they may not become
+a separate project.
+
+** Reference policy
+
+- [[https://github.com/abcdw/rde][RDE]] contributes principles: explicit state,
+  one clear tool per job, reproducibility, offline usefulness, and
+  attention-friendly behavior.  It is not adopted as a framework or desktop.
+- [[https://github.com/abcdw/guix][abcdw/guix]] is an upstream Guix/API reference,
+  not a new channel or dependency.
+- [[https://github.com/protesilaos/dotfiles][Prot's dotfiles]] contribute contextual
+  quit behavior, display-policy ideas, and simple discoverable native UI.
+- [[https://github.com/protesilaos/emacs-lisp-elements][Emacs Lisp Elements]] is an optional
+  offline learning reference for C12-E.
+- [[https://github.com/joshuablais/studium-emacs][Studium Emacs]] contributes launcher
+  and front-end ideas only.  Do not copy code without verified licensing and
+  provenance, and do not import its package scope.
+
+These references are idea catalogs, not authorities, dependencies, or implied
+backlogs.  An imported idea still needs a local problem, a bounded result, and
+explicit slice authorization.
+
+The older machine ledger,
+[[file:guix/machines/guixpc/todo.org][guix/machines/guixpc/todo.org]], is a
+historical record.  It is not an active queue and cannot expand this roadmap.
+
+* Outside the accepted roadmap
+
+The following work is deliberately parked.  It is not a dependency for
+C0--C16 and may not be used as a blocker.  The signal beside each item is what
+to look for before discussing it again.
+
+- *Leaving EXWM or adopting RDE/Sway as the desktop:* revisit only if an
+  accepted daily workflow cannot be made reliable in EXWM, EXWM becomes
+  unmaintainable, or a concrete security requirement cannot be met.
+- *Migrating from Xorg to XLibre:* keep the packaging reference, but revisit
+  only for a reproducible Xorg defect or security need and a mature,
+  reviewable Guix package and rollback path.
+- *General startup optimization:* revisit for repeated user-visible boot or
+  EXWM latency, hangs, or interaction loss.  A benchmark opportunity alone is
+  not a reason.
+- *Qt normalization:* revisit when a real daily-use Qt application exists and
+  visibly violates the accepted theme tokens.
+- *New Lisp dialects or broad Emacs application suites:* revisit only for a
+  concrete project, curriculum, or recurring workflow that the current tools
+  cannot serve.
+- *Large workspace, completion, tab, or launcher frameworks:* revisit only
+  after a named EXWM friction survives the focused C1/C2 approach.
+- *Kernel, IRQ, HPET/TSC, USB-keyboard, or other hardware experiments:* revisit
+  for a repeatable disruptive symptom such as crashes, data loss, material
+  latency, or device failure, with evidence that points to that layer.
+- *P5.2b, D1--D5 descendants, custom GRUB work, and direct System-generation
+  deletion:* remain frozen.  Revisit only if disk pressure remains after the
+  supported C10 path and a simpler supported recovery route is unavailable.
+- *Backup implementation, repartitioning, migration, or assigning the second
+  SSD:* revisit when important local-only data grows, affordable storage
+  becomes available, or Rafael's accepted risk changes.
+- *RSS, mail, Ledger, Calibre, and Studium-style environment expansion:*
+  revisit one application at a time when a recurring real workflow appears.
+- *Replacing BlueZ, PipeWire, WirePlumber, or NetworkManager:* revisit only if
+  an upstream daemon cannot meet a concrete requirement; C13--C15 build small
+  Lisp-native control surfaces over the existing services.
+- *A resident health daemon, database, telemetry system, or Guix framework:*
+  revisit only when the read-only, on-demand C6 design demonstrably cannot
+  answer an accepted operational question.
 
 * Frozen and historical material
 
