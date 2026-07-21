@@ -1187,6 +1187,7 @@ CLOSED: [2026-07-20 Mon]
 :protocol_checkpoint: 79a361a7f3c2e46ddb27b0c4d5e44a8751914dd5
 :publication_checkpoint: 0d97e5d5ed10fdd6e0500c072dec470c966f4995
 :semantic_core_checkpoint: 94044411abbe65641a7c712e705d35a5f94d2219
+:semantic_core_publication_checkpoint: 7cbb0bbd1f3fd2e33fbfd36006d3a4ae3de295c8
 :END:
 
 - Protocol checkpoint: [[file:../../../docs/audits/2026-07-20-p5.2b-d4c1a-live-manifest-protocol.org][2026-07-20 D4c.1a live-manifest protocol and production-source gap]].
@@ -1207,6 +1208,10 @@ CLOSED: [2026-07-20 Mon]
   Preserve the existing byte-frozen D4a =FIXTURE-ONLY= interfaces; require
   every initial-journal-temporary, durable-journal, and terminal observation to
   remain review-only.
+- [X] Publish semantic-core documentation closure
+  =7cbb0bbd1f3fd2e33fbfd36006d3a4ae3de295c8= and prove clean
+  =HEAD == origin/main == direct GitHub main=, ahead/behind =0/0=, with the
+  protected snapshot and boot ID unchanged.
 - [ ] Extend that semantic core with initial-journal-temporary and durable-
   journal recovery, exact terminal classification, and one boundary-derived
   canonical execution-effect plan.  Do not treat the current caller-supplied

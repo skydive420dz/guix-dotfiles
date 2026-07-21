@@ -597,7 +597,8 @@ or building a program, creating a root, or running a live action.
   =lowered=FALSE realized=FALSE= source gate also pass.  Initial-journal-
   temporary and durable-journal recovery, terminal semantics, production
   effects, and the final boundary-derived execution plan remain explicitly
-  outside this checkpoint.  Publication proof is pending.
+  outside this checkpoint.  Documentation closure =7cbb0bb= is published with
+  clean GuixPC/origin/direct-GitHub equality and unchanged protected state.
 - [ ] P5.2b-D4c.1a: publish the closed production source/schema/fixture
   contract with =authorization NOT-GRANTED= and prove upstream equality.
 - [ ] P5.2b-D4c.1b, only afterward: recompute and publish the fresh closed

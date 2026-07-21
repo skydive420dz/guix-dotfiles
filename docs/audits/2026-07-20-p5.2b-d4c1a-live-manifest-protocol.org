@@ -3,10 +3,11 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:source:
-#+status: bounded protocol published; pre-journal semantic core committed; D4c.1a remains open
+#+status: bounded protocol and pre-journal semantic core published; D4c.1a remains open
 #+source_checkpoint: 79a361a7f3c2e46ddb27b0c4d5e44a8751914dd5
 #+publication_checkpoint: 0d97e5d5ed10fdd6e0500c072dec470c966f4995
 #+semantic_core_checkpoint: 94044411abbe65641a7c712e705d35a5f94d2219
+#+semantic_core_publication_checkpoint: 7cbb0bbd1f3fd2e33fbfd36006d3a4ae3de295c8
 
 * Outcome
 
@@ -46,6 +47,12 @@ under unchanged boot ID =64140768-9522-4cad-8021-9db54e070e8a=.
 
 Source checkpoint =94044411abbe65641a7c712e705d35a5f94d2219= adds
 only pure Scheme semantics and source-only gates:
+
+Documentation closure =7cbb0bbd1f3fd2e33fbfd36006d3a4ae3de295c8=
+is published.  A fresh fetch proved a clean
+=HEAD == origin/main == direct GitHub main= at =7cbb0bb= with ahead/behind
+=0/0=.  The protected snapshot and boot ID remained the exact values recorded
+below.
 
 - [[file:../../guix/modules/sk/system-pruning-live-boundary.scm][=system-pruning-live-boundary.scm=]] binds the validated live manifest,
   source checkpoint, packet/program tuple, boot ID, selector, ordered recovery
@@ -214,9 +221,9 @@ and published.
 The bounded manifest and semantic-core evidence above has passed warning-fatal
 compilation, independent review, =git diff --check=, and the unchanged D4a/D4b
 regression gates.  Org lint returned no findings for this audit, the machine
-agenda, or =README.org=.  Clean publication equality remains required after
-the documentation closure.  Final D4c.1a validation must repeat and extend
-those gates over the still-missing production sources.
+agenda, or =README.org=.  Clean local/origin/direct-GitHub publication equality
+is proven at =7cbb0bb=.  Final D4c.1a validation must repeat and extend those
+gates over the still-missing production sources.
 
 This checkpoint ran no Guix lowering or build, created no result or GC root,
 captured no live manifest, opened no transaction, wrote no GRUB/=bootcfg=/EFI
@@ -225,8 +232,7 @@ and did not reboot.
 
 * Next
 
-Publish the bounded semantic-core source and documentation checkpoints, prove
-clean upstream equality, then continue D4c.1a with the collector, injected
-production adapter, canonical execution plan, renderer/driver, durable-
-journal recovery, terminal policies, and final source inventory.  D4c.1b
-remains blocked until that complete D4c.1a source contract is published.
+Continue D4c.1a with the collector, injected production adapter, canonical
+execution plan, renderer/driver, durable-journal recovery, terminal policies,
+and final source inventory.  D4c.1b remains blocked until that complete D4c.1a
+source contract is published.
