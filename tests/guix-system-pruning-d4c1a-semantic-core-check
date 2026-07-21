@@ -1,0 +1,201 @@
+#!/bin/sh
+set -eu
+
+LC_ALL=C
+export LC_ALL
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+frontend=${SK_GUIX_FRONTEND_PROFILE:-${HOME:?}/.config/guix/current}
+frontend_resolved=$(readlink -f "$frontend" 2>/dev/null || true)
+expected_frontend=/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile
+expected_guild=/gnu/store/8vwbdsni9znrlxvcwqi4n02f23ysc1fa-guile-3.0.11/bin/guild
+expected_guile=/gnu/store/f75z9sgss74ndiy1jnr02fippk1fjwkj-guile-wrapper/bin/guile
+expected_home_profile=/gnu/store/2p4vnz9y2ndfsbary431rzlf41jhanrs-profile
+expected_system_profile=/gnu/store/z84fzavdzq9ja3lyln3cf9px4h45ybf9-profile
+expected_manifest_sha=7ccedbb970436573d9836db4a878e3b7f91b2c40d429fb7bd28e179293394d40
+expected_manifest_test_sha=f57e22b04125fa447144755d06998c574b8db8b800fb0bdb277e36321acc3d0d
+
+fail() {
+    printf 'guix-system-pruning-d4c1a-semantic-core-check: FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+case $# in
+    0) ;;
+    *)
+        printf 'usage: %s\n' "$0" >&2
+        exit 64
+        ;;
+esac
+
+module_dir=$repo/guix/modules
+support_dir=$repo/tests/support
+manifest_module=$module_dir/sk/system-pruning-live-manifest.scm
+boundary_module=$module_dir/sk/system-pruning-live-boundary.scm
+grant_module=$module_dir/sk/system-pruning-live-grant.scm
+reconciliation_module=$module_dir/sk/system-pruning-live-reconciliation.scm
+fixture_module=$support_dir/sk/system-pruning-live-contract-fixture.scm
+manifest_test=$repo/tests/guix-system-pruning-live-manifest-check.scm
+boundary_test=$repo/tests/guix-system-pruning-live-boundary-check.scm
+grant_test=$repo/tests/guix-system-pruning-live-grant-check.scm
+reconciliation_test=$repo/tests/guix-system-pruning-live-reconciliation-check.scm
+
+sources="
+$manifest_module
+$boundary_module
+$grant_module
+$reconciliation_module
+$fixture_module
+$manifest_test
+$boundary_test
+$grant_test
+$reconciliation_test
+"
+
+for source in $sources; do
+    if [ ! -f "$source" ] || [ -L "$source" ]; then
+        fail "required source is not a repository-owned regular file: $source"
+    fi
+done
+
+manifest_sha=$(sha256sum "$manifest_module" | cut -d ' ' -f 1)
+[ "$manifest_sha" = "$expected_manifest_sha" ] ||
+    fail "bounded live-manifest module drifted: $manifest_sha"
+manifest_test_sha=$(sha256sum "$manifest_test" | cut -d ' ' -f 1)
+[ "$manifest_test_sha" = "$expected_manifest_test_sha" ] ||
+    fail "bounded live-manifest fixture drifted: $manifest_test_sha"
+
+if grep -E -n \
+    '\((system|system\*|open-input-file|open-output-file|call-with-input-file|call-with-output-file|delete-file|rename-file|symlink|link|mkdir|rmdir|chmod|chown|stat|lstat|readlink|scandir|file-exists\?|access\?|canonicalize-path|chdir|getcwd|fork|primitive-fork|execl|execle|execlp|execv|execve|execvp|dynamic-link|load|primitive-load|setenv|unsetenv|socket|bind|listen|accept|connect|connect-to-daemon|open-connection|add-temp-root|add-indirect-root|getenv)([[:space:]]|\))' \
+    "$boundary_module" "$grant_module" "$reconciliation_module"; then
+    fail "semantic core contains a forbidden direct runtime/effect capability"
+fi
+
+[ -x "$frontend_resolved/bin/guix" ] ||
+    fail "pinned Guix frontend is unavailable: $frontend_resolved/bin/guix"
+[ "$frontend_resolved" = "$expected_frontend" ] ||
+    fail "Guix frontend differs from the pinned identity: $frontend_resolved"
+
+home_profile=$(readlink -f "${SK_GUIX_HOME_PROFILE:-$HOME/.guix-home/profile}" \
+    2>/dev/null || true)
+system_profile=$(readlink -f /run/current-system/profile 2>/dev/null || true)
+[ "$home_profile" = "$expected_home_profile" ] ||
+    fail "Guix Home profile differs from the pinned identity: $home_profile"
+[ "$system_profile" = "$expected_system_profile" ] ||
+    fail "Guix System profile differs from the pinned identity: $system_profile"
+
+guix_site=$frontend_resolved/share/guile/site/3.0
+guix_ccache=$frontend_resolved/lib/guile/3.0/site-ccache
+home_site=$home_profile/share/guile/site/3.0
+home_ccache=$home_profile/lib/guile/3.0/site-ccache
+system_site=$system_profile/share/guile/site/3.0
+system_ccache=$system_profile/lib/guile/3.0/site-ccache
+system_extensions=$system_profile/lib/guile/3.0/extensions
+guild=$(readlink -f "$(command -v guild 2>/dev/null || true)" 2>/dev/null || true)
+
+[ "$guild" = "$expected_guild" ] ||
+    fail "Guild differs from the pinned identity: $guild"
+[ -x "$expected_guile" ] ||
+    fail "pinned Guile is not executable: $expected_guile"
+
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/p52b-d4c1a-core.XXXXXX")
+mkdir -p "$tmp/ccache/sk"
+
+cleanup() {
+    status=$?
+    trap - 0 HUP INT TERM
+    rm -rf -- "$tmp"
+    exit "$status"
+}
+trap cleanup 0
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+compile_index=0
+for source in $sources; do
+    compile_index=$((compile_index + 1))
+    stdout=$tmp/compile-$compile_index.stdout
+    stderr=$tmp/compile-$compile_index.stderr
+    case "$source" in
+        "$module_dir"/sk/*.scm)
+            relative=${source#"$module_dir"/}
+            object=$tmp/ccache/${relative%.scm}.go
+            ;;
+        "$support_dir"/sk/*.scm)
+            relative=${source#"$support_dir"/}
+            object=$tmp/ccache/${relative%.scm}.go
+            ;;
+        *) object=$tmp/compile-$compile_index.go ;;
+    esac
+    mkdir -p "$(dirname "$object")"
+    if ! env \
+        -u GUILE_LOAD_PATH \
+        -u GUILE_LOAD_COMPILED_PATH \
+        -u GUILE_EXTENSIONS_PATH \
+        GUILE_AUTO_COMPILE=0 \
+        GUILE_LOAD_PATH="$module_dir:$support_dir:$guix_site:$home_site:$system_site" \
+        GUILE_LOAD_COMPILED_PATH="$tmp/ccache:$guix_ccache:$home_ccache:$system_ccache" \
+        GUILE_EXTENSIONS_PATH="$system_extensions" \
+        "$guild" compile -W3 \
+        -L "$module_dir" \
+        -L "$support_dir" \
+        -L "$guix_site" \
+        -o "$object" \
+        "$source" >"$stdout" 2>"$stderr"; then
+        cat "$stdout" >&2
+        cat "$stderr" >&2
+        fail "warning-fatal compilation failed: $source"
+    fi
+    if [ -s "$stderr" ]; then
+        cat "$stderr" >&2
+        fail "warning-fatal compilation emitted diagnostics: $source"
+    fi
+done
+
+run_test() {
+    label=$1
+    test_file=$2
+    expected=$3
+    stdout=$tmp/$label.stdout
+    stderr=$tmp/$label.stderr
+    if ! env \
+        -u GUILE_LOAD_PATH \
+        -u GUILE_LOAD_COMPILED_PATH \
+        -u GUILE_EXTENSIONS_PATH \
+        GUILE_AUTO_COMPILE=0 \
+        GUILE_LOAD_PATH="$module_dir:$support_dir:$guix_site:$home_site:$system_site" \
+        GUILE_LOAD_COMPILED_PATH="$tmp/ccache:$guix_ccache:$home_ccache:$system_ccache" \
+        GUILE_EXTENSIONS_PATH="$system_extensions" \
+        "$frontend_resolved/bin/guix" repl -q \
+        -L "$module_dir" \
+        -L "$support_dir" -- \
+        "$test_file" >"$stdout" 2>"$stderr"; then
+        cat "$stdout" >&2
+        cat "$stderr" >&2
+        fail "pure fixture failed: $label"
+    fi
+    if [ -s "$stderr" ]; then
+        cat "$stderr" >&2
+        fail "pure fixture emitted diagnostics: $label"
+    fi
+    expected_stdout=$tmp/$label.expected
+    printf '%s\n' "$expected" >"$expected_stdout"
+    cmp -s "$expected_stdout" "$stdout" || {
+        cat "$stdout" >&2
+        fail "pure fixture stdout differs byte-for-byte from its PASS line: $label"
+    }
+    cat "$stdout"
+}
+
+run_test manifest "$manifest_test" \
+    'guix-system-pruning-live-manifest-check: PASS (90 checks)'
+run_test boundary "$boundary_test" \
+    'guix-system-pruning-live-boundary-check: PASS (48 checks)'
+run_test grant "$grant_test" \
+    'guix-system-pruning-live-grant-check: PASS (130 checks)'
+run_test reconciliation "$reconciliation_test" \
+    'guix-system-pruning-live-reconciliation-check: PASS (117 checks)'
+
+printf '%s\n' \
+    'guix-system-pruning-d4c1a-semantic-core-check: PASS (pure; no lowering or realization)'
