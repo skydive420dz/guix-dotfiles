@@ -1,2518 +1,235 @@
-#+title: guix-dotfiles
+#+title: GuixPC configuration
+#+startup: overview
 
-Source of truth for the guixpc experiment machine.
+* Purpose
 
-* User scope override — 2026-07-20
+This repository is the human-edited source of truth for Rafael Oliveira's
+=guixpc=.  It defines a Guix System, a Guix Home environment, and the EXWM
+desktop used on the machine every day.
 
-Rafael explicitly froze the entire custom P5.2b System-pruning experiment,
-from D1 through D5, as irrelevant to his objective purpose.  Its commits,
-source, tests, evidence, and narrative remain historical and inactive.  They
-are not a current roadmap item, prerequisite, blocker, or recommended next
-action.  Do not resume, extend, refactor, validate, publish, activate, or use
-this experiment to choose subsequent work without new explicit direction from
-Rafael that specifically reverses this freeze.
+The goal is a coherent, reliable, responsive, and maintainable workstation
+built around Guix, EXWM, Guile Scheme, and Emacs Lisp.  It is not a showcase
+for collecting language dialects, a research platform, or permission to build
+infrastructure without a practical benefit to the running system.
 
-This scope override supersedes every =READY=, =BACKLOG=, =Next=, or remaining-
-work statement about P5.2b-D1 through D5 elsewhere in this historical file.
-It does not freeze Rafael's original goals of practical Guix housekeeping,
-garbage collection, Home/Git hygiene, EXWM/system polish, Lisp-native tools,
-or a Scheme learning workflow.
+* Project contract
 
-* Current progress
+** Work from explicit outcomes
 
-The numbered stabilization pass is complete through Slice 19.  The later dated
-polishing roadmap has accepted Phase 1's SSH/terminal contract and the selected
-Phase 2 measurement, attribution, and storage-visibility work.  P2.M1a's
-no-new-package Scheme reader passed its source and cached-only live boundaries,
-and Rafael accepted it complete.  P2.3, P2.S1b/P2.S1c, P2.M1b/P2.M1c, and
-parked P2.M1d remain available but are not active.
+Every implementation slice must identify:
 
-Phase 3 is complete.  P3.1's read-only source/live ownership
-baseline and semantic-token architecture are accepted complete from published
-checkpoint =8933827=.  Emacs, Kitty, Fish, Xinit, Picom, and wallpaper have
-traceable live owners.  At that baseline GTK 3/4, icons, and the cursor had no
-declared GuixPC policy.  P3.2 records their accepted offline production policy,
-and P3.3 supplies immutable candidate owners.  P3.4 activated those owners as
-Home generation 43, then correctly stopped when the GTK 4 factory exposed a
-missing profile schema.  The published GTK output correction activated as
-generation 44 and removed that schema error; the exact-profile factory then
-found the independent missing =playbin3= GStreamer plugin.  Exact fresh
-Fish/Emacs assertions passed, while fresh Kitty and GTK 3 startup probes
-remained alive for five seconds.  The live Emacs background matched Kitty's
-declared =#0d0e1c= canvas, but its palette and opacity mechanism are not one
-contract with Kitty.
+- the user objective it serves;
+- the observable result Rafael should receive;
+- the files and live surfaces it may affect;
+- the smallest relevant validation;
+- its stopping point.
 
-Rafael accepted the recommended Phase 3 visual bundle, including the global
-JetBrainsMono Nerd Font roles, retained wallpaper, and 11 pt UI size.  P3.2's
-published fixture checkpoint =3627f0b= has clean upstream equality.  The
-published schema-v2 checkpoint =b74a98d= adds the inert production token datum,
-freezes the exact reviewed Modus 4.4.0 role/ANSI mapping and source provenance,
-and extends offline validation/rendering without wiring a live target.  P3.3
-then renders one complete Kitty config rather than a forbidden include, keeps
-Qt out of scope, and builds the immutable Home candidate.  P3.4's first
-correction explicitly owns both =gtk:out= and =gtk:bin= and was activated as
-generation 44.  The second correction explicitly owns =gst-plugins-base= and
-=gst-plugins-good=.  Published checkpoint =d83feb8= was activated as Home
-generation 45; its 96-record profile passed.  Two fresh boots proved the new
-EXWM Emacs inherited the Home GStreamer path, and the exact GTK 4 factory
-remained healthy and passed Rafael's visible check.  The wider visual pass then
-found two narrower blockers: GTK 3's accepted =Adwaita-dark= string rendered a
-light fallback, and Emacs applied theme/frame creation policy only after its
-first X frame existed.  Process-local GTK 3 A/B tests proved that =Adwaita=
-plus the existing prefer-dark flag renders both the widget factory and Blueman
-dark.  The realized correction candidate is
-=/gnu/store/dkasc56ngxmyg4gq453xx71h5xzaka3m-home=.  It passes 298 theme
-checks, native parsers, 61 Emacs tests, connected Lisp backends,
-immutable-candidate failure controls, the strict source gate, and the complete
-pinned Home/System build gate.  Published correction =e6492cc= was
-upstream-equal and activated as Home generation 46 at
-=/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home=; its profile remains the
-same 96 records.  A fresh boot passed the live five-frame EXWM/theme/font
-contract, all automated Emacs gates, and structural key/grab checks.  Rafael
-confirmed the normal GTK 3 widget factory and Blueman are dark and that
-keybindings behave normally; both probes were removed.  A later attended boot
-confirmed that the original bar, decoration, scrollbar, theme, and keyboard
-findings did not recur, but exposed one narrower transition: the dashboard was
-visible while EXWM carried its workspace from the initial small container to
-fullscreen.  Source review proved that real EXWM initialization runs after the
-earlier P2.2 trace seal and owns that deferred geometry.  A mapped transparent
-startup-gate candidate now passes 299 theme checks, 78 Emacs tests, a fresh-
-process watchdog-registration failure fixture, connected backends, the strict
-source gate, a controlled nested-X pixel-mask probe, and four no-pause nested-X
-lifecycle trials.  It yields to EXWM's idle fullscreen work, waits
-nonblockingly for every selected/active frame to reach monitor geometry,
-pre-renders while transparent, and reveals inactive frames before the selected
-frame.  Implementation =f24b7b5= and evidence =5c579da= are published,
-fetched, clean, and upstream-equal.  Guarded Home reconfiguration activated
-generation 47 at =/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home= with the
-same 96-record profile and generation 46 retained as immediate rollback.
-Attended boot =6c560dab-b745-41a5-9f45-8087580c8929= passes the exact
-single-Picom and live five-frame reveal-gate contracts.  Rafael reported that
-startup was “SO much better!”; this is strong positive evidence that the
-dashboard transition is materially corrected.  P3.4 is now accepted complete
-on current boot =b36bfc06-65d3-4534-9ff2-b8383c1dc9ed=: wallpaper and
-ultrawide fit, Picom transparency, font/contrast, Papirus icons, the Bibata
-cursor, GTK 4, Fish syntax/pager colors, and adjacent SSH/EXWM behavior passed
-Rafael's paired hand checks.  The final desktop-session invocation explicitly
-skipped disconnected physical-audio and Bluetooth endpoints.  This scoped
-acceptance is not rewritten as an absolute zero-transition claim and does not
-claim Qt, forced DPI, or global toolkit scaling.
+Adjacent features, packages, languages, abstractions, and experiments are out
+of scope until Rafael explicitly accepts them.  A =TODO=, =BACKLOG=, test, or
+existing source file does not authorize work by itself.
 
-P4.2 closes Phase 4's current decision-only boundary and returns the phase to
-parked status.  Rafael explicitly defers backup and storage implementation,
-accepts the recorded exposure of local-only or otherwise uncovered/unverified
-mutable data, selects no hardware purchase, and performs no mutation of the
-added Samsung 860 EVO 250 GB SSD, which the final guard observed unmounted and
-undeclared.  A future private Org remote remains a separate
-sync/history slice; it is not current coverage or a complete-backup claim.
+If a slice expands materially, stops producing practical progress, or Rafael
+questions its value, stop and reassess.  Report what changed, what has reached
+the live machine, what remains, and the realistic cost before continuing.  Do
+not answer a scope or value concern by persuading Rafael to endure more work.
 
-P4.1's metadata inventory remains the baseline: GitHub covers committed and
-pushed project bytes but not secrets or mutable user data; SSH/GPG modes are
-restrictive; and the channel-signing key expires in July 2028 while its private
-material and revocation certificate remain local.  Its pin correction promotes
-Home 47/46 and retains 42/41 as older known-good history.
+** Use native Lisp for custom behavior
 
-One P4.1 nominal inventory command, =guix gc --list-dead=, pruned 26
-already-dangling automatic GC-root symlinks.  No generation or store object
-was deleted, the 86/47/5 generation counts were unchanged, and retention
-verification passed.  That command remains forbidden in no-mutation reporters.
-P4.2 supersedes the former unconditional backup gate only for future Guix
-generation/store maintenance: a read-only =current + booted System when
-different + five newest additional distinct closures + explicit pins=
-estimator may be promoted separately, while generation deletion and store
-collection require different explicit destructive approvals.  No backup,
-restore, package, disk, service, activation, cleanup, or reboot is claimed.
+Custom behavior belongs in the native Lisp for its layer:
 
-P5.1 now passes its source, fixture, deterministic live-estimation, and
-before/after no-mutation gates.  The new =estimate= action implements the D-34
-distinct-closure floor while preserving =plan= as the duplicate-only reporter.
-Its exact snapshot reports 108 candidate links: 99 target 64 unretained
-closures; the remaining 9 are duplicate links to 4 retained closures.  The
-NAR-byte rows are forward-reference footprints rather than reclaim predictions;
-derivation policy, process and temporary roots, and filesystem allocation
-remain unmodeled, so guaranteed reclaimable bytes are =0=.  This checkpoint is
-published as =93619e90bfb01a43a1c4858be9a09ef76f818eb6=; the actual checkout
-is clean, =HEAD= equals =origin/main=, and ahead/behind is =0/0=.  P5.1 is
-complete; its closure returned Phase 5 to backlog.  At that boundary P5.2
-deletion and P5.3 collection remained unpromoted, separately reviewed, and
-explicitly attended.
+- Guile Scheme for Guix declarations, services, system utilities, and
+  standalone tools;
+- Emacs Lisp for Emacs and EXWM behavior.
 
-P5.2's historical read-only preflight observed a byte-identical
-=108=-candidate state and selected only the 30 Home links for the first manual
-cycle.  Its plan was published at =450f396= and separately authorized by
-immutable review-manifest hash.  P5.2a then removed exactly Home
-=1..28,30,31=: Home links changed =47 -> 17= while current Home remained
-generation 47.  System/Home/Pull now have =86/17/5= links and =78/0/0=
-candidates.  All retained tuples, all 78 held System candidates, GRUB,
-=bootcfg=, pins, current/booted pointers, and top-level store names remain
-exact.  No GC or dead/live query ran, no store object was removed, and material
-reclaim is zero.
+Existing upstream software may use other languages.  Shell is acceptable only
+as small boundary glue when the operating-system interface requires it; the
+feature logic should remain in Scheme or Emacs Lisp.  Do not add another Lisp
+dialect merely for breadth.  Any new dialect or non-Lisp implementation needs
+a concrete requirement and Rafael's approval.
 
-P5.2b-D1 now completes only the source and synthetic-fixture design boundary.
-Pinned-source review proves the supported System action deletes links before
-rebuilding GRUB from default bootloader configuration.  Exact-link-only
-deletion is also insufficient: all 78 candidates appear in the current menu,
-twice each, so it would leave 156 stale occurrences; the current =bootcfg= does
-not root every old System closure.  The new exact-tuple/rollback primitive
-hard-refuses root =/=, exposes no live =apply=, and carries
-=authorization state NOT-GRANTED=.  The retention planner no longer prints a
-System deletion command.  Live P5.2b remains held until a configuration-aware
-retained-only GRUB configuration can be built from the real GuixPC bootloader
-declaration and the accepted generation-87 boot parameters.  P5.3 remains
-separately held.
+** Prove the layer that changed
 
-P5.2b-D2a now provides that configuration-aware path as source machinery, not
-as an active boot configuration.  Its Scheme core validates the real
-=grub-efi= object, direct-store generation-87 main entry, and exactly old links
-=86,85,84,83,81,80,75=.  It also constructs an independent retained-only
-projection of the accepted installed GRUB and requires the future generated
-bytes to match it exactly.  The launcher exposes only =fixture-check= and an
-unprivileged =stage= action; its tracked specification says =STAGE-ONLY=,
-=NOT-GRANTED=, and =REVIEW-ONLY=.  D2b later ran from the required clean
-upstream-equal D2a checkpoint and froze the uninstalled build artifact and
-semantic report.  Recovery, live deletion, active =bootcfg= promotion, and
-P5.3 remain held.
+Keep these claims separate:
 
-P5.2b-D2b has now crossed only that immutable-build boundary.  Exact published
-D2a checkpoint =e8e563d= produced or confirmed a 5,163-byte uninstalled
-=grub.cfg= whose SHA256 is
-=70965414824c26e1712c6a7a51efd9517633eb3c83f36f88927565c87807496b=.
-The generated bytes equal the accepted-GRUB projection and retain exactly old
-entries =86,85,84,83,81,80,75=.  The exact bytes and untouched stage report
-are tracked; installed GRUB, live =bootcfg=, System/Home/Pull links, and boot
-state remained unchanged.  The evidence is published at checkpoint
-=abcf2ef=.  D3a recovery-transaction source/fixtures are published at
-=676b430=, but D3b's first clean compile gate found two warning diagnostics.
-The D3a compile-gate correction is published at =0601b9d=.  D3b's fresh
-clean-published evidence now passes direct warning-free compilation, the
-standalone and strict 98-point matrices, and an exact 129-record selected-live-
-surface comparison.  That evidence is published at =b1d6ecb=.  Accepted
-decision D-41 now separates D4a source/fixtures, D4b clean-published synthetic
-fused-program evidence, D4c.1a production source/schema/fixture publication,
-D4c.1b live-manifest publication, D4c.2 exact live fused-program evidence,
-D4c.3 unchanged-state execution-packet acceptance and stop, and the separately
-authorized D5 transaction.  Every live action remains blocked.
+1. source is valid;
+2. a candidate builds;
+3. a configuration was activated;
+4. the expected runtime owns the new state;
+5. Rafael completed any necessary hand test.
 
-P5.2b-D3a is complete at the source-and-fixture checkpoint, not as an accepted
-live transaction.  Its fixture-only Scheme engine declares 98 interruption points
-(54 forward and 44 rollback), direct synthetic recovery roots for each
-selected generation plus old/new =bootcfg=, a hash-chained journal with
-synchronized atomic replacement and directory =fsync=, and the safe order
-roots -> new GRUB -> new =bootcfg= -> link exclusion.  Recovery rolls back
-before the durable =COMMITTED= event and finishes forward cleanup afterward
-at the declared post-operation restart boundaries.  Pre-=BEGIN= and orphaned
-atomic-temporary states deliberately require manual review; D4 must add that
-reconciliation and immutable loaded-byte packaging before live promotion.
-Its transaction and System-profile locks are cooperative and do not exclude
-arbitrary =guix system= commands.  D4 must retain that nonclaim: it requires
-attended quiescence plus exact protected-surface revalidation before every
-phase, not a claim of global Guix exclusion.  It must also prove that
-production recovery roots for every selected candidate and the old/new
-=bootcfg= targets, plus the exact fused program, remain registered and live
-through safe cleanup.  After the separate D5 grant, the program temporary root
-is the first daemon mutation, and its direct symlink beneath the existing
-=/var/guix/gcroots= is the first persistent mutation and durable GC root.
-Transaction/System locks follow and must be reacquired/revalidated under a
-fresh state-specific continuation grant during recovery.  Every required root
-must be proven exact, daemon-visible, valid, and live before any GRUB,
-=bootcfg=, or generation-link mutation.  D5 retains the exact persistent lock
-inodes as terminal infrastructure rather than unlinking a locked pathname.
-The exact =54 + 44= matrix, static checks, and
-=scripts/shell-check --strict= pass.  D3a was published as =676b430=.
-The first exact clean-published =guild compile -W3= run then exposed two
-unused internal =failure= variables generated by final exhaustive =ice-9
-match= clauses, superseding the original warning-free claim.  The minimal
-D3a correction prevalidates the closed row shapes and removes only those
-unreachable catch-all clauses; direct module/driver compilation is silent,
-the full 98-point strict gate passes in 252 seconds, and a 121-record live
-snapshot is byte-identical before and after.  That correction is published at
-=0601b9d=; its selected 121-record live-surface snapshot remained
-byte-identical.
+A build, test suite, document, or generated artifact is not a live system
+improvement.  Call work complete only at the boundary Rafael requested.
 
-P5.2b-D3b has now rerun from clean published correction =0601b9d=.  Direct
-module and driver =guild compile -W3= runs emit zero diagnostics; the
-standalone matrix passes all =54 + 44 = 98= points in 143 seconds and the
-complete strict gate passes in 254 seconds.  Its separately captured raw
-channels and closed 54-record result are tracked.  The 129-record pre/post
-snapshot is byte-identical, including all =86/17/5= generation tuples,
-profile/runtime pointers, installed GRUB, =bootcfg=, boot ID, top-level store-
-name digest, and absent transaction surfaces.  This is selected-surface
-evidence, not whole-store or whole-machine identity.  D3b evidence is
-published at =b1d6ecb=.  The D4a source/fixture checkpoint passes its seven
-suites, the legacy 98-point matrix, the complete strict gate, and an exact
-19-record selected-surface comparison; it is published at =41e1115=.  D4b's
-source-only helper is published at =002d1ef=.  Its one authorized
-=computed-file= lowering and realization succeeded, yielding the exact
-=95b84e2...= / 956,987-byte fused program with three bounded store additions,
-no result root, and unchanged selected live surfaces.  The first runtime gate
-then stopped on an exact Guile 3.0.11 nested-loader warning.  Empty child
-stderr remains mandatory: root-cause analysis found that a lazily spawned
-finalizer thread made startup environment mutation reach =scm_putenv= with
-multiple threads, a condition Guile documents as unspecified.  The
-artifact/result remain accepted; a later source-only validator correction
-prevents the condition only during exact-prefix loading.  That correction was
-published at =99dfdeff=; its first recovery passed boundary and root-backend
-with empty child stderr, then stopped safely because the orchestrator
-whole-line matcher expected bare PASS instead of the frozen =PASS (313
-checks)= line.  No artifact semantics failed and no second realization ran.
-A second source-only matcher correction pins all six exact PASS literals.  Its
-published checkpoint =bf8040d= passed all six production suites with empty
-nested-loader stderr, then stopped safely when the artifact capability guard
-rejected the harness's 0755 D4a root.  Its exact 0-byte stdout and 115-byte
-stderr are retained; no artifact semantic check failed and no second
-realization ran.  The third source-only correction separates exact D4a
-topology (0700 root, 0600 reconciliation sentinel, absent transaction/root
-namespaces) from legacy 98-point topology.  It is published at =cdd4bd4=;
-runtime-v4 and checkout-independence pass all six production suites, five D4a
-actions, 11 empty nested-loader sites, and =54 + 44 = 98= artifact points.
-The exact 4,582-byte stdout is
-[[file:docs/audits/data/2026-07-20-p5.2b-d4b-runtime-recovery-3.stdout][tracked]],
-stderr is empty, all prior evidence/live surfaces remain unchanged, and no
-second realization or live action ran.  D4b evidence is complete and
-published with clean upstream equality at =9577e1d=.  Every live mutation
-remains blocked behind D4c and D5.
+* Current machine
 
-Decision D-41 requires one fused store-resident Scheme program with no project
-repository read at runtime.  D4c.1a first publishes the additive production
-manifest schema, deterministic read-only collector/verifier, exact live
-renderer/driver/root-adapter source, and synthetic fixtures while retaining
-=authorization NOT-GRANTED=.  D4c.1b then publishes the fresh live manifest
-binding that exact source checkpoint without a self-referential future program
-path.  D4c.2 binds the manifest SHA256 to the resulting program store path,
-file SHA256/size, and pinned runtime without changing semantic source.  D4c.3
-accepts a packet naming both identities while execution remains =NOT-GRANTED=.
-D5 requires a separate exact execution grant after unchanged initial
-preflight; restart recovery instead requires one accepted manifest-declared
-transition and a fresh state-specific continuation grant.  The program
-receives its own durable D5 recovery root, removed last only after =COMPLETE=
-or =ROLLED-BACK= and terminal postflight are durable.
+** Host summary
 
-The effects of Guix permitting one local build job and reporting/allowing up
-to four cores to it, HPET cost, sustained thermals, and real boot-to-ready time
-remain unmeasured.  No tuning or maintenance policy follows automatically from
-the earlier point samples.  Keep this section aligned with accepted machine
-state so the repo records intent, not only implementation commits.
+| Role       | Current hardware or policy                            |
+|------------+-------------------------------------------------------|
+| Host       | Lenovo ideacentre 510A-15ARR, host name =guixpc=      |
+| Processor  | AMD Ryzen 3 2200G with integrated Radeon Vega         |
+| Memory     | 32 GB DDR4                                            |
+| Display    | 3440x1440 at 100 Hz                                   |
+| Network    | Realtek Ethernet and Intel AX200 Wi-Fi/Bluetooth       |
+| Storage    | Two Samsung 860 EVO 250 GB SATA SSDs                  |
+| Boot       | UEFI GRUB; Secure Boot is intentionally disabled      |
 
-The canonical record for the completed numbered roadmap is
-[[file:docs/audits/2026-07-12-full-configuration-audit.org][the 2026-07-12 full configuration audit]].  It records verified state,
-confirmed defects, qualified risks, strengths, Lisp coverage, and acceptance
-gates.  [[file:docs/audits/2026-07-15-phase-0-baseline.org][The 2026-07-15 Phase 0 baseline and P1.1 record]] owns current follow-on
-machine state and boot-comparison evidence.
-[[file:docs/audits/2026-07-15-p2.1-emacs-exwm-measurement.org][The P2.1 Emacs/EXWM measurement record]] owns the versioned protocol, truth
-boundaries, and accepted baseline.  [[file:docs/audits/2026-07-16-p2.2-emacs-startup-attribution.org][The P2.2 startup-attribution record]] owns
-the opt-in observer, rejected attempts and corrections, accepted trace, and
-non-causal interpretation rules.  [[file:docs/audits/2026-07-16-p2.k1a-boot-kernel-attribution.org][The P2.K1a boot-edge attribution record]] owns
-the two-boot recurrence matrix, resolved P0-F01 signature, unresolved
-P0-F02/P0-F03 boundaries, and successor gates.
-[[file:docs/audits/2026-07-16-p2.s1a-system-performance-baseline.org][The P2.S1a system-performance baseline]] owns the passive CPU, thermal,
-memory, storage, Guix-build, generation, and timing observations; its qualified
-configuration and unverified-observability findings; and the boundary between
-observation, benchmarking, tuning, and destructive maintenance.
-[[file:docs/audits/2026-07-16-p2.m1-storage-maintenance-contract.org][The P2.M1 storage-maintenance contract]] corrects the SMART ownership boundary,
-records the disclosed UDisks lazy-activation probe, defines the contract for an
-identifier-rejecting Scheme reader, and separates visibility, TRIM policy,
-actual FITRIM, deep diagnostics, alerting, and cleanup.
-[[file:docs/audits/2026-07-16-p2.m1a-scheme-disk-health-source-checkpoint.org][The P2.M1a source checkpoint]] owns the reader implementation, fixed command
-plan, offline protocol/lifecycle fixtures, privacy boundary, and source-gate
-evidence.  It contains no live drive-health or UDisks D-Bus activation
-evidence.
-[[file:docs/audits/2026-07-16-p2.m1a-cached-only-runtime-acceptance.org][The P2.M1a cached-only runtime record]] owns the pushed-checkpoint equality,
-single live cached observation, sanitized result, no-PID-change evidence, and
-explicit completion boundary.
-[[file:docs/audits/2026-07-16-p3.1-visual-ownership-and-token-contract.org][The P3.1 visual ownership and semantic-token record]] owns the current
-Emacs/Kitty/Fish/GTK/font/icon/cursor/X-session baseline, exact truth
-boundaries, corrected no-Kitty-include architecture, data/rendering contract,
-and P3.2-P3.4 migration gates.  It contains no visual implementation or live
-desktop change.
-[[file:docs/audits/2026-07-16-p3.2-offline-theme-schema.org][The P3.2 offline semantic-theme record]] owns the inert schema, pure renderers,
-synthetic and production source data, deterministic goldens, validation
-evidence, accepted decision bundle, and exact production-identity gate.  It
-contains no Home wiring, candidate Home build, activation, or live desktop
-evidence.
-[[file:docs/audits/2026-07-17-p3.3-immutable-theme-home-wiring.org][The P3.3 immutable Home wiring record]] owns the isolated theme derivation,
-candidate Home mappings and package outputs, Kitty ownership transition,
-realized build evidence, and the exact P3.4 activation/rollback handoff.  It
-records no P3.3 activation, consumer restart, GUI launch, or visual acceptance
-evidence.
-[[file:docs/audits/2026-07-17-p3.4-theme-activation.org][The P3.4 GTK/GStreamer activation record]] owns generations 43 through 47,
-the live ownership and fresh-consumer evidence, both exact factory stops and
-root causes, the fresh-session GTK 4 result, the GTK 3 light-fallback and
-late-first-frame findings, the attended EXWM/dashboard reveal-order finding,
-the isolated opacity-gate evidence, its publication and generation-47
-activation, and the qualified attended startup result.
-[[file:docs/audits/2026-07-18-p4.1-recovery-inventory.org][The P4.1 recovery inventory and decision packet]] owns the metadata-only
-asset/coverage matrix, key and storage boundaries, recovery dependency order,
-Home-pin correction, unexpected GC-root side effect, and exact inputs required
-before backup implementation.
-[[file:docs/audits/2026-07-18-p4.2-recovery-storage-deferral.org][The P4.2 recovery/storage deferral record]] owns the explicit no-backup-now
-decision and residual risk, the no-disk-mutation boundary and observed
-second-SSD drift, reviewed storage alternatives, private-Org-repository
-handoff, and inert future =current + booted System when different + five newest
-additional distinct closures + explicit pins= maintenance policy.
-[[file:docs/audits/2026-07-18-p5.1-read-only-retention-estimator.org][The P5.1 read-only retention-estimator record]] owns the D-34 selection
-algorithm, safe Scheme store-API boundary, exact retained/candidate snapshot,
-forward-reference NAR accounting, fixture and live no-mutation evidence, and
-the separate P5.2/P5.3 stop boundary.
-[[file:docs/audits/2026-07-18-p5.2-reviewed-generation-deletion.org][The P5.2 generation-deletion preflight]] owns the fresh byte-identical
-estimate, exact Home-canary manifest and proposed selector, held System
-candidates, discovered default-GRUB reconstruction hazard, and the
-publication/authorization/postflight boundaries.  It records no deletion.
-[[file:docs/audits/2026-07-18-p5.2a-home-generation-deletion.org][The P5.2a Home generation-deletion record]] owns the later manifest-scoped
-authorization, exact =47 -> 17= link transition, immutable postflight estimate,
-unchanged GRUB/store boundaries, and explicit P5.2b/P5.3 stop.
-[[file:docs/audits/2026-07-18-p5.2b-custom-grub-safe-system-pruning-design.org][The P5.2b custom-GRUB-safe System-pruning design]] owns the pinned Guix
-semantics, 156-occurrence stale-menu finding, root-refusing synthetic
-exact-tuple/rollback primitive, planner correction, rejected paths, and the
-configuration-aware retained-only GRUB transaction required before live
-authorization.
-[[file:docs/audits/2026-07-18-p5.2b-d2a-retained-only-bootcfg-source.org][The P5.2b-D2a retained-only bootcfg source record]] owns the stage-only
-Scheme path, exact input specification, real bootloader-object contract,
-accepted-GRUB byte projector, native fixtures, and D2b clean-upstream build
-gate.  It records no built artifact, active boot configuration, recovery root,
-or live deletion authorization.
-[[file:docs/audits/2026-07-19-p5.2b-d2b-uninstalled-retained-only-bootcfg.org][The P5.2b-D2b uninstalled retained-only bootcfg record]] owns the exact
-5,163-byte tracked artifact, untouched stage report, source-checkpoint binding,
-byte/semantic results, immutable-store effect, postflight, and explicit
-non-claims.  It records no active boot configuration or live authorization.
-[[file:docs/audits/2026-07-19-p5.2b-d3a-recovery-transaction-source.org][The P5.2b-D3a recovery-transaction source record]] owns the current
-fixture-only architecture, direct synthetic-root lifecycle, durable
-hash-chained journal, safe forward/recovery order, 98-point declared matrix,
-cooperative-lock limitation, declared-boundary interruption scope, published
-=676b430= checkpoint, source-hash-preflight boundary, and explicit non-claims.
-[[file:docs/audits/2026-07-19-p5.2b-d3a-compile-gate-correction.org][The P5.2b-D3a compile-gate correction record]] owns the first
-clean-published D3b stop, exact two-warning diagnosis, minimal closed-shape
-rewrite, corrected module/manifest/harness hashes, strict revalidation, and
-unchanged live-surface proof.
-[[file:docs/audits/2026-07-19-p5.2b-d3b-clean-published-recovery-evidence.org][The P5.2b-D3b clean-published recovery record]] owns corrected
-source/remote equality, the closed evidence packet, warning-free direct
-compilation, standalone and strict 98-point results, exact 129-record
-selected-surface equality, exact =b1d6ecb= publication, and explicit
-non-claims.
-[[file:docs/audits/2026-07-19-p5.2b-d4-production-boundary-design.org][The P5.2b-D4 production-boundary design]] owns accepted decision D-41,
-the D4a/D4b/D4c.1a/D4c.1b/D4c.2/D4c.3/D5 safety decomposition,
-conservative reconciliation contract, one fused store-program requirement,
-non-circular source/manifest/program binding, production-root lifecycle, and
-exact stop/nonclaim gates.
-[[file:docs/audits/2026-07-19-p5.2b-d4a-reconciliation-fused-source.org][The P5.2b-D4a source checkpoint]] owns the closed journal automaton,
-root/orchestrator/reconciliation contracts, phase engine and in-memory runtime,
-ten-packet fused-source renderer, loader integration correction, seven-suite
-and legacy/strict results, exact 19-record nonmutation proof, adversarial
-review, and D4b behavioral-loader handoff.
-[[file:docs/audits/2026-07-19-p5.2b-d4b-helper-source.org][The P5.2b-D4b helper checkpoint]] owns the published exact-input
-constructor, preflight/realization gates, exact-code loader probe, runtime and
-checkout-unavailable validators, their historical source identities, and the
-bounded realization handoff.
-[[file:docs/audits/2026-07-19-p5.2b-d4b-runtime-recovery.org][The P5.2b-D4b runtime-validator recovery record]] owns the retained
-=002d1ef= realization/result identities, first failed runtime channels, exact
-117-byte Guile warning diagnosis, GC-quiescent exact-prefix correction,
-published =99dfdeff= first recovery, its safely failed orchestrator matcher
-channels, published =bf8040d= second recovery, its safely failed fixture-root
-capability channels, the distinct D4a/legacy topology contract, closed 11-site
-empty-stderr policy, published third-validator checkpoint =cdd4bd4=,
-subsequent runtime-v4/checkout PASS, exact
-[[file:docs/audits/data/2026-07-20-p5.2b-d4b-runtime-recovery-3.stdout][final stdout]],
-and the complete D4b runtime proof without a second realization or live
-action.  The final docs/data evidence is published with clean upstream
-equality at =9577e1d=.
-[[file:guix/machines/guixpc/todo.org][The guixpc TODO]] is the low-noise machine queue for separate deferred work.
-There is no successor numbered stabilization slice; new work is promoted
-through the dated roadmap.
+The first SSD carries the active System and Home filesystems.  The second SSD
+is installed but has no declared GuixPC role.  Detailed discovery evidence is
+in [[file:docs/audits/2026-07-12-full-configuration-audit.org][the full configuration audit]].
 
-** Current boundary
+** Accepted operating baseline
 
-Phase 3 is complete through P3.4.  P4.2 completed Phase 4's current
-decision-only boundary; Phase 4 is parked without backup or restore acceptance.
-The sequential record below begins with P3.1's published
-documentation-only checkpoint, which verifies the live/repository ownership
-map and defines the semantic-token, validation, rendering, wiring, rollback,
-and acceptance contract.  Closure added no package, theme, font, cursor, icon,
-wallpaper change, build, Home/System generation, process, activation, EXWM
-session, GUI launch, or reboot.
+- Guix System owns hardware, boot, filesystems, system services, and a small
+  tty recovery floor.
+- Guix Home owns the normal user package set, Fish, Emacs, session D-Bus,
+  PipeWire/WirePlumber, fonts, themes, and repository-backed dotfile links.
+- EXWM is the desktop session; tty1 remains the local recovery entry point.
+- Kitty and its terminfo are available in the System recovery floor.
+- Interactive SSH carries the truthful =xterm-kitty= terminal type without a
+  manual =TERM= override.
+- GTK 3/4, Emacs, Kitty, Fish, wallpaper, fonts, icons, and cursor share the
+  accepted dark visual policy.  Qt normalization has not yet been designed.
+- Bluetooth is enabled early enough for a paired device to reconnect, while
+  the user audio stack remains owned by Guix Home.
+- Channel inputs are authenticated and pinned in =guix/channels.scm=.
+- Generation retention inspection is read-only.  There is no approved
+  automatic System-generation deletion or store garbage-collection job.
 
-P3.2 is complete.  Its fixture checkpoint =3627f0b= and schema-v2 production
-checkpoint =b74a98d736b6dfbca421b115d1a0c979d707a853= are published with
-clean upstream equality.  The latter freezes the accepted 11 pt UI value at
-logical 96 DPI, exact production datum and provenance, role/ANSI identity,
-production goldens, and negative/native parser gates.  Its focused gate passes
-281 checks plus native parsers.  Emacs variable-pitch becomes 11 pt while
-default and fixed-pitch remain at their accepted 12 pt calibration.
+This is a concise baseline, not a substitute for live verification after a
+change.
 
-The production validator deliberately exempts only exact Modus terminal
-=black= and =bright-black= endpoints from the 3:1 ANSI-on-canvas check; they
-are terminal dark/dim endpoints, not semantic UI text or component roles.  The
-other 14 ANSI slots and all reviewed semantic contrast pairs remain enforced,
-and exact production identity checks prevent the exception from becoming an
-unbounded escape hatch.
+* Configuration ownership
 
-P3.3 is complete at its source/build boundary.  The isolated Scheme derivation,
-immutable Home mappings, explicit font/icon/cursor and =gtk:bin= outputs, and
-generation-level Kitty ownership migration are implemented.  Candidate
-=/gnu/store/b668045vxgnx7mnsi99pf4nsdd4md9hc-home= is built and passes exact
-adapter, parser, package, font, icon, cursor, and activation-order checks.
-Implementation checkpoint =530eb250e2e876f20b3c553be39533e5548cfb6d=
-and evidence checkpoint =00bf260d614ce4e5e4d023a7fba09826da48ae80=
-are published; fetched =HEAD= and =origin/main= equal =00bf260= at
-ahead/behind =0/0=.
+| Area                         | Source                                      |
+|------------------------------+---------------------------------------------|
+| Guix channels                | =guix/channels.scm=                         |
+| System configuration         | =guix/systems/guixpc.scm=                  |
+| Home configuration           | =guix/home/guixpc.scm=                     |
+| Package ownership            | =guix/package-ownership.scm=               |
+| Reusable Scheme modules      | =guix/modules/sk/=                          |
+| Theme tokens and renderers   | =theme/= and =guix/modules/sk/theme*.scm=  |
+| Emacs and EXWM               | =emacs/=                                    |
+| Shell and application config | =shell/=, =kitty/=, =ranger/=, =gdb/=, =x11/= |
+| Supported operator commands  | =scripts/=                                  |
+| Validation and fixtures      | =tests/= and =fixtures/=                    |
+| Machine record               | =guix/machines/guixpc/=                    |
+| Audit evidence               | =docs/audits/=                              |
 
-P3.4 is complete at its scoped activation and real-display boundary.
-Generation 43 at
-=/gnu/store/1slsnsfv8avdqzi3fsf0xhigyv6vfmal-home= records the first factory
-stop: =gtk:bin= exposed the executable while =gtk:out= remained outside the
-profile.  GTK correction =1358cb2= is published and upstream-equal; generation
-44 at =/gnu/store/gb9kvfwniwwasga61lia7b1dagfa2a4r-home= has both GTK outputs,
-passes the exact schema/cache gate, and removes that failure.  Its factory
-launch then stopped on missing GStreamer =playbin3=, before any session restart
-or visible acceptance.
+The repository owns human-edited configuration.  Guix store outputs,
+generations, caches, application history, and other generated state are not
+source files and should not be edited as if they were configuration.
 
-GStreamer correction =d83feb8= is published and upstream-equal.  Home
-generation 45 at =/gnu/store/9rmcgpl41riggidbkjz7ah3fj7a9wfky-home= directly
-owns =gst-plugins-base= and =gst-plugins-good=.  Its 96-record profile passes
-exact plugin provenance, generated search-path, hostile-ambient-environment,
-and fresh-registry discovery for playback, WebM/VP9, tempo, and automatic
-sinks.  A clean shell sourced =~/.profile= and launched the exact active
-factory with only an isolated registry; it remained alive for five seconds
-with no fatal GLib or GStreamer diagnostic.  The known nonfatal allocation
-warnings remain attributable to EXWM tiling the 1445-pixel test surface at 896
-pixels.
+** Live declaration links
 
-The X/EXWM session subsequently restarted twice.  The fresh Emacs inherited
-the then-active Home GStreamer path, all 30 reviewed EXWM global bindings
-remained installed and grabbed, and the exact factory passed both its runtime
-and visible-window checks.  The broader hand test did not close P3.4: GTK 3
-reported =Adwaita-dark= but rendered both its widget factory and Blueman light,
-while Emacs visibly added bars, decoration, fullscreen, and theme state after
-frame creation.  Isolated GTK 3 tests proved the corrected base is =Adwaita=
-with =gtk-application-prefer-dark-theme=true=.  Source review proved the Emacs
-adapter and frame policy were loaded after the initial X frame, while EXWM
-created four additional frames before its deferred fullscreen transition.
-
-The correction candidate changes only those discovered boundaries.  It moves
-immutable theme consumption and eight initial/default frame parameters into
-=early-init.el=, keeps GUI-dependent mode calls in normal init, and makes
-generated symbol-font setup per-frame so the pre-frame load cannot skip the
-initial or four EXWM workspace frames.  The candidate passes 298 theme checks
-and native parsers, all 61 Emacs tests and connected backends, immutable Home
-failure controls, the strict repository gate, and the complete pinned
-Home/System gate.  Its realized Home result is
-=/gnu/store/dkasc56ngxmyg4gq453xx71h5xzaka3m-home= with the unchanged
-96-record profile.  Checkpoint =e6492cc= is published and active as generation
-46 at =/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home=.  The fresh reboot
-passes all five frame invariants, and Rafael accepted normal GTK 3
-widget-factory/Blueman darkness plus keybinding behavior.  A subsequent
-attended boot accepted the original early-frame correction but exposed the
-dashboard during EXWM's later 1x1-container/deferred-fullscreen transition.
-The new candidate starts Picom before Emacs, keeps all five startup frames
-mapped at zero opacity, yields to EXWM's deferred fullscreen work, waits for
-the selected/active workspace geometry, pre-renders, then releases all frames
-to the declared 85 percent.  A controlled nested-X probe proves wallpaper-only
-pixels during the hidden phase; four separate no-pause trials prove the
-selected/active frame is full-size before reveal and all gate owners are
-removed afterward.  Published implementation =f24b7b5= and evidence
-=5c579da= are clean and upstream-equal.  Generation 47 at
-=/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home= retains the same 96-record
-profile; generation 46 is immediate rollback.  Fresh boot =6c560dab...= has
-one exact-policy Picom daemon, five 3440x1440 =fullboth= frames at explicit
-alpha 0.85, complete release, restored floor 20, and no surviving one-shot
-owner or startup-gate warning.  The live Emacs gate, 78/78 ERT tests,
-fresh-process failure fixture, connected backends, and desktop-session gate
-all pass.  Rafael reported that the attended startup was “SO much better!”
-That is strong positive evidence of a material correction, not an unqualified
-claim that every trace of a visual transition is absent.  Remaining
-real-display checks on current boot =b36bfc06...= accepted wallpaper and
-ultrawide fit, transparency and readable contrast without flicker or ghosting,
-the cursor and icons, GTK 4, Fish syntax/pager colors, and adjacent SSH/EXWM
-behavior.  The final automated desktop-session run passed with explicit
-disconnected audio/Bluetooth skips.  No Qt, forced-DPI, global toolkit-scale,
-or absolute zero-transition result is claimed.
-
-P2.3, P2.S1b/P2.S1c, and P2.M1b/P2.M1c remain =BACKLOG=; P2.M1d remains
-parked.  Phase 4 backup/storage implementation is parked by explicit owner
-decision.  P5.1 is complete at published checkpoint =93619e9=.  Phase 5 is
-back in =BACKLOG= after the completed P5.2a Home canary.  The canary removed
-exactly its 30 reviewed Home links and passed the full =86/17/5= postflight
-without GC, store-object removal, activation, or reboot.  P5.2 remains
-=BACKLOG= because live P5.2b System deletion remains held.  P5.2b-D1 completes
-only a root-refusing source/fixture primitive and records why neither the
-supported command nor exact-link-only deletion is acceptable.  P5.2b-D2a
-completes the configuration-aware stage-only source, exact input contract,
-accepted-GRUB byte projector, and native fixtures.  P5.2b-D2b completes the
-published uninstalled artifact/evidence boundary at =abcf2ef=.  D3a's
-recovery-transaction source/fixture checkpoint was published at =676b430=,
-where D3b's first clean compile gate found two generated unused-variable
-diagnostics.  The validated D3a compile-gate correction is published at
-=0601b9d=.  D3b's clean-published compile, standalone matrix, strict gate,
-closed output packet, and selected-surface comparison pass; its evidence is
-published at =b1d6ecb=.  D4a is complete and published at =41e1115=:
-its seven suites, standalone legacy matrix, strict aggregate gate, and
-selected-surface comparison pass without a store realization or live action.
-D4b's separate source-only constructor and runtime-evidence helpers reproduce
-the exact =95b84e2...= / 956,987-byte D4a render.  They were published at
-=002d1ef=, and the one explicitly approved synthetic realization succeeded.
-Its first runtime validation stopped on the exact 117-byte Guile nested-loader
-warning.  Empty stderr remains the required policy because Guile documents
-the observed multi-thread environment mutation as unspecified.  The accepted
-artifact is retained.  The first source-only validator correction is
-published at =99dfdeff=.  Its recovery passed boundary and root-backend with
-empty child stderr, then stopped safely when a bare-PASS whole-line matcher
-rejected the successful frozen orchestrator =PASS (313 checks)= line.  Its
-0-byte stdout and 129-byte stderr are preserved; no artifact semantics failed
-and no second realization ran.  The second correction pins all six exact suite
-PASS literals and was published at =bf8040d=.  Its recovery passed all six
-production suites with empty nested-loader stderr, then stopped safely when
-the artifact's capability guard rejected the harness-created 0755 D4a root.
-The 0-byte =runtime-recovery-2.stdout= and 115-byte
-=runtime-recovery-2.stderr= are preserved; no artifact semantic check
-failed and no second realization ran.  The third source-only correction
-separates exact D4a fixture topology from the legacy 98-point topology and
-is published at =cdd4bd4=.  Runtime-v4 and checkout-independence pass: six
-production suites, five D4a actions, 11 empty nested-loader sites, and all
-=54 + 44 = 98= artifact points.  The checkout is restored; all failed
-channels, the result/artifact, and the 19-record live snapshot remain exact.
-D4b evidence is complete and published with clean upstream equality at
-=9577e1d=.  D4c.1a source-only production contract is the next gate; D4c.1b
-live-manifest publication, D4c.2 exact live-program evidence, D4c.3
-unchanged-state execution-packet acceptance, and separately authorized D5
-execution remain later gates.
-P5.3 collection remains separate and unpromoted; no further cleanup is
-authorized.
-
-** Frozen P5.2b historical record
-
-The following subsection is retained only as provenance for the frozen
-experiment.  None of its incomplete items is ready or actionable.
-
-P5.2b-D4a is evidence-complete and published at =41e1115= at its bounded
-source/fixture boundary.  D4b's helper is published at =002d1ef= and its one
-authorized realization succeeded.  First validator correction =99dfdeff= is
-published; its recovery stopped safely at the orchestrator PASS matcher after
-two warning-free production suites.  Second validator correction =bf8040d= is
-published; all six production suites passed warning-free before its D4a
-fixture root failed the artifact's exact capability guard.  Third validator
-checkpoint =cdd4bd4= is published and equal; its exact runtime-v4 and
-checkout-independence packets pass with empty stderr and restored checkout.
-The final D4b docs/data evidence is published with clean upstream equality at
-=9577e1d=.  D4c.1a stopped as incomplete additive source-only work.  Its
-formerly proposed collector, production adapter, execution plan,
-renderer/driver, durable-journal policy, terminal policy, final inventory, and
-remaining gates are frozen by the user scope override above.
-
-- The first bounded D4c.1a protocol source checkpoint =79a361a= and
-  documentation closure =0d97e5d= are published with clean GuixPC/origin/direct
-  GitHub equality.  It adds a pure canonical live-manifest protocol and
-  adversarial fixtures while documenting the exact production-source gap.  Its
-  postflight rows cover only successful forward =COMPLETE=.  D4c.1a remains
-  open for additive live
-  boundary/journal/reconciliation, grant grammar, runtime adapter, collector,
-  fused renderer/driver source, the final exact source-input inventory, the
-  =ROLLED-BACK= postflight branch, and the recovery-root-base terminal
-  disposition.
-- The second bounded D4c.1a source checkpoint =9404441= adds the separate pure
-  live boundary/journal grammar, typed exact D5 grant transport, and fail-
-  closed observation-bound pre-journal reconciliation core.  Its pinned gate
-  warning-fatally compiles and runs the repository module bytes with exact
-  PASS counts =90/48/130/117=; D4a's seven suites and the D4b
-  =lowered=FALSE realized=FALSE= source gate also pass.  Initial-journal-
-  temporary and durable-journal recovery, terminal semantics, production
-  effects, and the final boundary-derived execution plan remain explicitly
-  outside this checkpoint.  Documentation closure =7cbb0bb= is published with
-  clean GuixPC/origin/direct-GitHub equality and unchanged protected state.
-- [ ] P5.2b-D4c.1a: publish the closed production source/schema/fixture
-  contract with =authorization NOT-GRANTED= and prove upstream equality.
-- [ ] P5.2b-D4c.1b, only afterward: recompute and publish the fresh closed
-  live-state review manifest binding the exact D4c.1a source checkpoint, prove
-  upstream equality, and stop without a program build, root, authorization, or
-  transaction mutation.
-P5.2a is complete.
-P5.2b-D1 is complete at the source and synthetic-fixture boundary;
-P5.2b-D2a is complete at its source and native-fixture boundary, and D2b is
-complete and published at its uninstalled artifact/evidence boundary.  D3a is
-published at =676b430=; its first D3b compile gate found two warnings.  The
-minimal D3a correction is published at =0601b9d=.  D3b is evidence-complete
-and published at =b1d6ecb=.  D4b's successful third validator is published
-at =cdd4bd4=; D4b evidence is complete and published with clean upstream
-equality at =9577e1d=.  Live P5.2b remains blocked on D4c.1a source-contract,
-D4c.1b manifest, and D4c.2 program publication, D4c.3 packet acceptance, and a
-separate exact D5 execution grant.
-P4.O1 private Org sync/history remains a selectable non-destructive successor.
-P5.3 is not ready, P5.S1 storage reorganization remains parked, and
-backup/restore implementation is parked as P4.3.
-
-** Completed
-
-- [X] P5.2b-D4b: clean-published synthetic fused-program evidence
-  Evidence publication =9577e1d= is clean-upstream-equal and records
-  third-validator checkpoint =cdd4bd4=, runtime-v4 and checkout-independence
-  PASS, exact 78-line stdout and empty stderr, six production suites, five
-  D4a actions, 11 empty nested-loader sites, and all =54 + 44 = 98= artifact
-  points.  The checkout was restored, the 19-record live snapshot remained
-  exact, and all failed attempts were retained.  No second lowering or
-  realization, result/root, or live action occurred.
-
-- [X] P5.2b-D4a: reconciliation and fused-program source/fixtures
-  Published checkpoint =41e1115= implements the closed journal automaton,
-  synthetic root and reconciliation contracts, central pre-phase gate,
-  3,172-check phase engine, 297-check in-memory runtime, and deterministic
-  ten-packet fused renderer.
-  The complete harness passes seven suites in 168 seconds; the standalone
-  =54 + 44 = 98= legacy matrix passes in 162 seconds and the strict aggregate
-  gate passes in 445 seconds.  The 19-record selected-live snapshot is
-  byte-identical before/after.  No program was realized, no live action ran,
-  and the later D4b source-helper work does not change the renderer or any of
-  its 18 input files.
-
-- [X] P5.2b-D3b: clean-published recovery evidence
-  Clean =HEAD == origin/main == GitHub main= at =0601b9d= binds the corrected
-  module, manifest, harness, and all nine adjacent inputs.  Direct compilation
-  is warning-free; the standalone and strict matrices pass all =54 + 44 = 98=
-  declared restart points in 143 and 254 seconds.  Four raw channels, a closed
-  54-record result, and a byte-identical 129-record selected-surface snapshot
-  are tracked.  No live transaction action ran, D4 authorization remains
-  =NOT-GRANTED=, and the evidence is published at =b1d6ecb=.
-
-- [X] P5.2b-D3a.1: compile-gate correction
-  The first clean-published D3b compile found two unused =failure= diagnostics
-  generated by exhaustive =ice-9 match= clauses in published checkpoint
-  =676b430=.  Closed row shape/tag validation now precedes matching and the
-  unreachable catch-alls are removed.  Corrected module and driver compilation
-  emit zero diagnostics; all 98 restart points and the complete strict gate
-  pass in 252 seconds.  The exact 121-record live snapshot remained identical.
-  The correction is published at =0601b9d= and is the exact D3b source.
-
-- [X] P5.2b-D2b: uninstalled retained-only bootcfg artifact
-  Exact published D2a checkpoint =e8e563d= realized or confirmed an immutable
-  5,163-byte =grub.cfg= with SHA256 =70965414824c...c87807496b=.  It is
-  byte-identical to the independent accepted-GRUB projection and names only
-  retained old links =86,85,84,83,81,80,75=.  The exact bytes and untouched
-  stage report are tracked; selected pre/post surfaces were identical.  The
-  output was not rooted, installed, activated, rebooted, or boot-tested.
-
-- [X] P5.2b-D2a: retained-only bootcfg source and native fixtures
-  The Scheme path validates the real GuixPC bootloader object, preserves
-  generation 87 as the direct-store main entry, selects only old links
-  =86,85,84,83,81,80,75=, and compares future generated bytes with an
-  independent projection of the accepted installed GRUB.  Its closed input is
-  =STAGE-ONLY=, =NOT-GRANTED=, and =REVIEW-ONLY=.  Native positive/negative
-  fixtures, warning-free compilation, and the read-only 5,163-byte live
-  projection pass.  No immutable output was built or made active in D2a.
-
-- [X] P5.2b-D1: custom-GRUB-safe System-pruning design primitive
-  Pinned-source review proves the supported action deletes first and rebuilds
-  GRUB from defaults.  The current menu contains every held candidate twice,
-  so link-only deletion would leave 156 stale occurrences, while the current
-  =bootcfg= does not root every old closure.  A SHA-bound synthetic manifest,
-  root-refusing exact-tuple verifier, staged rollback primitive, and failure/
-  signal/partial-state fixture pass; =plan= emits no System deletion command.
-  No live manifest or =apply= exists, no live state changed, and all 78 System
-  candidates remain held.
-
-- [X] P5.2a: reviewed Home generation-deletion canary
-  Published plan checkpoint =450f396= and manifest-scoped authorization bound
-  one attended deletion to Home =1..28,30,31=.  Home links changed
-  =47 -> 17=; System/Home/Pull now have =86/17/5= links and =78/0/0=
-  candidates, with current generations still =87/47/5=.  Retained tuples,
-  System/Pull, pins, GRUB, =bootcfg=, and top-level store names remain exact;
-  =verify= and =rollback-drill= pass.  No GC, store-object removal,
-  activation, or reboot occurred, and material reclaim is zero.
-
-- [X] P5.1: read-only retention and closure-accounting estimator
-  Published checkpoint =93619e9= implements the accepted distinct-closure
-  floor, passes deterministic fixture and live no-mutation gates, and records
-  108 candidate links: 99 target 64 unretained closures and 9 are duplicates
-  to 4 retained closures.  Guaranteed reclaimable bytes remain exactly zero.
-  No generation link, store object, profile, pin, package, activation, backup,
-  disk, boot state, or persistent process changed.
-
-- [X] P4.2: recovery/storage deferral and maintenance-policy decision
-  Accepted no backup or storage implementation for now, recorded residual
-  risk, performed no automated second-SSD mutation, recorded Rafael's deliberate
-  removal of its prior Windows-oriented layout, compared future layouts,
-  separated a private Org sync/history repository from backup, and defined an
-  inert =current + booted System when different + five newest additional
-  distinct closures + explicit pins= planning floor.  No automated disk,
-  generation, GC, activation, or reboot change occurred.
-
-- [X] P4.1: recovery inventory and backup decision packet
-  Captured recovery assets and coverage without reading secret contents,
-  corrected Home recovery roles to accepted generations 47/46, retained
-  42/41, and recorded the =guix gc --list-dead= stale-root side effect.
-  No backup, restore, deletion, collection, activation, or reboot occurred.
-
-- [X] P3.4: activation and scoped real-display visual acceptance
-  Generation 47 passed publication, guarded activation, exact fresh-runtime
-  checks, the attended startup correction, the remaining visual hand pass,
-  and adjacent SSH/EXWM acceptance.  Preserve the recorded disconnected
-  audio/Bluetooth skips and the Qt/scaling/zero-transition exclusions.
-
-- [X] P3.3: immutable Guix Home theme wiring and candidate build
-  Published implementation =530eb25= and evidence =00bf260= are fetched,
-  clean, and equal to upstream.  The complete pinned build and consumer gates
-  pass without Home activation or live visual claims.
-
-- [X] P3.2: offline semantic-token schema, production datum, and renderers
-  Published fixture checkpoint =3627f0b= and production checkpoint =b74a98d=
-  passed 281 Scheme checks and pinned native parsers.  P3.2 itself performed no
-  Home wiring/build, package change, activation, or runtime mutation.
-
-- [X] P3.1: visual ownership baseline and semantic-token contract
-  Published checkpoint =8933827= passed Org/diff review and upstream equality;
-  Rafael explicitly accepted the contract.  It defines ownership, schema,
-  validation, migration, rollback, and stop boundaries without changing the
-  running desktop.
-
-- [X] P2.M1a: Scheme UDisks SMART reader
-  Pushed source checkpoint =7756938=, 185 offline checks, and one separately
-  authorized cached-only runtime observation satisfy the accepted scope.  The
-  retained fresh snapshot was narrowly classified =favorable= without a
-  hardware identifier; it is not a full disk diagnosis or future-health
-  guarantee.  Ordinary UDisks D-Bus activation was not tested and remains
-  optional.  No package, service declaration, privilege, generation, mutable
-  SMART method, FITRIM, or reboot was part of completion.
-
-- [X] P2.M1: storage-maintenance contract design
-  Inherited UDisks 2.10.1 already exposes ATA SMART data, so adding
-  =smartmontools= is not the first move.  One exploratory =udisksctl status=
-  call lazily activated the declared root daemon and populated its cache; that
-  boundary deviation and the rejected identity-bearing raw output are recorded.
-  Allowlisted cached indicators were favorable at the sampled timestamp, but
-  they are not a future-health guarantee.  The design specifies a Scheme
-  reader and splits periodic TRIM policy, dry-run, declarative activation,
-  actual FITRIM, and optional alerting into later gates.  No package,
-  generation, service declaration, device setting, self-test, trim, or reboot
-  changed.
-
-- [X] P2.S1a: passive system/build/storage baseline
-  The synchronized System 87 host was observed without privilege, load,
-  cleanup, activation, or reboot.  The capture showed no CPU, memory, I/O,
-  capacity, or thermal-pressure symptom.  The
-  discard-capable SSD has neither a continuous-discard mount nor a declared
-  periodic =fstrim= owner.  =smartctl=/=smartd= are absent, but inherited
-  UDisks 2.10.1 and =libatasmart= already expose an ATA SMART path whose live
-  values were not queried.  Guix explicitly permits one build job at a time and
-  reports/allows up to four cores to that job; this is an explicit local cap
-  with unmeasured throughput/interactivity effects, not a confirmed defect.
-  At that P2.S1a boundary, 44 unprotected older same-target generation-link
-  candidates remained only Phase 5 inventory evidence; no generation was
-  deleted and no garbage was collected during that baseline.
-
-- [X] P2.K1a: read-only boot-edge kernel attribution
-  Two of two inspected boots reproduced the exact early initrd-Guile signal,
-  IRQ 7 disable, and TSC-to-HPET fallback under the same Linux 7.0.14 boot
-  stack.  Exact binary and upstream-source matching closes P0-F01 as BDWGC's
-  handled address-limit probe, not a PID 1 crash.  P0-F02 remains a real AMD
-  GPIO parent-IRQ storm of unknown source and impact; P0-F03 remains a real
-  TSC/HPET disagreement with an automatic, unmeasured HPET
-  fallback.  P0-F04/P0-F05 were explicitly excluded and deferred.  No
-  configuration, activation, or reboot occurred.
-
-- [X] P2.2: one-shot Emacs/EXWM startup attribution
-  The accepted protocol-v1 artifact is a clean 139-line, 9,823-byte capture
-  from published source =ba087f5= with all twelve collector invariants and all
-  post-extraction gates passing.  It observed a 7.919856-second Emacs init
-  boundary, a 6.926169-second init-file phase, and a 0.655097-second EXWM-config
-  phase.  The largest observed inclusive personal-require boundaries were
-  =sk-racket= at 1.316815 seconds, =sk-project= at 1.233377 seconds, and
-  =sk-notes= at 1.035355 seconds.  These are associations in one trace, not
-  causal findings or selected tuning targets.  Rafael judged the instrumented
-  session-start window not materially disruptive, so the slice closed with no
-  configuration change.
-
-- [X] P2.1: reproducible Emacs/EXWM responsiveness baseline
-  The first valid protocol-v1 artifact is preserved with all eight invariants
-  passing: RPC median/p95 were 4.937/7.492 ms, and launcher preparation was
-  37.714 ms first with a 16.175 ms repeated median.  It selected no tuning
-  target; P2.2 subsequently attributed the aggregate initialization boundary
-  and also closed without tuning.
-
-- [X] Slice 0: Runtime sanity
-  Confirmed the live EXWM/Emacs path, clean repo state, active Guix
-  system/home generations, and SSH-side validation limits.
-- [X] Slice 1: Editor/tooling audit
-  Inventoried package ownership, active language modes, LSP-backed and non-LSP
-  paths, diagnostics, completion, =SPC c= commands, and helper/window behavior.
-- [X] Slice 2: Completion and diagnostics polish
-  Standardized Company/LSP completion behavior, Flycheck activation, LSP
-  breadcrumbs, and Ivy/Counsel command and buffer matching.
-- [X] Slice 3: Helper and window behavior
-  Standardized helper panels, main-window result opening, buffer switching, and
-  Ibuffer behavior without changing Magit internals.
-- [X] Slice 4: Dev/practice toolchain
-  Added the missing declared tools for C, Lua, shell, JSON, Scheme, Common Lisp,
-  and Python practice workflows.
-- [X] Slice 5: Formatting contract
-  Added manual =SPC c f= formatting for C, shell, JSON, and native indentation
-  for Lua, Lisp-family, and Org buffers. No format-on-save policy was added.
-- [X] Slice 6: Fixtures and tool probes
-  Added tracked fixtures plus =scripts/editor-tools-check= for reproducible
-  tool availability checks.
-- [X] Display/session startup stabilization
-  Corrected the active connector to =HDMI-A-0=, made Xorg prefer the explicit
-  =3440x1440_100= modeline, changed =xrandr= to fallback-only, and starts
-  wallpaper/Picom before launching fullscreen Emacs/EXWM.
-
-** Audit remediation history and remaining independent work
-
-- [X] Extend =scripts/emacs-check= with batch probes for mode detection,
-  keybindings, and formatting dispatch.  This implementation landed, but the
-  2026-07-12 audit supersedes it as a validation-safety baseline.
-- [X] Decide Python formatter policy: =ruff format=.
-- [X] Decide Lua formatter policy: native indentation; no =stylua= for now.
-- [X] Execute Slice 7: elogind 255.24 fixed command and PTY SSH session cleanup;
-  System generation 81, Home services, EXWM, and package runtime are converged.
-- [X] Replace =scripts/emacs-check= with the isolated, non-mutating live/batch
-  split from Slice 8.  Independent failures, warning capture, real mode hooks,
-  package ownership, ERT, byte compilation, and Checkdoc are now enforced.
-- [X] Complete Slice 9 command, activation, and formatter correctness.  Fish,
-  Bash, and Eshell share one revision-reporting Guix wrapper; declaration and
-  Home links fail safely; JSONC, formatter filenames, lockfiles, and project
-  discovery now have explicit tested policies.
-- [X] Activate and accept Slice 10.  System generation 82 and Home generation
-  32 now use one canonical Home D-Bus, active RTKit, the declared ten-minute
-  display-only power policy, and the passing desktop-session checker.
-- [X] Activate and accept Slice 11.  A fresh session now combines Home
-  generation 33's bounded private tty recovery logs with the matched
-  application placement, single-owner visual startup, transactional
-  display-policy reload, and 25 focused ERT checks from source commit
-  =39df7c3=.
-  Log-permission hardening is commit =6b395ba=.
-- [X] Activate and accept Slice 12.  Pull generation 5, System generation 84,
-  and Home generation 34 now share the exact authenticated channel lock; the
-  non-activating package/Home/System gate and read-only retention/rollback
-  planner pass from the accepted frontend.
-- [X] Complete Slice 13.  Reduced System generation 85 and corrected Home
-  generation 36 pass fresh desktop/editor/ownership/forced-SSH acceptance.
-  Exact retention roots are rotated, and the installed-base configuration
-  bootstrap passes both fixture and isolated GuixPC acceptance.
-- [X] Activate and accept Slice 14.  Home generation 37 supplies pinned Puni
-  and Eshell syntax highlighting; repository-linked editor source supplies the
-  authored snippet set and explicit Geiser/SLY editing contract.  Live editor,
-  Guile, structural, and isolated acceptance pass, and the exact Home retention
-  root is rotated.
-- [X] Activate and accept Slice 15.  Home generation 38 supplies the 78-package
-  profile and package-lint; repository-owned source supplies the tracked Elisp,
-  Guile, and ASDF projects plus the shared project command surface.  The strict
-  Common Lisp environment, three project gates, live editor, and disposable
-  Geiser/SLY backend acceptance pass.  Home 38 is retained with Home 37 as its
-  immediate fallback.
-- [X] Activate and accept Slice 16.  Home generation 39 supplies 81 explicit
-  packages (85 realized after four Home-service packages), including
-  =emacs-clojure-mode=, =clj-kondo=, and =cljfmt=.  The pinned Guix-only JVM
-  environment, tracked project workflow, project-keyed comint REPL, explicit
-  clojure-lsp integration, 44/44 ERT checks, real connected checks, negative
-  cleanup control, and fresh-boot acceptance all pass.  Home 38 is retained as
-  the immediate fallback.
-- [X] Activate and accept Slice 17.  Published checkpoint =18bdc80= activated
-  Home generation 40 with 82 declared packages and the runtime-detached Racket
-  Mode package.  After reboot, the project gate and its status-91 control,
-  49/49 editor tests, live cold-open probe, connected backend/XP/debugger checks,
-  deliberate 1/255 cleanup control, runtime-absence checks, and exact retention
-  rotation all pass.  Home 39 is retained as the immediate fallback.
-- [X] Activate and accept Slice 18.  Published implementation =c1bbf39= and
-  candidate documentation =81ebb24= activated as Home generation 41 with 83
-  declared packages.  After reboot, live/batch editor checks, 53/53 ERT tests,
-  the real project checker, two-root REPL/LSP checks, deliberate cleanup,
-  strict shell/ownership/runtime-absence gates, residue cleanup, and retention
-  rotation all pass.  Home 40 is retained as the immediate Racket fallback.
-- [X] Activate and accept Slice 19 desktop, security, and documentation polish.
-  Its opening native-comp correction is accepted from published checkpoint
-  =7476b05= as Home generation 42 at
-  =/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home=.  Fresh EXWM Emacs uses
-  Guix Home Org 9.8.7 with the package-profile-keyed XDG cache first, no legacy
-  fallback, and no mismatch warning; the old cache remains quarantined.  At
-  that earlier native-cache acceptance, editor gates passed after one bounded
-  Fennel retry, while desktop/session gates passed for available hardware with
-  Bluetooth explicitly skipped.  Retention-pin rotation passes the read-only
-  suite without deletion or garbage collection.
-  One initial Fennel acceptance run exposed a diagnosed Fennel Mode 0.9.2
-  newline-framing bug.  Published checkpoint =a8d8222= replaces only the faulty
-  private splitter, adds deterministic fragmentation coverage, and preserves
-  the primary editor error in checker failures.  The supported live reload,
-  singleton advice proof, 56/56 isolated tests, failure-order fixture, strict
-  gate, and one no-retry connected run pass.  Published checkpoints =ba6bc65=,
-  =5b39af8=, and =b10bca3= then close the desktop policy: cookie-only local X
-  trust, disabled Kitty remote control, one ambient-config-free Picom with
-  serialized restarts, explicit ordinary/strict audio gates, and Bluetooth
-  controller auto-enable.  The final 58/58 editor suite and strict source gates
-  pass.  Cold acceptance booted System generation 86 at
-  =/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system=; with the Bose initially
-  off, the controller was already powered, non-discoverable, and non-pairable.
-  Pressing only the speaker's power button connected it automatically, selected
-  =bluez_output.04_52_C7_86_93_08.1= as the default sink, and passed finite
-  low-volume playback.  Home 42 and Pull 5 were current at that acceptance
-  boundary.  All Slice 19 findings are closed; no Slice 20 is planned.
-- [X] Accept follow-on Phase 1 P1.1.  Published checkpoint =6c408af= installs
-  Kitty's separate =terminfo= output beside its default output.  System
-  generation 87 is current and booted at
-  =/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system=.  Truthful
-  =TERM=xterm-kitty= works locally and through interactive SSH without an
-  override, generic =xterm-256color= remains healthy, noninteractive SSH is
-  byte-clean, Fastfetch appears once, and a real Kitty =emacsclient -t= pair
-  leaves the EXWM server alive.  Desktop/audio, strict source, retention, and
-  rollback gates pass.  System 86 is the immediate rollback.
-- [ ] Revisit EXWM/helper polish only when a concrete behavior is wrong.
-- [ ] GRUB/early boot ultrawide remains cosmetic. Check =videoinfo= manually at
-  the GRUB prompt before making more bootloader changes.
-- [ ] Treat a custom kernel as a future experiment only after hardware
-  inventory and rollback criteria are documented. The current stable baseline is
-  the Nonguix kernel with the hardware modules already proven on this machine.
-
-* Hardware baseline
-
-These facts are live-verified from firmware, DMI, PCI, and EFI output. Keep this
-section current when hardware changes so the machine does not need to be
-rediscovered from scratch.
-
-** Identity
+The supported Guix entry points are links into this checkout:
 
 #+begin_src text
-System vendor:   Lenovo
-Machine model:   90J0000PUS
-Product line:    ideacentre 510A-15ARR
-Motherboard:     Lenovo 36EE
-Board version:   SDK0J40700 WIN 3258123335809
-BIOS vendor:     LENOVO
-BIOS version:    O3TKT34A
-BIOS date:       2018-06-01
+~/.config/guix/channels.scm       -> guix/channels.scm
+~/.config/guix/home.scm           -> guix/home/guixpc.scm
+~/.config/guix/systems/guixpc.scm -> guix/systems/guixpc.scm
 #+end_src
 
-** Core hardware
-
-#+begin_src text
-CPU:       AMD Ryzen 3 2200G with Radeon Vega Graphics
-GPU:       AMD Raven Ridge / Radeon Vega iGPU
-Ethernet:  Realtek RTL8111/8168/8211/8411 PCIe Gigabit
-Wi-Fi:     Intel Wi-Fi 6 AX200
-Bluetooth: Intel AX200 Bluetooth USB device
-Audio:     AMD HDMI/DP audio + AMD HD audio
-Storage:   2x Samsung SSD 860 EVO 250GB SATA
-           sda is the active System/Home disk; sdb is unused and unmounted
-#+end_src
-
-** Memory
-
-#+begin_src text
-Slots:        2 DDR4 DIMM slots
-Current:      2x16 GB Timetec TIMETEC-U16G-2666
-Linux view:   31.1G online memory, about 30 GiB reported by free(1)
-Maximum:      32 GB
-Target state: reached
-DIMM details: DDR4-2667, 1.2V, non-ECC, unbuffered, dual-rank
-Configured:   2667 MT/s in both slots
-#+end_src
-
-Use plain JEDEC-compatible desktop UDIMM memory. Avoid SO-DIMM, ECC,
-registered/buffered memory, DDR5, and XMP-only kits.
-
-** Expansion
-
-#+begin_src text
-J10:   PCI Express x16 physical, x8 electrical, available, short length
-J3701: M.2 WLAN/BT PCIe x1, in use by Intel AX200
-U3700: M.2 PCIe x1, available
-#+end_src
-
-The GPU slot exists, but this is still an OEM Lenovo board with a 180W PSU. Any
-GPU should be low-profile, short, slot-powered, and should not require 6-pin or
-8-pin PCIe power. The RAM upgrade target has been reached; future hardware
-upgrades should prioritize stability, power budget, and low-profile physical
-fit.
-
-** EFI and Secure Boot
-
-#+begin_src text
-UEFI boot:      yes
-Secure Boot:    disabled
-SetupMode:      enabled
-Platform keys:  PK/KEK/db/dbx not enrolled
-Primary entry:  Boot0001 Guix -> \EFI\GUIX\GRUBX64.EFI
-Fallback entry: Boot0009 UEFI OS -> \EFI\BOOT\BOOTX64.EFI
-#+end_src
-
-Current EFI files:
-
-#+begin_src text
-/boot/efi/efi/Guix/grubx64.efi
-/boot/efi/efi/boot/bootx64.efi
-/boot/efi/efi/boot/bootia32.efi
-#+end_src
-
-Do not enable Secure Boot until there is a deliberate signing workflow. Guix
-currently boots through unsigned GRUB EFI.
-
-* Ownership
-
-This repo owns the human-edited configuration. Generated state stays outside the
-repo and should not be edited directly.
-
-** System layer
-
-File:
-
-#+begin_src text
-guix/systems/guixpc.scm
-#+end_src
-
-Owns:
-
-- kernel and boot arguments
-- bootloader
-- filesystems
-- users and groups
-- the Fish/Kitty tty recovery path and a System =emacs -Q=/EXWM package floor
-- system services such as SSH, Bluetooth, Xorg, elogind
-
-Slice 13 uses a staged ownership migration.  Its additive and subtractive
-ownership checkpoints are accepted as Home generation 35 and reduced System
-generation 85; a final forced-SSH environment correction is accepted as Home
-generation 36.  Slice 14's structural-editor packages are accepted as Home
-generation 37.  Slice 15's package-lint addition is accepted as Home generation
-38; the repository-linked project/test workflow passes against that profile.
-Slice 16 is accepted as Home generation 39.  It expands the explicit Home set
-from 78 to 81 with =emacs-clojure-mode=, =clj-kondo=, and =cljfmt=; four
-Home-service packages bring the active realized profile to 85 packages.  The
-JVM, Clojure JAR, and clojure-lsp remain isolated in the pinned project
-environment rather than leaking into persistent Home or System ownership.
-Slice 17 is accepted as Home generation 40 at
-=/gnu/store/by5c2mcdhmxf456q7imb6j56kv2y9s4w-home= from published implementation
-checkpoint =18bdc800668070b444c21c5f3f3c0d6b6084e290=.  It keeps those 81
-specification-resolved packages and adds one explicit package object, for 82
-declared Home packages: the local =emacs-racket-mode/runtime-detached= variant.
-Upstream Guix patches Racket Mode to contain an absolute =racket= store path;
-the local variant restores the plain ="racket"= command after that phase.  Its
-verified output closure is 44.0 MiB, and its complete requisites contain no
-full, minimal, VM, documentation, or other Racket runtime output, avoiding
-retention of the full 2.135 GiB Racket 9.1 closure.  The historical
-non-activating gate realized candidate Home
-=/gnu/store/0qslq27g81snh836mpw4g4n3wgadjq59-home= and unchanged candidate
-System =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=; neither gate-only
-path was activated.  Fresh live checks prove the active Home and System expose
-no persistent Racket runtime/package/executable leakage.  Home generation 39 at
-=/gnu/store/n2hzw6qmz431lc5f40174xsgjr6xy589-home= is the immediate fallback.
-Slice 18 is accepted as Home generation 41 at
-=/gnu/store/ci9szqljcz4jjvwcrp76865j8q8ihl3d-home= with active profile
-=/gnu/store/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile=.  It adds only
-=emacs-fennel-mode= to the 82-package Slice 17 declaration, for 83 declared
-Home packages.  Fennel 1.6.1, fnlfmt 0.3.0, fennel-ls 0.2.3, and its
-checker-only Findutils remain outside persistent profiles in the disposable
-=fennel= manifest.  The historical non-activating gate realized candidate Home
-=/gnu/store/8q8dki5ka0b7ayby2kg1c7gk1cc9mrfh-home= and unchanged candidate
-System =/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=; neither gate-only
-path describes the active generation.  Slice 18 fresh acceptance left System
-generation 85 current and booted at that time, at
-=/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system=, and proved that neither
-persistent profile exposes a Fennel runtime executable.
-The opening Slice 19 native-comp correction is accepted from published
-checkpoint =7476b0527caacb92a6fc1fdd4e05ea4cddd5a794= as Home generation 42 at
-=/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home=.  Its unchanged package
-profile remains =/gnu/store/bwa6glmgygb8fvw5yj4fvfvk85rqsgdc-profile=, while
-tracked early init moves writable native artifacts to a cache keyed by that
-immutable profile and excludes the legacy user cache from lookup.  Fresh Emacs
-loads Org 9.8.7 without a version warning; the 36 MiB legacy cache is retained
-only at =~/.emacs.d/eln-cache.quarantine-20260713-slice19/=.
-The reduced System consumes the 13 recovery specifications recorded in
-=guix/package-ownership.scm= plus =kitty-latest='s default and =terminfo=
-outputs.  System generation 87 is current and booted at
-=/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system=; accepted System 86 is
-its immediate rollback and System 85 remains an older accepted fallback.
-The System floor is not a second configured desktop: normal EXWM still requires
-the accepted base Home D-Bus services and Home editor profile.  Its independent
-guarantee is the tty shell, Kitty, and =emacs -Q= for repair.
-
-The full gate checks the realized package manifests, not only the Scheme source.
-Emacs is the sole overlap in the explicit ownership lists.  The realized System
-and Home profiles additionally overlap on Fish from the Home Fish service and
-Guile from System =%base-packages=; all three must resolve to identical store
-objects.  Any other top-level overlap, missing declared package, internal
-duplicate name, missing recovery/Home artifact, Clojure/JVM runtime leakage
-beyond the three declared Home editor-side packages, or persistent Racket
-runtime/package/executable leakage fails the gate.  The Slice 18 gate also
-fails if Fennel, fnlfmt, fennel-ls, LuaRocks, or generated Lua/dependency state
-leaks into persistent Home, System, or the project source.  For Racket Mode the
-gate also inspects every requisite of the realized editor output, because a hidden
-transitive runtime reference would evade top-level package and =profile/bin=
-checks.
-
-Apply with:
+Inspect them without mutation:
 
 #+begin_src sh
-gsr
+scripts/guix-entrypoints check
 #+end_src
 
-** Home layer
+=scripts/guix-entrypoints bootstrap= may create or repair those three links,
+but it must be used only for an explicit bootstrap task.  It refuses to
+overwrite conflicting regular files or directories.
 
-File:
+* Normal workflow
 
-#+begin_src text
-guix/home/guixpc.scm
-#+end_src
+Run commands from =~/Projects/guix-dotfiles= on =guixpc=.
 
-Owns:
+** Establish the boundary
 
-- user-level Guix Home services
-- user-level service profile
-- normal applications, Emacs extensions, fonts, formatters, compilers, and
-  persistent Guile/SBCL tooling
-- the full environment for direct non-login SSH commands, imported when the
-  Home profile is not the first Fish PATH entry
-- session services such as DBus, PipeWire, WirePlumber, PipeWire-Pulse
-- live symlinks from selected dotfiles back into this repo
-- Fish interactive configuration and native prompt
-
-Apply with:
+Before editing:
 
 #+begin_src sh
-ghr
+git status --short --branch
+scripts/guix-entrypoints check
 #+end_src
 
-Current live pointer:
+Confirm which owner is changing:
 
-#+begin_src text
-~/.config/guix/home.scm -> ~/Projects/guix-dotfiles/guix/home/guixpc.scm
-~/.guix-home             -> generated Guix Home profile in /gnu/store
-#+end_src
+- application or Emacs configuration may need only a reload;
+- Home packages, services, generated themes, Fish, or managed links require a
+  Home reconfiguration;
+- kernel, boot, filesystems, recovery packages, or system services require a
+  System reconfiguration and usually a reboot.
 
-Do not edit =~/.guix-home= directly.
+Do not turn a local application change into a System or Home rebuild without a
+real ownership reason.
 
-** Application config
+** Preview reconfiguration
 
-Files:
-
-#+begin_src text
-emacs/
-kitty/
-ranger/
-gdb/
-guile/
-shell/
-x11/
-assets/
-#+end_src
-
-Owns normal dotfile behavior. Most changes here apply by reloading the affected
-program. A Guix rebuild is only needed when a package or service declaration
-changes.
-
-Guix Home recreates the live app symlinks to these files during =ghr=. It does
-not replace them with store snapshots, so normal repo edits remain live.
-=scripts/guix-reconfigure= now runs a read-only check of 14 continuing links
-plus Kitty's one retired ownership transition through the fixed System-profile
-Guile before it invokes Guix.  A regular-file, directory, dangling-link,
-missing-source, or unreviewed retiring-target conflict present at that preflight
-is preserved and prevents the built-in Home activation services from starting.
-The activation service repeats the same complete validation before changing any
-project link.  A concurrent path race can still reach that later boundary after
-earlier built-in activation, so =ghr= remains the supported path and the
-additive System fallback is retained throughout this checkpoint.  Invoking
-=guix home reconfigure= directly bypasses the early wrapper preflight.
-
-Fish behavior lives in =shell/config.fish= and is installed through Guix Home
-because Fish is the account login shell. Run =ghr= after editing it. The prompt
-is native Fish, not Starship. Fastfetch is used as an interactive shell greeter,
-so it appears in kitty or any other terminal that starts an interactive Fish
-shell.  Direct SSH commands start Fish as non-login; when the Home profile is
-not first in PATH, the Fish config imports =~/.profile= through the explicitly
-owned =fish-foreign-env= package.  Local child Fish processes keep their
-inherited environment unchanged.
-
-* Emacs and EXWM baseline
-
-This machine uses Emacs as both editor and X window manager.
-
-** Startup path
-
-#+begin_src text
-tty1 mingetty autologin
--> Fish login shell
--> shell/config.fish guard
--> scripts/exwm-session (bounded current/previous logs)
--> startx
--> ~/.xinitrc
--> shell/xinitrc
--> emacs -fs --eval '(load-file "~/.exwm")'
--> ~/.exwm
--> emacs/exwm-loader.el
--> ~/.emacs.d/exwm.el
--> emacs/exwm.el
-
-Regular Emacs init:
-~/.emacs.d/early-init.el -> emacs/early-init.el
-~/.emacs.d/init.el -> emacs/init.el
-#+end_src
-
-There is no graphical display manager in the intended path.  The system config
-removes GDM, tty1 autologins as =skydive420dz=, and Fish starts EXWM only for
-the local interactive tty1 login shell.  SSH shells are excluded by the Fish
-guard.
-
-The session runner keeps a bounded private current/previous log pair:
-
-#+begin_src text
-~/.local/state/sk-exwm/startx-current.log
-~/.local/state/sk-exwm/startx-previous.log
-#+end_src
-
-If =XDG_STATE_HOME= is set, its value replaces =~/.local/state=.
-The previous file appears after a legacy-log migration or the second attempt;
-the state directory never grows beyond the pair.
-
-A failed or normally ended X session returns to the existing tty1 Fish prompt
-instead of terminating the login shell and triggering another mingetty
-autologin.  Inspect the current log, correct the cause, and run =sk-start-exwm=
-to retry.  SSH, an existing graphical display, and non-tty1 login shells remain
-silent and never autostart X.
-
-The live EXWM session should report EXWM as loaded:
+Fish exposes two aliases backed by =scripts/guix-reconfigure=:
 
 #+begin_src sh
-emacsclient --eval "(list :server t :daemon (daemonp) :user-init user-init-file :exwm-loaded (featurep (quote exwm)) :server-running (server-running-p))"
+ghr --print                       # Guix Home plan
+gsr --print                       # Guix System plan
 #+end_src
 
-Validate the editor config with the same Guix profile assumptions used by the
-live session:
+The wrapper checks the declaration links, channel lock, source path, Guix
+frontend, and relevant preflight before invoking Guix.  Direct =guix home
+reconfigure= bypasses the repository's early Home-link preflight and is not
+the supported path.
+
+** Apply an accepted change
 
 #+begin_src sh
-cd ~/Projects/guix-dotfiles
+ghr                               # Home-owned change
+gsr                               # System-owned change
+#+end_src
+
+When both layers truly change, apply and verify the System boundary first,
+including a reboot when required, then apply and verify Home.  A successful
+command is activation evidence, not automatic runtime acceptance.
+
+** Validate proportionally
+
+Use the smallest checks that prove the edited surface.  Common live checks
+include:
+
+#+begin_src sh
 scripts/emacs-check
-#+end_src
-
-The checker has two independent phases:
-
-#+begin_src text
-live   one fixed read-only expression sent to the existing EXWM server
-batch  copied sources under env -i with isolated HOME, TMPDIR, and every XDG path
-#+end_src
-
-The full Guix build gate also calls the batch phase against the newly built
-Home and System profiles before activation:
-
-#+begin_src sh
-SK_EMACS_CHECK_HOME_PROFILE=/gnu/store/...-home/profile \
-SK_EMACS_CHECK_SYSTEM_PROFILE=/gnu/store/...-system/profile \
-  scripts/emacs-check --batch-only
-#+end_src
-
-Candidate mode deliberately skips the active EXWM server, runs the exact Home
-Emacs executable, and exposes only the candidate Home/System =PATH= and
-=EMACSLOADPATH=.  It is an internal pre-activation proof; the ordinary command
-above remains the combined live-and-isolated acceptance check.
-
-The live phase never loads configuration.  It checks the running executable,
-EXWM/server state, package generations, hooks, keys, and positive load-path
-ownership.  The batch phase prevents writes outside its temporary root, keeps
-server/history/notes startup disabled, captures warnings, runs real mode hooks
-with only deferred LSP process startup stubbed, and executes ERT, formatter,
-byte-compile, and Checkdoc gates.  Repository status is compared before and
-after both phases.
-
-These maintenance-only negative controls must each exit nonzero while reporting
-the other phase independently:
-
-#+begin_src sh
-SK_EMACS_CHECK_BREAK_LIVE=1 scripts/emacs-check
-SK_EMACS_CHECK_BREAK_BATCH=1 scripts/emacs-check
-SK_EMACS_CHECK_BREAK_WARNING=1 scripts/emacs-check
-#+end_src
-
-P2.1 adds a separate observational performance snapshot.  It requires Linux
-=/proc= and clocksource sysfs, Python 3.10 or newer, Git with an upstream, a clean
-synchronized checkout, converged booted/current/profile System links, and the
-exact active-Home =emacsclient= and EXWM server.  Close every other
-=emacsclient= or =.emacsclient-real= process and remain idle during the normally
-short, per-call-bounded timing window:
-
-#+begin_src sh
-cd ~/Projects/guix-dotfiles
-scripts/emacs-performance-snapshot
-#+end_src
-
-The command emits versioned TSV to stdout.  It records live/fixture mode,
-runtime and source provenance, current-process initialization/start/uptime, GC
-and memory state, 21 monotonic host-local server-RPC samples, and five
-preparation-only launcher samples with raw values and descriptive distribution
-statistics.  The launcher probe replays discovery/filtering and stops before
-Ivy, application execution, or window placement.  The sampler refuses dirty or
-unsynchronized source, client/profile mismatch, another client process, or
-protected state drift.  It does not force garbage collection, persistently
-clear or warm the Counsel cache, tune Emacs, reload the config, activate a
-profile, or reboot.  Its evaluations still allocate and may advance cumulative
-GC/memory observations or warm the kernel filesystem cache.  See
-[[file:docs/audits/2026-07-15-p2.1-emacs-exwm-measurement.org][the P2.1 protocol and truth boundaries]] before interpreting its numbers.
-
-Publish the implementation checkpoint before collecting evidence.  From the
-then-clean =0/0= checkout, redirect stdout to
-=/tmp/guixpc-p2.1-emacs-exwm-v1.tsv= and stderr to the adjacent =.stderr= file.
-Require exit zero and empty stderr; review =run_mode= =live= metadata, sample
-counts, invariants, and SHA-256.  Only then add the unchanged TSV in a separate
-evidence commit and record its digest/interpretation in the P2.1 Evidence
-section.  Redirecting directly into the checkout correctly fails the clean-tree
-preflight.
-
-P2.2 keeps startup attribution separate from ordinary performance sampling.
-The 8.742822-second P2.1 value ends at =after-init-time=: it includes early
-init, package/window/frame setup, and =init.el=, but excludes after-init hooks,
-the =~/.exwm= command-line argument, EXWM activation, dashboard construction,
-and startup/window hooks.  Static source ownership is documented, but timing
-“blame” required the fresh process preserved as trace R1.
-
-The observer is dormant unless the new Emacs process inherits the exact token
-=SK_EMACS_STARTUP_TRACE=p2.2-v1=.  It records selected outer synchronous
-boundaries in memory, seals the trace at the configured window-setup hook tail,
-and removes all observer hooks/advice.  It never writes a report from Emacs.
-After a deliberately attributed fresh session, extract through SSH from the
-clean synchronized checkout:
-
-#+begin_src sh
-cd ~/Projects/guix-dotfiles
-scripts/emacs-startup-attribution
-#+end_src
-
-The command emits guarded protocol-v1 TSV to stdout with raw events,
-non-overlapping phases, 23 personal-module inclusive timings, explicit
-residual, GC co-occurrence, provenance, and invariants.  Preserve the first
-valid output outside the checkout with empty stderr and a SHA-256; do not rerun
-for a prettier number.  A module row includes its synchronous nested work and
-is association in one trace, not exclusive CPU time, causality, stable rank,
-or predicted savings.  See
-[[file:docs/audits/2026-07-16-p2.2-emacs-startup-attribution.org][the P2.2 attribution record]] for the activation protocol, accepted evidence,
-ranking, and no-tuning decision.
-
-The unmanaged Breadcrumb ELPA tree found by the audit was not used by this
-configuration.  It is quarantined outside =package-user-dir= at
-=~/.local/state/emacs/elpa-quarantine-20260712-slice8=.  Keep it until a normal
-EXWM restart and another full check pass; then it is safe to delete.  To roll
-back before deletion, move it back to =~/.emacs.d/elpa= and restart Emacs.
-
-Do not use plain =emacs --batch= from SSH as the canonical check. Noninteractive
-SSH may start with a minimal =PATH= and no =EMACSLOADPATH=, which can produce
-false package warnings even when the live EXWM Emacs session can load the same
-Guix-provided packages.
-
-** Current ownership
-
-#+begin_src text
-emacs/init.el
-  Package bootstrap and module loading.
-
-emacs/exwm.el
-  Thin entrypoint for the EXWM session. Adds the local Lisp directory to
-  =load-path=, loads =sk-exwm=, and starts the session.
-
-emacs/exwm-loader.el
-  Minimal bridge from the Guix EXWM wrapper to the tracked EXWM config.
-
-emacs/lisp/sk-org.el
-  Org setup, Org keymaps, source-block helpers, agenda integration.
-
-emacs/lisp/sk-notes.el
-  Personal notes, daily/weekly/project/topic files, capture targets, agenda
-  refresh helpers.
-
-emacs/lisp/sk-exwm.el
-  EXWM session behavior: wallpaper, launch keys, app launcher, window/workspace
-  controls, browser key, volume keys, keyboard repeat, and EXWM startup.
-
-emacs/lisp/sk-ui.el
-  Frame chrome, line-number policy, font/theme setup, and modeline setup.
-
-emacs/lisp/sk-completion.el
-  Ivy/Counsel completion, Helpful, Which-Key, and Ivy Rich setup.
-
-emacs/lisp/sk-evil.el
-  Evil and Evil Collection setup.
-
-emacs/lisp/sk-project.el
-  Projectile, Counsel Projectile, and Magit setup.  Direct children of
-  =~/Projects= are the project collection; known-project and frecency state is
-  kept in the owned XDG Emacs cache tree.
-
-emacs/lisp/sk-lsp.el
-  LSP mode, LSP Ivy, and LSP Treemacs setup.
-
-emacs/lisp/sk-core.el
-  Generated state/cache, history files, backups/autosaves, server startup,
-  editing defaults, rainbow delimiters, and window history.  Lockfiles remain
-  enabled for same-file concurrent-edit detection; backups and auto-saves stay
-  centralized in the cache tree.
-
-emacs/lisp/sk-keys.el
-  Global entry keys and leader key root.
-
-tests/emacs/live-check.el
-  The single observational expression allowed to query the live EXWM server.
-
-tests/emacs/batch-bootstrap.el
-  Batch warning capture and the sandbox write boundary.
-
-tests/emacs/batch-check.el
-  ERT mode/backend/project/diagnostics/formatter/state checks in an isolated
-  copied source tree.
-
-tests/emacs/backend-check.el
-  A second disposable Emacs process that owns its Guile and SBCL children and
-  exercises asynchronous Geiser/SLY evaluation, completion, docs, navigation,
-  controlled failure, and recovery without contacting live EXWM.
-
-scripts/lisp-project-check
-  Isolated =make check= dispatcher for the tracked Elisp, Guile, and Common
-  Lisp projects.  It copies fixtures under a temporary HOME/XDG tree and
-  propagates the first project failure.
-
-scripts/guix-reconfigure
-  Shared current-Guix, privileged-sudo, source, substitute, and revision
-  contract behind =gsr= and =ghr=.
-
-scripts/guix-entrypoints
-  Checked bootstrap/preflight for the three Guix declaration symlinks.
-
-scripts/shell-check
-  Deterministic ShellCheck gate for every project-owned shell input.
-
-tests/guix-entrypoints-check
-tests/guix-home-links-check
-  Missing/wrong/blocked/dangling entrypoint and Home activation safety gates.
-#+end_src
-
-The normal Emacs executable and its complete extension set are provided by
-Guix Home; System retains Emacs/EXWM as a recovery path.  The live checker
-selects Home Emacs whenever that profile contains it and otherwise accepts the
-System executable during rollback or a staged transition.  Emacs Lisp files wire
-behavior; they should not install packages themselves.
-
-** Emacs language acceptance
-
-Language support is split by backend. LSP-backed languages use =lsp-mode=,
-Company, LSP UI, and =SPC c x= through the LSP diagnostics path. Non-LSP
-languages use their native Emacs package plus Flycheck or REPL tooling where
-appropriate. =SPC c x= dispatches by backend: LSP diagnostics for LSP buffers,
-Flycheck errors for non-LSP buffers.
-
-#+begin_src text
-Lua
-  Mode:        lua-mode
-  Backend:     lsp-mode + lua-language-server
-  Diagnostics: LSP/Flycheck path
-  Formatter:   native Emacs indentation through =SPC c f=
-  Notes:       LSP-backed language model baseline. Stylua is intentionally not
-               installed because it is not packaged in the current Guix channel
-               and would require local Rust crate packaging.
-
-Python
-  Mode:        python-mode
-  Backend:     lsp-mode + python-lsp-server / pylsp
-  Diagnostics: LSP/Flycheck path
-  Formatter:   ruff format through =SPC c f=
-  Notes:       Pyright is not required for the current baseline. Formatting is
-               manual only; there is no format-on-save policy.
-
-Shell
-  Mode:        sh-mode
-  Backend:     Flycheck sh-bash + shellcheck
-  Diagnostics: Flycheck path
-  Notes:       shfmt is installed for formatting, but no format-on-save policy.
-
-JSON
-  Mode:        json-mode when available; built-in js-json-mode fallback
-  Backend:     Flycheck json-jq
-  Diagnostics: Flycheck path
-  Formatter:   jq through =SPC c f=
-  Notes:       jq is preferred over Flycheck's python checker because this Guix
-               profile exposes python3, while that checker looks for python.
-
-JSONC
-  Mode:        jsonc-mode
-  Backend:     no checker; installed JSON checkers reject comments
-  Diagnostics: deliberately disabled instead of producing false JSON errors
-  Formatter:   comment-preserving clang-format through =SPC c f=
-  Notes:       A sibling assumed =.json= filename selects the JSON parser while
-               retaining the visited directory for formatter configuration.
-
-Org
-  Mode:        org-mode
-  Backend:     Org native features
-  Diagnostics: none
-  Notes:       Owns notes, capture, agenda, source block helpers, and editing UI.
-
-C
-  Mode:        c-mode
-  Backend:     lsp-mode + clangd from the clang package
-  Diagnostics: LSP/Flycheck path
-  Notes:       clang-format is installed, but no format-on-save policy.
-
-Emacs Lisp
-  Mode:        emacs-lisp-mode
-  Backend:     Emacs native Eldoc/help/eval/navigation
-  Diagnostics: none currently
-  Notes:       Not LSP-backed.  =fixtures/elisp/sk-example= supplies a real
-               Projectile package with warning-fatal byte compilation, ERT,
-               Checkdoc, and Home-owned package-lint.
-
-Scheme / Guile
-  Mode:        scheme-mode
-  Backend:     Geiser + Geiser Guile
-  Diagnostics: Geiser/native interaction
-  Notes:       Guile, guile-readline, and guile-colorized are System-owned.
-               Native Scheme commands use =scheme-program-name= = guile.
-               Geiser owns its one scheme-mode activation path and never starts
-               Guile merely because a file opens.  Its REPL supplies CAPF
-               completion; the CLI .guile enables Readline and colorized output,
-               with colorization suppressed inside Emacs.  REPLs are separated
-               per Projectile root and add only the root and =src= load paths.
-               =fixtures/guile= supplies guild compilation, SRFI-64 tests, docs,
-               and a debug-VM REPL target.
-
-Common Lisp
-  Mode:        lisp-mode for .lisp, .cl, and .asd
-  Backend:     SLY + SBCL when SLY is started
-  Diagnostics: SLY/native interaction
-  Notes:       lisp-mode owns syntax; eagerly loaded SLY owns editing and
-               sly--lisp-indent-function consistently before and after a
-               connection.  Loading SLY does not start SBCL.
-               =inferior-lisp-program= is =sbcl=.
-               =SPC l r= starts SLY only from a marked project and supplies a
-               strict ASDF source registry plus project-keyed XDG build cache.
-               =fixtures/common-lisp= supplies primary/test ASDF systems.
-
-Clojure (Slice 16 accepted)
-  Mode:        clojure-mode
-  Backend:     project-keyed clojure.main comint REPL; explicit
-               lsp-mode + clojure-lsp through =SPC c l=
-  Diagnostics: Flycheck + clj-kondo before LSP; LSP diagnostics after explicit
-               language-server startup
-  Formatter:   cljfmt through =SPC c f=
-  Notes:       Opening a file starts neither the JVM REPL nor clojure-lsp.
-               =SPC l r= enters the pinned JVM manifest and starts the direct
-               Guix-JAR REPL for the marked project.  =deps.edn= is metadata
-               only; the wrapper does not invoke tools.deps or Maven.
-               =fixtures/clojure= supplies source/tests and tracked formatter,
-               linter, and language-server settings.
-
-Racket (accepted Slice 17)
-  Mode:        classic racket-mode only
-  Backend:     explicit project-keyed Racket Mode backend/REPL and XP analysis
-               through =scripts/racket-project=
-  Diagnostics: Racket XP/check-syntax only after explicit startup
-  Formatter:   native Emacs indentation through =SPC c f=
-  Notes:       Opening a file starts neither Racket nor XP.  Home owns only the
-               runtime-detached editor package; the full Racket 9.1 runtime,
-               raco, RackUnit, Scribble, docs, and GUI libraries remain in the
-               authenticated =racket= manifest.  =SPC l r= explicitly enables
-               XP and starts or selects the marked project's backend and
-               logical REPL; =SPC l q= disables that project's XP and stops only
-               its REPL/backend.  The tracked fixture supplies source, tests,
-               documentation, macro expansion, strict check-requires lint, and
-               negative controls without installing a package or changing a
-               Racket catalog.  Each project Makefile owns its concrete
-               source/test/docs policy; the production wrapper contains no
-               fixture-specific module path.  =racket-hash-lang-mode= remains deferred because
-               its initialization contacts the backend and therefore violates
-               this slice's cold-open contract.
-
-Fennel (accepted Slice 18)
-  Mode:        fennel-mode
-  Backend:     explicit project-keyed protocol REPL; explicit
-               lsp-mode + fennel-ls through =SPC c l=
-  Diagnostics: fennel-ls only after explicit language-server startup
-  Formatter:   fnlfmt through =SPC c f=
-  Notes:       Opening a file starts no interpreter or language server.  The
-               83-package accepted Home adds only =emacs-fennel-mode=; Fennel
-               1.6.1, fnlfmt 0.3.0, fennel-ls 0.2.3, and Findutils remain in
-               the authenticated =fennel= manifest.  The tracked fixture covers
-               source, macros, tests, formatting, lint, compilation, deliberate
-               failures, and bounded runaway-macro rejection without LuaRocks,
-               fnx, =.fennelrc=, or project-local generated Lua.  The pinned
-               server emits =--WARNING: plugin fennel-ls does not support Fennel
-               version 1.6.1=; the gate permits that exact warning only.  Basic
-               diagnostics, hover, definition, and distinct definition/use
-               references pass on non-macro source, but imported-macro semantic
-               navigation is not claimed.  Fresh rebooted project, editor,
-               connected-backend, ownership, and cleanup acceptance passes.
-#+end_src
-
-Lisp-family editing has a shared leader surface over the native backend for
-each dialect:
-
-#+begin_src text
-SPC l r  start or switch REPL
-SPC l b  evaluate buffer
-SPC l d  evaluate defun / top-level form
-SPC l e  evaluate last sexp
-SPC l D  instrument Elisp, show Geiser/SLY debugger, debug-run Racket, or
-         report Fennel debugging as unsupported
-SPC l g  visit definition
-SPC l k  show docs at point
-SPC l m  macroexpand at point
-SPC l n  reload the current Clojure namespace
-SPC l p  run the project's tracked check gate
-SPC l q  stop the current project's Clojure, Racket, or Fennel REPL/backend
-SPC l [ / ]  slurp backward / forward
-SPC l { / }  barf backward / forward
-SPC l (      wrap in round delimiters
-SPC l u      unwrap / splice
-SPC l R      raise the current form
-SPC l t      transpose forms
-SPC l x      show callers/references
-#+end_src
-
-These are wrappers over existing commands, not replacements for native Emacs
-keys:
-
-#+begin_src text
-Elisp:        native eval/help commands; works in cold buffers
-Scheme:       Geiser commands; richer docs/completion after Guile REPL starts
-Common Lisp:  SLY commands; richer docs/completion after SBCL/SLY connects
-Clojure:      direct comint evaluation; clojure-lsp docs/navigation only after
-              explicit =SPC c l= startup
-Racket:       Racket Mode commands; semantic XP analysis and the backend start
-              only on an explicit project command
-Fennel:       protocol REPL commands; fennel-ls docs/navigation start only on
-              explicit =SPC c l= and currently cover basic non-macro source
-#+end_src
-
-Cold Lisp files should provide mode detection, indentation, basic syntax, and
-the correct command surface. Rich semantic completion/docs are REPL-backed for
-Scheme and Common Lisp, explicitly clojure-lsp-backed for Clojure, and
-explicitly XP/backend-backed for Racket.  Accepted Fennel stays
-cold until its protocol REPL or fennel-ls command is invoked explicitly.
-Evaluation checks backend connection state before dispatch, while backend
-failures after that check retain their original error.
-Documentation uniformly reports =No symbol at point= instead of prompting for
-or describing an unintended symbol at whitespace.
-
-The shared display policy routes documentation and macroexpansion—including
-Racket description and stepper buffers—to right slot 1, routes REPL and xref
-buffers to right slot 0, and routes compilation, debugger, and Fennel error
-output to the bottom slot.  Opening a source file still never starts a runtime.
-
-=electric-pair-mode= owns delimiter insertion.  Puni is enabled only in Emacs
-Lisp, Lisp Interaction, Scheme, Common Lisp, Clojure, classic Racket, and
-Fennel source/protocol-REPL modes—including those source modes
-inside Org source editing—and owns balanced
-deletion plus the explicit structural commands above.  Evil retains modal state
-and ordinary motions.
-Puni does not redefine stock Evil =d=, =c=, or =x= as structural operators; use
-the Puni commands when balance preservation is required.
-
-Org offers Fennel source-block insertion and =fennel-mode= editing only.  It
-does not enable =ob-fennel=; every runtime action must cross the authenticated
-project wrapper.
-
-Yasnippet reads only the tracked =emacs/snippets= tree for authored templates:
-
-#+begin_src text
-emacs-lisp-mode  ERT test             ert
-scheme-mode      Guile procedure      define
-lisp-mode        Common Lisp function defun
-org-mode         Org source block     src
-#+end_src
-
-Acceptance probes should check actual buffer state, not just package presence:
-
-#+begin_src text
-major mode
-backend mode or REPL integration
-completion frontend when applicable
-diagnostics path when applicable
-formatter availability when intentionally installed
-#+end_src
-
-Formatter decisions are intentionally conservative:
-
-#+begin_src text
-C/C++:  clang-format receives the visited filename for language and
-        .clang-format discovery.
-Shell:  shfmt receives the visited filename for configuration discovery.
-Python: ruff format receives --stdin-filename and is installed by Guix.
-JSON:   jq owns strict JSON; JSONC uses clang-format and keeps comments.
-Lua:    native Emacs indentation only. Stylua is the preferred external
-        formatter in principle, but it is not packaged in the current Guix
-        channel and local Rust crate packaging is out of scope for this setup.
-Racket: native Racket Mode indentation only.  Pinned Racket has no =raco fmt=
-        or =raco format= command, and the recommended external =fmt= package is
-        not packaged in the pinned Guix channels.  Do not install it with
-        =raco pkg=, mutate a catalog, or present indentation/check-requires as a
-        project-wide formatter.
-#+end_src
-
-Do not mark a language complete because a package exists. The buffer has to open
-in the intended mode and the selected diagnostics/completion path has to work.
-
-** EXWM keys
-
-#+begin_src text
-s-SPC                 open app launcher from desktop entries
-s-RET                 open kitty
-s-w                   open Ungoogled Chromium through the chromium executable
-s-r                   reload EXWM config
-s-h / s-j / s-k / s-l focus window left/down/up/right
-s-H / s-J / s-K / s-L move current window left/down/up/right
-s-q                   close current EXWM app window; delete Emacs window otherwise
-s-b                   switch buffer
-s-f                   toggle fullscreen for current EXWM app window
-s-m                   promote selected window to master
-s-M                   normalize visible windows into master/stack layout
-s-1 .. s-5            switch/create EXWM workspace 1 through 5
-s-! s-@ s-# s-$ s-%   move current EXWM app window to workspace 1 through 5
-XF86AudioRaiseVolume  raise default sink volume through wpctl
-XF86AudioLowerVolume  lower default sink volume through wpctl
-#+end_src
-
-** Compositor
-
-Picom is intentionally scoped to Emacs frame transparency only:
-
-#+begin_src text
-picom --config /dev/null --backend glx --vsync --detect-client-opacity \
-  --opacity-rule '85:class_g = "Emacs" && !_NET_WM_WINDOW_OPACITY && !_NET_WM_WINDOW_OPACITY@' \
-  --daemon
-#+end_src
-
-The X session starts the wallpaper and Picom before launching Emacs/EXWM so the
-compositor is already active when Emacs appears.  It exports the one-shot
-startup opacity only after Picom daemon initialization succeeds; the
-frame/client property exclusions let mapped EXWM frames remain transparent
-until their final dashboard and geometry are ready.  It launches Emacs
-fullscreen directly instead of using the Guix =exwm= wrapper, whose hardcoded
-=-mm= maximized-frame startup can briefly draw a small pre-maximized frame.
-Xinit is the only automatic Picom starter and wallpaper owner; EXWM startup
-and reload never repeat either operation.  One explicit emergency exception
-may stop, but never start, this user's Picom after persistent alpha-write
-failure so raw X can become visible.  =M-x sk/start-picom= and
-=M-x sk/set-wallpaper= remain explicit maintenance commands.  Browser and
-terminal transparency are not managed through global active/inactive opacity
-rules.  =/dev/null= deliberately excludes ambient Picom configuration.  The
-manual restart path stops only this user's Picom, waits boundedly for both the
-old process and compositor selection to clear, initializes the replacement
-synchronously, and fails closed unless exactly one replacement owns the
-selection.
-
-** Application placement and reload policy
-
-Desktop entries are fully resolved and validated before a process starts.  The
-launcher omits =Hidden=/=NoDisplay= entries and conservatively omits complex
-=Exec= quoting that the direct parser cannot reproduce faithfully.  It never
-creates a speculative split.  Instead, a 30-second launch intent records the
-origin workspace, process PID, and normalized class metadata.  The EXWM manage
-hook rejects transient, dialog, fixed-size, and floating clients; it prefers
-exact/descendant PID matching and allows live class fallback only for the known
-single-instance Chromium path.  An ambiguous match is ignored.  Failure,
-timeout, successful placement, and reload all remove the intent and timer.
-
-Configuration reload reader-checks every module before loading the first one.
-It reports the exact failed module and how many earlier modules loaded, restores
-the complete project display-policy state, and explicitly warns that arbitrary
-earlier function/hook mutations cannot be rolled back.  Project display rules
-are identity-owned and preserve foreign/package rules.  The reviewed runtime
-floor is EXWM 0.35; its remaining private workspace/floating adapters are
-guarded by that exact compatibility check.  The Xref RET adapter is reviewed on
-Emacs 30 and degrades with a warning instead of blocking editor startup on a
-future Emacs major release.
-
-Live acceptance for the display/session path:
-
-#+begin_src text
-Xorg initial mode: 3440x1440_100
-xrandr current:    3440x1440_100 100.00*+
-Emacs frame:       3440x1440 fullboth
-#+end_src
-
-Do not preload =amdgpu= through =initrd-modules= on this machine. That experiment
-made X fall back to a generic =default= 1024x768 screen. Reverting it restored
-the accepted =HDMI-A-0= / =3440x1440_100= path.
-
-=s-h= uses the normal left-window focus path first. If normal windmove cannot
-see a left target and Treemacs is open, it falls back to selecting Treemacs.
-
-Workspace numbers are user-facing and one-based. EXWM internally uses zero-based
-workspace indexes, so =s-1= maps to EXWM workspace index 0, =s-2= maps to index
-1, and so on.
-
-** Emacs window policy
-
-Window behavior is intentionally owned by the shared Emacs window policy, not by
-each package independently.
-
-#+begin_src text
-emacs/lisp/sk-window-policy.el
-  Owns master/stack layout, side panels, transient panels, full-frame toggles,
-  stale side-window cleanup, and helper command wrappers.
-
-emacs/lisp/sk-exwm.el
-  Owns EXWM startup, external app launch, workspaces, and global =s-*= keys.
-  It delegates layout decisions to =sk-window-policy.el=.
-
-emacs/lisp/sk-keys.el
-  Owns user-facing keybindings. Commands that affect layout should call the
-  policy wrappers instead of raw package commands.
-#+end_src
-
-The intended layout contract:
-
-#+begin_src text
-Master/main area:
-  normal files and selected results open here
-
-Left persistent panel:
-  Treemacs project tree
-
-Right utility panel:
-  Dired
-  Ibuffer
-  Magit status
-  Xref/reference results
-  Help/Helpful/Eldoc
-  Eshell
-  Vterm
-
-Bottom transient panel:
-  Which-Key
-  Warnings / Compile logs
-#+end_src
-
-Emacs log buffers should carry timestamps where that does not break tooling:
-=*Messages*= gets per-message timestamps, =*Warnings*= uses a timestamped warning
-prefix, and compilation buffers get timestamped start/finish markers instead of
-per-line prefixes so file/line matching keeps working.
-
-The =SPC o= menu should stay compact and predictable:
-
-#+begin_src text
-SPC o d  Dired, right utility panel
-SPC o e  Eshell, right utility panel
-SPC o t  Treemacs project tree, left persistent panel
-SPC o v  Vterm, right utility panel
-#+end_src
-
-=term= is still available through =M-x term=, but the leader binding is reserved
-for Treemacs. Vterm is the preferred terminal buffer once it is available on
-this machine.  Eshell syntax highlighting is Home-owned and activates globally
-when Eshell loads; it is no longer an optional, silently skipped branch.
-
-File-opening commands are intentionally split by interaction style:
-
-#+begin_src text
-SPC o d  Dired panel for visual browsing and file operations
-SPC f f  Counsel find-file for path-based opening
-SPC .    Counsel FZF for fast fuzzy opening
-SPC p f  Counsel Projectile find-file for project fuzzy opening
-#+end_src
-
-Selector/helper commands should keep their helper panel open and open selected
-content in the master/main area:
-
-#+begin_src text
-Dired RET:
-  open selected file in master/main window
-  keep Dired panel open
-
-Ibuffer RET:
-  open selected buffer in master/main window
-  keep Ibuffer panel open
-
-Xref RET:
-  jump selected result in master/main window
-  keep Xref results panel open
-
-Treemacs RET / l:
-  open selected file/location in master/main window
-  keep Treemacs panel open
-#+end_src
-
-Do not override Magit internals without a specific reason. Magit has a large
-surface of transient and action buffers; start by controlling where Magit opens,
-then only adjust internal actions if the actual behavior is wrong.
-
-With Evil collection active, Magit refresh is =g r=. Plain =g= is an Evil
-prefix and will show the available =g= commands through Which-Key.
-
-** Future project: Lisp-native user environment
-
-Long-term direction: make GuixPC a practical Lisp-centered workstation where the
-daily user experience is owned by Emacs/EXWM, Emacs Lisp, and Guile instead of a
-collection of separate GTK/Qt desktop tools.
-
-This does not mean replacing the kernel, drivers, browser, or core daemons. The
-intended boundary is:
-
-#+begin_src text
-Core system:
-  Linux-libre or selected nonguix kernel
-  Guix / Shepherd
-  Xorg / EXWM
-  D-Bus
-  NetworkManager
-  PipeWire / WirePlumber
-  BlueZ
-
-Native user environment:
-  Emacs / EXWM
-  Emacs Lisp UI panels
-  Guile system helpers where appropriate
-  Org/Dired/Eshell/Vterm/Treemacs/Magit as primary workflow surfaces
-
-External exception:
-  browser
-  unavoidable hardware/vendor tools
-#+end_src
-
-The goal is to reduce daily dependence on standalone desktop applications, not
-to remove every non-Lisp binary from the system closure. Chromium, Emacs builds,
-Xorg, graphics/audio/network services, and hardware support will still pull
-normal system libraries.
-
-Browser baseline:
-
-#+begin_src text
-Primary browser: Ungoogled Chromium
-Executable:      chromium
-Shell default:   BROWSER=chromium
-Emacs links:     browse-url-generic -> chromium
-Desktop helper:  xdg-utils is installed for xdg-open/xdg-settings
-Text helper:     EWW remains available through Emacs for simple pages/docs
-#+end_src
-
-Browser note:
-
-Nyxt was evaluated as a possible programmable Lisp browser. The concept matches
-this machine's direction, but it is paused for now:
-
-- official Guix does not currently provide =nyxt=;
-- the Sijo Guix fork carries =nyxt= 3.11.7, while upstream is 4.0.0;
-- Nixpkgs carries =nyxt= 3.12.0;
-- upstream's Linux tarball is an AppImage, which conflicts with this repo's
-  reproducible/hackable package model and hit Guix/FHS binary assumptions during
-  testing;
-- no Nyxt files or packages are installed on GuixPC.
-
-Future direction: treat Nyxt as prior art for a personal Lisp browser or
-research browser project. Do not add Nyxt through AppImage or a broad Guix fork
-as part of the base system.
-
-Org source-block baseline:
-
-#+begin_src text
-Insert/edit helpers:
-  emacs-lisp, scheme, lisp, sh, bash, c, python, lua, json
-
-Babel execution enabled:
-  emacs-lisp, shell, python, lua, C, scheme
-
-Common Lisp:
-  Source blocks are available for notes and editing, but Babel execution is not
-  enabled.  Org's =ob-lisp= uses a separate inferior-lisp/comint path, bypassing
-  the accepted SLY connection, strict source registry, and project cache.  It
-  remains disabled until a Babel adapter can reuse those exact boundaries and
-  pass the same controlled-failure and cleanup checks.
-#+end_src
-
-Candidate native panels:
-
-#+begin_src text
-sk-network.el
-  D-Bus frontend for NetworkManager.
-  Start read-only: current connection, devices, Wi-Fi enabled state.
-  Later: list access points, connect saved profiles, reconnect, toggle Wi-Fi.
-
-sk-bluetooth.el
-  D-Bus frontend for BlueZ.
-  Start read-only: controller power, paired devices, connected devices.
-  Later: connect/disconnect/trust/pair flows where practical.
-
-sk-audio.el
-  Emacs UI for PipeWire/WirePlumber state.
-  Start with wpctl-backed status/actions if the native API path is too heavy.
-  Later: richer device/profile/session handling.
-
-sk-system.el
-  GuixPC control panel for =gsr=, =ghr=, generations, channels, and service
-  status.
-
-sk-launcher.el
-  Native app/action launcher that can replace more standalone menu behavior.
-
-sk-dashboard.el
-  Keep growing the Emacs home/dashboard into the machine status surface.
-#+end_src
-
-Implementation rule:
-
-#+begin_src text
-Prefer real APIs first:
-  D-Bus for NetworkManager and BlueZ.
-  Guix/Shepherd interfaces for system state.
-
-Allow CLI backends when the API path is not mature yet:
-  wpctl for audio is acceptable as a first backend.
-  Avoid fragile text parsing when a structured API exists.
-#+end_src
-
-First milestone:
-
-#+begin_src text
-1. Build a read-only =sk-network.el= panel.
-2. Show current Wi-Fi/Ethernet state and active connection.
-3. Bind it under =SPC o n= only after the UI shape is accepted.
-4. Do not replace existing network tooling until the panel is proven useful.
-#+end_src
-
-** EXWM app launcher
-
-=s-SPC= opens a Counsel/Ivy app launcher from installed desktop entries.
-
-The first implementation tried to delegate launching to =gtk-launch=, matching
-what =counsel-linux-app= does upstream. On this Guix system neither
-=gtk-launch= nor =gtk4-launch= is present in the active profile, so the local
-launcher keeps those as optional fast paths and otherwise launches directly from
-the selected =.desktop= file:
-
-1. resolve the selected desktop id, for example =blueman-manager.desktop=
-2. find the desktop file under the application directories
-3. read the =Exec== field from the =[Desktop Entry]= section
-4. remove desktop-entry field codes such as =%U=, =%F=, and =%i=
-5. launch the command asynchronously with Emacs =start-process=
-
-Terminal desktop entries are launched through =kitty -- ...=. This keeps GUI
-app launching usable without adding another standalone launcher while preserving
-the documented desktop-entry model.
-
-Reference points:
-
-- Desktop Entry Specification, =Exec= field codes:
-  https://specifications.freedesktop.org/desktop-entry-spec/latest/exec-variables.html
-- Emacs asynchronous process launch:
-  https://www.gnu.org/software/emacs/manual/html_node/elisp/Asynchronous-Processes.html
-
-Bluetooth Manager can be tested through the launcher by selecting
-=Bluetooth Manager=, or directly with:
-
-#+begin_src sh
-blueman-manager
-#+end_src
-
-If Blueman opens with icon warnings, that is a GTK/icon-theme issue, not the
-app launcher path.
-
-Blueman 2.4.6 persists its GUI geometry and recent-connection list through
-GLib's keyfile settings backend at
-=~/.config/glib-2.0/settings/keyfile=.  This user-owned mode-0600 file is local
-application state, not core system configuration.  No repository-owned dconf
-service or declaration is needed; the historical dconf warnings do not describe
-the current persistence path.
-
-** Keyboard repeat
-
-Keyboard repeat is intentionally aligned with the MSI profile:
-
-#+begin_src text
-delay: 210 ms
-rate:  67 repeats/sec requested
-#+end_src
-
-EXWM applies this with:
-
-#+begin_src sh
-xset r rate 210 67
-#+end_src
-
-=xset= may report the rate as =71= because Xorg rounds the interval internally;
-the requested value remains =67=. Validate the live setting with:
-
-#+begin_src sh
-xset q | grep "auto repeat delay"
-#+end_src
-
-* Desktop session policy
-
-The accepted Slice 10 baseline gives each long-lived desktop service one owner:
-
-#+begin_src text
-session D-Bus             Guix Home at unix:path=/run/user/1000/bus
-PipeWire/WirePlumber      Guix Home Shepherd services on that bus
-realtime scheduling       system RTKit through D-Bus/Polkit
-EXWM and launched apps    inherit the Guix Home bus directly
-AT-SPI accessibility bus  separate purpose-specific bus under /run/user/1000/at-spi
-#+end_src
-
-=shell/xinitrc= refuses an absent or noncanonical Home bus instead of silently
-autolaunching a second one.  It updates only the graphical D-Bus activation
-variables, without =--all= or systemd integration, then starts Emacs directly.
-
-The machine never suspends itself through elogind.  X independently blanks and
-powers down the monitor after 600 seconds of X input inactivity, with standby,
-suspend, and off all set to 600 seconds.  This preserves the observed desktop
-behavior and protects the panel; it is not a screen lock.  Tty1 autologin is an
-explicitly accepted policy for this trusted, physically controlled single-user
-workstation: physical access implies access to the local desktop session.  X
-access control remains enabled through the user-owned mode-0600 Xauthority
-cookie, Xorg does not listen on TCP, and Xinit never expands access with
-=xhost=.  Kitty remote control is disabled; no remote-control socket, password,
-or imported policy is configured.
-
-The graphical login is intentionally still represented by elogind as the
-active local =tty1= session with =Type=tty= and a tty-derived idle hint.  EXWM
-children receive correct =DISPLAY=:0=, =XDG_SESSION_TYPE=x11=, and desktop
-metadata.  Correcting login1's type would require changing how the PAM session
-is created, not an Xinit environment tweak, and is outside this slice.
-
-The System declaration explicitly enables BlueZ controller auto-enable so the
-adapter is ready before a paired speaker performs its startup reconnect.  A
-cold boot with the Bose powered off proved =AutoEnable = true= and
-=Powered: yes= without any manual Bluetooth command; the controller remained
-non-discoverable and non-pairable.
-
-After a fresh system/session activation, validate the automated boundary with:
-
-#+begin_src sh
 scripts/desktop-session-check
+scripts/guix-generation-retention verify
+scripts/guix-generation-retention rollback-drill
 #+end_src
 
-The ordinary audio gate accepts an ALSA or BlueZ physical default sink and sends
-it a finite low-volume stream.  When the Bose query succeeds and reports it
-disconnected, =auto_null= is also an accepted hardware-absence skip if no used
-physical endpoint is available.  Query failures, =auto_null= while Bluetooth is
-connected, unsupported sinks, and failed playback remain errors.
+=scripts/desktop-session-check= requires a running local EXWM session.  Add
+=--require-bluetooth= only when the Bluetooth endpoint is actually available
+for that acceptance pass.
 
-The stricter gate requires the paired Bose speaker to be connected, visible to
-PipeWire, selected as the expected default BlueZ sink, and able to consume the
-finite stream:
+The broad legacy gates, including =scripts/shell-check --strict= and
+=scripts/guix-build-gate=, currently cover optional dialect fixtures and the
+frozen System-pruning experiment.  They are not the default definition of
+success for new work.  Use them only when their complete existing scope is
+deliberately relevant; otherwise run the focused checks for the change.
 
-#+begin_src sh
-scripts/desktop-session-check --require-bluetooth
-#+end_src
+** Update channels separately
 
-Cold acceptance powered the Bose with only its power button; it reconnected
-automatically and became =bluez_output.04_52_C7_86_93_08.1=.  Audible Bose
-output and both XF86 volume keys remain manually accepted.  A real Kitty launch
-through EXWM's desktop-entry fallback inherited the canonical bus.  Audible
-HDMI is outside this workstation's policy because no HDMI audio device is used.
-
-* Apply
-
-Use the smallest command that matches the changed layer.
-
-System changes:
-
-#+begin_src sh
-gsr
-#+end_src
-
-Home service changes:
-
-#+begin_src sh
-ghr
-#+end_src
-
-Both layers changed:
-
-#+begin_src sh
-gsr
-ghr
-#+end_src
-
-Fish, Bash, and Eshell route both aliases through =scripts/guix-reconfigure=.
-The wrapper ignores ambient =PATH= for the important choices: it uses
-=~/.config/guix/current/bin/guix=, =/run/setuid-programs/sudo= for system
-changes, =/run/current-system/profile/bin/guile= for the Home-link preflight,
-the canonical declaration symlinks, and one substitute list.  Every invocation
-prints the resolved executables and exact Guix channel revision.
-Inspect either plan without reconfiguring:
-
-#+begin_src sh
-gsr --print
-ghr --print
-#+end_src
-
-Regular application config changes usually need only a program reload.
-
-* Guix channels
-
-The version-controlled =guix/channels.scm= is the channel lock.  Every channel
-has an exact 40-hex commit and authenticated introduction; moving branches are
-metadata only and never select a revision by themselves.
-
-#+begin_src text
-guix     upstream GNU Guix packages and system modules
-nonguix  nonfree kernel/firmware transformation and substitutes
-sk-guix  personal package channel; only promoted top-level package is kitty-latest
-#+end_src
-
-The accepted Slice 12 lock is:
-
-#+begin_src text
-guix     a8391f2d7451c2463ba253ffa9872fa6f27485d7
-nonguix  3b66965566fe8c96edb5a41fd39a9e5a90ad9b61
-sk-guix  b84ff24a515b2b6d0db85c0da30960c96e20ad22
-#+end_src
-
-=sk-guix= authentication starts at =eaade3680892ce74ebae68f4922cd0eb4a463a17=
-with signer =6B09 4D15 B02E 54B0 F6B5 E9E8 6F83 FC62 D232 E5EC=.  The public
-key is on its orphan =keyring= branch.  Main commits from the introduction
-forward must remain signed and authorized; replace/authorize the current key
-before its 2028-07-11 expiry.
-
-Nonguix has two separate trust boundaries.  Its channel introduction is
-=897c1a470da759236cc11798f4e0a5f7d4d59fbc= with OpenPGP fingerprint
-=2A39 3FFF 68F4 EF7A 3D29 12AF 6F51 20A0 22FB B2D5=.  Binary substitutes use
-the daemon ACL key whose Guix =q= value is
-=C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98=.
-The System declaration's =(nonguix-transformation-guix)= adds that substitute
-URL and key only when the resulting System is activated.  Bootstrap never
-edits =/etc/guix/acl=.  If the reviewed key is absent, it fails unless the
-operator explicitly permits proceeding at source-build risk with
-=SK_GUIX_BOOTSTRAP_ALLOW_NONGUIX_SOURCE_BUILD=1=.  That override neither
-authorizes a signature nor removes the Nonguix URL; the daemon can reject an
-unauthorized substitute and a local source build may be required.  Bootstrap
-does not automate manual ACL mutation.  Prefer the declarative System
-transformation; any manual key acquisition and authorization needs its own
-reviewed official procedure.
-
-Generated =/etc/guix/channels.scm= records daemon configuration and can move
-with an activated System.  It is not the project lock and must never replace
-the exact commits and introductions in =guix/channels.scm=.
-
-=sk-guix= owns =kitty-latest= only. The system imports it through =(sk packages
-terminals)= and installs its default and =terminfo= outputs explicitly, instead
-of resolving =kitty= through =specification->package=. Other applications should
-stay on upstream
-Guix/Nonguix unless we explicitly decide to package and maintain them in
-=sk-guix=.  =fish-latest= remains quarantined: the gate proves its derivation
-evaluates, but does not promote or build the known-incomplete recipe.
-
-Before changing the active pull profile, run the non-activating gate:
-
-#+begin_src sh
-scripts/guix-build-gate --plan
-scripts/guix-build-gate
-#+end_src
-
-It creates isolated HOME, cache, and trusted-channel state, realizes the exact
-authenticated time-machine profile, verifies provenance and reviewed EXWM 0.35,
-builds Kitty and its maintained Go inputs, evaluates quarantined Fish, builds
-each development manifest independently, then builds Home and System.  Full
-mode also enters the core manifest for the real Guile and ASDF project checks,
-runs the Elisp project against candidate Home Emacs/package-lint, executes the
-separate disposable connected Geiser/SLY checker, and enters the JVM manifest
-for the isolated Clojure project checker.  The connected Clojure editor checker
-runs directly with the pinned Guix and candidate Home/System profiles; its REPL
-and language server must enter the JVM manifest through the copied production
-=guix-lisp-shell jvm -- clojure-project= path.  The gate also performs isolated
-runtime and cross-tier leakage probes.  It validates the realized System/Home
-ownership boundary and critical profile artifacts; plan mode remains
-evaluation-only.
-The Slice 17 gate extends that non-activating contract with the copied
-Racket project checker, the connected Racket Mode backend/XP checker, strict
-Home/System Racket executable absence, and a full-requisite check proving that
-Home's editor package does not retain the manifest-only Racket runtime.  The
-complete gate passed from the exact source candidate before publication;
-checkpoint =18bdc80= was then published, activated as Home 40, rebooted, and
-accepted through the corresponding fresh-live checks.
-The Slice 18 gate extends that contract again with the copied Fennel project
-checker, connected protocol-REPL/fennel-ls checker, exact warning policy,
-runtime/tool leakage probes, and source/state/process cleanup controls.  The
-complete non-activating gate passes with candidate Home
-=/gnu/store/8q8dki5ka0b7ayby2kg1c7gk1cc9mrfh-home= and unchanged System
-=/gnu/store/6680dpbpy035vs0g3c2f4vkk0sdri4n1-system=.  Those remain historical
-gate-only paths.  Published implementation =c1bbf39= and candidate
-documentation =81ebb24= were then activated as Home generation 41, rebooted,
-and accepted through fresh project/editor/backend, ownership, cleanup, and
-retention gates; System 85 and Pull 5 remained unchanged at that acceptance.
-Guix may reuse already-authenticated
-immutable store objects; the separate isolated clean-clone test verifies the
-published =sk-guix= refs.  The gate never pulls, reconfigures,
-switches/deletes generations, or runs garbage collection.
-
-To update channels, change only the recorded commits while retaining each
-introduction, review the diff, and pass the complete gate.  Promote the tested
-lock explicitly:
+The repository lock contains =guix=, =nonguix=, and =sk-guix=.  A channel
+update is its own reviewed operation, not an incidental part of unrelated
+configuration work.  After explicitly changing and reviewing the pinned
+commits, the live pull command is:
 
 #+begin_src sh
 ~/.config/guix/current/bin/guix pull -C ~/.config/guix/channels.scm
-~/.config/guix/current/bin/guix describe --format=recutils
-gsr
-ghr
 #+end_src
 
-=scripts/guix-reconfigure= refuses both =gsr= and =ghr= when the active pull
-profile differs from the repository lock.  If a new pull frontend regresses,
-switch to the exact protected pull generation before rebuilding from the old
-lock; do not use a relative roll-back when the intended generation is known.
+=scripts/guix-reconfigure= refuses activation when the active Pull profile and
+repository lock disagree.
 
-* Lisp development environments
+* Recovery and maintenance
 
-The base workstation keeps normal Emacs, Geiser/SLY, Guile, and SBCL available
-through Home.  Optional dialect runtimes are project shells, not global machine
-packages.  The shared module in =guix/modules/sk/development-tiers.scm=
-composes four independently evaluable manifests:
-
-#+begin_src text
-core    Guile, readline/colorized modules, SBCL, and shared project/core tools
-jvm     OpenJDK, the Clojure JAR, clojure-lsp, clj-kondo, and cljfmt
-racket  full Racket, Findutils, raco, RackUnit, docs, and GUI/runtime libraries
-fennel  Fennel 1.6.1, fnlfmt 0.3.0, fennel-ls 0.2.3, and Findutils
-#+end_src
-
-List or enter them through the authenticated channel snapshot:
-
-#+begin_src sh
-scripts/guix-lisp-shell list
-scripts/guix-lisp-shell core
-scripts/guix-lisp-shell jvm -- make --no-print-directory -C fixtures/clojure check
-scripts/clojure-project-check
-scripts/racket-project --project fixtures/racket check
-scripts/racket-project-check
-scripts/fennel-project --project fixtures/fennel check
-scripts/fennel-project-check
-scripts/lisp-project-check all
-#+end_src
-
-The wrapper uses =--pure= and the exact repository channel lock.  It snapshots
-the channel file and supplies isolated trusted-channel state before invoking
-=guix time-machine=.  =--pure= cleans the inherited package environment but
-does not replace =HOME=; the wrapper explicitly preserves =TMPDIR= and
-=XDG_CACHE_HOME= for bounded project state.  Other project tools may still use
-deliberate user state such as =~/.clojure=.  The Clojure project wrapper does
-not consult that state: it launches =clojure.main= directly with OpenJDK and
-the Guix-owned =share/java/clojure.jar= plus the project's =src= and =test=
-directories.  Its generic surface is =classpath=, =clojure=, =format=,
-=format-check=, =lint=, =repl=, and =lsp=; each project Makefile owns its own
-evaluation, reload, test, and =check= policy.  =deps.edn= records project
-paths/root metadata only; tools.deps and Maven dependency downloads are outside
-this workflow.  The full build gate supplies isolated HOME/cache/config state
-while proving real Guile/SBCL/Clojure/Racket/Fennel commands and verifying that
-Racket does not leak into core/JVM, Clojure does not leak into Racket, and
-Fennel's runtime/tool stack remains confined to its own manifest.
-
-The Racket project surface is =backend=, =check=, =docs=, =eval=, =expand=,
-=lint=, =make=, =raw=, =repl=, and =test=.  It re-enters the repository-pinned
-full =racket= manifest unless its internal authenticated sentinel is present,
-so an arbitrary ambient =GUIX_ENVIRONMENT= cannot replace the reviewed runtime.
-It resolves only the marked project's =src= collection and places
-all writable state below
-=${XDG_CACHE_HOME:-$HOME/.cache}/racket/projects/<project-key>/=.  In particular,
-=PLTUSERHOME=, =PLTADDONDIR=, =PLTCONFIGDIR=, and the compiled/docs/tmp outputs
-are project-keyed.  =PLTCOLLECTS= records =ROOT/src:= as an explicit checked
-environment boundary, but =-U= suppresses its lookup; runtime actions therefore
-combine =-U= with =-S ROOT/src= so Racket ignores user-specific startup while
-still resolving the marked source collection.  =PLTCOMPILEDROOTS= puts writable
-compiled output before immutable installation roots.  The generic =check=
-action delegates to the project's =make check=; the tracked fixture Makefile
-owns its concrete source/test/docs paths, runs =raco make=, rejects
-=DROP=/=ADD=/=BYPASS= recommendations from =raco check-requires=, runs RackUnit
-through =raco test=, and generates Scribble HTML.  Macro expansion is available
-separately through =raco expand=.  No
-action invokes =raco pkg=, installs the fixture, changes a package catalog, or
-writes =compiled/= or =doc/= inside the project.
-
-The Fennel project surface is =check=, =compile=, =eval=, =expand=, =format=,
-=format-check=, =lint=, =lsp=, =make=, =raw=, =repl=, =run=, and =test=.
-Every public invocation re-enters =guix-lisp-shell fennel=; its internal
-=--authenticated= worker mode accepts only an exact canonical
-=/gnu/store/*-profile= =GUIX_ENVIRONMENT= below the non-writable Guix store,
-with a readable manifest, a non-writable profile, and the required tools.  A
-read-only lookalike directory outside the store is a tested rejection.  A SHA-256 digest of the
-canonical project root keys isolated HOME, XDG cache/config/data/state/runtime,
-and temporary directories below the caller's cache root.  The wrapper clears
-ambient Lua and Fennel search/startup variables, invokes Fennel with
-=--no-fennelrc=, and limits its module/macro search paths to the marked =src=
-and =test= trees.  Recursive Make targets preserve the authenticated mode and
-original cache root rather
-than nesting state.  No action installs a dependency or permits =.fennelrc=,
-LuaRocks/fnx state, project-local cache/target state, or generated Lua output.
-
-The persistent Home profile owns =emacs-clojure-mode=, =clj-kondo=, and
-=cljfmt= for editor-side mode, diagnostics, and formatting.  The JVM manifest
-owns the complete runtime/tool closure above, while System owns no Clojure/JVM
-package.  Repository source adds a project-keyed =clojure.main= comint REPL and
-starts =lsp-mode=/=clojure-lsp= only on an explicit command through the same
-project wrapper.  CIDER is intentionally absent: the pinned channels do not
-provide the Guix-packaged nREPL and cider-nrepl middleware needed for its
-standard jack-in flow, and this slice does not permit Maven downloads to fill
-that gap.  The accepted Slice 17 source similarly gives persistent Home only
-the runtime-detached Racket Mode package; the runtime, =raco= tools, package
-collections, and documentation stay in the project manifest.  Repository
-source configures Racket Mode to use the project wrapper only after explicit
-backend/XP startup.  The complete non-activating gate and the activated,
-fresh-reboot Home/editor/backend acceptance both pass.
-
-The accepted Fennel declaration gives Home only =emacs-fennel-mode=; its
-interpreter, formatter, language server, and checker-only Findutils stay in the
-project manifest.  Repository source adds explicit project-keyed protocol REPL
-and fennel-ls startup, shared evaluation/docs/navigation/macro/check/stop keys,
-Puni, wrapper-backed formatting, edit-only Org source blocks, and the existing
-helper/REPL window policy.  Opening =.fnl= starts no process, debugging reports
-an explicit unsupported error, and stopping one project preserves other
-projects and unrelated processes.  The published source and activated Home 41
-pass the fresh-live acceptance sequence.
-
-The disposable Racket checker proves evaluation at 42, the backend command,
-project-keyed PLT environment, compilation, strict require-recommendation lint, RackUnit,
-Scribble, macro expansion, and both direct and Makefile =check= paths.  Its
-negative controls are a syntax error, an unused require, a failing RackUnit
-test, broken Scribble, and a deliberate checker failure.  It snapshots the
-copied project, source fixture, repository, and real Home Racket paths before
-and after the run, and rejects project-local =compiled=, =doc=, =.racket=,
-=.pkg=, or =target= artifacts.
-
-The disposable Fennel checker proves evaluation and imported-macro evaluation
-at 42, compilation, fnlfmt formatting, fennel-ls lint, tests, macro expansion,
-direct and Makefile checks, exact keyed isolation, source/Home/repository
-non-mutation, and absence of project-local Lua/dependency artifacts.  Its
-syntax, format, lint, runaway-macro instruction-limit, failing-test, and
-status-91 controls fail for the intended reasons and recover cleanly.  The
-connected checker proves cold open, two-root REPL/LSP isolation, evaluation and
-error recovery, formatter/project gates, basic non-macro diagnostics, hover,
-definition/references, project-scoped stop, and deliberate process cleanup.
-After the Slice 18 reboot, the live probe resolves Fennel Mode 0.9.2 from the
-active store path without starting a Fennel child, 53/53 ERT tests pass, and the
-established connected Geiser/Guile and SLY/SBCL checks remain green.  The real
-Fennel project checker passes every normal/negative/isolation/no-mutation
-control; =SK_FENNEL_PROJECT_CHECK_BREAK=1= returns exact status 91 and cleanup
-passes.  Connected two-root REPL/LSP and deliberate-failure cleanup pass,
-=scripts/shell-check --strict= reports =recovery=13 home=83 explicit=1=, and neither
-Home nor System exposes a Fennel runtime executable.
-The accepted L-18 correction within Slice 19 fixes Fennel Mode 0.9.2's private
-buffered line splitter without changing the package or runtime boundary.  A
-deterministic regression covers newline-only completion, adjacent records,
-retained partial records, and every split point of complete and incomplete
-protocol payloads.
-The isolated suite passes 56/56; the checker-order fixture proves an early
-editor exit is reported before missing descendant metadata while final residue
-checks still run; and one serialized connected run passes both normal and
-deliberate-failure phases without retry.  Published checkpoint =a8d8222= loaded
-through the supported config reload in live EXWM Emacs with exactly one
-override; both formerly broken fragments pass and no Fennel child remains.
-Pinned fennel-ls emits the exact compatibility warning =--WARNING: plugin
-fennel-ls does not support Fennel version 1.6.1=.  Only that warning is allowed;
-imported-macro LSP navigation or semantic analysis is not claimed.
-
-All four manifests explicitly include Coreutils because the pure project
-wrappers require =env=, =cp=, =mkdir=, =mktemp=, =rm=, and related primitives.
-The Racket and Fennel tiers each own Findutils because their containment
-checkers inventory files, symlinks, and empty directories.  The production
-Racket wrapper re-enters the repository-pinned authenticated shell even when an
-unrelated =GUIX_ENVIRONMENT= is already present; none of these paths rely on an
-inherited workstation =PATH=.
-
-The Common Lisp dependency policy is deliberately smaller than a second package
-manager: the tracked ASDF system has no external dependency, discovery uses a
-strict project-only =CL_SOURCE_REGISTRY=, and compiled output goes to temporary
-or project-keyed XDG cache state.  Quicklisp, Qlot, and Roswell are not consulted.
-When a project needs a library, add its =sbcl-*= package to that project's
-authenticated Guix manifest; do not add mutable =~/.quicklisp= or Roswell state
-and do not promote project-only libraries into the base Home profile.
-
-* Generation retention and rollback
-
-Machine-specific keep targets live in
-=guix/machines/guixpc/generation-pins.tsv=.  Each row binds a kind and
-generation number to its expected canonical store target and recovery role.
-The planner aborts on pin/target mismatches, current/runtime divergence, an
-unrooted booted System, or dangling targets.  The rollback drill additionally
-checks recovery artifacts and required GRUB generation references.
-
-Those pins are historical, installation-specific acceptance evidence.  They
-are not bootstrap inputs for a newly configured installation: its generation
-numbers and store targets will differ.  Do not run =verify=, switch to a
-recorded number, or reseed the file until the new System, Home, and Pull
-generations have each passed their live acceptance gates.
+=guix/machines/guixpc/generation-pins.tsv= records machine-specific accepted
+System, Home, and Pull recovery targets.  The supported retention reporter has
+no apply action:
 
 #+begin_src sh
 scripts/guix-generation-retention inventory
@@ -2522,299 +239,67 @@ scripts/guix-generation-retention estimate
 scripts/guix-generation-retention rollback-drill
 #+end_src
 
-The implementation is intentionally read-only and has no =apply= action.
-=plan= retains its original narrow behavior: it reports only older links whose
-identical canonical closure survives through a newer link.  =estimate=
-implements the P4.2/D-34 floor, per System/Home/Pull profile, as the union of
-the current closure, booted System closure when different, five newest
-additional distinct closures, and every explicit pin.  It enumerates exact
-retained closures and candidate links, simulates candidate-root removal, and
-uses a Scheme helper to measure ordinary forward requisites and NAR bytes.
+Its reports do not authorize deletion and its byte counts are not guaranteed
+reclaim.  System-generation deletion, bootloader reconstruction, and Guix
+store garbage collection require a new, bounded plan and explicit approval.
 
-=estimate= never invokes =guix gc= or =guix size=.  It reports persistent-root,
-derivation-policy, process-root, temporary-root, and filesystem-allocation
-coverage explicitly.  Since the latter four surfaces are incomplete, its
-forward-reference byte differences are not expected free space or proven
-reclaim bounds; guaranteed reclaim remains zero.  P5.2 generation deletion and
-P5.3 unreachable-store collection require separate reviewed plans and explicit
-attended authorization.  When a booted closure maps to multiple System
-generation links, the estimator protects them all rather than guessing the
-booted generation number.
+The source checkpoint branch is not a backup of mutable documents, secrets,
+keys, browser data, or other local state.  Backup and storage policy remains a
+separate parked decision.
 
-The P4.2 retained-link counts are System/Home/Pull =86/47/5=.  Exact pins
-promote current/booted System 87, retain System 86 as its immediate fallback,
-and keep older accepted System fallbacks.  Home 47 is current and promoted,
-Home 46 is its immediate fallback, and older accepted Home pins remain
-protected.  Pull 5 is current and promoted, while older accepted Pull pins
-remain protected.  Acceptance left no checker residue and performed no
-generation deletion or garbage collection.
+* Active direction
 
-The P5.1 snapshot retains System/Home/Pull =8/17/5= distinct closures and
-=8/17/5= links.  It classifies =78/30/0= candidate links, of which =4/5/0=
-target retained closures and =74/25/0= target =51/13/0= unretained closures.
-The exact 329-row result and all coverage limits live in
-[[file:docs/audits/data/2026-07-18-p5.1-retention-estimate.tsv][the P5.1 estimator data]].  These rows are review input, not deletion
-authorization.
+There is currently no approved implementation slice.  The next approved task
+is to reconcile the documentation and build a new roadmap from the live
+machine and Rafael's actual priorities.
 
-The P5.2 preflight reproduced that 329-row artifact byte-for-byte, then created
-an exact Home-only review manifest.  P5.2a subsequently retained Home
-=29,32..47= and removed only =1..28,30,31=, changing Home links
-=47 -> 17=.  Live System/Home/Pull counts are now =86/17/5=; current
-generations remain =87/47/5= and candidates are =78/0/0=.  The exact 286-row
-result is
-[[file:docs/audits/data/2026-07-18-p5.2a-home-deletion-postflight-estimate.tsv][the P5.2a postflight estimator data]].  No GC ran, no top-level store object
-was removed, and material reclaim is zero.  The official System deletion
-action remains held because its post-deletion
-=reinstall-bootloader= path reconstructs default bootloader configuration
-instead of consuming GuixPC's declared EFI/ultrawide/keymap fields.
+The planning pass will distinguish completed work, current gaps, parked
+decisions, frozen artifacts, and optional ideas.  It will cover, without
+pre-authorizing implementation:
 
-P5.2b-D1 removes that unsafe command from =plan= and adds
-=scripts/guix-system-generation-link-pruner=.  The primitive verifies exact
-tuples and rollback only beneath a sentinel-marked synthetic root; it
-hard-refuses root =/=, has no live =apply=, and requires a SHA-bound
-=FIXTURE-ONLY= manifest whose authorization is =NOT-GRANTED=.  Its focused
-fixture covers staged apply, exact rollback, partial recovery, occupied paths,
-drift, injected failure, and signal interruption.
+- Guix and EXWM reliability, startup, responsiveness, and hardware behavior;
+- coherent GTK, Qt, Emacs, terminal, font, icon, cursor, and color ownership;
+- SSH and terminal behavior;
+- safe garbage collection and understandable generation maintenance;
+- Home-directory and Git hygiene;
+- Scheme-native Bluetooth, network, and sound tools;
+- a practical Scheme learning and development environment;
+- security, recovery, observability, accessibility, data continuity, and
+  other gaps discovered by the audit.
 
-The historical live menu contained all 78 candidates twice, so deleting links
-without a new menu would have left 156 stale path occurrences.  The reviewed
-=bootcfg= had only six direct forward references and did not retain every old
-System closure.  The retained-only GRUB artifact and D4b evidence are already
-published.  Live P5.2b still requires D4c.1a production source-contract,
-D4c.1b manifest, and D4c.2 program publication, D4c.3 packet acceptance, and
-the separately granted attended D5 transaction.  P5.3 remains separate and
-held.
+Candidate gaps will be ranked by practical value and presented to Rafael for
+selection.  Presence in this list is not approval to build them.
 
-P5.2b-D2a adds =scripts/guix-system-retained-bootcfg= and the Scheme module
-=(sk system-retained-bootcfg)=.  The stage-only input binds the pinned Guix,
-implementation/evaluation/source/channel/review hashes, the exact Pull-profile
-store item, exact live profile tuples, retained links, installed GRUB, current
-=bootcfg=, and GuixPC's EFI/ultrawide/keymap contract.  The launcher accepts
-only the canonical specification, sanitizes inherited Guile search paths, and
-requires the exact Git commit that introduced that specification.
-Check the source checkpoint without a store build:
+The existing machine ledger,
+[[file:guix/machines/guixpc/todo.org][guix/machines/guixpc/todo.org]], still
+contains historical statuses and must not be treated as an active queue until
+that reconciliation is complete.
 
-#+begin_src sh
-scripts/guix-system-retained-bootcfg fixture-check
-#+end_src
+* Frozen and historical material
 
-The D2b gate allowed the unprivileged =stage= action only after D2a was
-published and fetched cleanly.  That action realizes only an immutable store
-output, compares it byte-for-byte with the accepted-GRUB projection,
-revalidates the reviewed surfaces, and prints a report to standard output.  It
-does not write
-=/boot/grub/grub.cfg=, rotate =bootcfg=, create a result root, remove a link,
-or authorize the future transaction.  Realization may add immutable store
-objects and build metadata, so its later report must not claim whole-store or
-whole-machine byte identity.
+The branch =sol-ultra-delirious-experiment= is an immutable backup of commit
+=d703717b551a0d4751282953f989341ecbb4edd2=.  Do not check it out for
+development, move it, rebase it, merge into it, delete it, or otherwise change
+its contents.  Development happens on =main=.
 
-P5.2b-D2b ran that action from exact source checkpoint =e8e563d=.  The
-historical store output
-=/gnu/store/1pfbqbj5mxmxllnhcn0nfpx0ya94fn81-grub.cfg= had SHA256
-=70965414824c26e1712c6a7a51efd9517633eb3c83f36f88927565c87807496b=
-and 5,163 bytes.  [[file:docs/audits/data/2026-07-19-p5.2b-d2b-retained-grub.cfg][The tracked artifact]] is byte-identical to that output, and
-[[file:docs/audits/data/2026-07-19-p5.2b-d2b-stage-result.tsv][the tracked report]] preserves untouched stdout.  Projection equality,
-semantic validation, and selected pre/post-surface comparison passed.  No GC
-root naming the output or active boot reference was found.  D3a source and
-fixtures were later published at =676b430=.  Its first D3b clean compile gate
-found two generated unused-variable diagnostics; the separately validated
-D3a correction is published at =0601b9d=.  D3b's warning-free compiles,
-standalone/strict matrices, closed outputs, and 129-record selected-surface
-equality pass and are published at =b1d6ecb=.  D4a's bounded source/fixture
-checkpoint passes its final gates and is published at =41e1115=.  D4b's
-source-only helper is published at =002d1ef= and its one guarded synthetic
-realization succeeded.  The accepted result/output are retained while a later
-validator checkpoint prevents Guile's lazy finalizer thread during only the
-exact-prefix load, restores GC before packets/suites, and retains empty stderr
-at all 11 checked sites.  That checkpoint is published at =99dfdeff=; its
-first recovery passed boundary and root-backend warning-free, then stopped at
-a whole-line orchestrator matcher that expected bare PASS instead of the
-frozen =PASS (313 checks)= line.  No artifact semantics failed.  The next
-source-only correction pins all six exact suite PASS literals and is published
-at =bf8040d=.  Its recovery passed all six production suites with empty
-nested-loader stderr, then the artifact correctly rejected the harness's 0755
-D4a fixture root.  Its no-clobber =runtime-recovery-2.*= channels are
-preserved.  The third source-only correction separates the D4a 0700
-root/0600 reconciliation-sentinel topology from legacy transaction topology;
-it is published at =cdd4bd4=.  Exact runtime-v4 and checkout-independence
-validation pass with 4,582-byte tracked stdout, empty stderr, restored
-checkout, unchanged historical evidence, and unchanged selected live
-surfaces.  D4b evidence is complete and published with clean upstream equality
-at =9577e1d=.  No additional lowering or realization occurred, and all live
-gates remain separate.
+The custom P5.2b System-pruning work from D1 through D5 is frozen as irrelevant
+to the current objective.  Its modules, scripts, tests, fixtures, audit data,
+and historical status text may still exist on =main= while documentation and
+source are reviewed.  Do not execute, extend, refactor, validate, or use that
+work as a prerequisite or blocker without a new explicit decision from Rafael.
 
-* Live symlinks
+The repository also contains earlier Clojure, Racket, and Fennel environments
+and fixtures.  Their existence records prior work; it does not make dialect
+expansion an active goal.
 
-The important live files are symlinks back into this repo:
+* Documentation
 
-#+begin_src text
-~/.config/guix/channels.scm       -> guix/channels.scm
-~/.config/guix/home.scm           -> guix/home/guixpc.scm
-~/.config/guix/systems/guixpc.scm -> guix/systems/guixpc.scm
-~/.emacs.d/early-init.el          -> emacs/early-init.el
-~/.emacs.d/init.el                -> emacs/init.el
-~/.emacs.d/exwm.el                -> emacs/exwm.el
-#+end_src
+- [[file:docs/audits/2026-07-12-full-configuration-audit.org][Full configuration audit]]: original source and live-state findings.
+- [[file:docs/audits/2026-07-15-phase-0-baseline.org][Phase 0 baseline]]: later system baseline evidence.
+- [[file:docs/audits/2026-07-16-p3.1-visual-ownership-and-token-contract.org][Visual ownership and token contract]]: theme ownership and vocabulary.
+- [[file:docs/audits/2026-07-18-p4.2-recovery-storage-deferral.org][Recovery and storage deferral]]: accepted backup/storage decision.
+- [[file:docs/audits/2026-07-18-p5.1-read-only-retention-estimator.org][Retention estimator audit]]: limits of the read-only maintenance report.
+- [[file:docs/handoffs/2026-07-12-sk-guix-kitty.org][sk-guix Kitty handoff]]: authenticated channel/package history.
 
-The early-init link became live with accepted Home generation 42.
-
-The app and shell symlinks are managed by =guix/home/guixpc.scm=. The Guix
-entrypoint symlinks under =~/.config/guix= are bootstrap links and intentionally
-stay outside the Guix Home activation service so =gsr= and =ghr= always read the
-editable repo files.
-
-Check them without changing anything, or create/repair missing, wrong, or
-dangling symlinks during bootstrap:
-
-#+begin_src sh
-scripts/guix-entrypoints check
-scripts/guix-entrypoints bootstrap
-#+end_src
-
-Bootstrap refuses a regular-file/directory blocker or missing managed source and
-does not partially change another entrypoint.  It never overwrites a conflicting
-regular file.
-
-* Installed-base GuixPC configuration bootstrap
-
-The checked bootstrap boundary starts from an already bootable Guix base on
-this GuixPC hardware.  It does not install a blank disk.  Before continuing,
-the operator must have working networking and a Guix daemon, the
-=skydive420dz= account with its declared =wheel/netdev/audio/video= groups, and
-this checkout at
-=/home/skydive420dz/Projects/guix-dotfiles=.  Confirm that the root, Home,
-swap, and EFI UUIDs in =guix/systems/guixpc.scm= match the target machine before
-any System activation.  Review the three channel introductions and make an
-explicit Nonguix substitute-key or source-build-risk decision as described
-above.
-
-A validation-only run may use a stable worktree because bootstrap fingerprints
-the complete repository before and after every gate.  Before using its output
-for live activation, however, commit and push the intended checkpoint, require
-an empty =git status --short=, verify =HEAD= matches the intended remote commit,
-and rerun =prepare= from that exact checkpoint.
-
-From the checkout, run:
-
-#+begin_src sh
-scripts/guix-bootstrap --plan
-scripts/guix-bootstrap prepare
-#+end_src
-
-=--plan= validates the complete channel lock, chooses and freezes a runnable
-immutable user Pull or System Guix profile, plans the three declaration links,
-runs the 14-live-plus-one-retired Home preflight, and executes the authenticated build-gate
-plan.  Its time-machine evaluation may fetch or add authenticated immutable
-store/cache objects.  It does not activate a live profile or generation, pull,
-reconfigure, reboot, alter retention, or collect garbage.
-
-=prepare= first passes the complete non-activating package, manifest, Home, and
-System build gate.  Only then may it repair the three declaration symlinks and
-create the exact authenticated user Pull generation; it reuses that Pull when
-all six provenance fields already match.  It finally renders both activation
-plans through the frozen post-Pull profile.  It never activates System or Home,
-uses sudo, reboots, changes retention, or runs garbage collection.
-
-Preparation prints exact, Fish-safe =env SK_GUIX_FRONTEND_PROFILE=...=
-commands with the absolute =scripts/guix-reconfigure= path.  Before activating,
-confirm the checkout is still clean at that same checkpoint.  The frontend is
-frozen, but the System and Home declarations remain live repository files;
-rerun =prepare= after any source or commit change.  Then continue manually from
-a local recovery tty:
-
-1. Run the printed System command, then reboot.
-2. Confirm =/var/guix/profiles/system=, =/run/current-system=, and
-   =/run/booted-system= resolve to the same accepted store target.
-3. Run the printed Home command, then reboot again.
-4. Run =scripts/shell-check --strict=, =scripts/emacs-check=,
-   =scripts/editor-tools-check=, and =scripts/desktop-session-check=; also prove
-   a direct SSH command resolves Home-owned ShellCheck and SBCL.
-5. Only after live acceptance, record the new installation's exact System,
-   Home, and Pull targets in =generation-pins.tsv= and pass retention
-   verification plus the rollback drill.
-
-The recorded 86/47/5 generation identities and their older retained tiers are
-this installation's historical rollback evidence and are not valid new-install
-targets.  Blank-disk partitioning,
-filesystem creation, initial GRUB/EFI installation, initial user/network/
-firmware provisioning, secret restoration, substitute-ACL mutation, and a new
-installation's first boot remain outside this checked sequence.
-
-For a complete Slice 18 rollback, first restore source checkpoint
-=81ebb249e299e4e6bd840971d084ab21521d1e27= because the live repository links
-are not changed by a Home generation switch.  Then use the protected Pull 5
-Guix at =/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile/bin/guix= to
-switch exactly to Home generation 40 and reboot.  System generation 85 needs no
-change.
-
-For the accepted Slice 19 native-comp correction, restore source checkpoint
-=e69644a98a32e1c63eb7ea9b5bb313849c7c6d87= first, remove the managed
-=~/.emacs.d/early-init.el= link if it remains, use protected Pull 5 to switch
-exactly to Home generation 41, and reboot.  Keep the known-stale cache in its
-quarantine instead of restoring it to the native lookup path.  The System and
-Pull generations need no change for that cache-only rollback.
-
-For the accepted L-18 Fennel framing correction within Slice 19, restore source
-checkpoint =f52778c0c8a5a1364f139adfeda396eb235ead54= and reload or restart
-Emacs.  This source-only rollback needs no =ghr=, Home rollback, or reboot.
-
-To roll back the final desktop policy and Bluetooth boot-order corrections,
-restore source checkpoint =abb0518399daf3047862f96099cf6f9fa048f73b=, use
-protected Pull 5 to switch exactly to System generation 85, and reboot.  Home
-42 and Pull 5 need no change.
-
-To roll back accepted P1.1, revert source checkpoint
-=6c408af2d43631ae07119f25ac90f2ee07793a73= first, then use protected Pull 5
-to switch exactly to retained System generation 86 and reboot.  Home 42 and
-Pull 5 need no change.  Do not replace the truthful terminal type with a global
-=TERM= override.
-
-* Generated or local state
-
-These paths are not source configuration:
-
-#+begin_src text
-~/.guix-home
-~/.emacs.d/auto-save-list/
-~/.cache/emacs/eln-cache/<resolved-Guix-Home-profile>/
-~/.emacs.d/eln-cache.quarantine-20260713-slice19/
-~/.emacs.d/eshell/
-~/.emacs.d/transient/
-~/.emacs.d/url/
-~/.config/guix/backups/
-~/.config/guix/recovery/
-~/.config/chromium/
-~/.config/pulse/
-~/.config/fish/fish_variables
-~/.config/glib-2.0/settings/keyfile
-~/.config/alsa/
-~/.config/fontconfig/
-~/.config/shepherd/
-#+end_src
-
-They may be useful for recovery or runtime behavior, but they should not become
-the place where new config is written.
-
-The GLib keyfile is accepted mutable Blueman GUI state.  Keep it user-owned and
-private; do not promote recent-device history or window geometry into the
-declarative Home configuration.
-
-The accepted Slice 19 native-comp policy keeps Guix Home as the sole Org package
-owner and moves writable native artifacts out of =~/.emacs.d=.  The cache key
-is the immutable store basename reached through =~/.guix-home/profile=, not the
-stable symlink spelling or mutable generation number.  A package-profile
-change therefore gets a cold cache, while an exact retained rollback profile
-can reuse only its matching cache.  =emacs/early-init.el= also removes the old
-=~/.emacs.d/eln-cache/= entry from fallback lookup; merely prepending a new
-directory would not isolate a cold start from stale native files.  Do not
-suppress Org's version assertion or install a second Org through ELPA.
-
-The following files currently exist as accepted local application state, not as
-core system ownership:
-
-#+begin_src text
-~/.config/btop/btop.conf
-~/.config/nano/nanorc
-#+end_src
-
-Promote these into the repo only if they become deliberate configuration.
+Audit files are evidence and history, not an automatic roadmap.  The README
+and the subsequently accepted roadmap define current direction.
