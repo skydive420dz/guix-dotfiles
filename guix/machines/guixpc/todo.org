@@ -1186,6 +1186,7 @@ CLOSED: [2026-07-20 Mon]
 :ready_after: 9577e1daac3d5258222d1cbf186facba809d10fb
 :protocol_checkpoint: 79a361a7f3c2e46ddb27b0c4d5e44a8751914dd5
 :publication_checkpoint: 0d97e5d5ed10fdd6e0500c072dec470c966f4995
+:semantic_core_checkpoint: 94044411abbe65641a7c712e705d35a5f94d2219
 :END:
 
 - Protocol checkpoint: [[file:../../../docs/audits/2026-07-20-p5.2b-d4c1a-live-manifest-protocol.org][2026-07-20 D4c.1a live-manifest protocol and production-source gap]].
@@ -1200,10 +1201,16 @@ CLOSED: [2026-07-20 Mon]
   fixture, and machine-readable evidence input; limit historical narrative Org
   changes to roadmap/status corrections.  Do not confuse this checkpoint with
   the complete production contract.
-- [ ] Add the live-specific boundary/journal/reconciliation contract and exact
-  initial/recovery grant-token grammar.  The existing D4a phase/reconciliation
-  APIs are intentionally =FIXTURE-ONLY= and cannot be widened without
-  invalidating their byte-frozen evidence.
+- [X] Add the bounded pure live boundary/journal grammar, exact execution-token
+  grammar, and observation-bound pre-journal bootstrap recovery-token/
+  reconciliation core at =94044411abbe65641a7c712e705d35a5f94d2219=.
+  Preserve the existing byte-frozen D4a =FIXTURE-ONLY= interfaces; require
+  every initial-journal-temporary, durable-journal, and terminal observation to
+  remain review-only.
+- [ ] Extend that semantic core with initial-journal-temporary and durable-
+  journal recovery, exact terminal classification, and one boundary-derived
+  canonical execution-effect plan.  Do not treat the current caller-supplied
+  bootstrap-effect fixture list as final production semantics.
 - [ ] Complete the bounded live-review manifest protocol, deterministic
   read-only collector/verifier, exact production renderer/driver/root-adapter
   source, final exact source-input label/path inventory, exact retained-GRUB

@@ -572,11 +572,12 @@ fixture root failed the artifact's exact capability guard.  Third validator
 checkpoint =cdd4bd4= is published and equal; its exact runtime-v4 and
 checkout-independence packets pass with empty stderr and restored checkout.
 The final D4b docs/data evidence is published with clean upstream equality at
-=9577e1d=.  The current ready action is D4c.1a additive source-only work for
-the production manifest contract, deterministic read-only collector/verifier,
-live fused-program adapter, and synthetic fixtures.  It must publish cleanly
-and stop without capturing a live manifest, lowering or building a program,
-creating a root, or running a live action.
+=9577e1d=.  D4c.1a remains additive source-only work.  Its current ready scope
+is the deterministic read-only collector/verifier, production adapter,
+boundary-derived canonical execution plan, fused renderer/driver, durable-
+journal and terminal policy, final inventory, and remaining synthetic gates.
+It must publish cleanly and stop without capturing a live manifest, lowering
+or building a program, creating a root, or running a live action.
 
 - The first bounded D4c.1a protocol source checkpoint =79a361a= and
   documentation closure =0d97e5d= are published with clean GuixPC/origin/direct
@@ -588,6 +589,15 @@ creating a root, or running a live action.
   fused renderer/driver source, the final exact source-input inventory, the
   =ROLLED-BACK= postflight branch, and the recovery-root-base terminal
   disposition.
+- The second bounded D4c.1a source checkpoint =9404441= adds the separate pure
+  live boundary/journal grammar, typed exact D5 grant transport, and fail-
+  closed observation-bound pre-journal reconciliation core.  Its pinned gate
+  warning-fatally compiles and runs the repository module bytes with exact
+  PASS counts =90/48/130/117=; D4a's seven suites and the D4b
+  =lowered=FALSE realized=FALSE= source gate also pass.  Initial-journal-
+  temporary and durable-journal recovery, terminal semantics, production
+  effects, and the final boundary-derived execution plan remain explicitly
+  outside this checkpoint.  Publication proof is pending.
 - [ ] P5.2b-D4c.1a: publish the closed production source/schema/fixture
   contract with =authorization NOT-GRANTED= and prove upstream equality.
 - [ ] P5.2b-D4c.1b, only afterward: recompute and publish the fresh closed

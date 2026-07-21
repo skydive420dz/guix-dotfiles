@@ -3,9 +3,10 @@
 #+startup: overview
 #+category: guixpc
 #+filetags: :guixpc:guix:scheme:grub:recovery:source:
-#+status: bounded protocol checkpoint published; D4c.1a remains open
+#+status: bounded protocol published; pre-journal semantic core committed; D4c.1a remains open
 #+source_checkpoint: 79a361a7f3c2e46ddb27b0c4d5e44a8751914dd5
 #+publication_checkpoint: 0d97e5d5ed10fdd6e0500c072dec470c966f4995
+#+semantic_core_checkpoint: 94044411abbe65641a7c712e705d35a5f94d2219
 
 * Outcome
 
@@ -25,10 +26,13 @@ The historical D3/D4a/D4b fixture/source, artifact, and machine-readable
 evidence inputs remain byte-preserved.  Their narrative Org audits receive
 roadmap-only status and handoff corrections in this checkpoint.
 
-This is not D4c.1a completion.  The deterministic collector, live-specific
-boundary/journal/reconciliation core, exact D5 grant-token grammar, production
-runtime adapter, fused renderer/driver, and their complete synthetic gates
-remain required before any live manifest may be captured.
+This is not D4c.1a completion.  A second bounded checkpoint now supplies the
+pure live boundary/journal grammar, exact D5 token transport, and fail-closed
+pre-journal reconciliation core.  Durable-journal and initial-journal-
+temporary recovery, the canonical boundary-derived execution plan, the
+deterministic collector, production runtime adapter, fused renderer/driver,
+and their remaining synthetic gates are still required before any live
+manifest may be captured.
 
 The exact bounded source checkpoint is
 =79a361a7f3c2e46ddb27b0c4d5e44a8751914dd5= and its documentation/provenance
@@ -37,6 +41,67 @@ closure is =0d97e5d5ed10fdd6e0500c072dec470c966f4995=.  After the push,
 ahead/behind =0/0=.  The protected 19-record live snapshot remained exact at
 SHA256 =44a31120baabf015556e42a387903153ce6b54f02624b12ab7dbc21bc80dfc11=
 under unchanged boot ID =64140768-9522-4cad-8021-9db54e070e8a=.
+
+* Bounded pre-journal semantic core
+
+Source checkpoint =94044411abbe65641a7c712e705d35a5f94d2219= adds
+only pure Scheme semantics and source-only gates:
+
+- [[file:../../guix/modules/sk/system-pruning-live-boundary.scm][=system-pruning-live-boundary.scm=]] binds the validated live manifest,
+  source checkpoint, packet/program tuple, boot ID, selector, ordered recovery
+  roots, program-root formula, and a separate canonical hash-chained journal
+  grammar.  It does not widen the frozen D4a fixture module.
+- [[file:../../guix/modules/sk/system-pruning-live-grant.scm][=system-pruning-live-grant.scm=]] closes distinct execution and recovery token
+  schemas.  Environment transport is lowercase hex of exact final-LF UTF-8
+  TSV.  Typed readers require the selected token, reject the opposite token,
+  and bind every field to independently supplied expected context.
+- [[file:../../guix/modules/sk/system-pruning-live-reconciliation.scm][=system-pruning-live-reconciliation.scm=]] classifies normalized observations
+  without reading or changing the machine.  Only the exact absent initial
+  state and exact ordered pre-journal bootstrap prefixes are eligible.  A
+  recovery grant binds the full canonical observation digest and exact next
+  phase.  Skips, replay, stale phases, foreign state, initial-journal
+  temporaries, and every durable-journal or terminal state fail closed.
+- [[file:../../tests/support/sk/system-pruning-live-contract-fixture.scm][the shared fixture]], three positive/adversarial Scheme suites, and
+  [[file:../../tests/guix-system-pruning-d4c1a-semantic-core-check][the pinned aggregate gate]] exercise and compile these repository bytes.
+
+The checkpoint identities are:
+
+| source | SHA256 |
+|--------+--------|
+| live boundary | =b43b97f7f4174938a83ffcd3b5153f0902b391ab51dfbec2d7d3e89765480313= |
+| D5 grant grammar | =5cdf17043205973d8b281dd290e0db7ca67875d5ec0c3a9ea39308451653067f= |
+| live reconciliation | =9141118f05dc41ab5bb6c9b26a78543bd6028b7d7392a5db789f3007f4bb6354= |
+| shared fixture | =aa22b05a225620ab2c03209ea8ed002c2a1ec83fbc7eeb5c7fd2a01725a118b5= |
+| boundary suite | =30d6a34a4c4f0c9b17c9077d37dfd73ee737cf9c6389c3403266659c718fc4de= |
+| grant suite | =63367570ece9bd67681d1c9cba5b5b5e70f031b58e16acbc298c5685457c0354= |
+| reconciliation suite | =3cdca4eeec38b533cb1b60743895bd20d2693195620d5017db56d3849757def7= |
+| aggregate gate | =e245b9f023eb78133cc332d69dd63ad14ded2bc8a135629dc457357e964ef6b3= |
+
+The GuixPC aggregate gate warning-fatally compiled the bounded manifest,
+semantic modules, shared fixture, and four test programs into a temporary
+module-shaped cache, then executed those exact compiled repository modules.
+It required empty stderr and byte-exact stdout:
+
+- live manifest: PASS (90 checks);
+- live boundary: PASS (48 checks);
+- D5 grant grammar: PASS (130 checks); and
+- live reconciliation: PASS (117 checks).
+
+The unchanged D4a gate passed all seven frozen suites, including 3,172
+phase-engine checks and 297 fixture-runtime checks.  The D4b source gate
+passed with =lowered FALSE= and =realized FALSE=.  Independent semantic review
+returned =PUBLISH= with no remaining high- or medium-severity fail-open
+finding.  The protected live snapshot remained
+=44a31120baabf015556e42a387903153ce6b54f02624b12ab7dbc21bc80dfc11=
+under boot ID =64140768-9522-4cad-8021-9db54e070e8a=.
+
+This checkpoint deliberately does not freeze the final execution-effect
+sequence.  Its bootstrap-effect digest API is exact, but the current fixture
+list is caller-supplied.  The production packet/adapter checkpoint must derive
+one canonical ordered plan from the live boundary and cross-test the exact
+digest.  Likewise, durable-journal recovery, initial-journal temporary
+reconciliation, =COMPLETE=/=ROLLED-BACK= postflight, and terminal program/root-
+base disposition remain review-only and keep D4c.1a open.
 
 * Why the extra source checkpoint is required
 
@@ -146,10 +211,12 @@ and published.
 
 * Validation and nonclaims
 
-The pure manifest fixture currently passes 90 checks.  Final checkpoint
-validation must additionally include warning-fatal compilation, independent
-review, =git diff --check=, Org lint, and the unchanged D4a/D4b regression
-gates before publication.
+The bounded manifest and semantic-core evidence above has passed warning-fatal
+compilation, independent review, =git diff --check=, and the unchanged D4a/D4b
+regression gates.  Org lint returned no findings for this audit, the machine
+agenda, or =README.org=.  Clean publication equality remains required after
+the documentation closure.  Final D4c.1a validation must repeat and extend
+those gates over the still-missing production sources.
 
 This checkpoint ran no Guix lowering or build, created no result or GC root,
 captured no live manifest, opened no transaction, wrote no GRUB/=bootcfg=/EFI
@@ -158,6 +225,8 @@ and did not reboot.
 
 * Next
 
-Publish this bounded protocol checkpoint, prove clean upstream equality, and
-continue D4c.1a with the additive live boundary/grant/runtime source.  D4c.1b
-remains blocked until the complete D4c.1a source contract is published.
+Publish the bounded semantic-core source and documentation checkpoints, prove
+clean upstream equality, then continue D4c.1a with the collector, injected
+production adapter, canonical execution plan, renderer/driver, durable-
+journal recovery, terminal policies, and final source inventory.  D4c.1b
+remains blocked until that complete D4c.1a source contract is published.
