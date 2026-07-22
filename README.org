@@ -257,9 +257,9 @@ use.  It is not a framework-adoption, language-collection, or operating-system
 research plan.
 
 Each slice is separately authorized.  C0 is closed at published checkpoint
-=e8ce8b2=.  C1 is the current authorized source slice; its runtime reload and
-hand test wait for a reviewed, published source checkpoint.  C2 and later work
-remain unauthorized.
+=e8ce8b2=.  C1 is closed at published implementation checkpoint =57969d1= and
+was accepted live on 2026-07-21.  C2 is only the next candidate; it and every
+later slice remain unauthorized.
 
 ** C0 — Establish the human roadmap
 
@@ -300,6 +300,15 @@ remain unauthorized.
   close, fullscreen, and reload; and workspace switch/move 1--10.  Shift is
   explicit for every move action.  Float/tile, layout, and resize belong to C2,
   while clipboard and screenshot actions belong to C3.
+- State: closed and accepted live on 2026-07-21 at published checkpoint
+  =57969d1=.  The same Emacs process remained healthy through activation and
+  physical testing.  The tested physical positions were =N= Apps; =H/J/K/L=
+  focus and Shift/Move; =S= Emacs; =A/D/F/G= Terminal/Code/browser/files; =;=
+  fullscreen; =Z= close; =P/Q= WS10/WS1 switch and Shift/Move; and =.= reload.
+  Escape, =C-g=, and literal =C-q C-g= also passed.  The on-demand test expanded
+  the live session to ten workspaces; the configured next-start count remains
+  five.  Automated validation passed 85/85 isolated tests and both connected
+  Lisp backend checks.
 
 ** C2 — Normalize EXWM windows, helpers, dialogs, and recovery
 
