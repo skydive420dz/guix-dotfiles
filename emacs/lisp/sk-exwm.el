@@ -9,7 +9,10 @@
 (require 'seq)
 (require 'subr-x)
 
-(setq exwm-workspace-number 5
+(defconst sk/exwm-workspace-count 5
+  "Exact number of workspaces owned by the GuixPC EXWM policy.")
+
+(setq exwm-workspace-number sk/exwm-workspace-count
       ;; Keep EXWM's reviewed default: transient, fixed-size, utility, and
       ;; dialog clients float and receive focus instead of entering the stack.
       exwm-manage-force-tiling nil)
@@ -514,6 +517,11 @@ applications whose new window belongs to an existing process."
            :allow-live-name-fallback allow-live-name-fallback))))
 
 (defun sk/exwm-workspace-index (number)
+  "Return the zero-based index for reviewed workspace NUMBER."
+  (unless (and (integerp number)
+               (<= 1 number sk/exwm-workspace-count))
+    (user-error "Workspace %s is outside the reviewed range 1..%s"
+                number sk/exwm-workspace-count))
   (1- number))
 
 (defun sk/exwm-workspace-frame (index)
@@ -526,7 +534,7 @@ applications whose new window belongs to an existing process."
   (nth index exwm-workspace--list))
 
 (defun sk/exwm-ensure-workspace-frame (index)
-  "Return workspace frame INDEX, creating it on demand without retaining focus."
+  "Return configured workspace frame INDEX, recovering it without retaining focus."
   (or (and (boundp 'exwm-workspace--list)
            (frame-live-p (nth index exwm-workspace--list))
            (nth index exwm-workspace--list))
@@ -564,22 +572,12 @@ applications whose new window belongs to an existing process."
 (defun sk/exwm-switch-workspace-3 () (interactive) (sk/exwm-switch-workspace 3))
 (defun sk/exwm-switch-workspace-4 () (interactive) (sk/exwm-switch-workspace 4))
 (defun sk/exwm-switch-workspace-5 () (interactive) (sk/exwm-switch-workspace 5))
-(defun sk/exwm-switch-workspace-6 () (interactive) (sk/exwm-switch-workspace 6))
-(defun sk/exwm-switch-workspace-7 () (interactive) (sk/exwm-switch-workspace 7))
-(defun sk/exwm-switch-workspace-8 () (interactive) (sk/exwm-switch-workspace 8))
-(defun sk/exwm-switch-workspace-9 () (interactive) (sk/exwm-switch-workspace 9))
-(defun sk/exwm-switch-workspace-10 () (interactive) (sk/exwm-switch-workspace 10))
 
 (defun sk/exwm-move-window-to-workspace-1 () (interactive) (sk/exwm-move-window-to-workspace 1))
 (defun sk/exwm-move-window-to-workspace-2 () (interactive) (sk/exwm-move-window-to-workspace 2))
 (defun sk/exwm-move-window-to-workspace-3 () (interactive) (sk/exwm-move-window-to-workspace 3))
 (defun sk/exwm-move-window-to-workspace-4 () (interactive) (sk/exwm-move-window-to-workspace 4))
 (defun sk/exwm-move-window-to-workspace-5 () (interactive) (sk/exwm-move-window-to-workspace 5))
-(defun sk/exwm-move-window-to-workspace-6 () (interactive) (sk/exwm-move-window-to-workspace 6))
-(defun sk/exwm-move-window-to-workspace-7 () (interactive) (sk/exwm-move-window-to-workspace 7))
-(defun sk/exwm-move-window-to-workspace-8 () (interactive) (sk/exwm-move-window-to-workspace 8))
-(defun sk/exwm-move-window-to-workspace-9 () (interactive) (sk/exwm-move-window-to-workspace 9))
-(defun sk/exwm-move-window-to-workspace-10 () (interactive) (sk/exwm-move-window-to-workspace 10))
 
 (defun sk/set-keyboard-repeat ()
   (interactive)
@@ -726,9 +724,9 @@ Cancel and pass-through
 The keyboard emits Ctrl+Alt chords; Emacs displays Alt as Meta (C-M).
 The physical map below is EXWM-global, including inside Emacs buffers.
 
-  Q W E R T | Y U I O P
-  workspace 1..5 | workspace 6..10 (6..10 are created on first use)
-  Shift+top row moves the window to that workspace and follows it.
+  Q W E R T    workspace 1..5
+  Shift+Q..T  move the window to that workspace and follow it
+  Y U I O P    no workspace action; the session owns exactly five
 
   A          Kitty                 S          Emacs home
   D          Code / VSCodium       F          Chromium
@@ -828,21 +826,11 @@ M-x sk/exwm-input-help or Super+/.
     ("s-3" . sk/exwm-switch-workspace-3)
     ("s-4" . sk/exwm-switch-workspace-4)
     ("s-5" . sk/exwm-switch-workspace-5)
-    ("s-6" . sk/exwm-switch-workspace-6)
-    ("s-7" . sk/exwm-switch-workspace-7)
-    ("s-8" . sk/exwm-switch-workspace-8)
-    ("s-9" . sk/exwm-switch-workspace-9)
-    ("s-0" . sk/exwm-switch-workspace-10)
     ("s-!" . sk/exwm-move-window-to-workspace-1)
     ("s-@" . sk/exwm-move-window-to-workspace-2)
     ("s-#" . sk/exwm-move-window-to-workspace-3)
     ("s-$" . sk/exwm-move-window-to-workspace-4)
     ("s-%" . sk/exwm-move-window-to-workspace-5)
-    ("s-^" . sk/exwm-move-window-to-workspace-6)
-    ("s-&" . sk/exwm-move-window-to-workspace-7)
-    ("s-*" . sk/exwm-move-window-to-workspace-8)
-    ("s-(" . sk/exwm-move-window-to-workspace-9)
-    ("s-)" . sk/exwm-move-window-to-workspace-10)
     ("s-<return>" . sk/exwm-launch-kitty)
     ("s-w" . sk/exwm-launch-browser)
     ("s-r" . sk/exwm-reload)
@@ -874,22 +862,12 @@ M-x sk/exwm-input-help or Super+/.
     ("C-M-3" . sk/exwm-switch-workspace-3)
     ("C-M-4" . sk/exwm-switch-workspace-4)
     ("C-M-5" . sk/exwm-switch-workspace-5)
-    ("C-M-6" . sk/exwm-switch-workspace-6)
-    ("C-M-7" . sk/exwm-switch-workspace-7)
-    ("C-M-8" . sk/exwm-switch-workspace-8)
-    ("C-M-9" . sk/exwm-switch-workspace-9)
-    ("C-M-0" . sk/exwm-switch-workspace-10)
     ;; XKB resolves Shift+digits to punctuation before Emacs sees the event.
     ("C-M-!" . sk/exwm-move-window-to-workspace-1)
     ("C-M-@" . sk/exwm-move-window-to-workspace-2)
     ("C-M-#" . sk/exwm-move-window-to-workspace-3)
     ("C-M-$" . sk/exwm-move-window-to-workspace-4)
     ("C-M-%" . sk/exwm-move-window-to-workspace-5)
-    ("C-M-^" . sk/exwm-move-window-to-workspace-6)
-    ("C-M-&" . sk/exwm-move-window-to-workspace-7)
-    ("C-M-*" . sk/exwm-move-window-to-workspace-8)
-    ("C-M-(" . sk/exwm-move-window-to-workspace-9)
-    ("C-M-)" . sk/exwm-move-window-to-workspace-10)
     ("<XF86AudioRaiseVolume>" . sk/volume-raise)
     ("<XF86AudioLowerVolume>" . sk/volume-lower))
   "Repository-owned EXWM global keys as (KEY-DESCRIPTION . COMMAND).")

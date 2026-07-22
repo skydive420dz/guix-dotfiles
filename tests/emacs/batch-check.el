@@ -2196,16 +2196,12 @@
                ("C-M--" . sk/exwm-resize-narrower)
                ("C-M-=" . sk/exwm-resize-wider)
                ("C-M-f" . sk/exwm-toggle-fullscreen)
-               ("C-M-r" . sk/exwm-reload)
-               ("C-M-0" . sk/exwm-switch-workspace-10)
-               ("C-M-)" . sk/exwm-move-window-to-workspace-10)))
+               ("C-M-r" . sk/exwm-reload)))
       (should (eq (cdr (assoc (car entry) sk/exwm-global-key-contract))
                   (cdr entry))))
-    (cl-loop for number from 1 to 10
-             for switch-key in '("C-M-1" "C-M-2" "C-M-3" "C-M-4" "C-M-5"
-                                 "C-M-6" "C-M-7" "C-M-8" "C-M-9" "C-M-0")
-             for move-key in '("C-M-!" "C-M-@" "C-M-#" "C-M-$" "C-M-%"
-                               "C-M-^" "C-M-&" "C-M-*" "C-M-(" "C-M-)")
+    (cl-loop for number from 1 to 5
+             for switch-key in '("C-M-1" "C-M-2" "C-M-3" "C-M-4" "C-M-5")
+             for move-key in '("C-M-!" "C-M-@" "C-M-#" "C-M-$" "C-M-%")
              do (should
                  (eq (cdr (assoc switch-key sk/exwm-global-key-contract))
                      (intern (format "sk/exwm-switch-workspace-%d" number))))
@@ -2213,9 +2209,16 @@
                  (eq (cdr (assoc move-key sk/exwm-global-key-contract))
                      (intern
                       (format "sk/exwm-move-window-to-workspace-%d" number)))))
-    (dolist (reserved '("C-M-x" "C-M-s"))
+    (dolist (reserved '("C-M-x" "C-M-s"
+                        "C-M-6" "C-M-7" "C-M-8" "C-M-9" "C-M-0"
+                        "C-M-^" "C-M-&" "C-M-*" "C-M-(" "C-M-)"))
       (should-not (assoc reserved sk/exwm-global-key-contract)))
+    (should (= sk/exwm-workspace-count 5))
     (should (= exwm-workspace-number 5))
+    (should (= (sk/exwm-workspace-index 1) 0))
+    (should (= (sk/exwm-workspace-index 5) 4))
+    (should-error (sk/exwm-workspace-index 0) :type 'user-error)
+    (should-error (sk/exwm-workspace-index 6) :type 'user-error)
     (should-not exwm-manage-force-tiling)
     (should (string-match-p "Reserved for later accepted slices"
                             sk/exwm-input-help-text))
@@ -2280,28 +2283,27 @@
       (sk/exwm-normalize-layout))
     (should-not normalized)))
 
-(ert-deftest sk/check-exwm-workspace-creation-restores-floating-client-workspace ()
+(ert-deftest sk/check-exwm-missing-workspace-restores-floating-client-workspace ()
   (require 'sk-exwm)
-  (let ((exwm-workspace--list '(source-frame frame-2 frame-3 frame-4 frame-5))
+  (let ((exwm-workspace--list '(source-frame frame-2 frame-3 frame-4))
         (exwm-workspace--current 'source-frame)
         (selected 'floating-frame)
         switches)
     (cl-letf (((symbol-function 'frame-live-p)
                (lambda (frame)
-                 (memq frame '(source-frame frame-2 frame-3 frame-4 frame-5
+                 (memq frame '(source-frame frame-2 frame-3 frame-4
                                             floating-frame target-frame))))
               ((symbol-function 'exwm-workspace-switch-create)
                (lambda (target)
                  (push target switches)
                  (if (integerp target)
                      (setq exwm-workspace--list
-                           '(source-frame frame-2 frame-3 frame-4 frame-5
-                                          target-frame)
+                           '(source-frame frame-2 frame-3 frame-4 target-frame)
                            selected 'target-frame)
                    (setq selected target)))))
-      (should (eq (sk/exwm-ensure-workspace-frame 5) 'target-frame)))
+      (should (eq (sk/exwm-ensure-workspace-frame 4) 'target-frame)))
     (should (eq selected 'source-frame))
-    (should (equal (nreverse switches) '(5 source-frame)))
+    (should (equal (nreverse switches) '(4 source-frame)))
     (should (= exwm-workspace-number 5))))
 
 (ert-deftest sk/check-exwm-desktop-entry-is-read-once-per-spec ()

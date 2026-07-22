@@ -280,11 +280,11 @@ separate gates.  Every later slice remains unauthorized.
   34-key keyboard's Ctrl+Alt layer is the canonical action vocabulary and
   agrees with the macOS AeroSpace implementation.  The existing MSI/NixOS
   configuration is a partial reference whose parity gaps are recorded rather
-  than copied into GuixPC.  Workspaces 6--10 are created only when first
-  requested, so the accepted five-frame startup is unchanged.  The Ctrl+Alt
-  aliases are deliberately EXWM-global, including inside Emacs buffers: the
-  physical WM layer controls the whole session and therefore occupies those
-  corresponding =C-M= editing chords.
+  than copied into GuixPC.  GuixPC owns exactly five workspaces: physical
+  =Q/W/E/R/T= select them and Shift moves to them; =Y/U/I/O/P= do not create
+  extra workspaces.  The Ctrl+Alt aliases are deliberately EXWM-global,
+  including inside Emacs buffers: the physical WM layer controls the whole
+  session and therefore occupies those corresponding =C-M= editing chords.
 - Reference: the exact physical source is
   =yivu-corne-v4/validation/2026-07-20-lp-34-rgb-off-left-final/stock-layout.vil=
   at content digest =afe26819eef3= (from =git hash-object=).  Cross-host
@@ -298,18 +298,20 @@ separate gates.  Every later slice remains unauthorized.
   rewrite completion, tabs, or the window manager; do not add launcher history,
   ranking, or a separate desktop-entry database.  C1 covers launch Terminal,
   Emacs home, Code/VSCodium, browser, files, and app picker; focus and move;
-  close, fullscreen, and reload; and workspace switch/move 1--10.  Shift is
+  close, fullscreen, and reload; and workspace switch/move 1--5.  Shift is
   explicit for every move action.  Float/tile, layout, and resize belong to C2,
   while clipboard and screenshot actions belong to C3.
-- State: closed and accepted live on 2026-07-21 at published checkpoint
-  =57969d1=.  The same Emacs process remained healthy through activation and
-  physical testing.  The tested physical positions were =N= Apps; =H/J/K/L=
-  focus and Shift/Move; =S= Emacs; =A/D/F/G= Terminal/Code/browser/files; =;=
-  fullscreen; =Z= close; =P/Q= WS10/WS1 switch and Shift/Move; and =.= reload.
-  Escape, =C-g=, and literal =C-q C-g= also passed.  The on-demand test expanded
-  the live session to ten workspaces; the configured next-start count remains
-  five.  Automated validation passed 85/85 isolated tests and both connected
-  Lisp backend checks.
+- State: the interaction matrix was accepted live on 2026-07-21 at published
+  checkpoint =57969d1=, with the same Emacs process healthy through activation
+  and physical testing.  The tested physical positions were =N= Apps;
+  =H/J/K/L= focus and Shift/Move; =S= Emacs; =A/D/F/G=
+  Terminal/Code/browser/files; =;= fullscreen; =Z= close; and =.= reload.
+  Escape, =C-g=, and literal =C-q C-g= also passed.  The original acceptance
+  test exercised an on-demand tenth workspace; the user subsequently narrowed
+  the intended contract to exactly five on 2026-07-21.  Current source removes
+  workspace 6--10 actions; restart confirmation of the five-workspace runtime
+  is pending.  The corrected source passes 90/90 isolated Emacs tests and both
+  connected Lisp backend checks.
 
 ** C2 — Normalize EXWM windows, helpers, dialogs, and recovery
 
@@ -337,9 +339,10 @@ separate gates.  Every later slice remains unauthorized.
   toggle stale.  EXWM's reviewed default continues to float and focus X
   transient, fixed-size, utility, and dialog clients.  No new recovery command
   was justified.
-- Source state: the candidate passes 90/90 isolated Emacs tests plus connected
-  Geiser/Guile and SLY/SBCL checks.  It is not yet published, loaded into the
-  running Emacs process, or hand-tested.
+- Source state: checkpoint =89f5b09= is published and loaded into the running
+  Emacs process.  The five-workspace correction passes 90/90 isolated Emacs
+  tests plus connected Geiser/Guile and SLY/SBCL checks, but is not yet
+  published or loaded.  Full live and hand acceptance remain pending.
 
 ** C3 — Complete desktop integration and attention handling
 
