@@ -258,8 +258,9 @@ research plan.
 
 Each slice is separately authorized.  C0 is closed at published checkpoint
 =e8ce8b2=.  C1 is closed at published implementation checkpoint =57969d1= and
-was accepted live on 2026-07-21.  C2 is only the next candidate; it and every
-later slice remain unauthorized.
+was accepted live on 2026-07-21.  C2 is authorized and implemented at the
+source-only boundary; publication, live reload, and hand acceptance remain
+separate gates.  Every later slice remains unauthorized.
 
 ** C0 — Establish the human roadmap
 
@@ -321,6 +322,24 @@ later slice remain unauthorized.
 - Boundary: the representative window matrix, reserved-action matrix, and
   recovery hand test pass.  Do not introduce Beframe, Bufferlo, tab workspaces,
   or a master-stack rewrite.
+- Deliberate matrix: Treemacs remains left; ordinary utilities and REPLs use
+  right slot 0; Help/Helpful/Info/Man/Apropos and Lisp documentation use right
+  slot 1; compilation, Flycheck, warnings, backtraces, and active debuggers use
+  bottom slot 0; completions and Transient use bottom slot 1 without replacing
+  diagnostics.  Passive output does not steal source focus.  Explicit helper
+  commands retain their existing focus behavior.
+- Reserved physical actions: =X= toggles an X client between tiled and
+  floating; =C= restores the existing master/stack layout; =V= and =B= resize
+  narrower and wider.  Layout normalization preserves side helpers and asks a
+  floating client to tile first.  Clipboard and screenshot remain C3 work.
+- Recovery policy: Winner continues to own Emacs layout undo/redo, dead EXWM
+  frame records are pruned, and Winner restoration cannot leave the full-frame
+  toggle stale.  EXWM's reviewed default continues to float and focus X
+  transient, fixed-size, utility, and dialog clients.  No new recovery command
+  was justified.
+- Source state: the candidate passes 90/90 isolated Emacs tests plus connected
+  Geiser/Guile and SLY/SBCL checks.  It is not yet published, loaded into the
+  running Emacs process, or hand-tested.
 
 ** C3 — Complete desktop integration and attention handling
 

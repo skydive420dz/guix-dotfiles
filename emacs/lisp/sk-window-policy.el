@@ -81,10 +81,15 @@ The master window is the left-most regular window on the frame."
             (< (nth 1 (window-edges left))
                (nth 1 (window-edges right)))))))
 
-(defun sk/window-master-width ()
-  "Return the desired master width in columns."
-  (max window-min-width
-       (floor (* (frame-width) sk/window-master-width-ratio))))
+(defun sk/window-master-width (&optional window)
+  "Return the desired master width within WINDOW's available columns.
+Use the regular layout area rather than the whole frame so persistent side
+helpers do not make the requested split wider than the remaining workspace."
+  (let* ((window (or window (sk/window-master) (selected-window)))
+         (available (window-total-width window))
+         (desired (floor (* available sk/window-master-width-ratio))))
+    (max window-min-width
+         (min desired (- available window-min-width)))))
 
 (defun sk/window-splittable-stack-p (window)
   "Return non-nil when WINDOW has enough height to split into stack items."
@@ -175,18 +180,29 @@ expected starting location for file prompts."
   (sk/window-clear-stale-side-state)
   (let ((master (sk/window-master))
         (selected (selected-window)))
+    (unless (sk/window-regular-p selected)
+      (user-error "Only regular windows can become the layout master"))
     (unless (eq selected master)
       (window-swap-states selected master)
       (select-window master))))
 
 (defun sk/window-normalize-master-stack ()
-  "Normalize visible regular windows into a left master and right stack."
+  "Normalize visible regular windows into a left master and right stack.
+When invoked from a helper side window, keep the existing main window as the
+master instead of promoting the helper buffer into the regular layout."
   (interactive)
+  (when (window-minibuffer-p (selected-window))
+    (user-error "Finish or cancel the minibuffer before normalizing layout"))
   (sk/window-clear-stale-side-state)
-  (let* ((selected-buffer (current-buffer))
+  (let* ((anchor-window
+          (if (sk/window-regular-p (selected-window))
+              (selected-window)
+            (sk/window-main-window)))
+         (selected-buffer (window-buffer anchor-window))
          (buffers (sk/window-buffer-list))
          (stack-buffers (delq selected-buffer (copy-sequence buffers))))
-    (sk/window-display-master-stack selected-buffer stack-buffers)))
+    (with-selected-window anchor-window
+      (sk/window-display-master-stack selected-buffer stack-buffers))))
 
 (defun sk/window-display-master-stack (master-buffer stack-buffers)
   "Display MASTER-BUFFER on the left and STACK-BUFFERS on the right."
@@ -335,12 +351,12 @@ Dired, Help, Eshell, and diagnostic panels."
   (sk/window-select-direction 'right))
 
 (defun sk/window-resize-left ()
-  "Shrink the selected window horizontally."
+  "Shrink the selected Emacs window horizontally by five columns."
   (interactive)
   (shrink-window-horizontally 5))
 
 (defun sk/window-resize-right ()
-  "Enlarge the selected window horizontally."
+  "Enlarge the selected Emacs window horizontally by five columns."
   (interactive)
   (enlarge-window-horizontally 5))
 
@@ -558,19 +574,48 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
       [return] #'sk/window-treemacs-RET-action
       (kbd "l") #'sk/window-treemacs-RET-action)))
 
+(defun sk/window-prune-winner-frame-state (&optional deleting-frame)
+  "Remove dead Winner records and records for DELETING-FRAME.
+EXWM can replace workspace frames while Winner mode is active.  Winner itself
+prunes its pending-change list, but its per-frame configuration alists retain
+those dead frame keys unless the session policy removes them."
+  (dolist (variable '(winner-currents winner-ring-alist))
+    (when (boundp variable)
+      (set variable
+           (seq-remove
+            (lambda (entry)
+              (let ((frame (car entry)))
+                (or (eq frame deleting-frame)
+                    (not (frame-live-p frame)))))
+            (symbol-value variable))))))
+
+(add-hook 'delete-frame-functions #'sk/window-prune-winner-frame-state)
+(sk/window-prune-winner-frame-state)
+
 (defun sk/window-normalize-full-frame-window ()
   "Clear side-window parameters from the selected full-frame window."
   (sk/window-clear-side-state (selected-window)))
+
+(defun sk/window-full-frame-active-p ()
+  "Return non-nil when this frame is in the owned full-frame state.
+Side helpers do not end the state, but a restored multi-window regular layout
+does.  This lets Winner undo escape full-frame without leaving a stale toggle."
+  (and (frame-parameter nil 'sk/full-frame-window-configuration)
+       (= (length (sk/window-list)) 1)))
 
 (defun sk/window-toggle-full-frame ()
   "Toggle the selected window between full-frame and the previous layout."
   (interactive)
   (let ((configuration (frame-parameter nil 'sk/full-frame-window-configuration)))
-    (if configuration
+    (if (and configuration (sk/window-full-frame-active-p))
         (progn
           (set-frame-parameter nil 'sk/full-frame-window-configuration nil)
           (set-window-configuration configuration)
           (message "Restored window layout"))
+      ;; Winner may already have restored a multi-window layout.  In that case
+      ;; the saved full-frame configuration is stale and must not undo Winner.
+      (when configuration
+        (set-frame-parameter nil 'sk/full-frame-window-configuration nil))
       (when (minibufferp (current-buffer))
         (user-error "Cannot full-frame the minibuffer"))
       (set-frame-parameter nil 'sk/full-frame-window-configuration
@@ -592,6 +637,14 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
 
 (defvar sk/window-display-policy-migrated nil
   "Non-nil after removing the pre-ownership project display rules once.")
+
+(defconst sk/window-transient-display-buffer-action
+  '(display-buffer-in-side-window
+    (side . bottom)
+    (slot . 1)
+    (dedicated . t)
+    (inhibit-same-window . t))
+  "Display action for short-lived Transient menus below diagnostics.")
 
 (defconst sk/window-legacy-display-buffer-rules
   '(((derived-mode . treemacs-mode)
@@ -689,6 +742,10 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
          (inhibit-switch-frame . t)
          (window-parameters . ((no-delete-other-windows . t))))
         ((or (derived-mode . help-mode)
+             (derived-mode . helpful-mode)
+             (derived-mode . Info-mode)
+             (derived-mode . Man-mode)
+             (derived-mode . apropos-mode)
              (derived-mode . geiser-doc-mode)
              (derived-mode . racket-describe-mode)
              (derived-mode . racket-stepper-mode)
@@ -701,7 +758,8 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
          (side . right)
          (slot . 1)
          (window-width . 0.42)
-         (mode . (help-mode helpful-mode geiser-doc-mode
+         (mode . (help-mode helpful-mode Info-mode Man-mode apropos-mode
+                            geiser-doc-mode
                             racket-describe-mode racket-stepper-mode))
          (reusable-frames . nil)
          (inhibit-switch-frame . t)
@@ -737,7 +795,18 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
          (reusable-frames . nil)
          (inhibit-switch-frame . t)
          (window-parameters . ((no-delete-other-windows . t))))
+        ((derived-mode . completion-list-mode)
+         (display-buffer-reuse-window display-buffer-in-side-window)
+         (side . bottom)
+         (slot . 1)
+         (window-height . 0.28)
+         (reusable-frames . nil)
+         (inhibit-switch-frame . t)
+         (window-parameters . ((no-delete-other-windows . t))))
         ((or "\\*\\(?:Warnings\\|Compile-Log\\|compilation\\|Fennel Error\\)\\*"
+             (derived-mode . compilation-mode)
+             (derived-mode . flycheck-error-list-mode)
+             (derived-mode . backtrace-mode)
              sk/window-geiser-debugger-buffer-p
              (derived-mode . sly-db-mode))
          (display-buffer-reuse-window display-buffer-in-side-window)
@@ -749,6 +818,10 @@ Directories and non-file nodes keep Treemacs' default RET behavior."
          (window-parameters . ((no-delete-other-windows . t))))))
 
 (sk/window-install-display-buffer-rules sk/window-display-buffer-rules)
+
+(with-eval-after-load 'transient
+  (setq transient-display-buffer-action
+        sk/window-transient-display-buffer-action))
 
 ;; Compatibility names kept while callers move to the policy API.
 (defalias 'sk/display-buffer-right #'sk/window-display-right)

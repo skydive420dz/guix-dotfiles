@@ -1788,7 +1788,12 @@
 (ert-deftest sk/check-lisp-shared-window-routing ()
   (save-window-excursion
     (delete-other-windows)
-    (dolist (case '(("*sk-geiser-doc*" geiser-doc-mode nil right 1)
+    (let ((source-window (selected-window)))
+      (dolist (case '(("*sk-helpful*" helpful-mode nil right 1)
+                      ("*sk-info*" Info-mode nil right 1)
+                      ("*sk-man*" Man-mode nil right 1)
+                      ("*sk-apropos*" apropos-mode nil right 1)
+                      ("*sk-geiser-doc*" geiser-doc-mode nil right 1)
                     ("*sk-clojure-doc*" help-mode nil right 1)
                     ("*sk-racket-doc*" racket-describe-mode nil right 1)
                     ("*sk-racket-stepper*" racket-stepper-mode nil right 1)
@@ -1804,22 +1809,147 @@
                     ("*sk-sly-mrepl*" sly-mrepl-mode nil right 0)
                     ("*sk-geiser-debug*" geiser-debug-mode t bottom 0)
                     ("*compilation*" compilation-mode nil bottom 0)
-                    ("*sk-sly-db*" sly-db-mode nil bottom 0)))
-      (pcase-let ((`(,name ,mode ,debugger-active ,side ,slot) case))
-        (let ((buffer (generate-new-buffer name)))
-          (unwind-protect
-              (progn
-                (with-current-buffer buffer
-                  ;; The modes are already defined by the eager Geiser/SLY
-                  ;; setup.  Setting `major-mode' avoids starting a comint REPL.
-                  (setq major-mode mode)
-                  (when (eq mode 'geiser-debug-mode)
-                    (setq-local geiser-debug--debugger-active debugger-active)))
-                (let ((window (display-buffer buffer)))
-                  (should (window-live-p window))
-                  (should (eq (window-parameter window 'window-side) side))
-                  (should (= (window-parameter window 'window-slot) slot))))
-            (kill-buffer buffer)))))))
+                      ("*sk-custom-compilation*" compilation-mode nil bottom 0)
+                      ("*sk-flycheck-errors*" flycheck-error-list-mode nil bottom 0)
+                      ("*sk-backtrace*" backtrace-mode nil bottom 0)
+                      ("*sk-completions*" completion-list-mode nil bottom 1)
+                      ("*sk-dired*" dired-mode nil right 0)
+                      ("*sk-ibuffer*" ibuffer-mode nil right 0)
+                      ("*sk-treemacs*" treemacs-mode nil left 0)
+                      ("*sk-magit*" magit-status-mode nil right 0)
+                      ("*sk-sly-db*" sly-db-mode nil bottom 0)))
+        (pcase-let ((`(,name ,mode ,debugger-active ,side ,slot) case))
+          (let ((buffer (generate-new-buffer name)))
+            (unwind-protect
+                (progn
+                  (with-current-buffer buffer
+                    ;; The modes are already defined by the eager package
+                    ;; setup.  Setting `major-mode' avoids starting helpers.
+                    (setq major-mode mode)
+                    (when (eq mode 'geiser-debug-mode)
+                      (setq-local geiser-debug--debugger-active
+                                  debugger-active)))
+                  (let ((window (display-buffer buffer)))
+                    (should (window-live-p window))
+                    (should (eq (window-parameter window 'window-side) side))
+                    (should (= (window-parameter window 'window-slot) slot))
+                    ;; Passive helper output must not steal source focus.
+                    (should (eq source-window (selected-window)))))
+              (kill-buffer buffer))))))))
+
+(ert-deftest sk/check-transient-and-diagnostics-have-distinct-bottom-slots ()
+  (save-window-excursion
+    (delete-other-windows)
+    (let ((source-window (selected-window))
+          (diagnostic (generate-new-buffer "*sk-diagnostic-fixture*"))
+          (transient (generate-new-buffer " *sk-transient-fixture*")))
+      (unwind-protect
+          (progn
+            (with-current-buffer diagnostic
+              (setq major-mode 'compilation-mode))
+            (let ((diagnostic-window (display-buffer diagnostic))
+                  transient-window)
+              (setq transient-window
+                    (display-buffer
+                     transient sk/window-transient-display-buffer-action))
+              (should (window-live-p diagnostic-window))
+              (should (window-live-p transient-window))
+              (should-not (eq diagnostic-window transient-window))
+              (should (eq (window-parameter diagnostic-window 'window-side)
+                          'bottom))
+              (should (= (window-parameter diagnostic-window 'window-slot) 0))
+              (should (eq (window-parameter transient-window 'window-side)
+                          'bottom))
+              (should (= (window-parameter transient-window 'window-slot) 1))
+              (should (eq source-window (selected-window)))))
+        (mapc (lambda (buffer)
+                (when (buffer-live-p buffer)
+                  (kill-buffer buffer)))
+              (list diagnostic transient))))))
+
+(ert-deftest sk/check-layout-normalization-is-safe-from-side-helper ()
+  (save-window-excursion
+    (delete-other-windows)
+    (let ((master-buffer (generate-new-buffer "sk-layout-master"))
+          (stack-buffer (generate-new-buffer "sk-layout-stack"))
+          (helper-buffer (generate-new-buffer "*sk-layout-helper*")))
+      (unwind-protect
+          (progn
+            (switch-to-buffer master-buffer)
+            (set-window-buffer (split-window-right) stack-buffer)
+            (let ((helper-window (sk/window-display-right helper-buffer)))
+              (select-window helper-window)
+              (should-error (sk/window-promote-to-master) :type 'user-error)
+              (sk/window-normalize-master-stack)
+              (should (eq (window-buffer (sk/window-master)) master-buffer))
+              (should (equal (sort (mapcar #'buffer-name
+                                           (sk/window-buffer-list))
+                                   #'string<)
+                             (sort (mapcar #'buffer-name
+                                           (list master-buffer stack-buffer))
+                                   #'string<)))
+              (should (eq (window-parameter
+                           (get-buffer-window helper-buffer) 'window-side)
+                          'right))))
+        (mapc (lambda (buffer)
+                (when (buffer-live-p buffer)
+                  (kill-buffer buffer)))
+              (list master-buffer stack-buffer helper-buffer))))))
+
+(ert-deftest sk/check-full-frame-round-trip-and-winner-escape ()
+  (save-window-excursion
+    (delete-other-windows)
+    (set-frame-parameter nil 'sk/full-frame-window-configuration nil)
+    (let ((master-buffer (generate-new-buffer "sk-full-master"))
+          (stack-buffer (generate-new-buffer "sk-full-stack"))
+          (helper-buffer (generate-new-buffer "*sk-full-helper*")))
+      (unwind-protect
+          (progn
+            (switch-to-buffer master-buffer)
+            (let ((stack-window (split-window-right)))
+              (set-window-buffer stack-window stack-buffer)
+              (select-window stack-window))
+            (sk/window-display-right helper-buffer)
+            (let ((original (current-window-configuration)))
+              (sk/window-toggle-full-frame)
+              (should (sk/window-full-frame-active-p))
+              (should (= (length (sk/window-list)) 1))
+              (sk/window-toggle-full-frame)
+              (should-not
+               (frame-parameter nil 'sk/full-frame-window-configuration))
+              (should (= (length (sk/window-list)) 2))
+              (should (get-buffer-window helper-buffer))
+              ;; Model Winner restoring the prior layout before the toggle.
+              (select-window (get-buffer-window stack-buffer))
+              (sk/window-toggle-full-frame)
+              (set-window-configuration original)
+              (should-not (sk/window-full-frame-active-p))
+              ;; The next toggle starts a fresh cycle instead of replaying the
+              ;; stale pre-Winner configuration.
+              (sk/window-toggle-full-frame)
+              (should (sk/window-full-frame-active-p))
+              (sk/window-toggle-full-frame)
+              (should (= (length (sk/window-list)) 2))))
+        (set-frame-parameter nil 'sk/full-frame-window-configuration nil)
+        (mapc (lambda (buffer)
+                (when (buffer-live-p buffer)
+                  (kill-buffer buffer)))
+              (list master-buffer stack-buffer helper-buffer))))))
+
+(ert-deftest sk/check-winner-state-prunes-dead-and-deleting-frames ()
+  (let ((winner-currents '((live . current-live)
+                           (dead . current-dead)
+                           (deleting . current-deleting)))
+        (winner-ring-alist '((live . ring-live)
+                             (dead . ring-dead)
+                             (deleting . ring-deleting))))
+    (cl-letf (((symbol-function 'frame-live-p)
+               (lambda (frame) (memq frame '(live deleting)))))
+      (sk/window-prune-winner-frame-state 'deleting))
+    (should (equal winner-currents '((live . current-live))))
+    (should (equal winner-ring-alist '((live . ring-live)))))
+  (should (= 1 (cl-count #'sk/window-prune-winner-frame-state
+                         delete-frame-functions :test #'eq))))
 
 (ert-deftest sk/check-display-policy-preserves-foreign-rules ()
   (let* ((foreign-rule '("\\*Package-owned\\*" display-buffer-pop-up-window))
@@ -2061,6 +2191,10 @@
                ("C-M-h" . sk/window-left)
                ("C-M-S-h" . windmove-swap-states-left)
                ("C-M-q" . sk/exwm-close-current)
+               ("C-M-v" . sk/exwm-toggle-floating)
+               ("C-M-/" . sk/exwm-normalize-layout)
+               ("C-M--" . sk/exwm-resize-narrower)
+               ("C-M-=" . sk/exwm-resize-wider)
                ("C-M-f" . sk/exwm-toggle-fullscreen)
                ("C-M-r" . sk/exwm-reload)
                ("C-M-0" . sk/exwm-switch-workspace-10)
@@ -2079,12 +2213,18 @@
                  (eq (cdr (assoc move-key sk/exwm-global-key-contract))
                      (intern
                       (format "sk/exwm-move-window-to-workspace-%d" number)))))
-    (dolist (reserved '("C-M-v" "C-M-/" "C-M--" "C-M-=" "C-M-x" "C-M-s"))
+    (dolist (reserved '("C-M-x" "C-M-s"))
       (should-not (assoc reserved sk/exwm-global-key-contract)))
     (should (= exwm-workspace-number 5))
+    (should-not exwm-manage-force-tiling)
     (should (string-match-p "Reserved for later accepted slices"
                             sk/exwm-input-help-text))
-    (should (string-match-p "EXWM-global, including inside Emacs"
+    (should (string-match-p "physical positions" sk/exwm-input-help-text))
+    (should (string-match-p "X          float/tile X app"
+                            sk/exwm-input-help-text))
+    (should (string-match-p "C          normalize layout"
+                            sk/exwm-input-help-text))
+    (should (string-match-p "V / B      size narrower / wider"
                             sk/exwm-input-help-text)))
   (let ((exwm--connection nil))
     (sk/exwm-bind-keys)
@@ -2096,6 +2236,49 @@
       (should (= (length exwm-input--global-keys)
                  (length (delete-dups
                           (copy-sequence exwm-input--global-keys))))))))
+
+(ert-deftest sk/check-exwm-c2-reserved-action-dispatch ()
+  (require 'sk-exwm)
+  (let (calls
+        (exwm--floating-frame nil))
+    (cl-letf (((symbol-function 'derived-mode-p)
+               (lambda (&rest modes) (memq 'exwm-mode modes)))
+              ((symbol-function 'exwm-floating-toggle-floating)
+               (lambda () (push 'float calls)))
+              ((symbol-function 'exwm-layout-shrink-window-horizontally)
+               (lambda (amount) (push (list 'narrow amount) calls)))
+              ((symbol-function 'exwm-layout-enlarge-window-horizontally)
+               (lambda (amount) (push (list 'widen amount) calls)))
+              ((symbol-function 'sk/window-normalize-master-stack)
+               (lambda () (push 'layout calls))))
+      (sk/exwm-toggle-floating)
+      (sk/exwm-normalize-layout)
+      (sk/exwm-resize-narrower)
+      (sk/exwm-resize-wider))
+    (should (equal (nreverse calls)
+                   `(float layout
+                     (narrow ,sk/exwm-resize-step-pixels)
+                     (widen ,sk/exwm-resize-step-pixels)))))
+  (let (calls)
+    (cl-letf (((symbol-function 'derived-mode-p) (lambda (&rest _modes) nil))
+              ((symbol-function 'sk/window-normalize-master-stack)
+               (lambda () (push 'layout calls)))
+              ((symbol-function 'sk/window-resize-left)
+               (lambda () (push 'narrow calls)))
+              ((symbol-function 'sk/window-resize-right)
+               (lambda () (push 'widen calls))))
+      (sk/exwm-normalize-layout)
+      (sk/exwm-resize-narrower)
+      (sk/exwm-resize-wider))
+    (should (equal (nreverse calls) '(layout narrow widen))))
+  (let ((exwm--floating-frame 'floating)
+        normalized)
+    (cl-letf (((symbol-function 'derived-mode-p)
+               (lambda (&rest modes) (memq 'exwm-mode modes)))
+              ((symbol-function 'sk/window-normalize-master-stack)
+               (lambda () (setq normalized t))))
+      (sk/exwm-normalize-layout))
+    (should-not normalized)))
 
 (ert-deftest sk/check-exwm-workspace-creation-restores-floating-client-workspace ()
   (require 'sk-exwm)

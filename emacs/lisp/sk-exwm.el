@@ -2,12 +2,17 @@
 
 (require 'cl-lib)
 (require 'exwm)
+(require 'exwm-floating)
+(require 'exwm-layout)
 (require 'exwm-manage)
 (require 'sk-window-policy)
 (require 'seq)
 (require 'subr-x)
 
-(setq exwm-workspace-number 5)
+(setq exwm-workspace-number 5
+      ;; Keep EXWM's reviewed default: transient, fixed-size, utility, and
+      ;; dialog clients float and receive focus instead of entering the stack.
+      exwm-manage-force-tiling nil)
 
 (autoload 'counsel-linux-apps-list "counsel")
 
@@ -30,6 +35,9 @@
   (let ((version (sk/exwm-installed-version)))
     (unless (and (equal version sk/exwm-reviewed-version)
                  (fboundp 'exwm-manage-get-pid)
+                 (fboundp 'exwm-floating-toggle-floating)
+                 (fboundp 'exwm-layout-enlarge-window-horizontally)
+                 (fboundp 'exwm-layout-shrink-window-horizontally)
                  (fboundp 'exwm-workspace-move-window)
                  (fboundp 'exwm-workspace-switch-create))
       (error "EXWM policy requires reviewed EXWM %s APIs; found %s"
@@ -246,6 +254,46 @@
   (if (derived-mode-p 'exwm-mode)
       (exwm-layout-toggle-fullscreen)
     (message "Fullscreen toggle is only available in EXWM app buffers")))
+
+(defconst sk/exwm-resize-step-pixels 50
+  "Horizontal resize step used for EXWM clients on the physical WM layer.")
+
+(defun sk/exwm-toggle-floating ()
+  "Toggle the selected X client between tiled and floating states."
+  (interactive)
+  (if (derived-mode-p 'exwm-mode)
+      (exwm-floating-toggle-floating)
+    (message "Float/tile is only available in EXWM app buffers")))
+
+(defun sk/exwm-normalize-layout ()
+  "Normalize the current tiled workspace into the master/stack layout."
+  (interactive)
+  (if (and (derived-mode-p 'exwm-mode)
+           (bound-and-true-p exwm--floating-frame))
+      (message "Tile this app with physical X before normalizing the layout")
+    (sk/window-normalize-master-stack)))
+
+(defun sk/exwm-resize-narrower ()
+  "Make the selected X client or Emacs window horizontally narrower."
+  (interactive)
+  (condition-case error-data
+      (if (derived-mode-p 'exwm-mode)
+          (exwm-layout-shrink-window-horizontally sk/exwm-resize-step-pixels)
+        (sk/window-resize-left))
+    (error
+     (message "Cannot resize narrower here: %s"
+              (error-message-string error-data)))))
+
+(defun sk/exwm-resize-wider ()
+  "Make the selected X client or Emacs window horizontally wider."
+  (interactive)
+  (condition-case error-data
+      (if (derived-mode-p 'exwm-mode)
+          (exwm-layout-enlarge-window-horizontally sk/exwm-resize-step-pixels)
+        (sk/window-resize-right))
+    (error
+     (message "Cannot resize wider here: %s"
+              (error-message-string error-data)))))
 
 (defcustom sk/exwm-launch-intent-timeout 30
   "Seconds a validated application launch may wait for its main X client."
@@ -674,28 +722,29 @@ Cancel and pass-through
   C-q KEY   send KEY literally to the current X client
             (standard quoted-insert in an Emacs buffer)
 
-34-key WM layer
-The keyboard emits Ctrl+Alt; Emacs displays Alt as Meta (C-M).
-These chords are EXWM-global, including inside Emacs buffers, so the same
-physical WM layer controls the session in every application.
+34-key WM layer — physical positions
+The keyboard emits Ctrl+Alt chords; Emacs displays Alt as Meta (C-M).
+The physical map below is EXWM-global, including inside Emacs buffers.
 
-  Return    Kitty                 T        Emacs home
-  C         Code / VSCodium (when installed)
-  B         Chromium              E        Dired at home
-  Space     application launcher
-  H J K L   focus left/down/up/right
-  Shift+H/J/K/L                   move left/down/up/right
-  Q         close                 F        fullscreen
-  R         reload EXWM policy
-  1..0      workspace 1..10 (6..10 are created on first use)
-  Shift+1..0                      move to workspace and follow
+  Q W E R T | Y U I O P
+  workspace 1..5 | workspace 6..10 (6..10 are created on first use)
+  Shift+top row moves the window to that workspace and follows it.
+
+  A          Kitty                 S          Emacs home
+  D          Code / VSCodium       F          Chromium
+  G          Dired at home         H J K L    focus left/down/up/right
+  Shift+H/J/K/L                               move left/down/up/right
+  ;          fullscreen
+
+  Z          close                 X          float/tile X app
+  C          normalize layout      V / B      size narrower / wider
+  N          application launcher  .          reload EXWM policy
 
 Missing Code / VSCodium is reported clearly rather than failing silently.
 
 Reserved for later accepted slices
-  V         float/tile            /        layout
-  - / =     resize                X        clipboard
-  S         screenshot
+  M          clipboard             ,          screenshot
+  /          spare
 
 Existing Super bindings remain available.  Run this help with
 M-x sk/exwm-input-help or Super+/.
@@ -773,7 +822,7 @@ M-x sk/exwm-input-help or Super+/.
     ("s-b" . sk/exwm-switch-buffer)
     ("s-f" . sk/exwm-toggle-fullscreen)
     ("s-m" . sk/window-promote-to-master)
-    ("s-M" . sk/window-normalize-master-stack)
+    ("s-M" . sk/exwm-normalize-layout)
     ("s-1" . sk/exwm-switch-workspace-1)
     ("s-2" . sk/exwm-switch-workspace-2)
     ("s-3" . sk/exwm-switch-workspace-3)
@@ -814,6 +863,10 @@ M-x sk/exwm-input-help or Super+/.
     ("C-M-S-k" . windmove-swap-states-up)
     ("C-M-S-l" . windmove-swap-states-right)
     ("C-M-q" . sk/exwm-close-current)
+    ("C-M-v" . sk/exwm-toggle-floating)
+    ("C-M-/" . sk/exwm-normalize-layout)
+    ("C-M--" . sk/exwm-resize-narrower)
+    ("C-M-=" . sk/exwm-resize-wider)
     ("C-M-f" . sk/exwm-toggle-fullscreen)
     ("C-M-r" . sk/exwm-reload)
     ("C-M-1" . sk/exwm-switch-workspace-1)
