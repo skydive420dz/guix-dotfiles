@@ -125,6 +125,31 @@
         (string-prefix? prefix resolved-path)))
     (lambda _ #f)))
 
+(define* (sk:active-home-owned-link?
+          home relative-target target-path
+          #:optional (store-root "/gnu/store"))
+  "Return true when TARGET-PATH is exactly the active Home-owned target.
+
+The active =~/.guix-home= result, its managed RELATIVE-TARGET, and the live
+target must all resolve below STORE-ROOT.  Requiring the immutable active Home
+result prevents an arbitrary store symlink or mutable lookalike from being
+accepted as generation turnover."
+  (let* ((active-home (string-append home "/.guix-home"))
+         (active-target
+          (string-append active-home "/files/" relative-target)))
+    (and (sk:symlink-path? target-path)
+         (file-exists? active-home)
+         (sk:path-below? active-home store-root)
+         (sk:symlink-path? active-target)
+         (file-exists? active-target)
+         (sk:path-below? active-target store-root)
+         (sk:path-below? target-path store-root)
+         (catch #t
+           (lambda ()
+             (string=? (canonicalize-path target-path)
+                       (canonicalize-path active-target)))
+           (lambda _ #f)))))
+
 (define* (sk:retired-repo-link-problem
           home repo link #:optional (store-root "/gnu/store"))
   (let* ((target-path (string-append home "/" (car link)))
@@ -145,6 +170,9 @@
      ((not (file-exists? target-path))
       (list 'retired-dangling target-path (readlink target-path)))
      ((string=? (readlink target-path) legacy-path) #f)
+     ((sk:active-home-owned-link?
+       home (car link) target-path store-root)
+      #f)
      ((and (sk:path-below? target-path store-root)
            (string=? (sk:file-text target-path)
                      (sk:file-text golden-path)))
@@ -183,8 +211,9 @@
   "Validate retired LINKS without changing them.
 
 Each entry is (TARGET LEGACY-SOURCE PRODUCTION-GOLDEN).  TARGET may be absent,
-the exact legacy repository symlink, or a link resolving below STORE-ROOT whose
-bytes match the production golden."
+the exact legacy repository symlink, the exact target owned by the active
+immutable Guix Home result, or a link resolving below STORE-ROOT whose bytes
+match the production golden."
   (let ((problems
          (filter-map
           (lambda (link)

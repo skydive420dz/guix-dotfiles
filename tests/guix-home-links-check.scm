@@ -145,8 +145,9 @@
 (assert (not (sk:path-stat other-child))
         "activation partially changed links after a dangling parent")
 
-;; A retiring target may be absent, the exact legacy link, or an immutable
-;; store-backed link whose bytes match the reviewed golden.
+;; A retiring target may be absent, the exact legacy link, the exact target
+;; owned by the active immutable Home result, or an immutable store-backed link
+;; whose bytes match the reviewed golden.
 (define retired-target
   (string-append home "/.config/retired/item"))
 (define retired-legacy
@@ -159,13 +160,30 @@
   (string-append fake-store "/theme/kitty.conf"))
 (define wrong-store-file
   (string-append fake-store "/theme/wrong.conf"))
+(define other-wrong-store-file
+  (string-append fake-store "/theme/other-wrong.conf"))
 (define matching-nonstore-file
   (string-append root "/outside/kitty.conf"))
+(define active-home-result
+  (string-append fake-store "/active-home"))
+(define active-home-link
+  (string-append home "/.guix-home"))
+(define active-home-target
+  (string-append
+   active-home-result
+   "/files/.config/retired/item"))
+(define mutable-home-result
+  (string-append root "/outside/active-home"))
+(define mutable-home-target
+  (string-append
+   mutable-home-result
+   "/files/.config/retired/item"))
 
 (write-file retired-legacy "legacy\n")
 (write-file retired-golden "production\n")
 (write-file matching-store-file "production\n")
 (write-file wrong-store-file "wrong\n")
+(write-file other-wrong-store-file "other wrong\n")
 (write-file matching-nonstore-file "production\n")
 
 (sk:check-retired-repo-links home repo retired-links fake-store)
@@ -179,6 +197,22 @@
 (replace-with-link retired-target wrong-store-file)
 (assert (retired-preflight-fails? retired-links fake-store)
         "wrong store-backed retired bytes passed preflight")
+
+(sk:mkdir-p (dirname active-home-target))
+(symlink wrong-store-file active-home-target)
+(replace-with-link active-home-link active-home-result)
+(sk:check-retired-repo-links home repo retired-links fake-store)
+
+(replace-with-link retired-target other-wrong-store-file)
+(assert (retired-preflight-fails? retired-links fake-store)
+        "store target outside active Home ownership passed preflight")
+
+(sk:mkdir-p (dirname mutable-home-target))
+(symlink wrong-store-file mutable-home-target)
+(replace-with-link active-home-link mutable-home-result)
+(replace-with-link retired-target wrong-store-file)
+(assert (retired-preflight-fails? retired-links fake-store)
+        "mutable active-Home lookalike passed retired preflight")
 
 (replace-with-link retired-target matching-nonstore-file)
 (assert (retired-preflight-fails? retired-links fake-store)
