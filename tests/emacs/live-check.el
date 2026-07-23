@@ -402,7 +402,11 @@
                     (featurep 'sk-fennel)
                     (featurep 'sk-format)
                     (featurep 'sk-keys)
-                    (featurep 'sk-org)))
+                    (featurep 'sk-org)
+                    (featurep 'org-protocol)
+                    (advice-member-p
+                     #'org--protocol-detect-protocol-server
+                     'server-visit-files)))
          (cons "global Company frontend"
                (bound-and-true-p global-company-mode))
          (cons "global Flycheck diagnostics"

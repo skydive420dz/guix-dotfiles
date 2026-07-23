@@ -437,6 +437,13 @@
      (should-not (bound-and-true-p flycheck-mode))
      (should-not flycheck-checker))))
 
+(ert-deftest sk/check-org-protocol-is-ready-at-startup ()
+  (should (featurep 'org-protocol))
+  (should
+   (advice-member-p
+    #'org--protocol-detect-protocol-server
+    'server-visit-files)))
+
 (ert-deftest sk/check-org-lint-flycheck-compatibility ()
   (require 'org-lint)
   (should (equal flycheck-version "36.0"))

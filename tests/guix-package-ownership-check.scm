@@ -38,6 +38,8 @@
 (define desktop-integration-source
   (read-file
    (string-append repo "/guix/modules/sk/desktop-integration.scm")))
+(define desktop-session-source
+  (read-file (string-append repo "/scripts/desktop-session-check")))
 
 (assert
  (equal? recovery
@@ -145,13 +147,46 @@
  (lambda (text)
    (assert (string-contains desktop-integration-source text)
            (string-append "desktop integration lost: " text)))
- '("home-xdg-mime-applications-service-type"
-   "emacsclient.desktop"
-   "emacsclient-mail.desktop"
+ '("home-xdg-data-files-service-type"
+   "home-xdg-mime-applications-service-type"
+   "sk-emacsclient-files.desktop"
+   "sk-emacsclient-org-protocol.desktop"
+   "sk-emacsclient-mail.desktop"
+   " --socket-name=server --alternate-editor=false"
+   " --no-wait --reuse-frame -- %F"
+   " --no-wait -- %u"
+   "(message-mailto (pop server-eval-args-left))"
    "chromium.desktop"
    "home-x11-service-type"
    "polkit-gnome-authentication-agent-1"
    "(requirement '(dbus x11-display))"))
+
+(assert
+ (not (string-contains desktop-integration-source "sh -c"))
+ "desktop integration must not parse desktop launches through a shell")
+(assert
+ (not (string-contains desktop-integration-source "--create-frame"))
+ "desktop integration must not create a second graphical Emacs frame")
+(assert
+ (not (string-contains desktop-integration-source "(message-mailto ~s)"))
+ "desktop integration must not interpolate a mail URI into Lisp source")
+(for-each
+ (lambda (text)
+   (assert (string-contains desktop-session-source text)
+           (string-append "live desktop checker lost: " text)))
+ '("sk-emacsclient-files.desktop"
+   "sk-emacsclient-org-protocol.desktop"
+   "sk-emacsclient-mail.desktop"
+   "--socket-name=server --alternate-editor=false"
+   "org--protocol-detect-protocol-server"))
+(assert
+ (string-contains
+  home-source
+  (string-append
+   "(sk:desktop-integration-home-services\n"
+   "    (specification->package \"emacs\")\n"
+   "    (specification->package \"polkit-gnome\"))"))
+ "Home declaration does not pass exact Emacs and Polkit package objects")
 
 (for-each
  (lambda (specification)

@@ -402,6 +402,11 @@
     (with-eval-after-load 'evil
       (evil-define-key '(normal motion) org-agenda-mode-map (kbd "SPC m") sk/org-agenda-localleader-map))))
 
+;; The Home-owned org-protocol desktop entry targets the already-running
+;; server.  Load its server-visit advice during normal startup so the first URL
+;; cannot be mistaken for a local filename.
+(require 'org-protocol)
+
 ;; Heading bullets:
 ;; Keep the existing org-bullets package instead of switching marker packages.
 (use-package org-bullets

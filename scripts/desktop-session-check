@@ -23,7 +23,7 @@ PATH="$home/.guix-home/profile/bin:/run/current-system/profile/bin:/run/current-
 export PATH
 
 for command in awk bluetoothctl busctl dbus-send emacsclient env getent grep head herd id loginctl \
-    pgrep ps pw-cat sed tr wc wpctl xset; do
+    pgrep ps pw-cat readlink sed tr wc wpctl xset; do
     if ! command -v "$command" >/dev/null 2>&1; then
         printf 'desktop-session-check: missing command: %s\n' "$command" >&2
         exit 2
@@ -161,6 +161,63 @@ if [ "$require_c3" -eq 1 ]; then
         fi
     done
 
+    client_path=$(readlink -f \
+        "$home/.guix-home/profile/bin/emacsclient" 2>/dev/null || true)
+    desktop_root=$home/.local/share/applications
+    files_entry=$desktop_root/sk-emacsclient-files.desktop
+    org_entry=$desktop_root/sk-emacsclient-org-protocol.desktop
+    mail_entry=$desktop_root/sk-emacsclient-mail.desktop
+    expected_files_exec="$client_path --socket-name=server --alternate-editor=false --no-wait --reuse-frame -- %F"
+    expected_org_exec="$client_path --socket-name=server --alternate-editor=false --no-wait -- %u"
+
+    files_exec=$(sed -n 's/^Exec=//p' "$files_entry" 2>/dev/null || true)
+    files_try_exec=$(sed -n 's/^TryExec=//p' \
+        "$files_entry" 2>/dev/null || true)
+    if [ -n "$client_path" ] && [ "$files_exec" = "$expected_files_exec" ] && \
+       [ "$files_try_exec" = "$client_path" ]; then
+        pass 'the file/directory desktop entry reuses the canonical Emacs server'
+    else
+        fail "file desktop entry Exec/TryExec is ${files_exec:-unset}/${files_try_exec:-unset}"
+    fi
+
+    org_exec=$(sed -n 's/^Exec=//p' "$org_entry" 2>/dev/null || true)
+    org_try_exec=$(sed -n 's/^TryExec=//p' \
+        "$org_entry" 2>/dev/null || true)
+    if [ -n "$client_path" ] && [ "$org_exec" = "$expected_org_exec" ] && \
+       [ "$org_try_exec" = "$client_path" ]; then
+        pass 'the Org protocol desktop entry uses its dedicated URL contract'
+    else
+        fail "Org desktop entry Exec/TryExec is ${org_exec:-unset}/${org_try_exec:-unset}"
+    fi
+
+    mail_exec=$(sed -n 's/^Exec=//p' "$mail_entry" 2>/dev/null || true)
+    mail_try_exec=$(sed -n 's/^TryExec=//p' \
+        "$mail_entry" 2>/dev/null || true)
+    mail_handler=
+    case $mail_exec in
+        /gnu/store/*' %u') mail_handler=${mail_exec% %u} ;;
+    esac
+    if [ -n "$mail_handler" ] && [ "$mail_try_exec" = "$mail_handler" ] && \
+       [ -x "$mail_handler" ] && \
+       grep -Fq -- '--socket-name=server' "$mail_handler" && \
+       grep -Fq -- '--alternate-editor=false' "$mail_handler" && \
+       grep -Fq -- \
+           '(message-mailto (pop server-eval-args-left))' "$mail_handler"; then
+        pass 'the mailto desktop entry uses the shell-free Emacs client handler'
+    else
+        fail "mail desktop entry or handler is invalid: ${mail_exec:-unset}"
+    fi
+
+    org_protocol_state=$(emacsclient --socket-name=server \
+        --alternate-editor=false --eval \
+        '(list (featurep (quote org-protocol)) (advice-member-p (function org--protocol-detect-protocol-server) (quote server-visit-files)))' \
+        2>&1)
+    if [ "$org_protocol_state" = '(t t)' ]; then
+        pass 'Org Protocol is ready in the canonical Emacs server'
+    else
+        fail "Org Protocol readiness is $org_protocol_state; expected (t t)"
+    fi
+
     notification_reply=$(env DBUS_SESSION_BUS_ADDRESS="$expected_bus" \
         dbus-send --session --type=method_call --print-reply \
         --dest=org.freedesktop.Notifications \
@@ -231,12 +288,12 @@ text/html|chromium.desktop
 application/pdf|chromium.desktop
 image/png|chromium.desktop
 image/svg+xml|chromium.desktop
-text/plain|emacsclient.desktop
-text/x-lisp|emacsclient.desktop
-application/json|emacsclient.desktop
-inode/directory|emacsclient.desktop
-x-scheme-handler/org-protocol|emacsclient.desktop
-x-scheme-handler/mailto|emacsclient-mail.desktop
+text/plain|sk-emacsclient-files.desktop
+text/x-lisp|sk-emacsclient-files.desktop
+application/json|sk-emacsclient-files.desktop
+inode/directory|sk-emacsclient-files.desktop
+x-scheme-handler/org-protocol|sk-emacsclient-org-protocol.desktop
+x-scheme-handler/mailto|sk-emacsclient-mail.desktop
 EOF
     if [ "$mime_failures" -eq 0 ]; then
         pass 'accepted MIME/default-application map is active'

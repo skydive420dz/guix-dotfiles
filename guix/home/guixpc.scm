@@ -114,4 +114,5 @@
             (home-pipewire-configuration
              (enable-pulseaudio? #t))))
    (sk:desktop-integration-home-services
+    (specification->package "emacs")
     (specification->package "polkit-gnome")))))
