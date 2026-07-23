@@ -161,6 +161,8 @@ receive a literal global key through the explicit EXWM send-next command."
   (unless (server-running-p)
     (server-start)))
 
+(setq select-enable-clipboard t
+      select-enable-primary t)
 (delete-selection-mode 1)
 (unless noninteractive
   (global-auto-revert-mode 1))

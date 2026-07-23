@@ -49,6 +49,7 @@ quarantined_expression='(@ (sk packages shells) fish-latest)'
 
 for file in "$channels" "$home_config" "$system_config" \
     "$module_dir/sk/development-tiers.scm" \
+    "$module_dir/sk/desktop-integration.scm" \
     "$module_dir/sk/emacs.scm" \
     "$module_dir/sk/theme.scm" \
     "$module_dir/sk/theme-home.scm" \
@@ -60,6 +61,7 @@ for file in "$channels" "$home_config" "$system_config" \
     "$repo/fixtures/theme/expected-production/fish.fish" \
     "$repo/fixtures/theme/expected-production/gtk3.ini" \
     "$repo/fixtures/theme/expected-production/gtk4.ini" \
+    "$repo/fixtures/theme/expected-production/dunstrc" \
     "$repo/fixtures/theme/expected-production/x-session.sh" \
     "$repo/guix/home/repo-links.scm" \
     "$repo/guix/home/repo-links-manifest.scm" \

@@ -16,7 +16,7 @@
 
 (define %sk-theme-error-key 'sk-theme-invalid)
 (define %sk-theme-schema-version 2)
-(define %sk-theme-targets '(emacs kitty fish gtk3 gtk4 x-session))
+(define %sk-theme-targets '(emacs kitty fish gtk3 gtk4 dunst x-session))
 
 (define %top-level-keys
   '(schema-version
@@ -1315,6 +1315,8 @@
              (calibration theme 'kitty-background-opacity-ratio))
      (format #f "selection_foreground ~a" (role theme 'on-selection))
      (format #f "selection_background ~a" (role theme 'selection))
+     "copy_on_select no"
+     "clipboard_control write-clipboard write-primary read-clipboard-ask read-primary-ask"
      (format #f "cursor ~a" (role theme 'cursor))
      (format #f "cursor_text_color ~a" (role theme 'on-cursor))
      (format #f "url_color ~a" (role theme 'accent))
@@ -1481,6 +1483,31 @@
           (list "gtk-application-prefer-dark-theme=true")
           (list "gtk-interface-color-scheme=dark"))))))
 
+(define (render-dunst theme)
+  (lines->text
+   (append
+    (header-lines theme "#")
+    (list
+     "[global]"
+     (format #f "    font = ~a" (font-setting theme))
+     (format #f "    background = \"~a\"" (role theme 'surface))
+     (format #f "    foreground = \"~a\"" (role theme 'text))
+     (format #f "    frame_color = \"~a\"" (role theme 'border))
+     (format #f "    highlight = \"~a\"" (role theme 'accent))
+     (format #f "    icon_theme = \"~a\""
+             (desktop theme 'icon-theme))
+     "    enable_recursive_icon_lookup = true"
+     ""
+     "[urgency_low]"
+     (format #f "    frame_color = \"~a\"" (role theme 'success))
+     ""
+     "[urgency_normal]"
+     (format #f "    frame_color = \"~a\"" (role theme 'focus))
+     ""
+     "[urgency_critical]"
+     (format #f "    frame_color = \"~a\"" (role theme 'error))
+     "    timeout = 0"))))
+
 (define (shell-quoted value)
   ;; Every caller supplies a value already restricted to conservative ASCII
   ;; without apostrophes.  Keep the quoting explicit at the target boundary.
@@ -1527,6 +1554,7 @@
     ((fish) (render-fish theme))
     ((gtk3) (render-gtk theme 3))
     ((gtk4) (render-gtk theme 4))
+    ((dunst) (render-dunst theme))
     ((x-session) (render-x-session theme))
     (else
      (throw %sk-theme-error-key
@@ -1543,7 +1571,7 @@
   (render-dispatch theme target))
 
 (define (sk:render-all theme)
-  "Validate THEME and return the six target strings in canonical order."
+  "Validate THEME and return all target strings in canonical order."
   (raise-if-invalid theme)
   (map (lambda (target)
          (cons target (render-dispatch theme target)))

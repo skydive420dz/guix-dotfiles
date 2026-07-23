@@ -14,6 +14,7 @@
     (fish . "fish.fish")
     (gtk3 . "gtk3.ini")
     (gtk4 . "gtk4.ini")
+    (dunst . "dunstrc")
     (x-session . "x-session.sh")))
 
 (define (theme-build-module-name? name)
@@ -84,6 +85,7 @@ live checkout, Home directory, profile, display, or network."
          ("kitty/kitty.conf" . "/adapters/kitty.conf")
          ("gtk-3.0/settings.ini" . "/adapters/gtk3.ini")
          ("gtk-4.0/settings.ini" . "/adapters/gtk4.ini")
+         ("dunst/dunstrc" . "/adapters/dunstrc")
          ("sk-theme/x-session.sh" . "/adapters/x-session.sh")
          ("sk-theme/tokens.scm" . "/tokens.scm"))))
 

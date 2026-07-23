@@ -1,0 +1,99 @@
+#+title: C3 desktop integration candidate
+#+date: 2026-07-22
+#+status: source/build candidate validated; not committed, activated, or accepted live
+
+* Purpose
+
+C3 gives the existing EXWM desktop one explicit owner for the integration
+surfaces that a full desktop environment would normally supply.  It does not
+replace EXWM or introduce a second desktop framework.
+
+* Expected result and owner
+
+| Surface | Accepted owner | Expected result |
+|---------+----------------+-----------------|
+| X11 CLIPBOARD and PRIMARY | Emacs/Kitty/Chromium/GTK native X11 support | Text moves between all four application classes without a bridge daemon. |
+| Selected-area screenshot | Emacs Lisp calling =maim= then =xclip= | Physical Capture selects an area and places one PNG on CLIPBOARD. |
+| Notifications | Dunst through Home D-Bus activation | Exactly one readable notification server answers the standard API. |
+| Graphical authorization | system Polkit authority plus one Home =polkit-gnome= agent | A GUI privilege request presents one GTK authentication dialog. |
+| MIME/default applications | Guix Home XDG MIME service | Web/PDF/images open in Chromium; text/code/directories and mail reuse the Emacs server. |
+| Focus and urgency requests | reviewed EXWM 0.35 core | Preserve the current C2 behavior; do not install custom focus-stealing advice. |
+
+The generated Kitty policy makes its current selection and terminal clipboard
+security defaults explicit.  The generated Dunst configuration consumes the
+same Modus-derived semantic tokens as Emacs, Kitty, Fish, and GTK.
+
+* Explicit boundaries
+
+- Clipboard history, persistence, and the physical Clip key remain disabled
+  until a privacy/retention decision exists.
+- Physical Capture intentionally takes the EXWM-global =C-M-s= chord; Emacs
+  regexp search remains available by command.
+- Chromium is the current PDF/image owner because no dedicated daily-use
+  viewer is installed.
+- Media, office, and archive defaults remain undecided until real applications
+  are selected.
+- Qt theming still waits for a real daily-use Qt application.
+- C3 requires only a Guix Home activation.  It does not require a System
+  reconfigure or reboot.
+
+* Validation gates
+
+** Source and candidate build
+
+- Theme schema/render/golden tests, including native Kitty parsing.
+- Isolated Emacs tests for explicit selections, screenshot state/cleanup, and
+  the physical key contract.
+- Guix package-ownership and Home lowering/build checks.
+- Exact candidate checks for generated Dunst and MIME configuration and the
+  PolicyKit Shepherd service.
+
+** Live automated checks after separately authorized activation
+
+Run =scripts/desktop-session-check --require-c3=.  It must prove one Dunst API
+owner, one healthy =polkit-agent= with the canonical X/bus environment, the
+required commands, and the accepted MIME map.
+
+** Hand acceptance
+
+1. Copy harmless multiline Unicode text through the full CLIPBOARD matrix:
+   Emacs, Kitty, Chromium, and =gtk4-widget-factory=.
+2. Test the PRIMARY ring with mouse selection/middle-click through those four
+   applications.  No clipboard contents are logged by the checker.
+3. From several focused applications, press physical Capture, select an area,
+   and paste the resulting image into a destination that accepts PNG.
+4. Send, replace, and dismiss one Dunst notification; confirm its dark theme is
+   readable.
+5. Trigger one harmless Polkit prompt and cancel it; confirm that no privileged
+   change occurred and the agent remains healthy.
+6. Open a URL, text file, directory, PNG, SVG, and PDF through =xdg-open=;
+   text, directories, and mail must reuse the running Emacs server.
+7. Confirm C2 dialog focus/return behavior and cross-workspace attention still
+   behave as before.
+
+* Source/build evidence
+
+- The focused theme, Home-theme, package-ownership, desktop-policy, build-gate
+  harness, and profile-aware Emacs checks pass.  The Emacs result is =94/94=
+  isolated tests plus live Guile and Common Lisp backend probes.
+- =scripts/guix-build-gate --plan= passes against the pinned channels.
+- =scripts/guix-build-gate= passes and realizes both declarations without
+  activation: Home =/gnu/store/cci1vvhkmxi79d50msy6bb0s3dl9h9gm-home= and
+  System =/gnu/store/lfm4xrqhc1jxa87q084cp0bb5yx9f0yl-system=.
+- Candidate =xdg-mime= queries return =emacsclient.desktop= for text and
+  directories, =emacsclient-mail.desktop= for =mailto=, and
+  =chromium.desktop= for PDF and SVG as declared.
+- The candidate profile exposes Dunst/Dunstify, Maim, Xclip, Dunst's D-Bus
+  activation file, and the Polkit GNOME authentication-agent executable.
+- Dunst 1.13.2 parses the generated configuration without a configuration
+  warning under an isolated nonexistent display and bus.  The expected test
+  process stops only when it cannot initialize that deliberately absent X11
+  display; no daemon touches the live session.
+- =git diff --check= passes.  The frozen
+  =sol-ultra-delirious-experiment= ref remains
+  =d703717b551a0d4751282953f989341ecbb4edd2=.
+
+* Current gate
+
+The source/build checkpoint is ready for review.  Commit, push, Home
+activation, runtime checks, and hand acceptance remain separate gates.

@@ -368,6 +368,13 @@ remains unauthorized.
   applications, and Polkit each have one understood owner.
 - Boundary: test the actual applications.  Clipboard history waits for a
   privacy decision, and Qt theming waits for a real daily-use Qt application.
+- Source candidate: Guix Home owns Dunst, one GTK Polkit agent, MIME defaults,
+  and the =maim=/=xclip= screenshot boundary; Emacs Lisp owns the physical
+  Capture action and declares both X11 selections.  EXWM 0.35 retains focus and
+  urgency ownership without new advice.  See
+  [[file:docs/audits/2026-07-22-c3-desktop-integration-candidate.org][the concise C3 candidate and acceptance matrix]].  It is not yet committed,
+  activated, or accepted live.  The source, plan, complete candidate build,
+  generated-file inspection, and isolated native Dunst parse gates pass.
 
 ** C4 — Simplify and accept the existing Org workflow
 

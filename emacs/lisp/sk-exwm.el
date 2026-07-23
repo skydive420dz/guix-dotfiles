@@ -704,6 +704,84 @@ applications whose new window belongs to an existing process."
     (start-process "xwallpaper" nil
                    "xwallpaper" "--zoom" sk/wallpaper-file)))
 
+(defvar sk/exwm-screenshot-process nil
+  "Active selected-area screenshot or clipboard-copy process.")
+
+(defun sk/exwm-screenshot--copy-sentinel (process _event)
+  "Finish screenshot clipboard copy PROCESS and remove its temporary file."
+  (when (memq (process-status process) '(exit signal failed))
+    (let ((file (process-get process 'sk/exwm-screenshot-file)))
+      (when (and file (file-exists-p file))
+        (delete-file file))
+      (when (eq process sk/exwm-screenshot-process)
+        (setq sk/exwm-screenshot-process nil))
+      (if (and (eq (process-status process) 'exit)
+               (zerop (process-exit-status process)))
+          (message "Selected-area screenshot copied to CLIPBOARD")
+        (message "Screenshot clipboard copy failed (status %s)"
+                 (process-exit-status process))))))
+
+(defun sk/exwm-screenshot--capture-sentinel (process _event)
+  "Copy a successful selected-area capture from PROCESS to CLIPBOARD."
+  (when (memq (process-status process) '(exit signal failed))
+    (let ((file (process-get process 'sk/exwm-screenshot-file)))
+      (if (and (eq (process-status process) 'exit)
+               (zerop (process-exit-status process))
+               file
+               (file-exists-p file)
+               (> (file-attribute-size (file-attributes file)) 0))
+          (condition-case error-data
+              (let ((copy-process
+                     (make-process
+                      :name "sk-screenshot-clipboard"
+                      :buffer nil
+                      :command
+                      (list "xclip" "-selection" "clipboard"
+                            "-target" "image/png" "-in" file)
+                      :connection-type 'pipe
+                      :noquery t
+                      :sentinel #'sk/exwm-screenshot--copy-sentinel)))
+                (process-put copy-process 'sk/exwm-screenshot-file file)
+                (setq sk/exwm-screenshot-process copy-process))
+            (error
+             (when (file-exists-p file)
+               (delete-file file))
+             (setq sk/exwm-screenshot-process nil)
+             (message "Could not start screenshot clipboard copy: %s"
+                      (error-message-string error-data))))
+        (when (and file (file-exists-p file))
+          (delete-file file))
+        (when (eq process sk/exwm-screenshot-process)
+          (setq sk/exwm-screenshot-process nil))
+        (message "Selected-area screenshot canceled")))))
+
+(defun sk/exwm-screenshot-area-to-clipboard ()
+  "Select an X11 area and copy one PNG image to CLIPBOARD."
+  (interactive)
+  (unless (executable-find "maim")
+    (user-error "Screenshot utility is unavailable: maim"))
+  (unless (executable-find "xclip")
+    (user-error "Clipboard utility is unavailable: xclip"))
+  (when (process-live-p sk/exwm-screenshot-process)
+    (user-error "A screenshot operation is already active"))
+  (let ((file (make-temp-file "sk-screenshot-" nil ".png")))
+    (condition-case error-data
+        (let ((process
+               (make-process
+                :name "sk-screenshot-capture"
+                :buffer nil
+                :command (list "maim" "-s" file)
+                :connection-type 'pipe
+                :noquery t
+                :sentinel #'sk/exwm-screenshot--capture-sentinel)))
+          (process-put process 'sk/exwm-screenshot-file file)
+          (setq sk/exwm-screenshot-process process)
+          (message "Select the screenshot area"))
+      (error
+       (when (file-exists-p file)
+         (delete-file file))
+       (signal (car error-data) (cdr error-data))))))
+
 (defun sk/exwm-send-next-key ()
   "Send the next key to an X client, or quote it in an Emacs buffer."
   (interactive)
@@ -737,11 +815,12 @@ The physical map below is EXWM-global, including inside Emacs buffers.
   Z          close                 X          float/tile X app
   C          normalize layout      V / B      size narrower / wider
   N          application launcher  .          reload EXWM policy
+  ,          select screenshot area and copy PNG to CLIPBOARD
 
 Missing Code / VSCodium is reported clearly rather than failing silently.
 
-Reserved for later accepted slices
-  M          clipboard             ,          screenshot
+Reserved pending a privacy decision
+  M          clipboard history / picker
   /          spare
 
 Existing Super bindings remain available.  Run this help with
@@ -856,6 +935,7 @@ M-x sk/exwm-input-help or Super+/.
     ("C-M--" . sk/exwm-resize-narrower)
     ("C-M-=" . sk/exwm-resize-wider)
     ("C-M-f" . sk/exwm-toggle-fullscreen)
+    ("C-M-s" . sk/exwm-screenshot-area-to-clipboard)
     ("C-M-r" . sk/exwm-reload)
     ("C-M-1" . sk/exwm-switch-workspace-1)
     ("C-M-2" . sk/exwm-switch-workspace-2)

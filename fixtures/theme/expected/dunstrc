@@ -1,0 +1,20 @@
+# SYNTHETIC FIXTURE - DO NOT INSTALL
+# schema=2 palette=synthetic fixture only
+[global]
+    font = Fixture UI 13
+    background = "#181818"
+    foreground = "#ffffff"
+    frame_color = "#767676"
+    highlight = "#00d7ff"
+    icon_theme = "Fixture-Icons"
+    enable_recursive_icon_lookup = true
+
+[urgency_low]
+    frame_color = "#00ff87"
+
+[urgency_normal]
+    frame_color = "#ffff00"
+
+[urgency_critical]
+    frame_color = "#ff6b6b"
+    timeout = 0

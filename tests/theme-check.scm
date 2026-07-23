@@ -198,6 +198,7 @@
     (fish . "fish.fish")
     (gtk3 . "gtk3.ini")
     (gtk4 . "gtk4.ini")
+    (dunst . "dunstrc")
     (x-session . "x-session.sh")))
 
 (define %expected-production-provenance
@@ -331,7 +332,7 @@
      (write-file rendered-path text)))
  %outputs)
 
-;; Emacs uses semicolon comments, unlike the other five adapters.
+;; Emacs uses semicolon comments, unlike the other six adapters.
 (check (string-prefix?
         ";;; sk-theme-generated.el --- SYNTHETIC FIXTURE - DO NOT INSTALL"
                        (assq-ref %outputs 'emacs))
@@ -426,6 +427,15 @@
     ,(format #f "tab_bar_background ~a"
              (fixture-role 'shadow))
     "Kitty shadow role is mapped incorrectly")
+   (dunst
+    ,(format #f "    background = \"~a\"" (fixture-role 'surface))
+    "Dunst surface role is mapped incorrectly")
+   (dunst
+    ,(format #f "    foreground = \"~a\"" (fixture-role 'text))
+    "Dunst text role is mapped incorrectly")
+   (dunst
+    ,(format #f "    highlight = \"~a\"" (fixture-role 'accent))
+    "Dunst accent role is mapped incorrectly")
    (fish
     ,(format #f "set -g -- fish_color_command '~a'"
              (fixture-role-without-hash 'success))
@@ -454,6 +464,13 @@
          "Kitty remote-control denial is not unique")
   (check (= 1 (line-prefix-count kitty "allow_remote_control "))
          "Kitty emits more than one remote-control directive")
+  (check (= 1 (line-count kitty "copy_on_select no"))
+         "Kitty selection-to-clipboard policy is not explicit")
+  (check (= 1
+            (line-count
+             kitty
+             "clipboard_control write-clipboard write-primary read-clipboard-ask read-primary-ask"))
+         "Kitty terminal clipboard policy is not explicit")
   (for-each
    (lambda (forbidden)
      (check (not (string-contains kitty forbidden))
@@ -753,6 +770,15 @@
    (gtk4
     "gtk-cursor-theme-name=Bibata-Modern-Ice"
     "production cursor theme drifted")
+   (dunst
+    "    background = \"#1d2235\""
+    "production Dunst surface drifted")
+   (dunst
+    "    frame_color = \"#ff5f59\""
+    "production Dunst critical frame drifted")
+   (dunst
+    "    icon_theme = \"Papirus-Dark\""
+    "production Dunst icon theme drifted")
    (x-session
     "SK_THEME_WALLPAPER='assets/wallpapers/waifu-cyberpunk.png'"
     "production wallpaper path drifted")
@@ -768,6 +794,13 @@
          "production Kitty remote-control denial is not unique")
   (check (= 1 (line-prefix-count kitty "allow_remote_control "))
          "production Kitty emits multiple remote-control directives")
+  (check (= 1 (line-count kitty "copy_on_select no"))
+         "production Kitty selection-to-clipboard policy is not explicit")
+  (check (= 1
+            (line-count
+             kitty
+             "clipboard_control write-clipboard write-primary read-clipboard-ask read-primary-ask"))
+         "production Kitty terminal clipboard policy is not explicit")
   (for-each
    (lambda (forbidden)
      (check (not (string-contains kitty forbidden))
@@ -1128,13 +1161,13 @@
 (check
  (has-code?
   (alist-replace %theme 'targets
-                 '(emacs kitty fish gtk3 gtk4 qt))
+                 '(emacs kitty fish gtk3 gtk4 dunst qt))
   'invalid-target-set)
  "Qt target passed")
 (check
  (has-code?
   (alist-replace %theme 'targets
-                 '(kitty emacs fish gtk3 gtk4 x-session))
+                 '(kitty emacs fish gtk3 gtk4 dunst x-session))
   'invalid-target-set)
  "reordered target list passed")
 (check

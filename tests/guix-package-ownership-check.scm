@@ -35,6 +35,9 @@
   (read-file (string-append repo "/guix/home/guixpc.scm")))
 (define emacs-module-source
   (read-file (string-append repo "/guix/modules/sk/emacs.scm")))
+(define desktop-integration-source
+  (read-file
+   (string-append repo "/guix/modules/sk/desktop-integration.scm")))
 
 (assert
  (equal? recovery
@@ -42,21 +45,21 @@
            "ripgrep" "vim" "xset" "xwallpaper" "picom" "xrandr"))
  "reviewed 13-package recovery floor changed")
 
-(assert (= (length home-specifications) 89)
-        "reviewed Home specification list must contain exactly 89 packages")
+(assert (= (length home-specifications) 92)
+        "reviewed Home specification list must contain exactly 92 packages")
 (assert (equal? home-output-specifications '("gtk:out" "gtk:bin"))
         "reviewed Home output specifications changed")
 (assert (equal? home-output-names '("gtk"))
         "reviewed Home output package names changed")
 (assert (equal? home-explicit '("emacs-racket-mode"))
         "reviewed explicit Home package names changed")
-(assert (= (length home) 91)
-        "reviewed Home ownership must contain exactly 91 unique package names")
+(assert (= (length home) 94)
+        "reviewed Home ownership must contain exactly 94 unique package names")
 (assert (= (+ (length home-specifications)
               (length home-output-specifications)
               (length home-explicit))
-           92)
-        "reviewed Home declaration must contain exactly 92 selections")
+           95)
+        "reviewed Home declaration must contain exactly 95 selections")
 (assert
  (equal? home
          (append home-specifications home-output-names home-explicit))
@@ -71,7 +74,8 @@
    "emacs-package-lint" "emacs-clojure-mode" "cljfmt" "clj-kondo"
    "emacs-racket-mode" "emacs-fennel-mode"
    "guile" "sbcl" "python-lsp-server" "lua-language-server"
-   "ungoogled-chromium" "ranger" "shellcheck"
+   "ungoogled-chromium" "ranger" "shellcheck" "dunst" "polkit-gnome"
+   "maim" "xclip"
    "font-awesome" "font-google-material-design-icons"
    "papirus-icon-theme" "bibata-cursor-theme" "hicolor-icon-theme"
    "gst-plugins-base" "gst-plugins-good" "gtk"))
@@ -105,6 +109,8 @@
  "Home declaration lacks the reviewed Home-list wiring")
 (assert (string-contains home-source "(sk emacs)")
         "Home declaration lacks the local Emacs package module")
+(assert (string-contains home-source "(sk desktop-integration)")
+        "Home declaration lacks the desktop-integration module")
 (assert
  (string-contains home-source
                   "(list emacs-racket-mode/runtime-detached)")
@@ -136,6 +142,18 @@
         "Racket Mode variant embeds a literal store path")
 
 (for-each
+ (lambda (text)
+   (assert (string-contains desktop-integration-source text)
+           (string-append "desktop integration lost: " text)))
+ '("home-xdg-mime-applications-service-type"
+   "emacsclient.desktop"
+   "emacsclient-mail.desktop"
+   "chromium.desktop"
+   "home-x11-service-type"
+   "polkit-gnome-authentication-agent-1"
+   "(requirement '(dbus x11-display))"))
+
+(for-each
  (lambda (specification)
    (assert
     (not (string-contains system-source
@@ -143,6 +161,7 @@
     (string-append "non-System package leaked into System source: "
                    specification)))
  '("ungoogled-chromium" "ranger" "emacs-use-package" "emacs-geiser"
+   "dunst" "polkit-gnome" "maim" "xclip"
    "emacs-sly" "emacs-puni" "emacs-eshell-syntax-highlighting"
    "emacs-package-lint" "emacs-clojure-mode" "cljfmt" "clj-kondo"
    "emacs-fennel-mode"

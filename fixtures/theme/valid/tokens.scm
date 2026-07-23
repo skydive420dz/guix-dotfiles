@@ -263,4 +263,4 @@
      (foreground . on-selection)
      (background . selection)
      (attributes italics))))
-  (targets emacs kitty fish gtk3 gtk4 x-session))
+  (targets emacs kitty fish gtk3 gtk4 dunst x-session))

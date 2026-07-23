@@ -4,17 +4,19 @@ set -u
 repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
 
 usage() {
-    printf 'usage: %s [--require-bluetooth]\n' "$0" >&2
+    printf 'usage: %s [--require-bluetooth] [--require-c3]\n' "$0" >&2
     exit 2
 }
 
 require_bluetooth=0
-case ${1:-} in
-    '') ;;
-    --require-bluetooth) require_bluetooth=1 ;;
-    *) usage ;;
-esac
-[ "$#" -le 1 ] || usage
+require_c3=0
+for option in "$@"; do
+    case $option in
+        --require-bluetooth) require_bluetooth=1 ;;
+        --require-c3) require_c3=1 ;;
+        *) usage ;;
+    esac
+done
 
 home=${HOME:?HOME must be set}
 PATH="$home/.guix-home/profile/bin:/run/current-system/profile/bin:/run/current-system/profile/sbin:${PATH:-}"
@@ -148,6 +150,97 @@ if [ "$display" = :0 ] && [ "$session_type" = x11 ] && \
     pass 'EXWM exports the intended X11 desktop metadata'
 else
     fail "EXWM metadata is DISPLAY=${display:-unset} TYPE=${session_type:-unset} DESKTOP=${session_desktop:-unset}"
+fi
+
+if [ "$require_c3" -eq 1 ]; then
+    for command in dunst dunstify maim xclip xdg-mime; do
+        if command -v "$command" >/dev/null 2>&1; then
+            pass "C3 command is available: $command"
+        else
+            fail "C3 command is unavailable: $command"
+        fi
+    done
+
+    notification_reply=$(env DBUS_SESSION_BUS_ADDRESS="$expected_bus" \
+        dbus-send --session --type=method_call --print-reply \
+        --dest=org.freedesktop.Notifications \
+        /org/freedesktop/Notifications \
+        org.freedesktop.Notifications.GetServerInformation 2>&1)
+    if printf '%s\n' "$notification_reply" | grep -q 'string "dunst"'; then
+        pass 'Dunst owns and answers the desktop notification API'
+    else
+        fail "notification server reply is: $notification_reply"
+    fi
+
+    notification_owner_reply=$(env DBUS_SESSION_BUS_ADDRESS="$expected_bus" \
+        dbus-send --session --type=method_call --print-reply \
+        --dest=org.freedesktop.DBus /org/freedesktop/DBus \
+        org.freedesktop.DBus.GetNameOwner \
+        string:org.freedesktop.Notifications 2>&1)
+    notification_owner_count=$(printf '%s\n' "$notification_owner_reply" |
+        grep -c 'string ":[0-9][0-9]*\.[0-9][0-9]*"' || true)
+    if [ "$notification_owner_count" -eq 1 ]; then
+        pass 'exactly one notification-server bus owner is visible'
+    else
+        fail "notification owner reply is: $notification_owner_reply"
+    fi
+
+    polkit_status=$(herd status polkit-agent 2>&1)
+    if printf '%s\n' "$polkit_status" | grep -q 'It is running' && \
+       ! printf '%s\n' "$polkit_status" | grep -q 'Replacement pending'; then
+        pass 'the single Home PolicyKit agent service is running'
+    else
+        fail "PolicyKit agent service is unhealthy: $polkit_status"
+    fi
+
+    polkit_agent_pids=$(pgrep -u "$uid" -f \
+        '/polkit-gnome-authentication-agent-1$' 2>/dev/null || true)
+    polkit_agent_count=$(printf '%s\n' "$polkit_agent_pids" |
+        awk 'NF { count += 1 } END { print count + 0 }')
+    polkit_agent_pid=$(printf '%s\n' "$polkit_agent_pids" | sed -n '1p')
+    if [ "$polkit_agent_count" -eq 1 ] && \
+       [ -r "/proc/$polkit_agent_pid/environ" ]; then
+        agent_display=$(process_environment_value "$polkit_agent_pid" DISPLAY)
+        agent_bus=$(process_environment_value \
+            "$polkit_agent_pid" DBUS_SESSION_BUS_ADDRESS)
+        agent_xauthority=$(process_environment_value \
+            "$polkit_agent_pid" XAUTHORITY)
+        if [ "$agent_display" = "$display" ] && \
+           [ "$agent_bus" = "$expected_bus" ] && \
+           [ -n "$agent_xauthority" ]; then
+            pass 'exactly one GTK PolicyKit agent uses the canonical X/bus environment'
+        else
+            fail "PolicyKit agent environment is DISPLAY=${agent_display:-unset} BUS=${agent_bus:-unset} XAUTHORITY=${agent_xauthority:-unset}"
+        fi
+    else
+        fail "PolicyKit agent process count is $polkit_agent_count; expected 1"
+    fi
+
+    mime_failures=0
+    while IFS='|' read -r mime expected; do
+        [ -n "$mime" ] || continue
+        actual=$(xdg-mime query default "$mime" 2>/dev/null || true)
+        if [ "$actual" != "$expected" ]; then
+            fail "MIME default for $mime is ${actual:-unset}; expected $expected"
+            mime_failures=$((mime_failures + 1))
+        fi
+    done <<'EOF'
+x-scheme-handler/http|chromium.desktop
+x-scheme-handler/https|chromium.desktop
+text/html|chromium.desktop
+application/pdf|chromium.desktop
+image/png|chromium.desktop
+image/svg+xml|chromium.desktop
+text/plain|emacsclient.desktop
+text/x-lisp|emacsclient.desktop
+application/json|emacsclient.desktop
+inode/directory|emacsclient.desktop
+x-scheme-handler/org-protocol|emacsclient.desktop
+x-scheme-handler/mailto|emacsclient-mail.desktop
+EOF
+    if [ "$mime_failures" -eq 0 ]; then
+        pass 'accepted MIME/default-application map is active'
+    fi
 fi
 
 xset_status=$(env DISPLAY="$display" XAUTHORITY="$xauthority" xset q 2>&1)

@@ -68,6 +68,7 @@ mkdir -p \
     "$home_result/files/.config/fontconfig" \
     "$home_result/files/.config/gtk-3.0" \
     "$home_result/files/.config/gtk-4.0" \
+    "$home_result/files/.config/dunst" \
     "$home_result/files/.config/kitty" \
     "$home_result/files/.config/sk-theme" \
     "$home_result/files/.local/share/sk-theme/assets/wallpapers" \
@@ -108,6 +109,8 @@ cp "$fake_repo/fixtures/theme/expected-production/gtk3.ini" \
     "$bundle/adapters/gtk3.ini"
 cp "$fake_repo/fixtures/theme/expected-production/gtk4.ini" \
     "$bundle/adapters/gtk4.ini"
+cp "$fake_repo/fixtures/theme/expected-production/dunstrc" \
+    "$bundle/adapters/dunstrc"
 cp "$fake_repo/fixtures/theme/expected-production/x-session.sh" \
     "$bundle/adapters/x-session.sh"
 cp "$fake_repo/theme/tokens.scm" "$bundle/tokens.scm"
@@ -126,6 +129,8 @@ ln -s "$bundle/adapters/gtk3.ini" \
     "$home_result/files/.config/gtk-3.0/settings.ini"
 ln -s "$bundle/adapters/gtk4.ini" \
     "$home_result/files/.config/gtk-4.0/settings.ini"
+ln -s "$bundle/adapters/dunstrc" \
+    "$home_result/files/.config/dunst/dunstrc"
 ln -s "$bundle/adapters/x-session.sh" \
     "$home_result/files/.config/sk-theme/x-session.sh"
 ln -s "$bundle/tokens.scm" \

@@ -2196,6 +2196,7 @@
                ("C-M--" . sk/exwm-resize-narrower)
                ("C-M-=" . sk/exwm-resize-wider)
                ("C-M-f" . sk/exwm-toggle-fullscreen)
+               ("C-M-s" . sk/exwm-screenshot-area-to-clipboard)
                ("C-M-r" . sk/exwm-reload)))
       (should (eq (cdr (assoc (car entry) sk/exwm-global-key-contract))
                   (cdr entry))))
@@ -2209,7 +2210,7 @@
                  (eq (cdr (assoc move-key sk/exwm-global-key-contract))
                      (intern
                       (format "sk/exwm-move-window-to-workspace-%d" number)))))
-    (dolist (reserved '("C-M-x" "C-M-s"
+    (dolist (reserved '("C-M-x"
                         "C-M-6" "C-M-7" "C-M-8" "C-M-9" "C-M-0"
                         "C-M-^" "C-M-&" "C-M-*" "C-M-(" "C-M-)"))
       (should-not (assoc reserved sk/exwm-global-key-contract)))
@@ -2220,8 +2221,11 @@
     (should-error (sk/exwm-workspace-index 0) :type 'user-error)
     (should-error (sk/exwm-workspace-index 6) :type 'user-error)
     (should-not exwm-manage-force-tiling)
-    (should (string-match-p "Reserved for later accepted slices"
+    (should (string-match-p "Reserved pending a privacy decision"
                             sk/exwm-input-help-text))
+    (should (string-match-p
+             "select screenshot area and copy PNG to CLIPBOARD"
+             sk/exwm-input-help-text))
     (should (string-match-p "physical positions" sk/exwm-input-help-text))
     (should (string-match-p "X          float/tile X app"
                             sk/exwm-input-help-text))
@@ -2239,6 +2243,119 @@
       (should (= (length exwm-input--global-keys)
                  (length (delete-dups
                           (copy-sequence exwm-input--global-keys))))))))
+
+(ert-deftest sk/check-c3-explicit-x11-selection-policy ()
+  (should select-enable-clipboard)
+  (should select-enable-primary))
+
+(ert-deftest sk/check-c3-screenshot-entrypoint-is-bounded-and-asynchronous ()
+  (require 'sk-exwm)
+  (let ((sk/exwm-screenshot-process nil)
+        created-command created-sentinel property message-text)
+    (cl-letf (((symbol-function 'executable-find)
+               (lambda (program) (concat "/mock/" program)))
+              ((symbol-function 'process-live-p) (lambda (_process) nil))
+              ((symbol-function 'make-temp-file)
+               (lambda (&rest _arguments) "/tmp/sk-shot.png"))
+              ((symbol-function 'make-process)
+               (lambda (&rest arguments)
+                 (setq created-command (plist-get arguments :command)
+                       created-sentinel (plist-get arguments :sentinel))
+                 'capture-process))
+              ((symbol-function 'process-put)
+               (lambda (process key value)
+                 (setq property (list process key value))))
+              ((symbol-function 'message)
+               (lambda (format-string &rest arguments)
+                 (setq message-text
+                       (apply #'format format-string arguments)))))
+      (sk/exwm-screenshot-area-to-clipboard))
+    (should (equal created-command '("maim" "-s" "/tmp/sk-shot.png")))
+    (should (eq created-sentinel #'sk/exwm-screenshot--capture-sentinel))
+    (should (equal property
+                   '(capture-process sk/exwm-screenshot-file
+                     "/tmp/sk-shot.png")))
+    (should (eq sk/exwm-screenshot-process 'capture-process))
+    (should (equal message-text "Select the screenshot area")))
+  (cl-letf (((symbol-function 'executable-find)
+             (lambda (program) (and (equal program "maim") "/mock/maim"))))
+    (should-error (sk/exwm-screenshot-area-to-clipboard)
+                  :type 'user-error))
+  (let ((sk/exwm-screenshot-process 'active))
+    (cl-letf (((symbol-function 'executable-find)
+               (lambda (program) (concat "/mock/" program)))
+              ((symbol-function 'process-live-p) (lambda (_process) t)))
+      (should-error (sk/exwm-screenshot-area-to-clipboard)
+                    :type 'user-error))))
+
+(ert-deftest sk/check-c3-screenshot-sentinels-clean-up-and-copy-png ()
+  (require 'sk-exwm)
+  (cl-labels
+      ((finished-process
+        (name status)
+        (let ((process
+               (make-process
+                :name name
+                :buffer nil
+                :command (list shell-file-name "-c"
+                               (format "exit %d" status))
+                :noquery t)))
+          (while (process-live-p process)
+            (accept-process-output process 0.05))
+          process)))
+    (let* ((file (make-temp-file "sk-shot-test-" nil ".png"))
+           (capture (finished-process "sk-shot-capture-success" 0))
+           (copy (finished-process "sk-shot-copy-success" 0))
+           (sk/exwm-screenshot-process capture)
+           copy-command copy-sentinel message-text)
+      (unwind-protect
+          (progn
+            (with-temp-file file
+              (insert "nonempty PNG fixture"))
+            (process-put capture 'sk/exwm-screenshot-file file)
+            (cl-letf (((symbol-function 'make-process)
+                       (lambda (&rest arguments)
+                         (setq copy-command (plist-get arguments :command)
+                               copy-sentinel (plist-get arguments :sentinel))
+                         copy)))
+              (sk/exwm-screenshot--capture-sentinel capture "finished"))
+            (should
+             (equal copy-command
+                    (list "xclip" "-selection" "clipboard" "-target"
+                          "image/png" "-in" file)))
+            (should (eq copy-sentinel
+                        #'sk/exwm-screenshot--copy-sentinel))
+            (should (equal (process-get copy 'sk/exwm-screenshot-file) file))
+            (should (eq sk/exwm-screenshot-process copy))
+            (cl-letf (((symbol-function 'message)
+                       (lambda (format-string &rest arguments)
+                         (setq message-text
+                               (apply #'format format-string arguments)))))
+              (sk/exwm-screenshot--copy-sentinel copy "finished"))
+            (should-not (file-exists-p file))
+            (should-not sk/exwm-screenshot-process)
+            (should (equal message-text
+                           "Selected-area screenshot copied to CLIPBOARD")))
+        (when (file-exists-p file)
+          (delete-file file))))
+    (let* ((file (make-temp-file "sk-shot-cancel-" nil ".png"))
+           (capture (finished-process "sk-shot-capture-cancel" 1))
+           (sk/exwm-screenshot-process capture)
+           message-text)
+      (unwind-protect
+          (progn
+            (process-put capture 'sk/exwm-screenshot-file file)
+            (cl-letf (((symbol-function 'message)
+                       (lambda (format-string &rest arguments)
+                         (setq message-text
+                               (apply #'format format-string arguments)))))
+              (sk/exwm-screenshot--capture-sentinel capture "failed"))
+            (should-not (file-exists-p file))
+            (should-not sk/exwm-screenshot-process)
+            (should (equal message-text
+                           "Selected-area screenshot canceled")))
+        (when (file-exists-p file)
+          (delete-file file))))))
 
 (ert-deftest sk/check-exwm-c2-reserved-action-dispatch ()
   (require 'sk-exwm)

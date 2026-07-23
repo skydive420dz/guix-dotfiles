@@ -77,6 +77,7 @@ mkdir -p "$sandbox_repo/scripts" "$sandbox_repo/guix/home" \
     "$fake_home/files/.config/fontconfig" \
     "$fake_home/files/.config/gtk-3.0" \
     "$fake_home/files/.config/gtk-4.0" \
+    "$fake_home/files/.config/dunst" \
     "$fake_home/files/.config/kitty" \
     "$fake_home/files/.config/sk-theme" \
     "$fake_home/files/.local/share/sk-theme/assets/wallpapers"
@@ -94,6 +95,8 @@ cp "$repo/guix/package-ownership.scm" \
     "$sandbox_repo/guix/package-ownership.scm"
 cp "$repo/guix/modules/sk/emacs.scm" \
     "$sandbox_repo/guix/modules/sk/emacs.scm"
+cp "$repo/guix/modules/sk/desktop-integration.scm" \
+    "$sandbox_repo/guix/modules/sk/desktop-integration.scm"
 cp "$repo/guix/modules/sk/theme.scm" \
     "$sandbox_repo/guix/modules/sk/theme.scm"
 cp "$repo/guix/modules/sk/theme-home.scm" \
@@ -265,6 +268,7 @@ for relative in \
     .config/fontconfig/fonts.conf \
     .config/gtk-3.0/settings.ini \
     .config/gtk-4.0/settings.ini \
+    .config/dunst/dunstrc \
     .config/kitty/kitty.conf \
     .config/sk-theme/tokens.scm \
     .config/sk-theme/x-session.sh \
@@ -451,6 +455,8 @@ printf '%s\n' '# fake generated GTK 3 policy' \
     >"$fake_home/files/.config/gtk-3.0/settings.ini"
 printf '%s\n' '# fake generated GTK 4 policy' \
     >"$fake_home/files/.config/gtk-4.0/settings.ini"
+printf '%s\n' '# fake generated Dunst policy' \
+    >"$fake_home/files/.config/dunst/dunstrc"
 printf '%s\n' '# fake generated Kitty policy' \
     >"$fake_home/files/.config/kitty/kitty.conf"
 printf '%s\n' ';; fake immutable theme tokens' \
@@ -470,10 +476,11 @@ done
 
 printf '%s\n' curl git fish emacs emacs-exwm bluez ncurses ripgrep vim \
     xset xwallpaper picom xrandr >"$fake_recovery_names"
-printf '%s\n' fish-foreign-env emacs emacs-desktop-environment emacs-geiser \
+printf '%s\n' fish-foreign-env emacs emacs-geiser \
     emacs-sly emacs-puni emacs-eshell-syntax-highlighting emacs-yasnippet \
     emacs-package-lint emacs-clojure-mode emacs-fennel-mode \
     emacs-racket-mode cljfmt clj-kondo \
+    dunst polkit-gnome maim xclip \
     font-awesome font-google-material-design-icons papirus-icon-theme \
     bibata-cursor-theme hicolor-icon-theme gst-plugins-base \
     gst-plugins-good gtk \
@@ -501,10 +508,11 @@ reset_fake_system_manifest() {
 
 reset_fake_home_manifest() {
     write_fake_manifest "$fake_home_manifest" \
-        emacs emacs-desktop-environment emacs-eshell-syntax-highlighting \
+        emacs emacs-eshell-syntax-highlighting \
         emacs-geiser emacs-puni emacs-sly emacs-yasnippet \
         emacs-clojure-mode emacs-fennel-mode emacs-racket-mode fish \
         emacs-package-lint fish-foreign-env cljfmt clj-kondo guile \
+        dunst polkit-gnome maim xclip \
         lua-language-server python-lsp-server ranger sbcl shellcheck \
         ungoogled-chromium
     printf '%s\n' \

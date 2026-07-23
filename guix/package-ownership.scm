@@ -1,7 +1,9 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; P3.4 corrects the reviewed Home user/editor base to 92 package/output
-;; selections with 91 unique package names.  The nine visual/runtime selections
+;; C3 extends the reviewed Home user/editor base to 95 package/output
+;; selections with 94 unique package names.  The desktop integration packages
+;; explicitly own notifications, graphical authorization, and selected-area
+;; screenshot-to-clipboard behavior.  The nine visual/runtime selections
 ;; explicitly own the accepted global dependencies instead of relying on
 ;; unrelated propagated package edges.
 ;; Package-lint keeps the tracked Emacs Lisp project independent of mutable
@@ -44,6 +46,10 @@
     "bzmenu"
     "pipemixer"
     "pamixer"
+    "dunst"
+    "polkit-gnome"
+    "maim"
+    "xclip"
     "ranger"
     "ungoogled-chromium"
     "xdg-utils"
@@ -70,7 +76,6 @@
 
 (define %guixpc-home-emacs-package-specifications
   '("emacs"
-    "emacs-desktop-environment"
     "emacs-rainbow-delimiters"
     "emacs-visual-fill-column"
     "emacs-lsp-mode"

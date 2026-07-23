@@ -80,6 +80,9 @@ check_store_mapping \
     "$files/.config/gtk-4.0/settings.ini" \
     "$goldens/gtk4.ini"
 check_store_mapping \
+    "$files/.config/dunst/dunstrc" \
+    "$goldens/dunstrc"
+check_store_mapping \
     "$files/.config/sk-theme/x-session.sh" \
     "$goldens/x-session.sh"
 check_store_mapping \

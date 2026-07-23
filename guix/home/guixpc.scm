@@ -12,6 +12,7 @@
              (gnu services)
              (guix gexp)
              (guix packages)
+             (sk desktop-integration)
              (sk emacs)
              (sk theme-home))
 
@@ -87,7 +88,8 @@
     %guixpc-home-output-package-specifications)
    %guixpc-home-explicit-packages))
  (services
-  (list
+  (append
+   (list
    (simple-service 'sk-theme-xdg-configuration
                    home-xdg-configuration-files-service-type
                    (sk:theme-home-xdg-configuration-files
@@ -110,4 +112,6 @@
    (service home-dbus-service-type)
    (service home-pipewire-service-type
             (home-pipewire-configuration
-             (enable-pulseaudio? #t))))))
+             (enable-pulseaudio? #t))))
+   (sk:desktop-integration-home-services
+    (specification->package "polkit-gnome")))))
