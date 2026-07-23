@@ -210,7 +210,7 @@ if [ "$require_c3" -eq 1 ]; then
 
     org_protocol_state=$(emacsclient --socket-name=server \
         --alternate-editor=false --eval \
-        '(list (featurep (quote org-protocol)) (advice-member-p (function org--protocol-detect-protocol-server) (quote server-visit-files)))' \
+        '(list (featurep (quote org-protocol)) (and (advice-member-p (function org--protocol-detect-protocol-server) (quote server-visit-files)) t))' \
         2>&1)
     if [ "$org_protocol_state" = '(t t)' ]; then
         pass 'Org Protocol is ready in the canonical Emacs server'
