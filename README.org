@@ -339,10 +339,20 @@ separate gates.  Every later slice remains unauthorized.
   toggle stale.  EXWM's reviewed default continues to float and focus X
   transient, fixed-size, utility, and dialog clients.  No new recovery command
   was justified.
-- Source state: checkpoint =89f5b09= is published and loaded into the running
-  Emacs process.  The five-workspace correction passes 90/90 isolated Emacs
-  tests plus connected Geiser/Guile and SLY/SBCL checks, but is not yet
-  published or loaded.  Full live and hand acceptance remain pending.
+- Floating-frame policy: =fullscreen= is a workspace-only creation default and
+  is retired after EXWM creates its five workspace frames.  Later floating X
+  frames therefore honor the client's requested geometry; no arbitrary
+  application or dialog size table is needed.
+- State: checkpoint =0d3ced7= is published and running after a clean reboot.
+  The full live gate, 90/90 isolated tests, and both connected Lisp backends
+  passed with exactly five workspaces.  Physical =X/C/V/B= behavior, side-help
+  normalization, Winner/full-frame recovery, and dialog focus restoration all
+  passed.  Blueman's fixed-size About dialog exposed the inherited fullscreen
+  default: it requested =424x367= but initially occupied =3440x1440=.  The
+  root-cause live prototype rendered it at =444x394= around the requested size.
+  The source candidate passes 91/91 isolated tests and both connected backends;
+  publication, source reload, and final live dialog confirmation remain
+  pending.
 
 ** C3 — Complete desktop integration and attention handling
 

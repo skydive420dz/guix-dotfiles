@@ -3161,13 +3161,14 @@
     (should-not
      (memq #'sk/startup-frame-schedule-release window-setup-hook))))
 
-(ert-deftest sk/check-exwm-start-orders-release-scheduler-after-real-init ()
+(ert-deftest sk/check-exwm-start-orders-post-init-hooks-after-real-init ()
   (require 'sk-exwm)
   (let* ((sk/startup-frame-gate-active-p t)
          (sk/startup-frame-gate-release-complete-p nil)
          (window-setup-hook (list #'sk/startup-frame-schedule-release))
          (exwm-update-class-hook nil)
          (exwm-update-title-hook nil)
+         (exwm-workspace--list nil)
          (exwm-wm-mode nil)
          (fake-exwm-init (lambda () 'fake-exwm-init)))
     (cl-letf (((symbol-function 'sk/exwm-assert-compatible) #'ignore)
@@ -3179,16 +3180,18 @@
                  (setq exwm-wm-mode t)
                  (add-hook 'window-setup-hook fake-exwm-init t))))
       (sk/exwm-start)
-      (should
-       (equal window-setup-hook
-              (list fake-exwm-init
-                    #'sk/startup-frame-schedule-release)))
+      (should (eq (car window-setup-hook) fake-exwm-init))
+      (should (= (length window-setup-hook) 3))
+      (should (memq #'sk/startup-frame-schedule-release
+                    (cdr window-setup-hook)))
+      (should (memq #'sk/exwm-release-workspace-frame-defaults
+                    (cdr window-setup-hook)))
       (sk/exwm-start)
-      (should
-       (equal window-setup-hook
-              (list fake-exwm-init
-                    #'sk/startup-frame-schedule-release)))
+      (should (eq (car window-setup-hook) fake-exwm-init))
+      (should (= (length window-setup-hook) 3))
       (should (= 1 (cl-count #'sk/startup-frame-schedule-release
+                             window-setup-hook :test #'eq)))
+      (should (= 1 (cl-count #'sk/exwm-release-workspace-frame-defaults
                              window-setup-hook :test #'eq))))))
 
 (ert-deftest sk/check-exwm-start-rearms-release-scheduler-on-error ()
@@ -3209,6 +3212,33 @@
     (should
      (equal window-setup-hook
             (list #'sk/startup-frame-schedule-release)))))
+
+(ert-deftest sk/check-exwm-start-retires-workspace-fullscreen-default ()
+  (require 'sk-exwm)
+  (let ((default-frame-alist
+          '((fullscreen . fullboth) (undecorated . t)))
+        (initial-frame-alist '((fullscreen . fullboth)))
+        (window-setup-hook
+         (list #'sk/exwm-release-workspace-frame-defaults))
+        (exwm-update-class-hook nil)
+        (exwm-update-title-hook nil)
+        (exwm-workspace--list '(workspace-1 workspace-2 workspace-3
+                               workspace-4 workspace-5))
+        (exwm-wm-mode t)
+        (sk/startup-frame-gate-active-p nil))
+    (cl-letf (((symbol-function 'sk/exwm-assert-compatible) #'ignore)
+              ((symbol-function 'sk/exwm-bind-keys) #'ignore)
+              ((symbol-function 'sk/set-keyboard-repeat) #'ignore)
+              ((symbol-function 'frame-live-p)
+               (lambda (frame)
+                 (memq frame exwm-workspace--list))))
+      (sk/exwm-start)
+      (sk/exwm-start))
+    (should-not (assq 'fullscreen default-frame-alist))
+    (should (eq (alist-get 'undecorated default-frame-alist) t))
+    (should (eq (alist-get 'fullscreen initial-frame-alist) 'fullboth))
+    (should-not
+     (memq #'sk/exwm-release-workspace-frame-defaults window-setup-hook))))
 
 (ert-deftest sk/check-start-picom-isolates-ambient-config ()
   (require 'sk-exwm)
@@ -3408,8 +3438,10 @@
   (require 'sk-exwm)
   (let ((exwm-update-class-hook nil)
         (exwm-update-title-hook nil)
+        (exwm-workspace--list nil)
         (exwm-wm-mode t)
-        (sk/startup-frame-gate-active-p nil))
+        (sk/startup-frame-gate-active-p nil)
+        (window-setup-hook nil))
     (cl-letf (((symbol-function 'sk/set-wallpaper)
                (lambda () (error "wallpaper must remain Xinit-owned")))
               ((symbol-function 'sk/start-picom)
@@ -3421,7 +3453,9 @@
     (should (= 1 (cl-count #'sk/exwm-update-title
                            exwm-update-class-hook :test #'eq)))
     (should (= 1 (cl-count #'sk/exwm-update-title
-                           exwm-update-title-hook :test #'eq)))))
+                           exwm-update-title-hook :test #'eq)))
+    (should (= 1 (cl-count #'sk/exwm-release-workspace-frame-defaults
+                           window-setup-hook :test #'eq)))))
 
 (ert-deftest sk/check-racket-shared-dispatch-and-cold-guards ()
   (with-temp-buffer

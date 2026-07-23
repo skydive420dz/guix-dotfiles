@@ -893,6 +893,29 @@ M-x sk/exwm-input-help or Super+/.
                  "wpctl" "set-volume"
                  "@DEFAULT_AUDIO_SINK@" "5%-"))
 
+(defun sk/exwm-workspace-frames-ready-p ()
+  "Return non-nil when the configured EXWM workspace frames exist."
+  (and (boundp 'exwm-workspace--list)
+       (<= sk/exwm-workspace-count (length exwm-workspace--list))
+       (seq-every-p #'frame-live-p exwm-workspace--list)))
+
+(defun sk/exwm-release-workspace-frame-defaults ()
+  "Retire frame defaults that belong only to EXWM workspaces.
+EXWM makes workspace frames fullscreen itself.  Removing the creation-time
+default after those frames exist prevents later floating frames from inheriting
+workspace geometry instead of the X client's requested size."
+  (setq default-frame-alist
+        (assq-delete-all 'fullscreen default-frame-alist))
+  (remove-hook 'window-setup-hook
+               #'sk/exwm-release-workspace-frame-defaults))
+
+(defun sk/exwm-arrange-workspace-frame-default-release ()
+  "Release workspace-only defaults now, or after EXWM creates its frames."
+  (if (sk/exwm-workspace-frames-ready-p)
+      (sk/exwm-release-workspace-frame-defaults)
+    (add-hook 'window-setup-hook
+              #'sk/exwm-release-workspace-frame-defaults t)))
+
 (defun sk/exwm-start ()
   (sk/exwm-assert-compatible)
   (add-hook 'exwm-update-class-hook #'sk/exwm-update-title)
@@ -917,7 +940,8 @@ M-x sk/exwm-input-help or Super+/.
             (add-hook
              'window-setup-hook #'sk/startup-frame-schedule-release t))))
     (unless exwm-wm-mode
-      (exwm-wm-mode 1))))
+      (exwm-wm-mode 1)))
+  (sk/exwm-arrange-workspace-frame-default-release))
 
 (provide 'sk-exwm)
 

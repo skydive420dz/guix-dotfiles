@@ -312,6 +312,7 @@
                 (equal (face-attribute 'variable-pitch :family nil t)
                        "JetBrainsMono Nerd Font")
                 (= (face-attribute 'variable-pitch :height nil t) 110)
+                (not (assq 'fullscreen default-frame-alist))
                 (seq-every-p
                  (lambda (frame)
                    (and (eq (frame-parameter frame 'fullscreen) 'fullboth)
