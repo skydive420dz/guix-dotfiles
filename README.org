@@ -258,9 +258,9 @@ research plan.
 
 Each slice is separately authorized.  C0 is closed at published checkpoint
 =e8ce8b2=.  C1 is closed at published implementation checkpoint =57969d1= and
-was accepted live on 2026-07-21.  C2 is authorized and implemented at the
-source-only boundary; publication, live reload, and hand acceptance remain
-separate gates.  Every later slice remains unauthorized.
+was accepted live on 2026-07-21.  C2 is closed at published implementation
+checkpoint =13981e9= and was accepted live on 2026-07-22.  Every later slice
+remains unauthorized.
 
 ** C0 — Establish the human roadmap
 
@@ -308,10 +308,10 @@ separate gates.  Every later slice remains unauthorized.
   Terminal/Code/browser/files; =;= fullscreen; =Z= close; and =.= reload.
   Escape, =C-g=, and literal =C-q C-g= also passed.  The original acceptance
   test exercised an on-demand tenth workspace; the user subsequently narrowed
-  the intended contract to exactly five on 2026-07-21.  Current source removes
-  workspace 6--10 actions; restart confirmation of the five-workspace runtime
-  is pending.  The corrected source passes 90/90 isolated Emacs tests and both
-  connected Lisp backend checks.
+  the intended contract to exactly five on 2026-07-21.  Follow-up checkpoint
+  =0d3ced7= removes workspace 6--10 actions.  A clean reboot confirmed the
+  configured, policy, and live counts at exactly =5/5/5=; the corrected source
+  passed 90/90 isolated Emacs tests and both connected Lisp backend checks.
 
 ** C2 — Normalize EXWM windows, helpers, dialogs, and recovery
 
@@ -343,16 +343,23 @@ separate gates.  Every later slice remains unauthorized.
   is retired after EXWM creates its five workspace frames.  Later floating X
   frames therefore honor the client's requested geometry; no arbitrary
   application or dialog size table is needed.
-- State: checkpoint =0d3ced7= is published and running after a clean reboot.
-  The full live gate, 90/90 isolated tests, and both connected Lisp backends
+- State: closed and accepted live on 2026-07-22.  Checkpoints =0d3ced7= and
+  =13981e9= are published and running after a clean reboot and source reload.
+  The full live gate, 91/91 isolated tests, and both connected Lisp backends
   passed with exactly five workspaces.  Physical =X/C/V/B= behavior, side-help
   normalization, Winner/full-frame recovery, and dialog focus restoration all
   passed.  Blueman's fixed-size About dialog exposed the inherited fullscreen
-  default: it requested =424x367= but initially occupied =3440x1440=.  The
-  root-cause live prototype rendered it at =444x394= around the requested size.
-  The source candidate passes 91/91 isolated tests and both connected backends;
-  publication, source reload, and final live dialog confirmation remain
-  pending.
+  default: it requested =424x367= but initially occupied =3440x1440=.  After
+  the source fix was published and reloaded, a fresh dialog requested
+  =424x367=, rendered at =444x394= around that client geometry, had no
+  fullscreen state, received focus, and returned focus to its live manager
+  parent when dismissed with its native Escape path.  Emacs remained PID 480.
+- Known boundary: =sk/exwm-close-current= was not accepted as a GTK-modal
+  dismissal mechanism.  A remote diagnostic invocation exposed a pre-existing
+  floating-teardown race that can signal a sole-window deletion error, so no
+  speculative correction was retained.  Revisit only if the physical close
+  action fails on a floating client during normal use; the ordinary C1 close
+  behavior remains accepted as hand-tested.
 
 ** C3 — Complete desktop integration and attention handling
 
