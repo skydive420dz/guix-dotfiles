@@ -154,7 +154,7 @@
    "sk-emacsclient-mail.desktop"
    " --socket-name=server --alternate-editor=false"
    " --no-wait --reuse-frame -- %F"
-   " --no-wait -- %u"
+   " --no-wait --reuse-frame -- %u"
    "(message-mailto (pop server-eval-args-left))"
    "chromium.desktop"
    "home-x11-service-type"

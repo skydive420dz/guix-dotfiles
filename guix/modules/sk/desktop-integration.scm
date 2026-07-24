@@ -75,7 +75,7 @@ not normalize file:// URLs into local paths."
    "Exec="
    (file-append emacs "/bin/emacsclient")
    " --socket-name=server --alternate-editor=false"
-   " --no-wait -- %u\n"
+   " --no-wait --reuse-frame -- %u\n"
    "TryExec="
    (file-append emacs "/bin/emacsclient")
    "\n"

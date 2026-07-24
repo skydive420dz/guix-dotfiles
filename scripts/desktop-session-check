@@ -168,7 +168,7 @@ if [ "$require_c3" -eq 1 ]; then
     org_entry=$desktop_root/sk-emacsclient-org-protocol.desktop
     mail_entry=$desktop_root/sk-emacsclient-mail.desktop
     expected_files_exec="$client_path --socket-name=server --alternate-editor=false --no-wait --reuse-frame -- %F"
-    expected_org_exec="$client_path --socket-name=server --alternate-editor=false --no-wait -- %u"
+    expected_org_exec="$client_path --socket-name=server --alternate-editor=false --no-wait --reuse-frame -- %u"
 
     files_exec=$(sed -n 's/^Exec=//p' "$files_entry" 2>/dev/null || true)
     files_try_exec=$(sed -n 's/^TryExec=//p' \
