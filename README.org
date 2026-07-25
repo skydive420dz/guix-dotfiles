@@ -261,8 +261,9 @@ Each slice is separately authorized.  C0 is closed at published checkpoint
 was accepted live on 2026-07-21.  C2 is closed at published implementation
 checkpoint =13981e9= and was accepted live on 2026-07-22.  C3 is closed at
 published documentation checkpoint =75b0726= and was accepted live on
-2026-07-24.  The C3-P source candidate is authorized; C4 and every later slice
-remain unauthorized.
+2026-07-24.  C3-P is closed at published implementation checkpoint =f8ee476=
+and was accepted live on 2026-07-24.  C4 and every later slice remain
+unauthorized.
 
 ** C0 — Establish the human roadmap
 
@@ -397,8 +398,15 @@ remain unauthorized.
   acceptance are separate gates.  Hand-check the dashboard, an ordinary
   buffer, horizontal and vertical splits, minibuffer/completion, Help, a
   terminal frame, and Blueman's compact About dialog before closing the slice.
-- State: source candidate authorized; not yet committed, pushed, built,
-  activated, restarted, rebooted, or accepted live.
+- Accepted evidence: the pinned candidate built as
+  =/gnu/store/lr4dhsy2l8y2mfmf96rfn23pmb22g3nl-home= and became Home
+  generation 52.  After a watched reboot, live checks, all 96 isolated Emacs
+  tests, and connected Guile/SBCL checks passed with EXWM Emacs PID 496.  The
+  dashboard, ordinary buffers, both split directions, minibuffer completion,
+  Help, a terminal client without a manual =TERM= override, and Blueman's
+  compact About dialog all passed paired visual acceptance.
+- State: closed and accepted live on 2026-07-24 at published implementation
+  checkpoint =f8ee476=.
 
 ** C4 — Simplify and accept the existing Org workflow
 
