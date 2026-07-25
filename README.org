@@ -262,9 +262,9 @@ was accepted live on 2026-07-21.  C2 is closed at published implementation
 checkpoint =13981e9= and was accepted live on 2026-07-22.  C3 is closed at
 published documentation checkpoint =75b0726= and was accepted live on
 2026-07-24.  C3-P is closed at published implementation checkpoint =f8ee476=
-and was accepted live on 2026-07-24.  C4 source implementation is authorized;
-its build, activation, Emacs restart, commit, push, personal-note edits, and
-hand acceptance remain separate gates.  Every later slice remains
+and was accepted live on 2026-07-24.  C4 is closed at published implementation
+checkpoint =27053c8= and was accepted live on 2026-07-25.  Its separate
+personal-note cleanup gate remains parked.  Every later slice remains
 unauthorized.
 
 ** C0 — Establish the human roadmap
@@ -445,19 +445,30 @@ unauthorized.
   =fill-column= to 100, while =sk-org.el= centers a 100-column visual fill with
   soft visual wrapping.  C4 preserves and explicitly accepts that pairing
   without enabling automatic hard wrapping.
-- Acceptance: isolated tests cover the command surface, generated-note lint,
-  Inbox matching, review layout, and manual archive policy.  After a separately
-  approved activation, Rafael completes capture from an EXWM application,
-  clarification, refile, agenda, daily review, weekly review, completion, and
-  manual archive once by hand.
+- Acceptance: isolated synthetic-data tests cover the command surface,
+  generated-note lint, Inbox matching and reveal, review layout, DONE and
+  COMPLETED retention, and actual central archiving.  A focused Home build
+  passes without installation.  After a fresh Emacs/EXWM start, the read-only
+  hand pass covers workflow help, Inbox clarification, both review layouts,
+  and opening and cancelling the direct refile prompt.  Capture, actual
+  refiling, completion, and archiving against personal notes remain outside
+  this acceptance pass because they belong to the separate personal-data edit
+  gate.
 - Boundary: do not replace the current Org system, add automatic DONE handling,
   alter EXWM-global keys, or edit personal Org data during the source pass.
   The 17 low-severity findings found in existing personal notes are a separate
   explicit data-edit gate.
-- State: the source candidate and its synthetic-data tests are implemented.
-  All 100 isolated Emacs tests and the connected Guile/SBCL checks passed on
-  2026-07-25.  No Home build, activation, live load, personal-note edit,
-  commit, push, or hand acceptance has occurred.
+- State: closed and accepted live on 2026-07-25 at published implementation
+  checkpoint =27053c8=.  The focused non-activating Home build passed and
+  returned the existing generation-52 result
+  =/gnu/store/lr4dhsy2l8y2mfmf96rfn23pmb22g3nl-home=, as expected because
+  the Emacs configuration is linked directly to the checkout and C4 did not
+  change the Home graph.  A fresh reboot loaded the source into canonical EXWM
+  Emacs PID 500.  Live checks, all 100 isolated Emacs tests, and the connected
+  Guile/SBCL checks passed.  The help surface, Inbox reveal, daily and weekly
+  note-plus-agenda layouts, and direct refile prompt passed paired hand
+  acceptance.  No personal Org data was edited; its 17 previously identified
+  low-severity lint findings remain a separate explicit gate.
 
 ** C5 — Give Home and XDG state explicit ownership
 
