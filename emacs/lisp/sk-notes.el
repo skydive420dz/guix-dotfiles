@@ -1,42 +1,127 @@
 ;;; sk-notes.el --- Personal note workflow -*- lexical-binding: t; -*-
 
 (require 'org)
+(require 'org-archive)
 (require 'org-capture)
+(require 'sk-window-policy)
 (require 'subr-x)
 
 (defvar sk/org-notes-root (expand-file-name "~/Documents/OrgFiles/")
   "Root directory for personal Org notes.")
 
 (defconst sk/org-daily-note-template
-  "* Today
-** Focus
-** Tasks
-** Notes
-** Questions
-** Follow-up
-** Review
-- [ ] Process inbox into tasks, projects, topics, or archive.
-- [ ] Clarify open TODOs and decide what still matters.
-- [ ] Move project/topic notes where they belong.
-- [ ] Mark follow-ups and waiting items.
-- [ ] Choose tomorrow's first focus.
-"
-  "Body inserted into newly-created daily notes.")
-
-(defconst sk/org-weekly-note-template
-  "* Review
+  "#+title: {{date}} - {{weekday}}
+#+date: {{date}}
+#+startup: overview
+#+category: daily
+#+filetags: :daily:
 
 * Plan
+
+** Focus
+- …
+
+** Today
+- …
+
+** If there is extra time
+- …
+
+* Inbox
+
+Use this section for quick notes that should be sorted later.
+
+* Log
+
+* Notes
+
+* Review
+
+** Wins
+- …
+
+** Friction
+- …
+
+** Carry forward
+- …
 "
-  "Body inserted into newly-created weekly notes.")
+  "Complete fallback document for newly-created daily notes.")
+
+(defconst sk/org-weekly-note-template
+  "#+title: {{week}}
+#+date: {{date}}
+#+startup: overview
+#+category: weekly
+#+filetags: :weekly:
+
+* Review
+
+** What moved
+- …
+
+** What stalled
+- …
+
+** What kept showing up
+- …
+
+* Decisions
+
+- …
+
+* Next Week
+
+** Focus
+- …
+
+** Commitments
+- …
+
+** Carry forward
+- …
+
+* Notes
+"
+  "Complete fallback document for newly-created weekly notes.")
+
+(defconst sk/org-workflow-help-text
+  "Org workflow
+
+From EXWM application buffers in line mode
+  C-c j     Capture
+  C-c n i   Open the Inbox for clarification
+  C-c n a   Open the agenda
+  C-c n r   Run the daily review
+  C-c n W   Run the weekly review
+  C-c n h   Show this help
+
+Inside Emacs
+  SPC n c   Capture
+  SPC n i   Open the Inbox for clarification
+  SPC n a   Open the agenda
+  SPC n d   Run the daily review
+  SPC n w   Run the weekly review
+  SPC n h   Show this help
+
+Clarify and finish
+  Process each Inbox item into a task, project, topic, note, or archive.
+  In an Org buffer, use SPC m r to refile the current item.
+  DONE items stay where they are.  SPC m A archives only when requested,
+  into the central Archive.org file.
+"
+  "Concise help for the personal Org workflow.")
 
 (defun sk/org-agenda-note-files ()
   "Return every Org note file under `sk/org-notes-root'."
-  (let ((templates-dir (expand-file-name "Templates/" sk/org-notes-root)))
+  (let ((templates-dir (expand-file-name "Templates/" sk/org-notes-root))
+        (archive-file (sk/org-archive-file)))
     (when (file-directory-p sk/org-notes-root)
       (delq nil
             (mapcar (lambda (file)
-                      (unless (file-in-directory-p file templates-dir)
+                      (unless (or (file-in-directory-p file templates-dir)
+                                  (string-equal (expand-file-name file)
+                                                archive-file))
                         file))
                     (directory-files-recursively sk/org-notes-root "\\.org\\'"))))))
 
@@ -70,19 +155,26 @@
              (cdr replacement)
              template t t)))))
 
-(defun sk/org--ensure-file (file title &optional body)
-  "Create FILE with TITLE and optional BODY when it does not exist."
+(defun sk/org--ensure-document (file contents)
+  "Create FILE with complete document CONTENTS when it does not exist."
   (make-directory (file-name-directory file) t)
   (unless (file-exists-p file)
     (with-temp-file file
-      (insert "#+title: " title "\n"
-              "#+date: " (format-time-string "%Y-%m-%d") "\n"
-              "#+startup: overview\n\n")
-      (when body
-        (insert body)))
+      (insert contents)
+      (unless (bolp)
+        (insert "\n")))
     (when (boundp 'org-agenda-files)
       (sk/org-refresh-agenda-files)))
   file)
+
+(defun sk/org--ensure-file (file title &optional body)
+  "Create FILE with TITLE and optional BODY when it does not exist."
+  (sk/org--ensure-document
+   file
+   (concat "#+title: " title "\n"
+           "#+date: " (format-time-string "%Y-%m-%d") "\n"
+           "#+startup: overview\n\n"
+           body)))
 
 (defun sk/org--ensure-heading (file heading)
   "Open FILE for capture and return point below HEADING, creating it if needed."
@@ -106,6 +198,14 @@
    (expand-file-name "Inbox.org" sk/org-notes-root)
    "Inbox"
    "* Inbox\n"))
+
+(defun sk/org-archive-file ()
+  "Return the central archive file."
+  (expand-file-name "Archive.org" sk/org-notes-root))
+
+(defun sk/org-central-archive-location ()
+  "Return the Org location for source-grouped central archiving."
+  (concat (sk/org-archive-file) "::* From %s"))
 
 (defun sk/org-tasks-file ()
   "Return the task file, creating it if needed."
@@ -139,7 +239,7 @@
                 `(("{{date}}" . ,date)
                   ("{{weekday}}" . ,weekday))))
          (file (expand-file-name (concat "Daily/" date ".org") sk/org-notes-root)))
-    (sk/org--ensure-file file date body)))
+    (sk/org--ensure-document file body)))
 
 (defun sk/org-weekly-file (&optional time)
   "Return a weekly note file for TIME, creating it if needed."
@@ -153,7 +253,7 @@
                 `(("{{week}}" . ,week)
                   ("{{date}}" . ,date))))
          (file (expand-file-name (concat "Weekly/" week ".org") sk/org-notes-root)))
-    (sk/org--ensure-file file week body)))
+    (sk/org--ensure-document file body)))
 
 (defun sk/org-topic-file ()
   "Prompt for a topic note and return its file path, creating it if needed."
@@ -188,6 +288,20 @@
   "Open the personal inbox."
   (interactive)
   (find-file (sk/org-inbox-file)))
+
+(defun sk/org-clarify-inbox ()
+  "Open and reveal the canonical Inbox for deliberate processing."
+  (interactive)
+  (find-file (sk/org-inbox-file))
+  (goto-char (point-min))
+  (when (re-search-forward
+         (format org-complex-heading-regexp-format "Inbox")
+         nil t)
+    (org-back-to-heading t)
+    (org-show-subtree)
+    (org-end-of-meta-data t))
+  (message
+   "Clarify each item, then use SPC m r to refile or SPC m A to archive it."))
 
 (defun sk/org-open-topic-note ()
   "Create or open a topic note."
@@ -233,20 +347,38 @@
   (sk/org-refresh-agenda-files)
   (org-agenda nil "t"))
 
+(defun sk/org--review (note-file agenda-key)
+  "Open NOTE-FILE and show AGENDA-KEY through the shared window policy."
+  (sk/org-refresh-agenda-files)
+  (find-file note-file)
+  (let* ((note-window (selected-window))
+         (agenda-buffer
+          (save-window-excursion
+            (org-agenda nil agenda-key)
+            (current-buffer))))
+    (sk/window-display-right agenda-buffer)
+    (when (window-live-p note-window)
+      (select-window note-window))))
+
 (defun sk/org-daily-review ()
   "Open today's note and the daily agenda dashboard."
   (interactive)
-  (sk/org-refresh-agenda-files)
-  (find-file (sk/org-daily-file))
-  (let ((daily-window (selected-window)))
-    (split-window-right)
-    (other-window 1)
-    (org-agenda nil "d")
-    (select-window daily-window)))
+  (sk/org--review (sk/org-daily-file) "d"))
+
+(defun sk/org-weekly-review ()
+  "Open this week's note and the weekly agenda dashboard."
+  (interactive)
+  (sk/org--review (sk/org-weekly-file) "w"))
+
+(defun sk/org-workflow-help ()
+  "Show the concise personal Org workflow."
+  (interactive)
+  (with-help-window "*Org Workflow*"
+    (princ sk/org-workflow-help-text)))
 
 (defun sk/org-daily-capture-target ()
-  "Return a capture target inside today's daily note."
-  (sk/org--ensure-heading (sk/org-daily-file) "Notes"))
+  "Return a capture target inside today's daily Inbox."
+  (sk/org--ensure-heading (sk/org-daily-file) "Inbox"))
 
 (defun sk/org-inbox-capture-target ()
   "Return a capture target inside the inbox note."
@@ -284,6 +416,9 @@
       org-refile-use-outline-path 'file
       org-outline-path-complete-in-steps nil
       org-refile-allow-creating-parent-nodes 'confirm
+      org-archive-location (sk/org-central-archive-location)
+      org-archive-default-command 'org-archive-subtree
+      org-archive-mark-done nil
       org-todo-keywords
       '((sequence "TODO(t)" "NEXT(n)" "|" "DONE(d!)")
         (sequence "BACKLOG(b)" "PLAN(p)" "READY(r)" "ACTIVE(a)" "REVIEW(v)" "WAIT(w@/!)" "HOLD(h)" "|" "COMPLETED(c)" "CANC(k@)"))
@@ -312,7 +447,7 @@
          agenda ""
          ((org-agenda-span 'week)))
         ("i" "Inbox"
-         tags "CATEGORY=\"inbox\""
+         tags "CATEGORY=\"Inbox\""
          ((org-agenda-overriding-header "Inbox")))
         ("f" "Follow-up"
          search "Follow-up"
@@ -346,7 +481,7 @@
          (function sk/org-task-capture-target)
          "* TODO %?\n  %U\n  %a\n  %i"
          :empty-lines 1)
-        ("d" "Daily note" entry
+        ("d" "Daily inbox" entry
          (function sk/org-daily-capture-target)
          "* %?\n  %U\n"
          :empty-lines 1)
@@ -381,9 +516,10 @@
          "| %U | %^{Weight} | %^{Notes} |"
          :kill-buffer t)))
 
-(global-set-key (kbd "C-c n i") #'sk/org-open-inbox)
+(global-set-key (kbd "C-c n i") #'sk/org-clarify-inbox)
 (global-set-key (kbd "C-c n d") #'sk/org-open-daily-note)
 (global-set-key (kbd "C-c n w") #'sk/org-open-weekly-note)
+(global-set-key (kbd "C-c n W") #'sk/org-weekly-review)
 (global-set-key (kbd "C-c n t") #'sk/org-open-topic-note)
 (global-set-key (kbd "C-c n p") #'sk/org-open-project-note)
 (global-set-key (kbd "C-c n o") #'sk/org-open-notes-root)
@@ -394,15 +530,17 @@
 (global-set-key (kbd "C-c n T") #'sk/org-todo-agenda)
 (global-set-key (kbd "C-c n r") #'sk/org-daily-review)
 (global-set-key (kbd "C-c n R") #'sk/org-refresh-agenda-files)
+(global-set-key (kbd "C-c n h") #'sk/org-workflow-help)
 (global-set-key (kbd "C-c j") #'org-capture)
 
 (with-eval-after-load 'general
   (when (fboundp 'rune/leader-keys)
     (rune/leader-keys
       "n" '(:ignore t :which-key "notes")
-      "ni" '(sk/org-open-inbox :which-key "inbox")
-      "nd" '(sk/org-open-daily-note :which-key "daily note")
-      "nw" '(sk/org-open-weekly-note :which-key "weekly note")
+      "ni" '(sk/org-clarify-inbox :which-key "inbox / clarify")
+      "nd" '(sk/org-daily-review :which-key "daily review")
+      "nw" '(sk/org-weekly-review :which-key "weekly review")
+      "nh" '(sk/org-workflow-help :which-key "workflow help")
       "nt" '(sk/org-open-topic-note :which-key "topic note")
       "np" '(sk/org-open-project-note :which-key "project note")
       "no" '(sk/org-open-notes-root :which-key "notes root")
@@ -411,7 +549,7 @@
       "nc" '(org-capture :which-key "capture")
       "na" '(sk/org-agenda :which-key "agenda")
       "nT" '(sk/org-todo-agenda :which-key "todos")
-      "nr" '(sk/org-daily-review :which-key "daily review")
+      "nr" nil
       "nR" '(sk/org-refresh-agenda-files :which-key "refresh agenda"))))
 
 (provide 'sk-notes)

@@ -455,6 +455,7 @@
                     (featurep 'sk-format)
                     (featurep 'sk-keys)
                     (featurep 'sk-org)
+                    (featurep 'sk-notes)
                     (featurep 'org-protocol)
                     (advice-member-p
                      #'org--protocol-detect-protocol-server
@@ -521,6 +522,72 @@
                     (equal (org-version) expected-org-version)
                     (not (boundp 'sk/check-stale-org-native-code))
                     (not org-version-mismatch-warning)))
+         (cons "C4 Org workflow contract"
+               (and
+                (seq-every-p
+                 #'commandp
+                 '(sk/org-open-inbox
+                   sk/org-open-daily-note
+                   sk/org-open-weekly-note
+                   sk/org-clarify-inbox
+                   sk/org-daily-review
+                   sk/org-weekly-review
+                   sk/org-workflow-help))
+                (seq-every-p
+                 (lambda (binding)
+                   (eq (lookup-key evil-normal-state-map
+                                   (kbd (car binding)))
+                       (cdr binding)))
+                 '(("SPC n c" . org-capture)
+                   ("SPC n i" . sk/org-clarify-inbox)
+                   ("SPC n a" . sk/org-agenda)
+                   ("SPC n d" . sk/org-daily-review)
+                   ("SPC n w" . sk/org-weekly-review)
+                   ("SPC n h" . sk/org-workflow-help)
+                   ("SPC n t" . sk/org-open-topic-note)
+                   ("SPC n p" . sk/org-open-project-note)
+                   ("SPC n o" . sk/org-open-notes-root)
+                   ("SPC n f" . sk/org-find-note)
+                   ("SPC n s" . sk/org-search-notes)
+                   ("SPC n T" . sk/org-todo-agenda)
+                   ("SPC n R" . sk/org-refresh-agenda-files)))
+                (not (lookup-key evil-normal-state-map (kbd "SPC n r")))
+                (seq-every-p
+                 (lambda (binding)
+                   (eq (lookup-key global-map (kbd (car binding)))
+                       (cdr binding)))
+                 '(("C-c n i" . sk/org-clarify-inbox)
+                   ("C-c n d" . sk/org-open-daily-note)
+                   ("C-c n w" . sk/org-open-weekly-note)
+                   ("C-c n W" . sk/org-weekly-review)
+                   ("C-c n h" . sk/org-workflow-help)
+                   ("C-c n t" . sk/org-open-topic-note)
+                   ("C-c n p" . sk/org-open-project-note)
+                   ("C-c n o" . sk/org-open-notes-root)
+                   ("C-c n f" . sk/org-find-note)
+                   ("C-c n s" . sk/org-search-notes)
+                   ("C-c n c" . org-capture)
+                   ("C-c n a" . sk/org-agenda)
+                   ("C-c n T" . sk/org-todo-agenda)
+                   ("C-c n r" . sk/org-daily-review)
+                   ("C-c n R" . sk/org-refresh-agenda-files)
+                   ("C-c j" . org-capture)))
+                (eq (lookup-key global-map (kbd "C-c e"))
+                    #'sk/window-open-eshell)
+                (eq (lookup-key global-map (kbd "C-c t"))
+                    #'sk/window-open-term)
+                (commandp (lookup-key global-map (kbd "C-c p")))
+                (eq (lookup-key sk/org-localleader-map (kbd "r"))
+                    #'org-refile)
+                (not (lookup-key sk/org-subtree-map (kbd "r")))
+                (equal (nth 3 (assoc "i" org-agenda-custom-commands))
+                       "CATEGORY=\"Inbox\"")
+                (equal org-archive-location
+                       (concat
+                        (expand-file-name "Archive.org" sk/org-notes-root)
+                        "::* From %s"))
+                (eq org-archive-default-command #'org-archive-subtree)
+                (not org-archive-mark-done)))
          (cons "Geiser package generation"
                (funcall owned-library-p "geiser" "geiser-[0-9]*"))
          (cons "Geiser Guile package generation"

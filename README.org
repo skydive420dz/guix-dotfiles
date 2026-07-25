@@ -262,7 +262,9 @@ was accepted live on 2026-07-21.  C2 is closed at published implementation
 checkpoint =13981e9= and was accepted live on 2026-07-22.  C3 is closed at
 published documentation checkpoint =75b0726= and was accepted live on
 2026-07-24.  C3-P is closed at published implementation checkpoint =f8ee476=
-and was accepted live on 2026-07-24.  C4 and every later slice remain
+and was accepted live on 2026-07-24.  C4 source implementation is authorized;
+its build, activation, Emacs restart, commit, push, personal-note edits, and
+hand acceptance remain separate gates.  Every later slice remains
 unauthorized.
 
 ** C0 — Establish the human roadmap
@@ -414,12 +416,48 @@ unauthorized.
   review each have one obvious command and a short help surface.  Redundancy is
   removed only when it is confusing, completed-task handling is decided
   explicitly, and normal editing is free of Org lint failures.
+- Accepted command surface:
+  - =SPC n c/i/a/d/w/h= are the concise Emacs-buffer routes for capture,
+    Inbox clarification, agenda, daily review, weekly review, and workflow
+    help.
+  - =C-c j= and every existing =C-c n= route are retained for non-leader use
+    from EXWM application buffers in line mode.  Existing =C-c n d/w= keep
+    their original raw daily/weekly-note behavior; =C-c n r= remains daily
+    review, and =C-c n W/h= add weekly review and help.
+  - The remaining useful =SPC n= note, search, TODO, and refresh commands stay
+    available.  Only the duplicate =SPC n r= route is retired.
+  - In Org buffers, =SPC m r= directly refiles.  The nested duplicate
+    =SPC m s r= is retired; both existing manual archive routes remain.
+- Capture and review contract: the central =Inbox.org= is the canonical
+  general capture and clarification queue.  Direct task capture remains
+  available, while daily capture is named =Daily inbox= and targets the daily
+  =Inbox= heading.  Daily and weekly review open the corresponding note beside
+  the matching agenda dashboard through the shared window policy.
+- Completion and archive contract: changing an item to =DONE= or =COMPLETED=
+  leaves it in place.  No TODO-state hook automatically refiles or archives
+  anything.  A manual archive action moves the subtree into central
+  =Archive.org= under a source-file heading; that archive is excluded from
+  active agenda discovery.
+- File-generation contract: external daily/weekly templates are complete Org
+  documents.  Future notes receive title, date, startup, category, and filetag
+  keywords exactly once; the source fallbacks mirror the accepted templates.
 - Existing writing-width contract: =sk-core.el= already sets default
   =fill-column= to 100, while =sk-org.el= centers a 100-column visual fill with
   soft visual wrapping.  C4 preserves and explicitly accepts that pairing
   without enabling automatic hard wrapping.
-- Boundary: Rafael completes one full representative workflow by hand.  Do not
-  replace the current Org system or automatically refile DONE tasks by default.
+- Acceptance: isolated tests cover the command surface, generated-note lint,
+  Inbox matching, review layout, and manual archive policy.  After a separately
+  approved activation, Rafael completes capture from an EXWM application,
+  clarification, refile, agenda, daily review, weekly review, completion, and
+  manual archive once by hand.
+- Boundary: do not replace the current Org system, add automatic DONE handling,
+  alter EXWM-global keys, or edit personal Org data during the source pass.
+  The 17 low-severity findings found in existing personal notes are a separate
+  explicit data-edit gate.
+- State: the source candidate and its synthetic-data tests are implemented.
+  All 100 isolated Emacs tests and the connected Guile/SBCL checks passed on
+  2026-07-25.  No Home build, activation, live load, personal-note edit,
+  commit, push, or hand acceptance has occurred.
 
 ** C5 — Give Home and XDG state explicit ownership
 

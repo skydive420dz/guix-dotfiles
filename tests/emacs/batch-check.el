@@ -1569,10 +1569,284 @@
    "org/sample.org"
    (lambda ()
      (should (eq major-mode 'org-mode))
+     (should (= fill-column 100))
      (should (bound-and-true-p visual-line-mode))
      (should (bound-and-true-p org-bullets-mode))
-     (should (bound-and-true-p visual-fill-column-mode))))
+     (should (bound-and-true-p visual-fill-column-mode))
+     (should (= visual-fill-column-width 100))
+     (should visual-fill-column-center-text)
+     (should-not auto-fill-function)
+     (evil-normal-state)
+     (should (eq (key-binding (kbd "SPC m A"))
+                 #'org-archive-subtree-default))
+     (should (eq (key-binding (kbd "SPC m r")) #'org-refile))
+     (should-not (key-binding (kbd "SPC m s r")))))
   (should-not (file-exists-p sk/org-notes-root)))
+
+(ert-deftest sk/check-org-workflow-command-surface ()
+  (dolist (command '(sk/org-open-inbox
+                     sk/org-open-daily-note
+                     sk/org-open-weekly-note
+                     sk/org-clarify-inbox
+                     sk/org-daily-review
+                     sk/org-weekly-review
+                     sk/org-workflow-help))
+    (should (commandp command)))
+  (dolist (binding '(("SPC n c" . org-capture)
+                     ("SPC n i" . sk/org-clarify-inbox)
+                     ("SPC n a" . sk/org-agenda)
+                     ("SPC n d" . sk/org-daily-review)
+                     ("SPC n w" . sk/org-weekly-review)
+                     ("SPC n h" . sk/org-workflow-help)
+                     ("SPC n t" . sk/org-open-topic-note)
+                     ("SPC n p" . sk/org-open-project-note)
+                     ("SPC n o" . sk/org-open-notes-root)
+                     ("SPC n f" . sk/org-find-note)
+                     ("SPC n s" . sk/org-search-notes)
+                     ("SPC n T" . sk/org-todo-agenda)
+                     ("SPC n R" . sk/org-refresh-agenda-files)))
+    (should (eq (lookup-key evil-normal-state-map (kbd (car binding)))
+                (cdr binding))))
+  (should-not (lookup-key evil-normal-state-map (kbd "SPC n r")))
+  (dolist (binding '(("C-c n i" . sk/org-clarify-inbox)
+                     ("C-c n d" . sk/org-open-daily-note)
+                     ("C-c n w" . sk/org-open-weekly-note)
+                     ("C-c n W" . sk/org-weekly-review)
+                     ("C-c n h" . sk/org-workflow-help)
+                     ("C-c n t" . sk/org-open-topic-note)
+                     ("C-c n p" . sk/org-open-project-note)
+                     ("C-c n o" . sk/org-open-notes-root)
+                     ("C-c n f" . sk/org-find-note)
+                     ("C-c n s" . sk/org-search-notes)
+                     ("C-c n c" . org-capture)
+                     ("C-c n a" . sk/org-agenda)
+                     ("C-c n T" . sk/org-todo-agenda)
+                     ("C-c n r" . sk/org-daily-review)
+                     ("C-c n R" . sk/org-refresh-agenda-files)
+                     ("C-c j" . org-capture)))
+    (should (eq (lookup-key global-map (kbd (car binding)))
+                (cdr binding))))
+  (should (eq (lookup-key global-map (kbd "C-c e"))
+              #'sk/window-open-eshell))
+  (should (eq (lookup-key global-map (kbd "C-c t"))
+              #'sk/window-open-term))
+  (should (commandp (lookup-key global-map (kbd "C-c p"))))
+  (should (eq (lookup-key sk/org-localleader-map (kbd "r"))
+              #'org-refile))
+  (should-not (lookup-key sk/org-subtree-map (kbd "r")))
+  (should
+   (equal (nth 3 (assoc "i" org-agenda-custom-commands))
+          "CATEGORY=\"Inbox\""))
+  (should
+   (equal org-archive-location
+          (concat (expand-file-name "Archive.org" sk/org-notes-root)
+                  "::* From %s")))
+  (should (eq org-archive-default-command #'org-archive-subtree))
+  (should-not org-archive-mark-done)
+  (should (string-match-p "C-c j[ \t]+Capture"
+                          sk/org-workflow-help-text))
+  (should (string-match-p "SPC m r"
+                          sk/org-workflow-help-text))
+  (let (target)
+    (cl-letf (((symbol-function 'sk/org-daily-file)
+               (lambda (&optional _time) "/tmp/sk-daily-fixture.org"))
+              ((symbol-function 'sk/org--ensure-heading)
+               (lambda (file heading)
+                 (setq target (list file heading))
+                 'fixture-point)))
+      (should (eq (sk/org-daily-capture-target) 'fixture-point)))
+    (should (equal target
+                   '("/tmp/sk-daily-fixture.org" "Inbox")))))
+
+(ert-deftest sk/check-org-clarify-inbox-isolated ()
+  (let* ((root (file-name-as-directory
+                (make-temp-file "sk-org-clarify-" t)))
+         (sk/org-notes-root root)
+         (org-directory root)
+         (org-agenda-files nil)
+         (inbox (expand-file-name "Inbox.org" root))
+         messages
+         inbox-buffer)
+    (unwind-protect
+        (progn
+          (with-temp-file inbox
+            (insert "#+title: Inbox\n\n"
+                    "* Inbox\n"
+                    "** TODO Folded fixture\n"))
+          (setq inbox-buffer (find-file-noselect inbox))
+          (with-current-buffer inbox-buffer
+            (org-mode)
+            (goto-char (point-min))
+            (search-forward "* Inbox")
+            (org-back-to-heading t)
+            (org-fold-hide-subtree)
+            (search-forward "Folded fixture")
+            (should (org-invisible-p)))
+          (save-window-excursion
+            (cl-letf (((symbol-function 'message)
+                       (lambda (format-string &rest arguments)
+                         (push (apply #'format-message
+                                      format-string arguments)
+                               messages))))
+              (sk/org-clarify-inbox))
+            (setq inbox-buffer (current-buffer))
+            (should (file-equal-p buffer-file-name inbox))
+            (should (derived-mode-p 'org-mode))
+            ;; Clarification deliberately lands on the first Inbox item.
+            (should (equal (org-get-heading t t t t) "Folded fixture"))
+            (save-excursion
+              (goto-char (point-min))
+              (search-forward "Folded fixture")
+              (should-not (org-invisible-p)))
+            (should (seq-some
+                     (lambda (text)
+                       (and (string-match-p "Clarify" text)
+                            (string-match-p "refile" text)))
+                     messages))))
+      (when (buffer-live-p inbox-buffer)
+        (kill-buffer inbox-buffer))
+      (delete-directory root t))))
+
+(ert-deftest sk/check-org-review-templates-and-window-policy ()
+  (require 'org-lint)
+  (let* ((root (file-name-as-directory
+                (make-temp-file "sk-org-review-" t)))
+         (sk/org-notes-root root)
+         (org-directory root)
+         (org-agenda-files nil)
+         note-buffers
+         agenda-buffers)
+    (unwind-protect
+        (progn
+          (make-directory (expand-file-name "Templates/" root) t)
+          ;; Exercise an external whole-document daily template.  Weekly
+          ;; uses the same complete-document contract.
+          (with-temp-file (expand-file-name "Templates/Daily.org" root)
+            (insert sk/org-daily-note-template))
+          (with-temp-file (expand-file-name "Templates/Weekly.org" root)
+            (insert sk/org-weekly-note-template))
+          (dolist (case '((sk/org-daily-review "d" "Daily/")
+                          (sk/org-weekly-review "w" "Weekly/")))
+            (let ((command (nth 0 case))
+                  (expected-key (nth 1 case))
+                  (expected-directory
+                   (expand-file-name (nth 2 case) root))
+                  agenda-key
+                  displayed-buffer
+                  (display-calls 0)
+                  note-buffer
+                  agenda-buffer)
+              (save-window-excursion
+                (cl-letf (((symbol-function 'org-agenda)
+                           (lambda (_prefix key)
+                             (setq agenda-key key
+                                   agenda-buffer
+                                   (get-buffer-create
+                                    (format " *sk-org-agenda-%s*" key)))
+                             (switch-to-buffer agenda-buffer)))
+                          ((symbol-function 'sk/window-display-right)
+                           (lambda (buffer &rest _arguments)
+                             (setq displayed-buffer buffer
+                                   display-calls (1+ display-calls))
+                             (selected-window)))
+                          ((symbol-function 'split-window-right)
+                           (lambda (&rest _arguments)
+                             (ert-fail "Org review used raw split-window-right")))
+                          ((symbol-function 'other-window)
+                           (lambda (&rest _arguments)
+                             (ert-fail "Org review used raw other-window"))))
+                  (funcall command))
+                (setq note-buffer (window-buffer (selected-window)))
+                (should (buffer-file-name note-buffer))
+                (should
+                 (file-in-directory-p
+                  (buffer-file-name note-buffer)
+                  expected-directory))
+                (should (equal agenda-key expected-key))
+                (should (eq displayed-buffer agenda-buffer))
+                (should (= display-calls 1)))
+              (push note-buffer note-buffers)
+              (push agenda-buffer agenda-buffers)
+              (with-temp-buffer
+                (insert-file-contents (buffer-file-name note-buffer))
+                (let ((case-fold-search t))
+                  (dolist (keyword '("title" "date" "startup"
+                                     "category" "filetags"))
+                    (goto-char (point-min))
+                    (should
+                     (= 1 (how-many
+                           (format "^#\\+%s:" keyword)
+                           (point-min) (point-max))))))
+                (org-mode)
+                (should-not (org-lint))))))
+      (dolist (buffer (append note-buffers agenda-buffers))
+        (when (buffer-live-p buffer)
+          (kill-buffer buffer)))
+      (delete-directory root t))))
+
+(ert-deftest sk/check-org-manual-central-archive ()
+  (let* ((root (file-name-as-directory
+                (make-temp-file "sk-org-archive-" t)))
+         (sk/org-notes-root root)
+         (org-directory root)
+         (org-agenda-files nil)
+         (org-archive-location (sk/org-central-archive-location))
+         (org-archive-default-command 'org-archive-subtree)
+         (org-archive-mark-done nil)
+         (tasks (expand-file-name "Tasks.org" root))
+         (archive (sk/org-archive-file))
+         tasks-buffer
+         archive-buffer)
+    (unwind-protect
+        (progn
+          (with-temp-file tasks
+            (insert "#+title: Tasks\n\n"
+                    "* TODO Keep after completion\n"
+                    "* BACKLOG Keep after project completion\n"
+                    "* TODO Archive manually\n"))
+          (setq tasks-buffer (find-file-noselect tasks))
+          (with-current-buffer tasks-buffer
+            (org-mode)
+            (goto-char (point-min))
+            (search-forward "Keep after completion")
+            (org-back-to-heading t)
+            (org-todo "DONE")
+            (should-not (file-exists-p archive))
+            (goto-char (point-min))
+            (search-forward "Keep after project completion")
+            (org-back-to-heading t)
+            (org-todo "COMPLETED")
+            (should-not (file-exists-p archive))
+            (goto-char (point-min))
+            (search-forward "Archive manually")
+            (org-back-to-heading t)
+            (org-archive-subtree-default)
+            (save-buffer)
+            (goto-char (point-min))
+            (should (search-forward "DONE Keep after completion" nil t))
+            (goto-char (point-min))
+            (should
+             (search-forward
+              "COMPLETED Keep after project completion" nil t))
+            (goto-char (point-min))
+            (should-not (search-forward "Archive manually" nil t)))
+          (should (file-exists-p archive))
+          (setq archive-buffer (find-buffer-visiting archive))
+          (with-current-buffer (or archive-buffer
+                                   (find-file-noselect archive))
+            (setq archive-buffer (current-buffer))
+            (goto-char (point-min))
+            (should (search-forward "From Tasks.org" nil t))
+            (goto-char (point-min))
+            (should (search-forward "TODO Archive manually" nil t)))
+          (should-not
+           (file-exists-p (concat tasks "_archive")))
+          (should-not
+           (member archive (sk/org-agenda-note-files))))
+      (dolist (buffer (list tasks-buffer archive-buffer))
+        (when (buffer-live-p buffer)
+          (kill-buffer buffer)))
+      (delete-directory root t))))
 
 (ert-deftest sk/check-key-surface ()
   (dolist (binding '(("SPC c f" . sk/format-buffer)

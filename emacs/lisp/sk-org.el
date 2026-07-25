@@ -24,9 +24,6 @@
 (defvar sk/org-priority-map (make-sparse-keymap)
   "Org priority commands under `sk/org-localleader-map'.")
 
-(defvar sk/org-refile-map (make-sparse-keymap)
-  "Org refile commands under `sk/org-localleader-map'.")
-
 (defvar sk/org-subtree-map (make-sparse-keymap)
   "Org subtree commands under `sk/org-localleader-map'.")
 
@@ -173,7 +170,7 @@
 (define-key sk/org-localleader-map (kbd "g") sk/org-goto-map)
 (define-key sk/org-localleader-map (kbd "l") sk/org-link-map)
 (define-key sk/org-localleader-map (kbd "p") sk/org-priority-map)
-(define-key sk/org-localleader-map (kbd "r") sk/org-refile-map)
+(define-key sk/org-localleader-map (kbd "r") #'org-refile)
 (define-key sk/org-localleader-map (kbd "s") sk/org-subtree-map)
 
 (define-key sk/org-attach-map (kbd "a") #'org-attach)
@@ -217,8 +214,6 @@
 (define-key sk/org-priority-map (kbd "p") #'org-priority)
 (define-key sk/org-priority-map (kbd "u") #'org-priority-up)
 
-(define-key sk/org-refile-map (kbd "r") #'org-refile)
-
 (define-key sk/org-subtree-map (kbd "a") #'org-toggle-archive-tag)
 (define-key sk/org-subtree-map (kbd "b") #'org-tree-to-indirect-buffer)
 (define-key sk/org-subtree-map (kbd "c") #'org-clone-subtree-with-time-shift)
@@ -228,7 +223,7 @@
 (define-key sk/org-subtree-map (kbd "k") #'org-move-subtree-up)
 (define-key sk/org-subtree-map (kbd "l") #'org-demote-subtree)
 (define-key sk/org-subtree-map (kbd "n") #'org-narrow-to-subtree)
-(define-key sk/org-subtree-map (kbd "r") #'org-refile)
+(define-key sk/org-subtree-map (kbd "r") nil)
 (define-key sk/org-subtree-map (kbd "s") #'org-sparse-tree)
 (define-key sk/org-subtree-map (kbd "A") #'org-archive-subtree-default)
 (define-key sk/org-subtree-map (kbd "N") #'widen)
