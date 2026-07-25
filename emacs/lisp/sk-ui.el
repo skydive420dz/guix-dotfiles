@@ -66,6 +66,29 @@ Terminal clients use the terminal emulator's font configuration instead.")
   (sk/setup-fonts)
   (load-theme 'modus-vivendi-tinted))
 
+(defconst sk/spacious-padding-widths
+  '( :internal-border-width 15
+     :header-line-width 4
+     :mode-line-width 6
+     :custom-button-width 3
+     :tab-width 4
+     :right-divider-width 30
+     :scroll-bar-width 8
+     :fringe-width 10)
+  "Accepted Emacs UI spacing in pixels.
+These are Spacious Padding 0.8.0's stable defaults except that the fringe
+width preserves GuixPC's existing ten-pixel frame contract.")
+
+(use-package spacious-padding
+  ;; The source-linked configuration must remain loadable before the separately
+  ;; authorized Home activation makes this declared package visible.
+  :if (locate-library "spacious-padding")
+  :config
+  (setq spacious-padding-widths (copy-tree sk/spacious-padding-widths)
+        ;; Preserve the generated Modus mode/header-line colors.
+        spacious-padding-subtle-frame-lines nil)
+  (spacious-padding-mode 1))
+
 (use-package all-the-icons
   :if (locate-library "all-the-icons"))
 

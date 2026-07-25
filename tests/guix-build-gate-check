@@ -430,8 +430,8 @@ printf '%s\n' candidate-guile-ready
 EOF
 chmod +x "$fake_home/profile/bin/guile"
 for library in clojure-mode-0 eshell-syntax-highlighting-0 geiser-0 \
-    geiser-guile-0 org-0 package-lint-0 puni-0 sly-0 use-package-0 \
-    yasnippet-0; do
+    geiser-guile-0 org-0 package-lint-0 puni-0 sly-0 spacious-padding-0 \
+    use-package-0 yasnippet-0; do
     mkdir -p "$fake_home/profile/share/emacs/site-lisp/$library"
 done
 for editor in racket fennel; do
@@ -478,7 +478,8 @@ printf '%s\n' curl git fish emacs emacs-exwm bluez ncurses ripgrep vim \
     xset xwallpaper picom xrandr >"$fake_recovery_names"
 printf '%s\n' fish-foreign-env emacs emacs-geiser \
     emacs-sly emacs-puni emacs-eshell-syntax-highlighting emacs-yasnippet \
-    emacs-package-lint emacs-clojure-mode emacs-fennel-mode \
+    emacs-package-lint emacs-spacious-padding \
+    emacs-clojure-mode emacs-fennel-mode \
     emacs-racket-mode cljfmt clj-kondo \
     dunst polkit-gnome maim xclip \
     font-awesome font-google-material-design-icons papirus-icon-theme \
@@ -511,7 +512,8 @@ reset_fake_home_manifest() {
         emacs emacs-eshell-syntax-highlighting \
         emacs-geiser emacs-puni emacs-sly emacs-yasnippet \
         emacs-clojure-mode emacs-fennel-mode emacs-racket-mode fish \
-        emacs-package-lint fish-foreign-env cljfmt clj-kondo guile \
+        emacs-package-lint emacs-spacious-padding \
+        fish-foreign-env cljfmt clj-kondo guile \
         dunst polkit-gnome maim xclip \
         lua-language-server python-lsp-server ranger sbcl shellcheck \
         ungoogled-chromium
@@ -1079,7 +1081,7 @@ printf '%s\n' 'function fenv.main' 'end' \
     >"$fake_home/profile/share/fish/functions/fenv.main.fish"
 
 for library in clojure-mode eshell-syntax-highlighting fennel-mode \
-    package-lint puni racket-mode yasnippet; do
+    package-lint puni racket-mode spacious-padding yasnippet; do
     mv "$fake_home/profile/share/emacs/site-lisp/$library-0" \
         "$tmp/$library-0.absent"
     if output=$(run_gate 2>&1); then
@@ -1103,7 +1105,7 @@ done
 
 for package in emacs-clojure-mode emacs-eshell-syntax-highlighting \
     emacs-fennel-mode emacs-package-lint emacs-puni emacs-racket-mode \
-    emacs-yasnippet cljfmt clj-kondo; do
+    emacs-spacious-padding emacs-yasnippet cljfmt clj-kondo; do
     remove_fake_manifest_package "$fake_home_manifest" "$package"
     if output=$(run_gate 2>&1); then
         fail "Home manifest missing declared $package passed the gate"

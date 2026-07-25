@@ -326,6 +326,58 @@
                         (frame-parameter
                          frame 'sk-theme-symbol-fonts-configured)))
                  exwm-workspace--list)))
+         (cons "spacious padding policy"
+               (or
+                ;; The running pre-activation Emacs has not loaded candidate
+                ;; source yet.  Once it has, package and runtime state are
+                ;; mandatory together.
+                (not (boundp 'sk/spacious-padding-widths))
+                (and
+                 (featurep 'spacious-padding)
+                 (bound-and-true-p spacious-padding-mode)
+                 (equal
+                  spacious-padding-widths
+                  sk/spacious-padding-widths)
+                 (not spacious-padding-subtle-frame-lines)
+                 (funcall
+                  owned-library-p
+                  "spacious-padding"
+                  "spacious-padding-[0-9]*")
+                 (= 1
+                    (cl-count
+                     #'spacious-padding-set-parameters-of-frame
+                     after-make-frame-functions
+                     :test #'eq))
+                 (= 1
+                    (cl-count
+                     #'spacious-padding-set-faces
+                     enable-theme-functions
+                     :test #'eq))
+                 (= 1
+                    (cl-count
+                     #'spacious-padding-set-parameters-of-selected-frame
+                     server-after-make-frame-hook
+                     :test #'eq))
+                 (= 1
+                    (cl-count
+                     #'spacious-padding--enable-mode
+                     window-divider-mode-hook
+                     :test #'eq))
+                 (seq-every-p
+                  (lambda (frame)
+                    (and
+                     (equal
+                      (frame-parameter frame 'internal-border-width)
+                      15)
+                     (equal
+                      (frame-parameter frame 'right-divider-width)
+                      30)
+                     (equal (frame-parameter frame 'left-fringe) 10)
+                     (equal (frame-parameter frame 'right-fringe) 10)
+                     (equal
+                      (frame-parameter frame 'scroll-bar-width)
+                      8)))
+                  exwm-workspace--list))))
          (cons "startup opacity release"
                (or
                 ;; Pre-activation sessions do not yet define the gate.  This

@@ -569,8 +569,8 @@ validate_home_profile_artifacts() {
     done
 
     for library in clojure-mode eshell-syntax-highlighting fennel-mode geiser \
-        geiser-guile org package-lint puni racket-mode sly use-package \
-        yasnippet; do
+        geiser-guile org package-lint puni racket-mode sly spacious-padding \
+        use-package yasnippet; do
         found=0
         for path in "$profile/share/emacs/site-lisp/$library"-*; do
             if [ -e "$path" ]; then

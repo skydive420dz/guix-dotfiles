@@ -47,21 +47,21 @@
            "ripgrep" "vim" "xset" "xwallpaper" "picom" "xrandr"))
  "reviewed 13-package recovery floor changed")
 
-(assert (= (length home-specifications) 92)
-        "reviewed Home specification list must contain exactly 92 packages")
+(assert (= (length home-specifications) 93)
+        "reviewed Home specification list must contain exactly 93 packages")
 (assert (equal? home-output-specifications '("gtk:out" "gtk:bin"))
         "reviewed Home output specifications changed")
 (assert (equal? home-output-names '("gtk"))
         "reviewed Home output package names changed")
 (assert (equal? home-explicit '("emacs-racket-mode"))
         "reviewed explicit Home package names changed")
-(assert (= (length home) 94)
-        "reviewed Home ownership must contain exactly 94 unique package names")
+(assert (= (length home) 95)
+        "reviewed Home ownership must contain exactly 95 unique package names")
 (assert (= (+ (length home-specifications)
               (length home-output-specifications)
               (length home-explicit))
-           95)
-        "reviewed Home declaration must contain exactly 95 selections")
+           96)
+        "reviewed Home declaration must contain exactly 96 selections")
 (assert
  (equal? home
          (append home-specifications home-output-names home-explicit))
@@ -73,7 +73,8 @@
            (string-append "Home ownership lost " specification)))
  '("fish-foreign-env" "emacs" "emacs-use-package" "emacs-geiser" "emacs-sly"
    "emacs-puni" "emacs-eshell-syntax-highlighting" "emacs-yasnippet"
-   "emacs-package-lint" "emacs-clojure-mode" "cljfmt" "clj-kondo"
+   "emacs-package-lint" "emacs-spacious-padding"
+   "emacs-clojure-mode" "cljfmt" "clj-kondo"
    "emacs-racket-mode" "emacs-fennel-mode"
    "guile" "sbcl" "python-lsp-server" "lua-language-server"
    "ungoogled-chromium" "ranger" "shellcheck" "dunst" "polkit-gnome"
@@ -198,7 +199,8 @@
  '("ungoogled-chromium" "ranger" "emacs-use-package" "emacs-geiser"
    "dunst" "polkit-gnome" "maim" "xclip"
    "emacs-sly" "emacs-puni" "emacs-eshell-syntax-highlighting"
-   "emacs-package-lint" "emacs-clojure-mode" "cljfmt" "clj-kondo"
+   "emacs-package-lint" "emacs-spacious-padding"
+   "emacs-clojure-mode" "cljfmt" "clj-kondo"
    "emacs-fennel-mode"
    "sbcl" "python-lsp-server" "lua-language-server"
    "gcc-toolchain" "gdb" "shellcheck" "babashka" "clojure"

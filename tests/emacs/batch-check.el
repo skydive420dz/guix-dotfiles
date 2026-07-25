@@ -234,6 +234,49 @@
       (when (file-exists-p mutable-adapter)
         (delete-file mutable-adapter)))))
 
+(ert-deftest sk/check-spacious-padding-contract ()
+  (should
+   (equal
+    sk/spacious-padding-widths
+    '( :internal-border-width 15
+       :header-line-width 4
+       :mode-line-width 6
+       :custom-button-width 3
+       :tab-width 4
+       :right-divider-width 30
+       :scroll-bar-width 8
+       :fringe-width 10)))
+  (when (locate-library "spacious-padding")
+    (should (featurep 'spacious-padding))
+    (should (bound-and-true-p spacious-padding-mode))
+    (should (equal spacious-padding-widths
+                   sk/spacious-padding-widths))
+    (should-not spacious-padding-subtle-frame-lines)
+    (should
+     (= 1
+        (cl-count
+         #'spacious-padding-set-parameters-of-frame
+         after-make-frame-functions
+         :test #'eq)))
+    (should
+     (= 1
+        (cl-count
+         #'spacious-padding-set-faces
+         enable-theme-functions
+         :test #'eq)))
+    (should
+     (= 1
+        (cl-count
+         #'spacious-padding-set-parameters-of-selected-frame
+         server-after-make-frame-hook
+         :test #'eq)))
+    (should
+     (= 1
+        (cl-count
+         #'spacious-padding--enable-mode
+         window-divider-mode-hook
+         :test #'eq)))))
+
 (ert-deftest sk/check-generated-theme-loader-is-idempotent ()
   "An accepted immutable adapter is loaded once and must provide its feature."
   (let ((adapter
