@@ -38,6 +38,40 @@ Section \"Monitor\"
   Option \"PreferredMode\" \"3440x1440_100\"
 EndSection")
 
+(define %guixpc-firewall-ruleset
+  (plain-file
+   "guixpc-nftables.conf"
+   "\
+table inet filter {
+  chain input {
+    type filter hook input priority 0; policy drop;
+
+    ct state invalid drop
+    ct state { established, related } accept
+    iif lo accept
+    iif != lo ip daddr 127.0.0.1/8 drop
+    iif != lo ip6 daddr ::1/128 drop
+
+    ip protocol icmp accept
+    ip6 nexthdr icmpv6 accept
+
+    udp sport 67 udp dport 68 accept
+    udp sport 547 udp dport 546 accept
+    ip daddr 224.0.0.251 udp dport 5353 accept
+    ip6 daddr ff02::fb udp dport 5353 accept
+    ip saddr 192.168.1.0/24 tcp dport 22 accept
+
+    reject with icmpx type port-unreachable
+  }
+  chain forward {
+    type filter hook forward priority 0; policy drop;
+  }
+  chain output {
+    type filter hook output priority 0; policy accept;
+  }
+}
+"))
+
 ((nonguix-transformation-guix)
  ((nonguix-transformation-linux)
   (operating-system
@@ -79,7 +113,12 @@ EndSection")
      (modify-services
       (append
        (list
-        (service openssh-service-type)
+        (service openssh-service-type
+                 (openssh-configuration
+                  (password-authentication? #f)))
+        (service nftables-service-type
+                 (nftables-configuration
+                  (ruleset %guixpc-firewall-ruleset)))
         ;; Keep the controller available before a paired speaker powers on.
         ;; Guix defaults this to false, so the adapter can still be off during
         ;; the Bose's startup reconnect attempt.
