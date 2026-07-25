@@ -1,0 +1,135 @@
+#+title: C5 Home and XDG Ownership
+#+date: 2026-07-25
+#+startup: overview
+
+* Purpose
+
+C5 gives the existing guixpc Home and XDG layout explicit ownership without
+turning hygiene into a filesystem-management framework.  The companion
+=scripts/home-xdg-audit.scm= is a read-only Guile program with a static
+one-level manifest.
+
+The program reads only:
+
+- existence, type, owner, mode, link target, and reported file size;
+- the direct children of =~=, =~/.config=, =~/.local=,
+  =~/.local/share=, =~/.local/state=, and =~/.cache=.
+
+It does not read file contents, follow personal directory trees, call Guix,
+write state, delete or move paths, activate Home, or run garbage collection.
+Each result is emitted as a quoted Scheme record so unusual filenames cannot
+corrupt the report.
+
+* Audited baseline
+
+- Repository: clean published =main= at =d49381d=.
+- Frozen branch: =d703717b551a0d4751282953f989341ecbb4edd2=, untouched.
+- Active Home: generation 52,
+  =/gnu/store/lr4dhsy2l8y2mfmf96rfn23pmb22g3nl-home=.
+- =~= is mode =0700= on a separate 149 GiB ext4 filesystem.
+- Home usage is 2.7 GiB; 2.3 GiB is under =~/.cache=.
+- The Guix entrypoint check passes 3/3 links.
+- The Home repository-link preflight passes 14 live links and one retired
+  Kitty transition.
+- All 18 files in the active Home result match their live store-backed links.
+- No world-writable Home path or broken top-level repository link was found.
+
+* Ownership classes
+
+| Class | Meaning | Current policy |
+|-------+---------+----------------|
+| declarative | Guix Home, Guix profile, or repository-owned configuration | verify and keep |
+| durable-synchronized | user data intended for the later private Org synchronization slice | keep untouched |
+| durable-local | valuable machine-local data and application state | keep |
+| secret | authentication or private trust material | keep private and outside cleanup |
+| state-log | logs or state that belongs below XDG state | keep or propose a targeted migration |
+| cache | reproducible or disposable acceleration data | keep while capacity is healthy |
+| runtime | session-only authentication or coordination data | leave to its runtime owner |
+| mixed | a directory containing more than one ownership class | require targeted handling |
+| legacy | an older conventional location with no demonstrated current defect | review, never delete implicitly |
+| unknown | no legitimate owner established | exact review candidate |
+
+* Current classification
+
+** Keep untouched
+
+- =~/Documents= and its Org data;
+- =~/Projects=, =~/Downloads=, Chromium's durable profile, and application
+  histories;
+- =~/.ssh=, =~/.gnupg=, =~/.local/share/pki=, and =~/.Xauthority=;
+- Guix recovery material and the legacy Kitty rollback copy;
+- Pulse, WirePlumber, Fish, Ranger, and Emacs durable state.
+
+** Keep as cache
+
+The large cache trees are not a capacity problem:
+
+- Guix: 1.3 GiB, chiefly channel checkouts;
+- Chromium: 923 MiB;
+- Emacs: 103 MiB, including the active profile-keyed native cache.
+
+Removing them would affect the roomy =/home= filesystem, not the separate root
+filesystem.  C5 therefore adds no cache purge or schedule.
+
+** Review candidates
+
+- two zero-byte unknown Home entries: === and a filename containing =%l=
+  followed by a newline;
+- =~/.geiser_history.guile= is mode =0644= while comparable histories are
+  =0600=;
+- =~/.emacs.d= mixes three repository links with legacy cache and durable
+  editor state;
+- =~/.emacs.d/eln-cache= is not on the live native-comp load path;
+- =~/.emacs.d/eln-cache.quarantine-20260713-slice19= remains an explicit
+  quarantine;
+- =~/.cache/sk-exwm-startx.log= is a legacy log; current logs are correctly
+  under =~/.local/state/sk-exwm=;
+- Xorg logs remain under =~/.local/share/xorg=;
+- =~/.ruff_cache= is a small rebuildable cache created at Home root.
+
+These are proposals only.  No path is moved, removed, or chmodded by C5a.
+
+* Guix estimator incident
+
+During the inventory, the documented retention =estimate= action called
+Guix's =find-roots=.  Guix automatically removed 26 auto-root symlinks whose
+profile-cache targets were already absent.
+
+No store item, generation, configuration, or user data was deleted.  Current
+and booted System still match, Home generation 52 remains active, and the
+repository is unchanged.  Nevertheless, removing dangling root metadata is a
+mutation, so the action is not strictly read-only.
+
+C5 will not call that estimator again.  Correcting its contract is parked for
+C10 and must not revive the frozen pruning experiment.
+
+* Running the audit
+
+From the repository root:
+
+#+begin_src sh
+guile --no-auto-compile -s scripts/home-xdg-audit.scm
+#+end_src
+
+The command exits nonzero only for an ownership, type, permission, or expected
+link-target failure.  Known candidates and newly observed direct children
+produce =review= records without changing the filesystem.
+
+The 2026-07-25 live run reported =105 pass=, =10 review=, =0 fail=, and
+=0 absent=.  No unclassified direct child was found.  The ten review records
+are the two unknown files, =~/.clojure=, =~/.dbus=, =~/.emacs.d= as one mixed
+tree, the Geiser history, =~/.ruff_cache=, =~/.local/share/xorg=,
+=~/.cache/emacs=, and the legacy EXWM log.
+
+* Bounded next decision
+
+After this source is reviewed, any live correction requires a separate exact
+manifest and authorization.  The likely first batch is limited to the two
+zero-byte unknown entries and the Geiser history permission.  Emacs state
+migration, cache removal, Guix recovery cleanup, and log relocation are not
+implicitly authorized by that batch.
+
+* State
+
+C5a source candidate only.  No Home path, service, generation, personal file,
+or declarative link is changed by this checkpoint.
