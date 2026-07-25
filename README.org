@@ -509,6 +509,9 @@ Every later slice remains unauthorized.
   An Emacs view renders the same state.
 - Boundary: read-only inspection only.  Do not add a daemon, database,
   telemetry collector, or a parallel source of machine truth.
+- State: closed and accepted live on 2026-07-25 at published implementation
+  checkpoint =f94cbf0=.  See
+  [[file:docs/audits/2026-07-25-c6-lisp-native-status.org][the C6 contract, validation, and acceptance record]].
 
 ** C7 — Make Git, SSH, and GPG behavior declarative and testable
 

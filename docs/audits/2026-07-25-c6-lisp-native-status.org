@@ -1,0 +1,96 @@
+#+title: C6 Lisp-native System Status
+#+date: 2026-07-25
+#+startup: overview
+
+* Purpose
+
+C6 provides one on-demand, read-only view of the operating state already
+owned by Guix, Emacs/EXWM, Home Shepherd, BlueZ, PipeWire/WirePlumber, and
+NetworkManager.  It does not become another source of machine truth.
+
+The published implementation checkpoint is =f94cbf0=.
+
+* Interface
+
+=scripts/sk-status= is an executable Guile program.  With no arguments it
+emits exactly one newline-terminated =sk-status/v1= expression containing:
+
+- current System, Home, and Pull generation numbers and direct link matches;
+- Emacs server identity and EXWM workspace state;
+- Home Shepherd and the canonical user D-Bus;
+- PipeWire, WirePlumber, and Pulse compatibility;
+- Bluetooth controller state and connected-device count;
+- normalized NetworkManager connection and connectivity state;
+- stable findings with informational, warning, or critical severity and
+  non-executable recovery guidance.
+
+The expression uses only proper lists, symbols, strings, and exact integers,
+so both Guile and Emacs can read it.  A valid observation exits zero even when
+its =overall= value is =degraded= or =critical=.  Exit 1 is reserved for an
+internal failure to produce a valid expression; invalid invocation exits 2.
+
+=M-x sk/status= and =SPC o s= open =*SK Status*= in the established right
+utility window.  The Emacs reader consumes and validates the complete fixed
+schema before rendering it.  The view has only two actions:
+
+- =g=: request one new asynchronous snapshot;
+- =q=: close the utility window.
+
+* Read-only boundary
+
+The observer reads exact generation links directly.  It never invokes Guix,
+=find-roots=, garbage collection, generation enumeration, reconfiguration, or
+activation.
+
+External probes use fixed direct argument vectors and bounded execution.
+Their raw output is reduced to accepted fields.  The expression does not emit
+usernames, Home paths, store hashes, SSIDs, IP addresses, MAC addresses,
+Bluetooth names or addresses, connection names, logs, or raw errors.
+
+C6 performs no audio playback and does not read =journalctl= or =dmesg=.  It
+has no daemon, timer, polling loop, cache, database, telemetry, repair action,
+service-control action, or persistent state.
+
+Storage health remains C11.  Bluetooth, audio, and network controls remain
+C13, C14, and C15 respectively.
+
+* Validation
+
+The source checkpoint passed:
+
+- Guile compilation with warnings enabled;
+- the focused synthetic generation, parser, privacy, normalization, and
+  finding tests in =tests/sk-status-check=;
+- one passive live =sk-status/v1= observation;
+- a real Guile-to-Emacs cross-reader check;
+- a real isolated asynchronous Emacs render;
+- all 102 profile-aware Emacs batch tests;
+- the connected Geiser/Guile and SLY/SBCL backend checks;
+- repository whitespace and exact staged-path checks.
+
+The accepted live observation reported:
+
+- System generation 87, Home generation 52, and Pull generation 5;
+- current, active, and booted generation links matching;
+- Emacs 30.2 with EXWM and five workspaces;
+- healthy Shepherd, D-Bus, PipeWire, WirePlumber, and Pulse compatibility;
+- one powered Bluetooth controller;
+- NetworkManager running with full connectivity;
+- =overall ok= and no findings.
+
+No Guix Home or System build, activation, or reconfiguration was required.
+
+* Live acceptance
+
+After the implementation checkpoint was published, Rafael reported that all
+requested screen-side checks passed:
+
+- =SPC o s= opened the right-side status view;
+- the view showed =Overall: ok=;
+- =g= refreshed the observation;
+- =q= closed the view and returned focus normally.
+
+* State
+
+C6 is closed and accepted live on 2026-07-25 at published checkpoint
+=f94cbf0=.  This documentation closeout is a separate repository checkpoint.
