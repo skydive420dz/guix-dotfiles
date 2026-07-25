@@ -533,6 +533,11 @@ Every later slice remains unauthorized.
   fresh-clone, conflict, and restore workflow.
 - Boundary: synchronization and version history are not described as a full
   backup.  Do not enroll secrets or unrelated mutable data implicitly.
+- State: closed and accepted live on 2026-07-25.  The private =sk-org= remote
+  holds 24 Org files plus the ignore policy at signed root checkpoint
+  =89cdfb6=.  Authenticated SSH matched that checkpoint while anonymous access
+  exposed nothing; fresh-clone, tracked-file restore, and divergent
+  =pull --ff-only= refusal tests passed without changing the real remote.
 
 ** C9 — Rehearse security, updates, and rollback
 
