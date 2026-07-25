@@ -1,5 +1,5 @@
 # SYNTHETIC FIXTURE - DO NOT INSTALL
-# schema=2 palette=synthetic fixture only
+# schema=3 palette=synthetic fixture only
 [global]
     font = Fixture UI 13
     background = "#181818"

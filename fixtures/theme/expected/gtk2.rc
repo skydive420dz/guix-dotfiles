@@ -1,0 +1,9 @@
+# SYNTHETIC FIXTURE - DO NOT INSTALL
+# schema=3 palette=synthetic fixture only
+# GTK 2 policy: logical-dpi=96 scale=1 ownership=inherit-verified
+# Scaling is verified externally; this file emits no scale override.
+gtk-theme-name = "Fixture-GTK2-Dark"
+gtk-icon-theme-name = "Fixture-Icons"
+gtk-font-name = "Fixture UI 13"
+gtk-cursor-theme-name = "Fixture-Cursor"
+gtk-cursor-theme-size = 24

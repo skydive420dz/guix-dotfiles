@@ -192,10 +192,39 @@
                    valid?)
                   (loop (cdr lines) sections entries #f)))))))))
 
+(define (gtk2-settings-entries text)
+  ;; GTK 2 consumes gtkrc assignments rather than the GTK 3/4 GKeyFile
+  ;; format.  Accept only the generated one-assignment-per-line subset.
+  (let loop ((lines (string-split text #\newline))
+             (entries '())
+             (valid? #t))
+    (if (null? lines)
+        (and valid? (reverse entries))
+        (let ((line (car lines)))
+          (cond
+           ((or (string-null? line)
+                (string-prefix? "#" line))
+            (loop (cdr lines) entries valid?))
+           (else
+            (let ((separator (string-contains line " = ")))
+              (if (and separator
+                       (> separator 0)
+                       (< (+ separator 3) (string-length line))
+                       (not (string-contains line " = " (+ separator 3))))
+                  (loop
+                   (cdr lines)
+                   (cons
+                    (cons (substring line 0 separator)
+                          (substring line (+ separator 3)))
+                    entries)
+                   valid?)
+                  (loop (cdr lines) entries #f)))))))))
+
 (define %expected-paths
   '((emacs . "emacs.el")
     (kitty . "kitty.conf")
     (fish . "fish.fish")
+    (gtk2 . "gtk2.rc")
     (gtk3 . "gtk3.ini")
     (gtk4 . "gtk4.ini")
     (dunst . "dunstrc")
@@ -265,6 +294,7 @@
 
 (define %expected-production-desktop
   '((color-scheme . dark)
+    (gtk2-theme . "Adwaita-dark")
     (gtk3-theme . "Adwaita")
     (gtk4-theme . "Adwaita")
     (icon-theme . "Papirus-Dark")
@@ -295,8 +325,8 @@
 
 (check (null? (sk:theme-validation-errors %theme))
        "synthetic fixture failed validation")
-(check-equal (assq-ref %theme 'schema-version) 2
-             "synthetic fixture is not schema v2")
+(check-equal (assq-ref %theme 'schema-version) 3
+             "synthetic fixture is not schema v3")
 (check (null? (sk:theme-asset-errors %theme %asset-root))
        "synthetic fixture asset failed explicit-root validation")
 (check-equal (map car %outputs) %sk-theme-targets
@@ -540,6 +570,42 @@
      "fish_pager_color_selected_description")))
 
 (for-each
+ (lambda (outputs label expected)
+   (let ((entries
+          (gtk2-settings-entries (assq-ref outputs 'gtk2))))
+     (check entries
+            (string-append label " GTK 2 output is not valid gtkrc"))
+     (when entries
+       (check-equal
+        entries
+        expected
+        (string-append label " GTK 2 setting order or values drifted"))
+       (check (= (length entries)
+                 (length (delete-duplicates
+                          (map car entries) string=?)))
+              (string-append label
+                             " GTK 2 contains duplicate setting keys")))
+     (check (not (string-contains (assq-ref outputs 'gtk2)
+                                  "gtk.css"))
+            (string-append label " GTK 2 unexpectedly emits CSS"))
+     (check (not (string-contains (assq-ref outputs 'gtk2)
+                                  "gtk-xft-dpi"))
+            (string-append label " GTK 2 unexpectedly forces DPI"))))
+ (list %outputs %production-outputs)
+ '("fixture" "production")
+ (list
+  '(("gtk-theme-name" . "\"Fixture-GTK2-Dark\"")
+    ("gtk-icon-theme-name" . "\"Fixture-Icons\"")
+    ("gtk-font-name" . "\"Fixture UI 13\"")
+    ("gtk-cursor-theme-name" . "\"Fixture-Cursor\"")
+    ("gtk-cursor-theme-size" . "24"))
+  '(("gtk-theme-name" . "\"Adwaita-dark\"")
+    ("gtk-icon-theme-name" . "\"Papirus-Dark\"")
+    ("gtk-font-name" . "\"JetBrainsMono Nerd Font 11\"")
+    ("gtk-cursor-theme-name" . "\"Bibata-Modern-Ice\"")
+    ("gtk-cursor-theme-size" . "32"))))
+
+(for-each
  (lambda (case)
    (let* ((target (car case))
           (expected-keys (cdr case))
@@ -621,8 +687,8 @@
 ;; do not imply Home wiring, a Guix build, activation, or live consumption.
 (check (null? (sk:theme-validation-errors %production-theme))
        "production theme failed validation")
-(check-equal (assq-ref %production-theme 'schema-version) 2
-             "production theme is not schema v2")
+(check-equal (assq-ref %production-theme 'schema-version) 3
+             "production theme is not schema v3")
 (check (null? (sk:theme-asset-errors %production-theme %repo))
        "production theme asset failed explicit-repository validation")
 (check-equal (assq-ref %production-theme 'kind) 'production
@@ -752,6 +818,12 @@
     ,(format #f "set -g -- fish_color_autosuggestion '~a'"
              (production-role-without-hash 'text-disabled))
     "production Fish autosuggestion role drifted")
+   (gtk2
+    "gtk-theme-name = \"Adwaita-dark\""
+    "production GTK 2 base drifted")
+   (gtk2
+    "gtk-font-name = \"JetBrainsMono Nerd Font 11\""
+    "production GTK 2 font drifted")
    (gtk3
     "gtk-theme-name=Adwaita"
     "production GTK 3 base drifted")
@@ -864,14 +936,22 @@
        "missing top-level key passed")
 (check (has-code? (append %theme '((surprise . #t))) 'unknown-key)
        "unknown top-level key passed")
-(check (has-code? (alist-replace %theme 'schema-version 1)
+(check (has-code? (alist-replace %theme 'schema-version 2)
                   'unsupported-schema)
-       "schema v1 passed the schema v2 validator")
+       "schema v2 passed the schema v3 validator")
 (let ((masquerade (alist-replace %theme 'kind 'production)))
   (check (has-code? masquerade 'invalid-production-identity)
          "synthetic fixture identities passed as production")
   (check (throws-theme-error? (lambda () (sk:render-all masquerade)))
          "invalid production masquerade rendered"))
+(check
+ (has-code?
+  (mutate-group
+   %production-theme 'desktop
+   (lambda (desktop)
+     (alist-replace desktop 'gtk2-theme "Adwaita")))
+  'invalid-production-identity)
+ "unaccepted GTK 2 light base passed as production")
 (check
  (has-code?
   (mutate-group
@@ -1161,13 +1241,13 @@
 (check
  (has-code?
   (alist-replace %theme 'targets
-                 '(emacs kitty fish gtk3 gtk4 dunst qt))
+                 '(emacs kitty fish gtk2 gtk3 gtk4 dunst qt))
   'invalid-target-set)
  "Qt target passed")
 (check
  (has-code?
   (alist-replace %theme 'targets
-                 '(kitty emacs fish gtk3 gtk4 dunst x-session))
+                 '(kitty emacs fish gtk2 gtk3 gtk4 dunst x-session))
   'invalid-target-set)
  "reordered target list passed")
 (check

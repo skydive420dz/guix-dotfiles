@@ -40,6 +40,8 @@
     (".geiser_history.guile"
      durable-local application regular review-private keep #f #f)
     (".gnupg" secret user directory private keep #t #f)
+    (".gtkrc-2.0" declarative guix-home symlink any keep #t
+     (home-file ".gtkrc-2.0"))
     (".guile" declarative repo symlink any keep #t (repo "guile/guile"))
     (".guile_history" durable-local application regular private keep #f #f)
     (".guix-home" declarative guix-home symlink any keep #t

@@ -15,8 +15,9 @@
             sk:render-all))
 
 (define %sk-theme-error-key 'sk-theme-invalid)
-(define %sk-theme-schema-version 2)
-(define %sk-theme-targets '(emacs kitty fish gtk3 gtk4 dunst x-session))
+(define %sk-theme-schema-version 3)
+(define %sk-theme-targets
+  '(emacs kitty fish gtk2 gtk3 gtk4 dunst x-session))
 
 (define %top-level-keys
   '(schema-version
@@ -111,6 +112,7 @@
 
 (define %desktop-keys
   '(color-scheme
+    gtk2-theme
     gtk3-theme
     gtk4-theme
     icon-theme
@@ -703,6 +705,7 @@
                   (object-ref desktop key)
                   expected)))
        '((color-scheme dark)
+         (gtk2-theme "Adwaita-dark")
          (gtk3-theme "Adwaita")
          (gtk4-theme "Adwaita")
          (icon-theme "Papirus-Dark")
@@ -868,7 +871,8 @@
                  (unless (safe-name? (object-ref desktop key))
                    (add-error 'invalid-name (list 'desktop key)
                               "desktop identity contains unsupported characters")))
-               '(gtk3-theme
+               '(gtk2-theme
+                 gtk3-theme
                  gtk4-theme
                  icon-theme
                  cursor-theme
@@ -1059,7 +1063,7 @@
 
             (unless (equal? targets %sk-theme-targets)
               (add-error 'invalid-target-set '(targets)
-                         "target list must be the exact six-target order"))
+                         "target list must be the exact eight-target order"))
 
             (validate-accepted-production-identities!
              add-error
@@ -1448,6 +1452,27 @@
           (typography theme 'ui-family)
           (typography theme 'ui-size-pt)))
 
+(define (render-gtk2 theme)
+  (lines->text
+   (append
+    (header-lines theme "#")
+    (list
+     (format #f
+             "# GTK 2 policy: logical-dpi=~a scale=~a ownership=~a"
+             (desktop theme 'logical-dpi)
+             (desktop theme 'integer-scale)
+             (desktop theme 'scale-ownership))
+     "# Scaling is verified externally; this file emits no scale override."
+     (format #f "gtk-theme-name = ~s"
+             (desktop theme 'gtk2-theme))
+     (format #f "gtk-icon-theme-name = ~s"
+             (desktop theme 'icon-theme))
+     (format #f "gtk-font-name = ~s" (font-setting theme))
+     (format #f "gtk-cursor-theme-name = ~s"
+             (desktop theme 'cursor-theme))
+     (format #f "gtk-cursor-theme-size = ~a"
+             (desktop theme 'cursor-size-px))))))
+
 (define (render-gtk theme version)
   (let ((gtk-theme (if (= version 3)
                        (desktop theme 'gtk3-theme)
@@ -1552,6 +1577,7 @@
     ((emacs) (render-emacs theme))
     ((kitty) (render-kitty theme))
     ((fish) (render-fish theme))
+    ((gtk2) (render-gtk2 theme))
     ((gtk3) (render-gtk theme 3))
     ((gtk4) (render-gtk theme 4))
     ((dunst) (render-dunst theme))

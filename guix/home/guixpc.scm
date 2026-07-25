@@ -91,6 +91,12 @@
  (services
   (append
    (list
+   (simple-service 'sk-theme-environment
+                   home-environment-variables-service-type
+                   (sk:theme-home-environment-variables))
+   (simple-service 'sk-theme-home-files
+                   home-files-service-type
+                   (sk:theme-home-files %theme-home-bundle))
    (simple-service 'sk-theme-xdg-configuration
                    home-xdg-configuration-files-service-type
                    (sk:theme-home-xdg-configuration-files

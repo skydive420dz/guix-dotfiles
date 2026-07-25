@@ -1,4 +1,4 @@
-'((schema-version . 2)
+'((schema-version . 3)
   (kind . fixture)
   (provenance
    (palette-authority . frozen-modus-subset)
@@ -55,6 +55,7 @@
     "Fixture Emoji"))
   (desktop
    (color-scheme . dark)
+   (gtk2-theme . "Fixture-GTK2-Dark")
    (gtk3-theme . "Fixture-Dark")
    (gtk4-theme . "Fixture")
    (icon-theme . "Fixture-Icons")
@@ -263,4 +264,4 @@
      (foreground . on-selection)
      (background . selection)
      (attributes italics))))
-  (targets emacs kitty fish gtk3 gtk4 dunst x-session))
+  (targets emacs kitty fish gtk2 gtk3 gtk4 dunst x-session))

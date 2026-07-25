@@ -1,4 +1,4 @@
-'((schema-version . 2)
+'((schema-version . 3)
   (kind . production)
   (provenance
    (palette-authority . frozen-modus-subset)
@@ -57,6 +57,7 @@
     "Material Icons"))
   (desktop
    (color-scheme . dark)
+   (gtk2-theme . "Adwaita-dark")
    (gtk3-theme . "Adwaita")
    (gtk4-theme . "Adwaita")
    (icon-theme . "Papirus-Dark")
@@ -265,4 +266,4 @@
      (foreground . on-selection)
      (background . selection)
      (attributes italics))))
-  (targets emacs kitty fish gtk3 gtk4 dunst x-session))
+  (targets emacs kitty fish gtk2 gtk3 gtk4 dunst x-session))

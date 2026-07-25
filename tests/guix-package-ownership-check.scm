@@ -38,6 +38,8 @@
 (define desktop-integration-source
   (read-file
    (string-append repo "/guix/modules/sk/desktop-integration.scm")))
+(define theme-home-source
+  (read-file (string-append repo "/guix/modules/sk/theme-home.scm")))
 (define desktop-session-source
   (read-file (string-append repo "/scripts/desktop-session-check")))
 
@@ -47,21 +49,21 @@
            "ripgrep" "vim" "xset" "xwallpaper" "picom" "xrandr"))
  "reviewed 13-package recovery floor changed")
 
-(assert (= (length home-specifications) 94)
-        "reviewed Home specification list must contain exactly 94 packages")
+(assert (= (length home-specifications) 95)
+        "reviewed Home specification list must contain exactly 95 packages")
 (assert (equal? home-output-specifications '("gtk:out" "gtk:bin"))
         "reviewed Home output specifications changed")
 (assert (equal? home-output-names '("gtk"))
         "reviewed Home output package names changed")
 (assert (equal? home-explicit '("emacs-racket-mode"))
         "reviewed explicit Home package names changed")
-(assert (= (length home) 96)
-        "reviewed Home ownership must contain exactly 96 unique package names")
+(assert (= (length home) 97)
+        "reviewed Home ownership must contain exactly 97 unique package names")
 (assert (= (+ (length home-specifications)
               (length home-output-specifications)
               (length home-explicit))
-           97)
-        "reviewed Home declaration must contain exactly 97 selections")
+           98)
+        "reviewed Home declaration must contain exactly 98 selections")
 (assert
  (equal? home
          (append home-specifications home-output-names home-explicit))
@@ -81,6 +83,7 @@
    "maim" "xclip"
    "gnupg"
    "font-awesome" "font-google-material-design-icons"
+   "gnome-themes-extra"
    "papirus-icon-theme" "bibata-cursor-theme" "hicolor-icon-theme"
    "gst-plugins-base" "gst-plugins-good" "gtk"))
 
@@ -129,6 +132,19 @@
    "    %guixpc-home-output-package-specifications)\n"
    "   %guixpc-home-explicit-packages)"))
  "Home declaration does not append its explicit package objects")
+(assert
+ (string-contains
+  home-source
+  (string-append
+   "(simple-service 'sk-theme-environment\n"
+   "                   home-environment-variables-service-type\n"
+   "                   (sk:theme-home-environment-variables))"))
+ "Home declaration lacks the GTK 2 engine environment service")
+(assert
+ (string-contains
+  theme-home-source
+  "'((\"GUIX_GTK2_PATH\" . \"$HOME/.guix-home/profile/lib/gtk-2.0\"))")
+ "theme Home module lacks the stable GTK 2 engine search path")
 
 (assert
  (string-contains emacs-module-source
@@ -206,6 +222,7 @@
    "sbcl" "python-lsp-server" "lua-language-server"
    "gcc-toolchain" "gdb" "shellcheck" "babashka" "clojure"
    "gnupg"
+   "gnome-themes-extra"
    "clojure-tools" "clojure-lsp" "gradle" "leiningen" "maven"
    "openjdk" "racket" "racket-minimal" "emacs-racket-mode"
    "fennel" "fnlfmt" "fennel-ls"))

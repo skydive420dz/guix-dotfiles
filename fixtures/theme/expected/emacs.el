@@ -1,5 +1,5 @@
 ;;; sk-theme-generated.el --- SYNTHETIC FIXTURE - DO NOT INSTALL -*- lexical-binding: t; -*-
-;;; schema=2 palette=synthetic fixture only
+;;; schema=3 palette=synthetic fixture only
 
 (setq modus-themes-variable-pitch-ui t
       modus-vivendi-tinted-palette-overrides

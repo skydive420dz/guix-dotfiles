@@ -60,6 +60,7 @@ for file in "$channels" "$home_config" "$system_config" \
     "$repo/fixtures/theme/expected-production/emacs.el" \
     "$repo/fixtures/theme/expected-production/kitty.conf" \
     "$repo/fixtures/theme/expected-production/fish.fish" \
+    "$repo/fixtures/theme/expected-production/gtk2.rc" \
     "$repo/fixtures/theme/expected-production/gtk3.ini" \
     "$repo/fixtures/theme/expected-production/gtk4.ini" \
     "$repo/fixtures/theme/expected-production/dunstrc" \
@@ -880,7 +881,8 @@ validate_realized_package_ownership() {
         fi
     done
     for package in font-awesome font-google-material-design-icons \
-        papirus-icon-theme bibata-cursor-theme hicolor-icon-theme \
+        gnome-themes-extra papirus-icon-theme bibata-cursor-theme \
+        hicolor-icon-theme \
         gst-plugins-base gst-plugins-good; do
         if ! profile_has_package_output "$home_records" "$package" out; then
             printf 'guix-build-gate: Home profile lacks declared package output: %s:out\n' \

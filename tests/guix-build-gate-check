@@ -73,6 +73,8 @@ mkdir -p "$sandbox_repo/scripts" "$sandbox_repo/guix/home" \
     "$fake_home/profile/share/icons/Papirus-Dark" \
     "$fake_home/profile/share/icons/Bibata-Modern-Ice" \
     "$fake_home/profile/share/icons/hicolor" \
+    "$fake_home/profile/share/themes/Adwaita-dark/gtk-2.0" \
+    "$fake_home/profile/lib/gtk-2.0/2.10.0/engines" \
     "$fake_home/files/.config/emacs" \
     "$fake_home/files/.config/fish" \
     "$fake_home/files/.config/fontconfig" \
@@ -268,6 +270,7 @@ for command_path in "$SK_THEME_HOME_GUIX" "$SK_THEME_HOME_FISH" \
 done
 
 for relative in \
+    .gtkrc-2.0 \
     .config/emacs/sk-theme-generated.el \
     .config/fish/config.fish \
     .config/fontconfig/fonts.conf \
@@ -282,6 +285,8 @@ for relative in \
 done
 [ -r "$SK_FAKE_HOME/activate" ]
 [ -x "$SK_FAKE_HOME/profile/bin/gtk4-widget-factory" ]
+[ -r "$SK_FAKE_HOME/profile/share/themes/Adwaita-dark/gtk-2.0/gtkrc" ]
+[ -r "$SK_FAKE_HOME/profile/lib/gtk-2.0/2.10.0/engines/libadwaita.so" ]
 for icon_index in \
     "$SK_FAKE_HOME/profile/share/icons/Papirus-Dark/index.theme" \
     "$SK_FAKE_HOME/profile/share/icons/Bibata-Modern-Ice/index.theme" \
@@ -300,6 +305,7 @@ require_record gtk 4.22.1 out
 require_record gtk 4.22.1 bin
 require_record gst-plugins-base 1.28.1 out
 require_record gst-plugins-good 1.28.1 out
+require_record gnome-themes-extra 3.28 out
 require_record font-awesome 4.7.0 out
 require_record font-google-material-design-icons 4.0.0 out
 require_record papirus-icon-theme 20250501 out
@@ -482,6 +488,8 @@ cat >"$fake_home/files/.config/git/config" <<'EOF'
 	conflictStyle = zdiff3
 EOF
 printf '%s\n' use-keyboxd >"$fake_home/files/.gnupg/common.conf"
+printf '%s\n' '# fake generated GTK 2 policy' \
+    >"$fake_home/files/.gtkrc-2.0"
 printf '%s\n' '#!/bin/sh' 'exit 0' >"$tmp/fake-pinentry"
 chmod +x "$tmp/fake-pinentry"
 cat >"$fake_home/files/.gnupg/gpg-agent.conf" <<EOF
@@ -513,6 +521,10 @@ for icon_index in \
     "$fake_home/profile/share/icons/hicolor/index.theme"; do
     printf '%s\n' '[Icon Theme]' >"$icon_index"
 done
+printf '%s\n' '# fake GTK 2 Adwaita-dark theme' \
+    >"$fake_home/profile/share/themes/Adwaita-dark/gtk-2.0/gtkrc"
+printf '%s\n' 'fake GTK 2 Adwaita engine' \
+    >"$fake_home/profile/lib/gtk-2.0/2.10.0/engines/libadwaita.so"
 
 printf '%s\n' curl git fish emacs emacs-exwm bluez ncurses ripgrep vim \
     xset xwallpaper picom xrandr >"$fake_recovery_names"
@@ -522,8 +534,8 @@ printf '%s\n' fish-foreign-env emacs emacs-geiser \
     emacs-clojure-mode emacs-fennel-mode \
     emacs-racket-mode cljfmt clj-kondo \
     dunst polkit-gnome maim xclip \
-    font-awesome font-google-material-design-icons papirus-icon-theme \
-    bibata-cursor-theme hicolor-icon-theme gst-plugins-base \
+    font-awesome font-google-material-design-icons gnome-themes-extra \
+    papirus-icon-theme bibata-cursor-theme hicolor-icon-theme gst-plugins-base \
     gst-plugins-good gtk gnupg \
     guile sbcl lua-language-server python-lsp-server \
     ungoogled-chromium ranger shellcheck >"$fake_home_names"
@@ -560,6 +572,7 @@ reset_fake_home_manifest() {
     printf '%s\n' \
         'font-awesome	4.7.0	out	/gnu/store/fake-font-awesome' \
         'font-google-material-design-icons	4.0.0	out	/gnu/store/fake-font-google-material-design-icons' \
+        'gnome-themes-extra	3.28	out	/gnu/store/fake-gnome-themes-extra' \
         'papirus-icon-theme	20250501	out	/gnu/store/fake-papirus-icon-theme' \
         'bibata-cursor-theme	2.0.3	out	/gnu/store/fake-bibata-cursor-theme' \
         'hicolor-icon-theme	0.18	out	/gnu/store/fake-hicolor-icon-theme' \
@@ -1207,7 +1220,8 @@ contains "$output" 'Home profile lacks declared package output: gtk:bin'
 reset_fake_home_manifest
 
 for package in font-awesome font-google-material-design-icons \
-    papirus-icon-theme bibata-cursor-theme hicolor-icon-theme \
+    gnome-themes-extra papirus-icon-theme bibata-cursor-theme \
+    hicolor-icon-theme \
     gst-plugins-base gst-plugins-good; do
     replace_fake_manifest_output "$fake_home_manifest" "$package" doc
     if output=$(run_gate 2>&1); then

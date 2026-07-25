@@ -4,6 +4,8 @@
   #:use-module (guix gexp)
   #:use-module (guix modules)
   #:export (sk:theme-home-bundle
+            sk:theme-home-environment-variables
+            sk:theme-home-files
             sk:theme-home-xdg-configuration-files
             sk:theme-home-xdg-data-files
             sk:theme-home-fish-fragment))
@@ -12,6 +14,7 @@
   '((emacs . "emacs.el")
     (kitty . "kitty.conf")
     (fish . "fish.fish")
+    (gtk2 . "gtk2.rc")
     (gtk3 . "gtk3.ini")
     (gtk4 . "gtk4.ini")
     (dunst . "dunstrc")
@@ -76,6 +79,15 @@ live checkout, Home directory, profile, display, or network."
 
 (define (bundle-file bundle relative)
   (file-append bundle relative))
+
+(define (sk:theme-home-environment-variables)
+  "Return the session variable needed to discover Home's GTK 2 engines."
+  '(("GUIX_GTK2_PATH" . "$HOME/.guix-home/profile/lib/gtk-2.0")))
+
+(define (sk:theme-home-files bundle)
+  "Return the Home-root configuration mappings owned by BUNDLE."
+  (list
+   (list ".gtkrc-2.0" (bundle-file bundle "/adapters/gtk2.rc"))))
 
 (define (sk:theme-home-xdg-configuration-files bundle)
   "Return the XDG configuration mappings owned by BUNDLE."

@@ -1,5 +1,5 @@
 # SYNTHETIC FIXTURE - DO NOT INSTALL
-# schema=2 palette=synthetic fixture only
+# schema=3 palette=synthetic fixture only
 # Same-shell data only: starts no process and emits no toolkit scale override.
 SK_THEME_LOGICAL_DPI='96'
 SK_THEME_INTEGER_SCALE='1'

@@ -40,6 +40,8 @@ gst_base_store=$store/88888888888888888888888888888888-gst-plugins-base-1.28.1
 wrong_gst_base_store=$store/99999999999999999999999999999999-gst-plugins-base-1.28.1
 gst_good_store=$store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-gst-plugins-good-1.28.1
 wrong_gst_good_store=$store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-gst-plugins-good-1.28.1
+gnome_themes_store=$store/cccccccccccccccccccccccccccccccc-gnome-themes-extra-3.28
+wrong_gnome_themes_store=$store/dddddddddddddddddddddddddddddddd-gnome-themes-extra-3.28
 commands=$tmp/commands
 records=$tmp/home-packages
 
@@ -63,6 +65,10 @@ mkdir -p \
     "$wrong_gst_base_store/lib/gstreamer-1.0" \
     "$gst_good_store/lib/gstreamer-1.0" \
     "$wrong_gst_good_store/lib/gstreamer-1.0" \
+    "$gnome_themes_store/share/themes/Adwaita-dark/gtk-2.0" \
+    "$gnome_themes_store/lib/gtk-2.0/2.10.0/engines" \
+    "$wrong_gnome_themes_store/share/themes/Adwaita-dark/gtk-2.0" \
+    "$wrong_gnome_themes_store/lib/gtk-2.0/2.10.0/engines" \
     "$home_result/files/.config/emacs" \
     "$home_result/files/.config/fish" \
     "$home_result/files/.config/fontconfig" \
@@ -75,10 +81,12 @@ mkdir -p \
     "$home_result/profile/bin" \
     "$home_result/profile/etc" \
     "$home_result/profile/lib/gstreamer-1.0" \
+    "$home_result/profile/lib/gtk-2.0/2.10.0/engines" \
     "$home_result/profile/share/glib-2.0/schemas" \
     "$home_result/profile/share/icons/Papirus-Dark" \
     "$home_result/profile/share/icons/Bibata-Modern-Ice" \
     "$home_result/profile/share/icons/hicolor" \
+    "$home_result/profile/share/themes/Adwaita-dark/gtk-2.0" \
     "$commands"
 
 cp "$source_repo/emacs/init.el" "$fake_repo/emacs/init.el"
@@ -105,6 +113,8 @@ cp "$fake_repo/fixtures/theme/expected-production/emacs.el" \
     "$bundle/adapters/emacs.el"
 cp "$fake_repo/fixtures/theme/expected-production/kitty.conf" \
     "$bundle/adapters/kitty.conf"
+cp "$fake_repo/fixtures/theme/expected-production/gtk2.rc" \
+    "$bundle/adapters/gtk2.rc"
 cp "$fake_repo/fixtures/theme/expected-production/gtk3.ini" \
     "$bundle/adapters/gtk3.ini"
 cp "$fake_repo/fixtures/theme/expected-production/gtk4.ini" \
@@ -125,6 +135,8 @@ ln -s "$bundle/adapters/emacs.el" \
     "$home_result/files/.config/emacs/sk-theme-generated.el"
 ln -s "$bundle/adapters/kitty.conf" \
     "$home_result/files/.config/kitty/kitty.conf"
+ln -s "$bundle/adapters/gtk2.rc" \
+    "$home_result/files/.gtkrc-2.0"
 ln -s "$bundle/adapters/gtk3.ini" \
     "$home_result/files/.config/gtk-3.0/settings.ini"
 ln -s "$bundle/adapters/gtk4.ini" \
@@ -145,6 +157,11 @@ printf '%s\n' \
     '(primitive-load "update-symlinks")' \
     '(sk:activate-repo-links)' >"$home_result/activate"
 cp "$home_result/activate" "$tmp/good-activate"
+# shellcheck disable=SC2016
+printf '%s\n' \
+    'export GUIX_GTK2_PATH="$HOME/.guix-home/profile/lib/gtk-2.0"' \
+    >"$home_result/setup-environment"
+cp "$home_result/setup-environment" "$tmp/good-setup-environment"
 
 cat >"$gtk_bin_store/bin/gtk4-widget-factory" <<'EOF'
 #!/bin/sh
@@ -238,6 +255,18 @@ for index in \
     "$home_result/profile/share/icons/hicolor/index.theme"; do
     printf '%s\n' '[Icon Theme]' >"$index"
 done
+printf '%s\n' '# fake GTK 2 Adwaita-dark theme' \
+    >"$gnome_themes_store/share/themes/Adwaita-dark/gtk-2.0/gtkrc"
+printf '%s\n' 'fake GTK 2 Adwaita engine' \
+    >"$gnome_themes_store/lib/gtk-2.0/2.10.0/engines/libadwaita.so"
+cp "$gnome_themes_store/share/themes/Adwaita-dark/gtk-2.0/gtkrc" \
+    "$wrong_gnome_themes_store/share/themes/Adwaita-dark/gtk-2.0/gtkrc"
+cp "$gnome_themes_store/lib/gtk-2.0/2.10.0/engines/libadwaita.so" \
+    "$wrong_gnome_themes_store/lib/gtk-2.0/2.10.0/engines/libadwaita.so"
+ln -s "$gnome_themes_store/share/themes/Adwaita-dark/gtk-2.0/gtkrc" \
+    "$home_result/profile/share/themes/Adwaita-dark/gtk-2.0/gtkrc"
+ln -s "$gnome_themes_store/lib/gtk-2.0/2.10.0/engines/libadwaita.so" \
+    "$home_result/profile/lib/gtk-2.0/2.10.0/engines/libadwaita.so"
 
 cat >"$commands/guix" <<'EOF'
 #!/bin/sh
@@ -316,6 +345,10 @@ hicolor-icon-theme 0.18 out
 font-awesome 4.7.0 out
 font-google-material-design-icons 4.0.0 out
 EOF
+    if [ "$mode" != no-gnome-themes ]; then
+        printf 'gnome-themes-extra 3.28 out %s\n' \
+            "$gnome_themes_store" >>"$records"
+    fi
     if [ "$mode" != no-gst-base ]; then
         printf 'gst-plugins-base 1.28.1 out %s\n' \
             "$gst_base_store" >>"$records"
@@ -431,6 +464,39 @@ expect_failure \
     "GTK 4 runtime without the out output is rejected" \
     "candidate profile lacks gtk 4.22.1:out"
 write_package_records
+
+write_package_records no-gnome-themes
+expect_failure \
+    "GTK 2 runtime without gnome-themes-extra ownership is rejected" \
+    "candidate profile lacks gnome-themes-extra 3.28:out"
+write_package_records
+
+printf '%s\n' 'export GUIX_GTK2_PATH=/wrong' \
+    >"$home_result/setup-environment"
+expect_failure \
+    "malformed Home GTK 2 search-path export is rejected" \
+    "candidate Home GTK 2 engine search path is not exact"
+cp "$tmp/good-setup-environment" "$home_result/setup-environment"
+
+ln -sf \
+    "$wrong_gnome_themes_store/share/themes/Adwaita-dark/gtk-2.0/gtkrc" \
+    "$home_result/profile/share/themes/Adwaita-dark/gtk-2.0/gtkrc"
+expect_failure \
+    "GTK 2 theme from undeclared provenance is rejected" \
+    "GTK 2 Adwaita-dark theme has undeclared provenance"
+ln -sf \
+    "$gnome_themes_store/share/themes/Adwaita-dark/gtk-2.0/gtkrc" \
+    "$home_result/profile/share/themes/Adwaita-dark/gtk-2.0/gtkrc"
+
+ln -sf \
+    "$wrong_gnome_themes_store/lib/gtk-2.0/2.10.0/engines/libadwaita.so" \
+    "$home_result/profile/lib/gtk-2.0/2.10.0/engines/libadwaita.so"
+expect_failure \
+    "GTK 2 engine from undeclared provenance is rejected" \
+    "GTK 2 Adwaita engine has undeclared provenance"
+ln -sf \
+    "$gnome_themes_store/lib/gtk-2.0/2.10.0/engines/libadwaita.so" \
+    "$home_result/profile/lib/gtk-2.0/2.10.0/engines/libadwaita.so"
 
 ln -sf "$wrong_gtk_bin_store/bin/gtk4-widget-factory" \
     "$home_result/profile/bin/gtk4-widget-factory"

@@ -1,5 +1,5 @@
 ;;; sk-theme-generated.el --- Generated theme adapter -*- lexical-binding: t; -*-
-;;; schema=2 palette=GNU Emacs 30.2 etc/themes/modus-vivendi-tinted-theme.el
+;;; schema=3 palette=GNU Emacs 30.2 etc/themes/modus-vivendi-tinted-theme.el
 
 (setq modus-themes-variable-pitch-ui t
       modus-vivendi-tinted-palette-overrides

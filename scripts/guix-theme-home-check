@@ -74,6 +74,9 @@ check_store_mapping \
     "$files/.config/kitty/kitty.conf" \
     "$goldens/kitty.conf"
 check_store_mapping \
+    "$files/.gtkrc-2.0" \
+    "$goldens/gtk2.rc"
+check_store_mapping \
     "$files/.config/gtk-3.0/settings.ini" \
     "$goldens/gtk3.ini"
 check_store_mapping \
@@ -91,6 +94,15 @@ check_store_mapping \
 check_store_mapping \
     "$files/.local/share/sk-theme/assets/wallpapers/waifu-cyberpunk.png" \
     "$repo/assets/wallpapers/waifu-cyberpunk.png"
+
+setup_environment=$home_result/setup-environment
+[ -r "$setup_environment" ] || \
+    fail "candidate Home lacks generated setup-environment"
+# shellcheck disable=SC2016
+[ "$(grep -Fxc \
+    'export GUIX_GTK2_PATH="$HOME/.guix-home/profile/lib/gtk-2.0"' \
+    "$setup_environment" || true)" -eq 1 ] || \
+    fail "candidate Home GTK 2 engine search path is not exact"
 
 fish_config=$files/.config/fish/config.fish
 fish_golden=$goldens/fish.fish
@@ -244,6 +256,7 @@ require_record gtk 4.22.1 out
 require_record gtk 4.22.1 bin
 require_record gst-plugins-base 1.28.1 out
 require_record gst-plugins-good 1.28.1 out
+require_record gnome-themes-extra 3.28 out
 require_record papirus-icon-theme 20250501 out
 require_record bibata-cursor-theme 2.0.3 out
 require_record hicolor-icon-theme 0.18 out
@@ -258,6 +271,21 @@ gst_base_store=$(record_store gst-plugins-base 1.28.1 out) || \
     fail "candidate profile does not have exactly one gst-plugins-base 1.28.1:out store"
 gst_good_store=$(record_store gst-plugins-good 1.28.1 out) || \
     fail "candidate profile does not have exactly one gst-plugins-good 1.28.1:out store"
+gnome_themes_store=$(record_store gnome-themes-extra 3.28 out) || \
+    fail "candidate profile does not have exactly one gnome-themes-extra 3.28:out store"
+
+gtk2_theme=$profile/share/themes/Adwaita-dark/gtk-2.0/gtkrc
+gtk2_engine=$profile/lib/gtk-2.0/2.10.0/engines/libadwaita.so
+[ -r "$gtk2_theme" ] || \
+    fail "candidate profile lacks the GTK 2 Adwaita-dark theme"
+[ "$(readlink -f "$gtk2_theme")" = \
+    "$gnome_themes_store/share/themes/Adwaita-dark/gtk-2.0/gtkrc" ] || \
+    fail "GTK 2 Adwaita-dark theme has undeclared provenance"
+[ -r "$gtk2_engine" ] || \
+    fail "candidate profile lacks the GTK 2 Adwaita engine"
+[ "$(readlink -f "$gtk2_engine")" = \
+    "$gnome_themes_store/lib/gtk-2.0/2.10.0/engines/libadwaita.so" ] || \
+    fail "GTK 2 Adwaita engine has undeclared provenance"
 
 gtk_factory=$profile/bin/gtk4-widget-factory
 [ -x "$gtk_factory" ] || fail "candidate profile lacks gtk4-widget-factory"
