@@ -57,7 +57,8 @@ corrupt the report.
 - =~/Projects=, =~/Downloads=, Chromium's durable profile, and application
   histories;
 - =~/.ssh=, =~/.gnupg=, =~/.local/share/pki=, and =~/.Xauthority=;
-- Guix recovery material and the legacy Kitty rollback copy;
+- Guix recovery material; the legacy Kitty rollback copy was still retained
+  pending review at this baseline;
 - Pulse, WirePlumber, Fish, Ranger, and Emacs durable state.
 
 ** Keep as cache
@@ -73,7 +74,7 @@ filesystem.  C5 therefore adds no cache purge or schedule.
 
 ** Review candidates
 
-- two zero-byte unknown Home entries: === and a filename containing =%l=
+- two zero-byte unknown Home entries: ~=~ and a filename containing =%l=
   followed by a newline;
 - =~/.geiser_history.guile= is mode =0644= while comparable histories are
   =0600=;
@@ -115,21 +116,55 @@ The command exits nonzero only for an ownership, type, permission, or expected
 link-target failure.  Known candidates and newly observed direct children
 produce =review= records without changing the filesystem.
 
-The 2026-07-25 live run reported =105 pass=, =10 review=, =0 fail=, and
-=0 absent=.  No unclassified direct child was found.  The ten review records
-are the two unknown files, =~/.clojure=, =~/.dbus=, =~/.emacs.d= as one mixed
-tree, the Geiser history, =~/.ruff_cache=, =~/.local/share/xorg=,
-=~/.cache/emacs=, and the legacy EXWM log.
+The initial 2026-07-25 live run reported =105 pass=, =10 review=, =0 fail=,
+and =0 absent=.  No unclassified direct child was found.  The ten review
+records were the two unknown files, =~/.clojure=, =~/.dbus=, =~/.emacs.d= as
+one mixed tree, the Geiser history, =~/.ruff_cache=,
+=~/.local/share/xorg=, =~/.cache/emacs=, and the legacy EXWM log.
 
-* Bounded next decision
+* Reviewed C5b live batch
 
-After this source is reviewed, any live correction requires a separate exact
-manifest and authorization.  The likely first batch is limited to the two
-zero-byte unknown entries and the Geiser history permission.  Emacs state
-migration, cache removal, Guix recovery cleanup, and log relocation are not
-implicitly authorized by that batch.
+The ownership-audit source was published at =97b9242=.  A separately approved
+live batch then required the following preconditions before its first
+mutation:
+
+- both unknown paths were user-owned regular files, mode =0644=, size zero,
+  and still had recorded inodes =7618987= and =7624688=;
+- =~/.geiser_history.guile= was the same user-owned regular file at inode
+  =7622501=, size 61 bytes, and mode =0644=.
+
+All preconditions passed.  The two zero-byte artifacts were deleted and the
+Geiser history mode was changed to =0600=.  Its inode and size remained
+unchanged.  The immediate post-C5b audit reported =106 pass=, =7 review=,
+=0 fail=, and =2 absent=.
+
+The timestamped Kitty migration backup contained only one 318-byte file whose
+SHA256 was identical to the retained repository source
+=kitty/kitty.conf=.  After reviewing that evidence, Rafael removed the
+redundant directory manually.  The final closure audit reported =105 pass=,
+=7 review=, =0 fail=, and =3 absent=.
+
+The seven remaining reviews are explicitly parked and unchanged:
+
+- =~/.clojure=;
+- legacy =~/.dbus=;
+- mixed =~/.emacs.d=;
+- =~/.ruff_cache=;
+- =~/.local/share/xorg=;
+- mixed =~/.cache/emacs=;
+- legacy =~/.cache/sk-exwm-startx.log=.
+
+No cache was purged, no state was migrated, no Home service or generation was
+changed, and no activation or reboot occurred.
+
+* Closure decision
+
+C5 stops here.  Emacs state migration, cache removal, Guix recovery cleanup,
+and log relocation require later evidence and explicit authorization; they are
+not hidden follow-up work for this slice.
 
 * State
 
-C5a source candidate only.  No Home path, service, generation, personal file,
-or declarative link is changed by this checkpoint.
+Closed and accepted live on 2026-07-25 at published ownership-audit checkpoint
+=97b9242=.  The documentation closeout remains a separate repository
+checkpoint.

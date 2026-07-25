@@ -264,8 +264,9 @@ published documentation checkpoint =75b0726= and was accepted live on
 2026-07-24.  C3-P is closed at published implementation checkpoint =f8ee476=
 and was accepted live on 2026-07-24.  C4 is closed at published implementation
 checkpoint =27053c8= and was accepted live on 2026-07-25.  Its separate
-personal-note cleanup gate remains parked.  Every later slice remains
-unauthorized.
+personal-note cleanup gate remains parked.  C5 is closed at published
+ownership-audit checkpoint =97b9242= and was accepted live on 2026-07-25.
+Every later slice remains unauthorized.
 
 ** C0 — Establish the human roadmap
 
@@ -474,10 +475,31 @@ unauthorized.
 
 - Result: relevant Home paths are classified as declarative configuration,
   durable synchronized data, durable local data, secrets, logs, rebuildable
-  cache, runtime state, or unknown.  One reviewed batch then moves, declares,
-  quarantines, or leaves items with a rollback path.
-- Boundary: no unknown file is deleted.  Inventory and approve the batch before
-  changing it; do not turn hygiene into an unbounded home-directory rewrite.
+  cache, runtime state, mixed legacy state, or unknown.  The bounded Guile
+  auditor checks one static manifest using filesystem metadata only.
+- Accepted ownership: 18 Guix Home files, 14 repository links, three Guix
+  entrypoints, durable application data, secrets, state, cache, runtime paths,
+  and every observed direct Home/XDG child have an explicit owner or review
+  decision.  Cache remains untouched because =/home= has 139 GiB free and
+  cache removal would not free the separate root filesystem.
+- Accepted live batch: after exact inode, owner, type, mode, and size checks,
+  two reviewed zero-byte artifacts named ~=~ and =%l= followed by a newline
+  were deleted.  The unchanged 61-byte Geiser history inode was tightened from
+  mode =0644= to =0600=.  Rafael then removed the timestamped Kitty migration
+  backup after its sole 318-byte file was proven byte-identical to the retained
+  repository source.  The final audit reports =105 pass=, =7 review=,
+  =0 fail=, and =3 absent=.
+- Parked reviews: =~/.clojure=, =~/.dbus=, mixed =~/.emacs.d=,
+  =~/.ruff_cache=, =~/.local/share/xorg=, mixed =~/.cache/emacs=, and the
+  legacy =~/.cache/sk-exwm-startx.log= remain deliberately unchanged.  No
+  cache purge, migration, activation, reconfiguration, or reboot is implied.
+- Boundary: no unclassified path is deleted.  Inventory and authorize an exact
+  batch before changing data; do not turn hygiene into a general filesystem
+  manager.  The retention estimator's discovered =find-roots= side effect is
+  parked under C10 and must not revive the frozen pruning experiment.
+- State: closed and accepted live on 2026-07-25 at published ownership-audit
+  checkpoint =97b9242=.  See
+  [[file:docs/audits/2026-07-25-c5-home-xdg-ownership.org][the C5 ownership, incident, and acceptance record]].
 
 ** C6 — Add one Lisp-native system health view
 
