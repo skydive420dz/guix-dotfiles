@@ -1,0 +1,106 @@
+#!/bin/sh
+
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+guile=${GUILE:-guile}
+git=${GIT:-git}
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/sk-git-audit-check.XXXXXX")
+projects=$tmp/projects
+work=$projects/work
+origin=$tmp/origin.git
+report=$tmp/report.scm
+
+cleanup() {
+    rm -rf "$tmp"
+}
+trap cleanup EXIT HUP INT TERM
+
+for command in "$guile" "$git" sha256sum stat; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        printf 'sk-git-audit-check: missing command: %s\n' "$command" >&2
+        exit 2
+    fi
+done
+
+if grep -En \
+    '[ (]"(fetch|pull|push|clean|gc|maintenance|reset|checkout|add|rm|update-index|config|verify-commit|verify-tag|show|log)"' \
+    "$repo/scripts/sk-git-audit"; then
+    printf '%s\n' 'sk-git-audit-check: forbidden Git action found' >&2
+    exit 1
+fi
+
+for required in \
+    'GIT_OPTIONAL_LOCKS' \
+    'GIT_NO_LAZY_FETCH' \
+    'GIT_TERMINAL_PROMPT' \
+    '--no-optional-locks' \
+    '--no-lazy-fetch' \
+    'core.fsmonitor=false' \
+    'core.untrackedCache=false' \
+    'maintenance.auto=false' \
+    'gc.auto=0' \
+    'status.submoduleSummary=false' \
+    '--untracked-files=all' \
+    '--ignore-submodules=none' \
+    '--no-renames' \
+    'trusted repositories'; do
+    if ! grep -F -- "$required" "$repo/scripts/sk-git-audit" >/dev/null; then
+        printf 'sk-git-audit-check: missing safety control: %s\n' \
+            "$required" >&2
+        exit 1
+    fi
+done
+
+mkdir -p "$projects"
+"$git" init -q --bare --initial-branch=main "$origin"
+"$git" init -q -b main "$work"
+"$git" -C "$work" config user.name Fixture
+"$git" -C "$work" config user.email fixture.invalid@example.invalid
+"$git" -C "$work" config commit.gpgsign false
+printf '%s\n' base >"$work/tracked.txt"
+"$git" -C "$work" add tracked.txt
+"$git" -C "$work" commit -q -m initial
+"$git" -C "$work" remote add origin "$origin"
+"$git" -C "$work" push -q -u origin main
+
+printf '%s\n' modified >>"$work/tracked.txt"
+printf '%s\n' staged >"$work/staged.txt"
+"$git" -C "$work" add staged.txt
+mkdir "$work/untracked"
+printf '%s\n' one >"$work/untracked/one.txt"
+printf '%s\n' two >"$work/untracked/two.txt"
+
+printf '%s\n' index-lock >"$work/.git/index.lock"
+printf '%s\n' packed-refs-lock >"$work/.git/packed-refs.lock"
+
+index=$work/.git/index
+before_hash=$(sha256sum "$index")
+before_metadata=$(stat -c '%Y:%s' "$index")
+before_index_lock=$(sha256sum "$work/.git/index.lock")
+before_packed_refs_lock=$(sha256sum "$work/.git/packed-refs.lock")
+
+GUILE_AUTO_COMPILE=0 "$guile" --no-auto-compile \
+    -s "$repo/scripts/sk-git-audit" --root "$projects" >"$report"
+
+after_hash=$(sha256sum "$index")
+after_metadata=$(stat -c '%Y:%s' "$index")
+after_index_lock=$(sha256sum "$work/.git/index.lock")
+after_packed_refs_lock=$(sha256sum "$work/.git/packed-refs.lock")
+
+if [ "$before_hash" != "$after_hash" ] || \
+   [ "$before_metadata" != "$after_metadata" ]; then
+    printf '%s\n' 'sk-git-audit-check: repository index changed' >&2
+    exit 1
+fi
+if [ "$before_index_lock" != "$after_index_lock" ] || \
+   [ "$before_packed_refs_lock" != "$after_packed_refs_lock" ]; then
+    printf '%s\n' 'sk-git-audit-check: existing lock changed' >&2
+    exit 1
+fi
+
+GUILE_AUTO_COMPILE=0 "$guile" --no-auto-compile \
+    -s "$repo/tests/sk-git-audit-check.scm" \
+    "$repo" "$report"
+
+printf '%s\n' 'sk-git-audit-check: PASS'

@@ -80,6 +80,9 @@
     (".config/fontconfig" declarative guix-home directory owned keep #t #f)
     (".config/fontconfig/fonts.conf" declarative guix-home symlink any keep #t
      (home-file ".config/fontconfig/fonts.conf"))
+    (".config/git" declarative guix-home directory owned keep #t #f)
+    (".config/git/config" declarative guix-home symlink any keep #t
+     (home-file ".config/git/config"))
     (".config/glib-2.0" durable-local application directory private keep #f #f)
     (".config/gtk-3.0" declarative guix-home directory owned keep #t #f)
     (".config/gtk-3.0/settings.ini" declarative guix-home symlink any keep #t

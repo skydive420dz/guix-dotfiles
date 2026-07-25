@@ -70,8 +70,10 @@ shellcheck \
     "$repo/tests/clojure-project-check" \
     "$repo/tests/lisp-project-check" \
     "$repo/tests/guix-home-links-check" \
+    "$repo/tests/guix-git-gpg-home-check" \
     "$repo/tests/guix-package-ownership-check" \
     "$repo/tests/guix-reconfigure-check" \
+    "$repo/tests/sk-git-audit-check" \
     "$repo/tests/theme-check"
 
 "$repo/tests/exwm-session-check"
@@ -105,6 +107,7 @@ else
 fi
 if command -v guile >/dev/null 2>&1; then
     "$repo/tests/guix-home-links-check"
+    "$repo/tests/sk-git-audit-check"
 else
     if [ "$strict" -eq 1 ]; then
         printf '%s\n' 'shell-check: strict mode requires guile' >&2
@@ -112,6 +115,7 @@ else
     fi
     printf '%s\n' 'SKIP: Guix Home link fixture (guile unavailable)'
 fi
+"$repo/tests/guix-git-gpg-home-check"
 if command -v guile >/dev/null 2>&1 && \
     command -v guild >/dev/null 2>&1; then
     if command -v fish >/dev/null 2>&1 && \

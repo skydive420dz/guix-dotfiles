@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+guix=${GUIX:-${HOME:?HOME must be set}/.config/guix/current/bin/guix}
+
+if [ ! -x "$guix" ]; then
+    printf 'SKIP: Git/GPG Home check (Guix unavailable: %s)\n' "$guix"
+    exit 0
+fi
+
+GUILE_AUTO_COMPILE=0 "$guix" repl -q \
+    -L "$repo/guix/modules" \
+    -- "$repo/tests/guix-git-gpg-home-check.scm" "$repo"

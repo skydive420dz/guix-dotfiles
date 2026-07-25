@@ -14,6 +14,7 @@
              (guix packages)
              (sk desktop-integration)
              (sk emacs)
+             (sk git-home)
              (sk theme-home))
 
 (load (string-append (dirname (current-filename))
@@ -113,6 +114,7 @@
    (service home-pipewire-service-type
             (home-pipewire-configuration
              (enable-pulseaudio? #t))))
+   (sk:git-gpg-home-services)
    (sk:desktop-integration-home-services
     (specification->package "emacs")
     (specification->package "polkit-gnome")))))

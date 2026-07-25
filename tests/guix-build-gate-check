@@ -44,6 +44,7 @@ fake_home_names=$tmp/fake-home-names
 fake_log=$tmp/guix.log
 fake_candidate_log=$tmp/candidate.log
 fake_elisp_failure=$tmp/fail-elisp-fixture
+host_git=$(command -v git)
 gate=$sandbox_repo/scripts/guix-build-gate
 fake_emacs_check=$sandbox_repo/scripts/emacs-check
 fake_emacs_clojure_check=$sandbox_repo/scripts/emacs-clojure-check
@@ -75,11 +76,13 @@ mkdir -p "$sandbox_repo/scripts" "$sandbox_repo/guix/home" \
     "$fake_home/files/.config/emacs" \
     "$fake_home/files/.config/fish" \
     "$fake_home/files/.config/fontconfig" \
+    "$fake_home/files/.config/git" \
     "$fake_home/files/.config/gtk-3.0" \
     "$fake_home/files/.config/gtk-4.0" \
     "$fake_home/files/.config/dunst" \
     "$fake_home/files/.config/kitty" \
     "$fake_home/files/.config/sk-theme" \
+    "$fake_home/files/.gnupg" \
     "$fake_home/files/.local/share/sk-theme/assets/wallpapers"
 cp "$repo/scripts/guix-build-gate" "$gate"
 cp "$repo/scripts/lisp-project-check" \
@@ -95,6 +98,8 @@ cp "$repo/guix/package-ownership.scm" \
     "$sandbox_repo/guix/package-ownership.scm"
 cp "$repo/guix/modules/sk/emacs.scm" \
     "$sandbox_repo/guix/modules/sk/emacs.scm"
+cp "$repo/guix/modules/sk/git-home.scm" \
+    "$sandbox_repo/guix/modules/sk/git-home.scm"
 cp "$repo/guix/modules/sk/desktop-integration.scm" \
     "$sandbox_repo/guix/modules/sk/desktop-integration.scm"
 cp "$repo/guix/modules/sk/theme.scm" \
@@ -330,6 +335,11 @@ for command in bluetoothctl curl dbus-update-activation-environment emacs \
         >"$fake_system/profile/bin/$command"
     chmod +x "$fake_system/profile/bin/$command"
 done
+cat >"$fake_system/profile/bin/git" <<EOF
+#!/bin/sh
+exec "$host_git" "\$@"
+EOF
+chmod +x "$fake_system/profile/bin/git"
 cat >"$fake_system/profile/bin/infocmp" <<'EOF'
 #!/bin/sh
 set -eu
@@ -365,7 +375,8 @@ EOF
 write_fake_fish
 
 for command in bat btop chafa chromium clang cljfmt clj-kondo emacs fastfetch \
-    fzf gcc gdb gtk4-widget-factory guile jq lua lua-language-server make \
+    fzf gcc gdb gpg gpg-agent gpg-connect-agent gpgconf \
+    gtk4-widget-factory guile jq lua lua-language-server make \
     mediainfo pamixer pipemixer pylsp ranger ruff sbcl shellcheck shfmt; do
     printf '%s\n' '#!/bin/sh' 'exit 0' >"$fake_home/profile/bin/$command"
     chmod +x "$fake_home/profile/bin/$command"
@@ -451,6 +462,35 @@ printf '%s\n' ';; fake generated Emacs theme adapter' \
     >"$fake_home/files/.config/emacs/sk-theme-generated.el"
 printf '%s\n' '# fake generated Fontconfig policy' \
     >"$fake_home/files/.config/fontconfig/fonts.conf"
+cat >"$fake_home/files/.config/git/config" <<'EOF'
+[user]
+	name = Rafael Oliveira
+	email = r0liveira@icloud.com
+	signingKey = 6B094D15B02E54B0F6B5E9E86F83FC62D232E5EC
+	useConfigOnly = true
+[commit]
+	gpgSign = true
+[gpg]
+	format = openpgp
+[init]
+	defaultBranch = main
+[pull]
+	ff = only
+[fetch]
+	prune = true
+[merge]
+	conflictStyle = zdiff3
+EOF
+printf '%s\n' use-keyboxd >"$fake_home/files/.gnupg/common.conf"
+printf '%s\n' '#!/bin/sh' 'exit 0' >"$tmp/fake-pinentry"
+chmod +x "$tmp/fake-pinentry"
+cat >"$fake_home/files/.gnupg/gpg-agent.conf" <<EOF
+pinentry-program $tmp/fake-pinentry
+default-cache-ttl 600
+max-cache-ttl 7200
+default-cache-ttl-ssh 1800
+max-cache-ttl-ssh 7200
+EOF
 printf '%s\n' '# fake generated GTK 3 policy' \
     >"$fake_home/files/.config/gtk-3.0/settings.ini"
 printf '%s\n' '# fake generated GTK 4 policy' \
@@ -484,7 +524,7 @@ printf '%s\n' fish-foreign-env emacs emacs-geiser \
     dunst polkit-gnome maim xclip \
     font-awesome font-google-material-design-icons papirus-icon-theme \
     bibata-cursor-theme hicolor-icon-theme gst-plugins-base \
-    gst-plugins-good gtk \
+    gst-plugins-good gtk gnupg \
     guile sbcl lua-language-server python-lsp-server \
     ungoogled-chromium ranger shellcheck >"$fake_home_names"
 
@@ -513,7 +553,7 @@ reset_fake_home_manifest() {
         emacs-geiser emacs-puni emacs-sly emacs-yasnippet \
         emacs-clojure-mode emacs-fennel-mode emacs-racket-mode fish \
         emacs-package-lint emacs-spacious-padding \
-        fish-foreign-env cljfmt clj-kondo guile \
+        fish-foreign-env cljfmt clj-kondo gnupg guile \
         dunst polkit-gnome maim xclip \
         lua-language-server python-lsp-server ranger sbcl shellcheck \
         ungoogled-chromium
@@ -943,6 +983,8 @@ contains "$output" 'System recovery profile: PASS'
 contains "$output" 'Detached Racket Mode closure requisites: PASS'
 contains "$output" 'Detached Fennel Mode closure requisites: PASS'
 contains "$output" 'Realized package ownership: PASS (overlap=emacs,fish,guile)'
+contains "$output" \
+    'Declarative Git and GPG Home policy: PASS (10 Git keys; SSH agent unchanged)'
 contains "$output" 'guix-theme-home-check: PASS'
 contains "$output" 'Candidate Guile profile: PASS'
 contains "$output" 'Non-login SSH Fish environment: PASS'
@@ -1046,6 +1088,15 @@ for command in cljfmt clj-kondo; do
     mv "$tmp/$command.absent" "$fake_home/profile/bin/$command"
 done
 
+for command in gpg gpg-agent gpg-connect-agent gpgconf; do
+    mv "$fake_home/profile/bin/$command" "$tmp/$command.absent"
+    if output=$(run_gate 2>&1); then
+        fail "Home profile missing $command passed the gate"
+    fi
+    contains "$output" "Home profile lacks $command"
+    mv "$tmp/$command.absent" "$fake_home/profile/bin/$command"
+done
+
 for command in bb clj clojure clojure-lsp drracket fennel fennel-ls fnlfmt \
     gradle gracket java javac lein mvn mzc plt-help raco racket scribble; do
     printf '%s\n' '#!/bin/sh' 'exit 0' >"$fake_home/profile/bin/$command"
@@ -1105,7 +1156,7 @@ done
 
 for package in emacs-clojure-mode emacs-eshell-syntax-highlighting \
     emacs-fennel-mode emacs-package-lint emacs-puni emacs-racket-mode \
-    emacs-spacious-padding emacs-yasnippet cljfmt clj-kondo; do
+    emacs-spacious-padding emacs-yasnippet cljfmt clj-kondo gnupg; do
     remove_fake_manifest_package "$fake_home_manifest" "$package"
     if output=$(run_gate 2>&1); then
         fail "Home manifest missing declared $package passed the gate"

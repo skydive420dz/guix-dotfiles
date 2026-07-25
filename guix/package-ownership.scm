@@ -1,7 +1,7 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; C3-P extends the reviewed Home user/editor base to 96 package/output
-;; selections with 95 unique package names.  The desktop integration packages
+;; C7 extends the reviewed Home user/editor base to 97 package/output
+;; selections with 96 unique package names.  The desktop integration packages
 ;; explicitly own notifications, graphical authorization, and selected-area
 ;; screenshot-to-clipboard behavior.  The visual/runtime selections
 ;; explicitly own the accepted global dependencies instead of relying on
@@ -136,10 +136,14 @@
     "gdb"
     "pkg-config"))
 
+(define %guixpc-home-security-package-specifications
+  '("gnupg"))
+
 (define %guixpc-home-package-specifications
   (append %guixpc-home-desktop-package-specifications
           %guixpc-home-emacs-package-specifications
-          %guixpc-home-development-package-specifications))
+          %guixpc-home-development-package-specifications
+          %guixpc-home-security-package-specifications))
 
 ;; GTK's runtime data and gtk4-widget-factory are deliberately selected from
 ;; its "out" and "bin" outputs.  The out output supplies GTK 4's GSettings

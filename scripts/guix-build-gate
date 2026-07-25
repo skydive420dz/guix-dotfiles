@@ -51,6 +51,7 @@ for file in "$channels" "$home_config" "$system_config" \
     "$module_dir/sk/development-tiers.scm" \
     "$module_dir/sk/desktop-integration.scm" \
     "$module_dir/sk/emacs.scm" \
+    "$module_dir/sk/git-home.scm" \
     "$module_dir/sk/theme.scm" \
     "$module_dir/sk/theme-home.scm" \
     "$module_dir/sk/system-retained-bootcfg.scm" \
@@ -560,7 +561,8 @@ validate_home_profile_artifacts() {
     fi
 
     for command in bat btop chafa chromium clang cljfmt clj-kondo emacs \
-        fastfetch fzf gcc gdb guile jq lua lua-language-server make \
+        fastfetch fzf gcc gdb gpg gpg-agent gpg-connect-agent gpgconf \
+        guile jq lua lua-language-server make \
         mediainfo pamixer pipemixer pylsp ranger ruff sbcl shellcheck shfmt; do
         if [ ! -x "$profile/bin/$command" ]; then
             printf 'guix-build-gate: Home profile lacks %s\n' "$command" >&2
@@ -682,6 +684,114 @@ validate_home_profile_artifacts() {
         exit 1
     fi
     printf '%s\n' 'Detached Fennel Mode closure requisites: PASS'
+}
+
+validate_git_gpg_home_candidate() {
+    home_result=$1
+    system_result=$2
+    git_config=$home_result/files/.config/git/config
+    common_config=$home_result/files/.gnupg/common.conf
+    agent_config=$home_result/files/.gnupg/gpg-agent.conf
+    git_command=$system_result/profile/bin/git
+    actual_keys=$tmp/git-config-keys
+    expected_keys=$tmp/git-config-expected-keys
+    expected_common=$tmp/gpg-common-expected
+
+    for file in "$git_config" "$common_config" "$agent_config"; do
+        if [ ! -r "$file" ]; then
+            printf 'guix-build-gate: Home result lacks Git/GPG policy file: %s\n' \
+                "$file" >&2
+            exit 1
+        fi
+    done
+    if [ ! -x "$git_command" ]; then
+        printf '%s\n' \
+            'guix-build-gate: System result lacks Git config parser' >&2
+        exit 1
+    fi
+
+    "$git_command" config --file "$git_config" --name-only --list \
+        | sort >"$actual_keys"
+    printf '%s\n' \
+        commit.gpgsign \
+        fetch.prune \
+        gpg.format \
+        init.defaultbranch \
+        merge.conflictstyle \
+        pull.ff \
+        user.email \
+        user.name \
+        user.signingkey \
+        user.useconfigonly >"$expected_keys"
+    if ! cmp -s "$expected_keys" "$actual_keys"; then
+        printf '%s\n' \
+            'guix-build-gate: generated Git policy key set changed' >&2
+        exit 1
+    fi
+
+    check_git_setting() {
+        key=$1
+        expected=$2
+        actual=$("$git_command" config --file "$git_config" --get "$key") || {
+            printf 'guix-build-gate: generated Git policy lacks %s\n' \
+                "$key" >&2
+            exit 1
+        }
+        if [ "$actual" != "$expected" ]; then
+            printf 'guix-build-gate: generated Git policy differs for %s\n' \
+                "$key" >&2
+            exit 1
+        fi
+    }
+
+    check_git_setting user.name 'Rafael Oliveira'
+    check_git_setting user.email r0liveira@icloud.com
+    check_git_setting user.signingkey \
+        6B094D15B02E54B0F6B5E9E86F83FC62D232E5EC
+    check_git_setting user.useconfigonly true
+    check_git_setting commit.gpgsign true
+    check_git_setting gpg.format openpgp
+    check_git_setting init.defaultbranch main
+    check_git_setting pull.ff only
+    check_git_setting fetch.prune true
+    check_git_setting merge.conflictstyle zdiff3
+
+    printf '%s\n' use-keyboxd >"$expected_common"
+    if ! cmp -s "$expected_common" "$common_config"; then
+        printf '%s\n' \
+            'guix-build-gate: generated GnuPG common policy changed' >&2
+        exit 1
+    fi
+
+    pinentry_program=$(
+        sed -n 's/^pinentry-program //p' "$agent_config"
+    )
+    if [ -z "$pinentry_program" ] || [ ! -x "$pinentry_program" ]; then
+        printf '%s\n' \
+            'guix-build-gate: generated GPG agent lacks usable pinentry' >&2
+        exit 1
+    fi
+    for line in \
+        'default-cache-ttl 600' \
+        'max-cache-ttl 7200' \
+        'default-cache-ttl-ssh 1800' \
+        'max-cache-ttl-ssh 7200'; do
+        if ! grep -Fx "$line" "$agent_config" >/dev/null; then
+            printf 'guix-build-gate: generated GPG agent lacks: %s\n' \
+                "$line" >&2
+            exit 1
+        fi
+    done
+    if [ "$(awk 'NF { count += 1 } END { print count + 0 }' \
+        "$agent_config")" -ne 5 ] || \
+       grep -Eq '^(enable-ssh-support|ssh-support)' "$agent_config"; then
+        printf '%s\n' \
+            'guix-build-gate: generated GPG agent policy expanded' >&2
+        exit 1
+    fi
+
+    printf '%s\n' \
+        'Declarative Git and GPG Home policy: PASS (10 Git keys; SSH agent unchanged)'
 }
 
 validate_nonlogin_fish_environment() {
@@ -1384,6 +1494,7 @@ else
     printf '%s\n' "$system_result"
     validate_system_recovery_profile "$system_result"
     validate_realized_package_ownership "$system_result" "$home_result"
+    validate_git_gpg_home_candidate "$home_result" "$system_result"
     validate_theme_home_candidate "$home_result" "$system_result"
     validate_guile_profile_environment "$system_result" "$home_result"
     validate_nonlogin_fish_environment "$system_result" "$home_result"

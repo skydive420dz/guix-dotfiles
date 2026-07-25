@@ -47,21 +47,21 @@
            "ripgrep" "vim" "xset" "xwallpaper" "picom" "xrandr"))
  "reviewed 13-package recovery floor changed")
 
-(assert (= (length home-specifications) 93)
-        "reviewed Home specification list must contain exactly 93 packages")
+(assert (= (length home-specifications) 94)
+        "reviewed Home specification list must contain exactly 94 packages")
 (assert (equal? home-output-specifications '("gtk:out" "gtk:bin"))
         "reviewed Home output specifications changed")
 (assert (equal? home-output-names '("gtk"))
         "reviewed Home output package names changed")
 (assert (equal? home-explicit '("emacs-racket-mode"))
         "reviewed explicit Home package names changed")
-(assert (= (length home) 95)
-        "reviewed Home ownership must contain exactly 95 unique package names")
+(assert (= (length home) 96)
+        "reviewed Home ownership must contain exactly 96 unique package names")
 (assert (= (+ (length home-specifications)
               (length home-output-specifications)
               (length home-explicit))
-           96)
-        "reviewed Home declaration must contain exactly 96 selections")
+           97)
+        "reviewed Home declaration must contain exactly 97 selections")
 (assert
  (equal? home
          (append home-specifications home-output-names home-explicit))
@@ -79,6 +79,7 @@
    "guile" "sbcl" "python-lsp-server" "lua-language-server"
    "ungoogled-chromium" "ranger" "shellcheck" "dunst" "polkit-gnome"
    "maim" "xclip"
+   "gnupg"
    "font-awesome" "font-google-material-design-icons"
    "papirus-icon-theme" "bibata-cursor-theme" "hicolor-icon-theme"
    "gst-plugins-base" "gst-plugins-good" "gtk"))
@@ -204,6 +205,7 @@
    "emacs-fennel-mode"
    "sbcl" "python-lsp-server" "lua-language-server"
    "gcc-toolchain" "gdb" "shellcheck" "babashka" "clojure"
+   "gnupg"
    "clojure-tools" "clojure-lsp" "gradle" "leiningen" "maven"
    "openjdk" "racket" "racket-minimal" "emacs-racket-mode"
    "fennel" "fnlfmt" "fennel-ls"))

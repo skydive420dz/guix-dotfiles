@@ -1,0 +1,473 @@
+#!/usr/bin/env -S guile --no-auto-compile -s
+!#
+
+;;; One-shot, observational Git repository hygiene report.
+;;;
+;;; This tool is for repositories the user trusts.  It disables Git's optional
+;;; writes, lazy fetching, maintenance, and index refreshes.  Git status still
+;;; honors repository-configured clean/process filters, so an untrusted
+;;; checkout remains outside this tool's safety boundary.
+
+(use-modules (ice-9 ftw)
+             (ice-9 regex)
+             (ice-9 textual-ports)
+             (srfi srfi-1))
+
+(define %program "sk-git-audit")
+(define %git "/run/current-system/profile/bin/git")
+(define %timeout "/run/current-system/profile/bin/timeout")
+(define %maximum-output (* 1024 1024))
+(define %maximum-candidates 1024)
+(define %maximum-repositories 256)
+
+(define (command-result kind output)
+  (list kind output))
+
+(define (result-kind result)
+  (car result))
+
+(define (result-output result)
+  (cadr result))
+
+(define (status-success? status)
+  (catch #t
+    (lambda ()
+      (let ((exit-value (status:exit-val status)))
+        (and (integer? exit-value) (zero? exit-value))))
+    (lambda _ #f)))
+
+(define (close-quietly port)
+  (when port
+    (catch #t
+      (lambda () (close-port port))
+      (lambda _ #f))))
+
+(define (wait-quietly pid)
+  (catch #t
+    (lambda () (cdr (waitpid pid 0)))
+    (lambda _ #f)))
+
+(define (run-command program arguments)
+  "Run PROGRAM with direct ARGUMENTS and return bounded, normalized stdout."
+  (if (or (not (file-exists? program))
+          (not (access? program X_OK))
+          (not (file-exists? %timeout)))
+      (command-result 'unavailable "")
+      (catch #t
+        (lambda ()
+          (let ((read-port #f)
+                (write-port #f)
+                (pid #f)
+                (reaped? #f))
+            (dynamic-wind
+              (lambda () #t)
+              (lambda ()
+                (let ((ports (pipe)))
+                  (set! read-port (car ports))
+                  (set! write-port (cdr ports)))
+                (set! pid (primitive-fork))
+                (if (zero? pid)
+                    (catch #t
+                      (lambda ()
+                        (close-port read-port)
+                        (dup2 (port->fdes write-port) 1)
+                        (close-port write-port)
+                        (let ((null-fd (open-fdes "/dev/null" O_RDWR)))
+                          (dup2 null-fd 0)
+                          (dup2 null-fd 2)
+                          (close-fdes null-fd))
+                        (setenv "GIT_OPTIONAL_LOCKS" "0")
+                        (setenv "GIT_NO_LAZY_FETCH" "1")
+                        (setenv "GIT_TERMINAL_PROMPT" "0")
+                        (for-each
+                         unsetenv
+                         '("GIT_DIR"
+                           "GIT_WORK_TREE"
+                           "GIT_INDEX_FILE"
+                           "GIT_COMMON_DIR"
+                           "GIT_OBJECT_DIRECTORY"
+                           "GIT_ALTERNATE_OBJECT_DIRECTORIES"
+                           "GIT_NAMESPACE"
+                           "GIT_SHALLOW_FILE"))
+                        (setenv "LC_ALL" "C")
+                        (apply execl %timeout %timeout
+                               (append
+                                '("--kill-after=1" "5")
+                                (list program)
+                                arguments)))
+                      (lambda _ (primitive-exit 127)))
+                    (begin
+                      (close-port write-port)
+                      (set! write-port #f)
+                      (set-port-encoding! read-port "UTF-8")
+                      (let* ((chunk
+                              (get-string-n read-port
+                                            (+ %maximum-output 1)))
+                             (output
+                              (if (eof-object? chunk) "" chunk)))
+                        (when (> (string-length output) %maximum-output)
+                          ;; Closing the pipe makes an overproducing child
+                          ;; terminate without retaining unbounded output.
+                          (close-port read-port)
+                          (set! read-port #f))
+                        (let ((status (wait-quietly pid)))
+                          (set! reaped? #t)
+                          (cond
+                           ((> (string-length output) %maximum-output)
+                            (command-result 'oversize ""))
+                           ((status-success? status)
+                            (command-result 'ok output))
+                           (else
+                            (command-result 'failed ""))))))))
+              (lambda ()
+                (close-quietly read-port)
+                (close-quietly write-port)
+                (when (and pid (> pid 0) (not reaped?))
+                  (catch #t
+                    (lambda () (kill pid SIGKILL))
+                    (lambda _ #f))
+                  (wait-quietly pid))))))
+        (lambda _ (command-result 'unavailable "")))))
+
+(define sk:command-runner run-command)
+
+(define (run-git repository arguments)
+  (sk:command-runner
+   %git
+   (append
+    '("--no-optional-locks"
+      "--no-lazy-fetch"
+      "-c" "core.fsmonitor=false"
+      "-c" "core.untrackedCache=false"
+      "-c" "maintenance.auto=false"
+      "-c" "gc.auto=0"
+      "-c" "status.submoduleSummary=false"
+      "-C")
+    (list repository)
+    arguments)))
+
+(define (nonempty-lines text)
+  (filter (lambda (line) (not (string-null? line)))
+          (string-split text #\newline)))
+
+(define (prefixed-value prefix line)
+  (and (string-prefix? prefix line)
+       (substring line (string-length prefix))))
+
+(define (hex-digit? character)
+  (or (char-numeric? character)
+      (and (char>=? character #\a) (char<=? character #\f))
+      (and (char>=? character #\A) (char<=? character #\F))))
+
+(define (valid-oid? candidate)
+  (and (string? candidate)
+       (member (string-length candidate) '(40 64))
+       (every hex-digit? (string->list candidate))))
+
+(define (parse-status text)
+  "Normalize `git status --porcelain=v2 --branch' output without paths."
+  (let ((oid #f)
+        (branch #f)
+        (upstream #f)
+        (ahead 'unknown)
+        (behind 'unknown)
+        (staged 0)
+        (unstaged 0)
+        (untracked 0)
+        (conflicts 0))
+    (for-each
+     (lambda (line)
+       (let ((oid-value (prefixed-value "# branch.oid " line))
+             (head-value (prefixed-value "# branch.head " line))
+             (upstream-value
+              (prefixed-value "# branch.upstream " line))
+             (ab-match
+              (string-match
+               "^# branch\\.ab \\+([0-9]+) -([0-9]+)$"
+               line)))
+         (cond
+          (oid-value
+           (set! oid oid-value))
+          (head-value
+           (set! branch head-value))
+          (upstream-value
+           (set! upstream upstream-value))
+          (ab-match
+           (set! ahead
+                 (string->number (match:substring ab-match 1)))
+           (set! behind
+                 (string->number (match:substring ab-match 2))))
+          ((and (> (string-length line) 3)
+                (or (char=? (string-ref line 0) #\1)
+                    (char=? (string-ref line 0) #\2)))
+           (unless (char=? (string-ref line 2) #\.)
+             (set! staged (+ staged 1)))
+           (unless (char=? (string-ref line 3) #\.)
+             (set! unstaged (+ unstaged 1))))
+          ((string-prefix? "u " line)
+           (set! conflicts (+ conflicts 1)))
+          ((string-prefix? "? " line)
+           (set! untracked (+ untracked 1))))))
+     (nonempty-lines text))
+    (let* ((head-state
+            (cond
+             ((and oid (string=? oid "(initial)") branch) 'unborn)
+             ((not (valid-oid? oid)) 'unknown)
+             ((not branch) 'unknown)
+             ((and branch (string=? branch "(detached)")) 'detached)
+             (else 'branch)))
+           (short-head
+            (cond
+             ((eq? head-state 'unborn) 'none)
+             ((eq? head-state 'unknown) 'unknown)
+             (else (substring oid 0 12))))
+           (normalized-branch
+            (if (eq? head-state 'detached)
+                'detached
+                (or branch 'unknown))))
+      `((head-state ,head-state)
+        (branch ,normalized-branch)
+        (full-head ,(if (valid-oid? oid) oid 'none))
+        (head ,short-head)
+        (upstream-present ,(if upstream 'yes 'no))
+        (upstream-name ,(or upstream 'none))
+        (cached-ahead ,ahead)
+        (cached-behind ,behind)
+        (staged ,staged)
+        (unstaged ,unstaged)
+        (untracked ,untracked)
+        (conflicts ,conflicts)))))
+
+(define (record-value record key)
+  (let ((entry (assq key record)))
+    (and entry (pair? (cdr entry)) (cadr entry))))
+
+(define (trim-single-line text)
+  (let ((trimmed (string-trim-both text)))
+    (and (not (string-null? trimmed))
+         (not (string-contains trimmed "\n"))
+         trimmed)))
+
+(define (repository-relative-name repository root)
+  (if (string=? repository root)
+      "."
+      (substring repository (+ (string-length root) 1))))
+
+(define (git-path repository arguments)
+  (let ((result
+         (run-git repository arguments)))
+    (and (eq? (result-kind result) 'ok)
+         (let ((path (trim-single-line (result-output result))))
+           (and path (string-prefix? "/" path) path)))))
+
+(define %known-locks
+  '((index git "index.lock")
+    (head git "HEAD.lock")
+    (config common "config.lock")
+    (packed-refs common "packed-refs.lock")
+    (shallow common "shallow.lock")))
+
+(define (present-locks repository)
+  (let ((git-dir
+         (git-path repository '("rev-parse" "--absolute-git-dir")))
+        (common-dir
+         (git-path
+          repository
+          '("rev-parse" "--path-format=absolute" "--git-common-dir"))))
+    (map
+     (lambda (entry)
+       (let* ((name (list-ref entry 0))
+              (scope (list-ref entry 1))
+              (file (list-ref entry 2))
+              (directory
+               (if (eq? scope 'git) git-dir common-dir)))
+         (list
+          name
+          (if directory
+              (if (false-if-exception
+                   (lstat (string-append directory "/" file)))
+                  'yes
+                  'no)
+              'unknown))))
+     %known-locks)))
+
+(define (remote-count repository)
+  (let ((result (run-git repository '("remote"))))
+    (if (eq? (result-kind result) 'ok)
+        (length (nonempty-lines (result-output result)))
+        'unknown)))
+
+(define (head-signature repository head-state full-head)
+  (if (eq? head-state 'unborn)
+      'not-applicable
+      (if (eq? head-state 'unknown)
+          'unknown
+      (let ((result
+             (run-git repository
+                      (list "cat-file" "commit" full-head))))
+        (if (not (eq? (result-kind result) 'ok))
+            'unknown
+            (let loop ((lines (string-split (result-output result)
+                                            #\newline)))
+              (cond
+               ((null? lines) 'absent)
+               ((string-null? (car lines)) 'absent)
+               ((or (string-prefix? "gpgsig " (car lines))
+                    (string-prefix? "gpgsig-sha256 " (car lines)))
+                'present)
+               (else (loop (cdr lines))))))))))
+
+(define (locks-available? locks)
+  (every (lambda (entry)
+           (memq (cadr entry) '(yes no)))
+         locks))
+
+(define (lock-present? locks)
+  (any (lambda (entry) (eq? (cadr entry) 'yes)) locks))
+
+(define (repository-state parsed locks remotes signature)
+  (cond
+   ((eq? (record-value parsed 'head-state) 'unknown) 'unavailable)
+   ((not (locks-available? locks)) 'unavailable)
+   ((eq? remotes 'unknown) 'unavailable)
+   ((eq? signature 'unknown) 'unavailable)
+   ((and (eq? (record-value parsed 'head-state) 'branch)
+         (eq? (record-value parsed 'upstream-present) 'yes)
+         (or (eq? (record-value parsed 'cached-ahead) 'unknown)
+             (eq? (record-value parsed 'cached-behind) 'unknown)))
+    'unavailable)
+   ((lock-present? locks) 'attention)
+   ((any positive?
+         (map (lambda (key) (record-value parsed key))
+              '(staged unstaged untracked conflicts)))
+    'dirty)
+   (else 'clean)))
+
+(define (observe-repository root repository)
+  (let ((status-result
+         (run-git
+          repository
+          '("status" "--porcelain=v2" "--branch" "--ahead-behind"
+            "--untracked-files=all" "--ignore-submodules=none"
+            "--no-renames"))))
+    (if (not (eq? (result-kind status-result) 'ok))
+        `((path ,(repository-relative-name repository root))
+          (state unavailable))
+        (let* ((parsed (parse-status (result-output status-result)))
+               (locks (present-locks repository))
+               (head-state (record-value parsed 'head-state))
+               (full-head (record-value parsed 'full-head))
+               (remotes (remote-count repository))
+               (signature
+                (head-signature repository head-state full-head))
+               (public-parsed
+                (filter
+                 (lambda (entry)
+                   (not (eq? (car entry) 'full-head)))
+                 parsed)))
+          (append
+           `((path ,(repository-relative-name repository root))
+             (state
+              ,(repository-state parsed locks remotes signature)))
+           public-parsed
+           `((remotes ,remotes)
+             (head-signature ,signature)
+             (locks ,locks)))))))
+
+(define (plain-directory? path)
+  (let ((entry (false-if-exception (lstat path))))
+    (and entry (eq? (stat:type entry) 'directory))))
+
+(define (git-marker? directory)
+  (false-if-exception
+   (lstat (string-append directory "/.git"))))
+
+(define (child-names directory)
+  (sort
+   (scandir
+    directory
+    (lambda (name)
+      (not (member name '("." "..")))))
+   string<?))
+
+(define (discover-repositories root)
+  (if (git-marker? root)
+      (list root)
+      (let ((names (child-names root)))
+        (when (> (length names) %maximum-candidates)
+          (error "repository candidate limit exceeded"))
+        (filter-map
+         (lambda (name)
+           (let ((child (string-append root "/" name)))
+             (and (plain-directory? child)
+                  (git-marker? child)
+                  child)))
+         names))))
+
+(define (overall-state records)
+  (cond
+   ((any (lambda (record)
+           (eq? (record-value record 'state) 'unavailable))
+         records)
+    'degraded)
+   ((any (lambda (record)
+           (memq (record-value record 'state) '(dirty attention)))
+         records)
+    'attention)
+   (else 'ok)))
+
+(define (build-report root)
+  (let* ((canonical-root (canonicalize-path root))
+         (repositories (discover-repositories canonical-root))
+         (_
+          (when (> (length repositories) %maximum-repositories)
+            (error "repository limit exceeded")))
+         (records
+          (map (lambda (repository)
+                 (observe-repository canonical-root repository))
+               repositories)))
+    (list
+     'sk-git-audit/v1
+     (list 'overall (overall-state records))
+     (list 'repositories (length records))
+     '(scope root-or-direct-children)
+     (list 'maximum-repositories %maximum-repositories)
+     (cons 'items records)
+     '(upstream-state cached-no-fetch)
+     '(repository-actions none))))
+
+(define (usage port)
+  (format port "usage: ~a [--root DIRECTORY] [--help]~%" %program)
+  (format port
+          "Inspect trusted repositories only; Git status honors filters.~%"))
+
+(define (main arguments)
+  (cond
+   ((or (null? arguments)
+        (and (= (length arguments) 2)
+             (string=? (car arguments) "--root")))
+    (let ((root
+           (if (null? arguments)
+               (string-append (or (getenv "HOME") "") "/Projects")
+               (cadr arguments))))
+      (catch #t
+        (lambda ()
+          (unless (plain-directory? root)
+            (error "invalid repository root"))
+          (write (build-report root))
+          (newline)
+          0)
+        (lambda _
+          (format (current-error-port)
+                  "~a: unable to inspect repository root~%"
+                  %program)
+          1))))
+   ((equal? arguments '("--help"))
+    (usage (current-output-port))
+    0)
+   (else
+    (usage (current-error-port))
+    2)))
+
+(when (string=? (basename (car (command-line))) %program)
+  (exit (main (cdr (command-line)))))

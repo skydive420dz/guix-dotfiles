@@ -36,6 +36,31 @@ end
 
 __sk_import_home_environment_for_ssh
 
+function __sk_prepare_gpg_terminal
+    status is-interactive
+    or return
+
+    set -l current_tty (tty 2>/dev/null)
+    string match -q '/dev/*' "$current_tty"
+    or return
+    set -gx GPG_TTY "$current_tty"
+
+    command -q gpgconf
+    or return
+    command -q gpg-connect-agent
+    or return
+
+    set -l agent_socket (gpgconf --list-dirs agent-socket 2>/dev/null)
+    test -n "$agent_socket"
+    and test -S "$agent_socket"
+    or return
+
+    command gpg-connect-agent --no-autostart \
+        updatestartuptty /bye >/dev/null 2>/dev/null
+end
+
+__sk_prepare_gpg_terminal
+
 function sk-start-exwm
     test -z "$SSH_CONNECTION"
     or begin
@@ -138,7 +163,9 @@ function __sk_git_status
     command git rev-parse --is-inside-work-tree >/dev/null 2>/dev/null
     or return
 
-    set -l git_state (command git status --porcelain 2>/dev/null)
+    set -l git_state (
+        command env GIT_OPTIONAL_LOCKS=0 git status --porcelain 2>/dev/null
+    )
     if test -z "$git_state"
         echo '󱓏'
     else
