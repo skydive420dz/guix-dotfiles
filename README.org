@@ -521,14 +521,10 @@ Every later slice remains unauthorized.
   reports hygiene without mutating repositories.
 - Boundary: a local and SSH signed-commit test plus =emacsclient -t= pass.  No
   automatic cleaning, history rewriting, or repository mutation.
-- Pending correction gate: the local signing test passed functionally but
-  exposed that generic Guix =pinentry= is GTK 2 while the generated theme owns
-  only GTK 3/4.  Before C7 closes, Scheme must add an explicit =gtk2-theme=
-  token, generate and Home-own =~/.gtkrc-2.0=, expose
-  =gnome-themes-extra=, and prove that the local graphical prompt follows the
-  accepted dark font, icon, and cursor policy while the SSH curses fallback
-  still passes.  Do not replace the accepted frontend with a Gcr/D-Bus
-  prompter or add a prompt daemon merely to avoid owning the GTK 2 adapter.
+- State: closed and accepted live on 2026-07-25 at published correction
+  checkpoint =9dbacef=.  Scheme owns the GTK 2 adapter, theme package, and
+  search path; the activated graphical prompt passed dark-theme acceptance;
+  and separate graphical and SSH-curses commits produced verified signatures.
 
 ** C8 — Give Org notes private synchronization and history
 
