@@ -1,6 +1,7 @@
-#+title: C3 desktop integration candidate
+#+title: C3 desktop integration acceptance record
 #+date: 2026-07-22
-#+status: published source/build checkpoint; corrective activation preflight validated but not committed
+#+updated: 2026-07-24
+#+status: accepted live; C3 closed
 
 * Purpose
 
@@ -16,7 +17,7 @@ replace EXWM or introduce a second desktop framework.
 | Selected-area screenshot | Emacs Lisp calling =maim= then =xclip= | Physical Capture selects an area and places one PNG on CLIPBOARD. |
 | Notifications | Dunst through Home D-Bus activation | Exactly one readable notification server answers the standard API. |
 | Graphical authorization | system Polkit authority plus one Home =polkit-gnome= agent | A GUI privilege request presents one GTK authentication dialog. |
-| MIME/default applications | Guix Home XDG MIME service | Web/PDF/images open in Chromium; text/code/directories and mail reuse the Emacs server. |
+| MIME/default applications | Guix Home XDG MIME service | Web/PDF/images open in Chromium; dedicated shell-free desktop entries route text/code/directories, Org Protocol, and mail to the canonical Emacs server. |
 | Focus and urgency requests | reviewed EXWM 0.35 core | Preserve the current C2 behavior; do not install custom focus-stealing advice. |
 
 The generated Kitty policy makes its current selection and terminal clipboard
@@ -45,14 +46,16 @@ same Modus-derived semantic tokens as Emacs, Kitty, Fish, and GTK.
 - Isolated Emacs tests for explicit selections, screenshot state/cleanup, and
   the physical key contract.
 - Guix package-ownership and Home lowering/build checks.
-- Exact candidate checks for generated Dunst and MIME configuration and the
+- Exact candidate checks for generated Dunst, the three executable shell-free
+  Emacs desktop entries, Org Protocol readiness, the MIME map, and the
   PolicyKit Shepherd service.
 
-** Live automated checks after separately authorized activation
+** Live automated checks after activation
 
 Run =scripts/desktop-session-check --require-c3=.  It must prove one Dunst API
 owner, one healthy =polkit-agent= with the canonical X/bus environment, the
-required commands, and the accepted MIME map.
+required commands, executable fail-closed desktop entries, Org Protocol
+readiness in the canonical server, and the accepted MIME map.
 
 ** Hand acceptance
 
@@ -60,31 +63,37 @@ required commands, and the accepted MIME map.
    Emacs, Kitty, Chromium, and =gtk4-widget-factory=.
 2. Test the PRIMARY ring with mouse selection/middle-click through those four
    applications.  No clipboard contents are logged by the checker.
-3. From several focused applications, press physical Capture, select an area,
-   and paste the resulting image into a destination that accepts PNG.
+3. Press physical Capture, select an area, and inspect the CLIPBOARD targets,
+   payload size, and PNG signature without retaining the clipboard contents.
 4. Send, replace, and dismiss one Dunst notification; confirm its dark theme is
    readable.
 5. Trigger one harmless Polkit prompt and cancel it; confirm that no privileged
    change occurred and the agent remains healthy.
-6. Open a URL, text file, directory, PNG, SVG, and PDF through =xdg-open=;
-   text, directories, and mail must reuse the running Emacs server.
+6. Open a URL, text file, directory, PNG, SVG, PDF, harmless =org-protocol:=
+   URI, and harmless =mailto:= URI through =xdg-open=.  Text, directories, Org
+   Protocol, and mail must reuse the running Emacs server.
 7. Confirm C2 dialog focus/return behavior and cross-workspace attention still
    behave as before.
 
 * Source/build evidence
 
 - The focused theme, Home-theme, package-ownership, desktop-policy, build-gate
-  harness, and profile-aware Emacs checks pass.  The Emacs result is =94/94=
-  isolated tests plus live Guile and Common Lisp backend probes.
+  harness, and profile-aware Emacs checks pass.  The final Emacs result is
+  =95/95= isolated tests plus live Guile and Common Lisp backend probes.
 - =scripts/guix-build-gate --plan= passes against the pinned channels.
-- =scripts/guix-build-gate= passes and realizes both declarations without
-  activation: Home =/gnu/store/cci1vvhkmxi79d50msy6bb0s3dl9h9gm-home= and
-  System =/gnu/store/lfm4xrqhc1jxa87q084cp0bb5yx9f0yl-system=.
-- Candidate =xdg-mime= queries return =emacsclient.desktop= for text and
-  directories, =emacsclient-mail.desktop= for =mailto=, and
-  =chromium.desktop= for PDF and SVG as declared.
-- The candidate profile exposes Dunst/Dunstify, Maim, Xclip, Dunst's D-Bus
-  activation file, and the Polkit GNOME authentication-agent executable.
+- The initial =scripts/guix-build-gate= passed and realized both declarations
+  without activation: Home
+  =/gnu/store/cci1vvhkmxi79d50msy6bb0s3dl9h9gm-home= and unchanged System
+  =/gnu/store/lfm4xrqhc1jxa87q084cp0bb5yx9f0yl-system=.  Each bounded
+  correction then passed its focused lowering/build gate; the final realized
+  and active Home result is recorded below.
+- The realized and active MIME map uses =sk-emacsclient-files.desktop= for text
+  and directories, =sk-emacsclient-org-protocol.desktop= for Org Protocol,
+  =sk-emacsclient-mail.desktop= for =mailto=, and =chromium.desktop= for web,
+  PDF, and images.
+- The initial candidate Home profile exposes Dunst/Dunstify, Maim, Xclip,
+  Dunst's D-Bus activation file, and the Polkit GNOME authentication-agent
+  executable.
 - Dunst 1.13.2 parses the generated configuration without a configuration
   warning under an isolated nonexistent display and bus.  The expected test
   process stops only when it cannot initialize that deliberately absent X11
@@ -93,24 +102,72 @@ required commands, and the accepted MIME map.
   =sol-ultra-delirious-experiment= ref remains
   =d703717b551a0d4751282953f989341ecbb4edd2=.
 
-* Current gate
+* Published and active state
 
-The published source/build checkpoint is =5d13a35=.  Its first Home activation
-attempt stopped before mutation because the retired Kitty migration guard
-compared the active generation's old generated bytes with C3's new Kitty
-golden.  That is legitimate generation turnover, but the guard did not model
-it.
+The accepted implementation is the published chain:
 
-A bounded corrective candidate accepts the old Kitty link only when it exactly
-matches the file owned by the active immutable =~/.guix-home= result and all
-resolved paths remain below =/gnu/store=.  Arbitrary store links, mutable
-lookalikes, wrong links, dangling links, and regular files remain rejected.
+- =5d13a35= establishes C3 integration ownership.
+- =3c70531= permits only exact immutable active-Home generation turnover.
+- =ab7be0d= replaces shell-quoted upstream MIME commands with executable,
+  shell-free, fail-closed Emacs client entries.
+- =846a23d= normalizes the Org Protocol readiness assertion.
+- =1ac8701= presents Org Protocol requests and capture in EXWM with
+  =--reuse-frame=.
 
-The focused repository-link, reconfigure, and immutable Home-theme fixtures
-pass.  The read-only preflight against the actual active generation reports
-=PASS (14 live links, 1 retired transition)=.  The corrected Home declaration
-realizes as =/gnu/store/3j51r9wyr43xd9w99w0dg4a89ir5rvzr-home=, and its
-generated theme/Home checker passes.
+At C3 closure on 2026-07-24, the exact active state was Home generation 51,
+result =/gnu/store/ppn3l0hcv228y792qxw86wr8drma2fia-home=.  The final
+=scripts/desktop-session-check --require-c3= passes, including the canonical
+EXWM server, D-Bus, PipeWire, WirePlumber, =pipewire-pulseaudio=, one Dunst
+owner, one Polkit agent, executable desktop entries, Org Protocol readiness,
+the MIME map, screenshot commands, Bluetooth audio, and the inherited desktop
+checks.
 
-The correction's commit and push, activation retry, runtime checks, and hand
-acceptance remain separate gates.
+The first activation attempt had stopped before mutation because the retired
+Kitty migration guard did not distinguish legitimate immutable generation
+turnover.  The published correction accepts that link only when it exactly
+matches the file owned by the active =~/.guix-home= result and every resolved
+path remains below =/gnu/store=.  Arbitrary store links, mutable lookalikes,
+wrong links, dangling links, and regular files remain rejected.
+
+Generation 49 left the four pre-existing D-Bus, PipeWire, WirePlumber, and
+=pipewire-pulseaudio= services replacement pending.  Subsequent reloads also
+required reconciling the now-running Polkit agent, even though generations
+49--51 share the exact same generated Shepherd configuration object.
+Reconciliation restarted the session bus and dependents, restored the canonical
+X11 D-Bus activation environment, and restarted affected services in dependency
+order.  The final live checker proves that all are healthy and none remains
+replacement pending.  This is an activation-operational note, not a retained
+parallel service mechanism.
+
+Dunst logs one non-blocking icon-theme warning on activation because
+=Papirus-Dark= inherits the absent =breeze-dark= theme.  The =hicolor= fallback,
+notification API, and paired appearance checks all pass; the warning remains a
+documented polish item rather than a C3 blocker.
+
+* Live hand-acceptance evidence
+
+- CLIPBOARD and PRIMARY pass across Emacs, Kitty, Chromium, and
+  =gtk4-widget-factory=, including middle-click PRIMARY paste.
+- Physical Capture produced a 479239-byte =image/png= clipboard target with
+  the exact PNG signature.
+- Dunst was dark and readable; replacement, critical styling, and click
+  dismissal passed.  A harmless Polkit request produced one dialog, canceled
+  without mutation, and left exactly one healthy agent.
+- =xdg-open= reused the running Chromium instance for URLs, PNG, SVG, and PDF.
+  It reused Emacs PID 480 for a text file and Dired directory.  The immutable
+  CUPS Russian-form PDF rendered correctly.
+- Org Protocol presented its Inbox capture in the foreground and canceled
+  cleanly.  A harmless =mailto:= URI presented a compose buffer and was killed
+  without sending.  Neither route started another Emacs.
+- The C2 regression passed again: Blueman's About dialog remained compact,
+  received focus, dismissed through native Escape, and returned focus to its
+  manager.  A real EWMH =_NET_WM_STATE_DEMANDS_ATTENTION= client message for
+  Chromium on another workspace did not switch workspaces or steal focus;
+  normal workspace switching exposed the target and cleared EXWM's urgency
+  flag.
+
+No System reconfigure or reboot was required for C3.  Clipboard history and Qt
+theming remain outside this slice under the explicit boundaries above.
+
+The frozen =sol-ultra-delirious-experiment= ref remains
+=d703717b551a0d4751282953f989341ecbb4edd2=.
