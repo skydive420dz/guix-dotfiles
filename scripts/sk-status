@@ -1,0 +1,552 @@
+#!/usr/bin/env -S guile --no-auto-compile -s
+!#
+
+;;; One-shot, read-only GuixPC status snapshot.
+
+(use-modules (ice-9 regex)
+             (ice-9 textual-ports)
+             (srfi srfi-1))
+
+(define %program "sk-status")
+(define %timeout "/run/current-system/profile/bin/timeout")
+(define %system-bin "/run/current-system/profile/bin")
+(define %maximum-output 8192)
+
+(define (command-result kind output)
+  (list kind output))
+
+(define (result-kind result)
+  (car result))
+
+(define (result-output result)
+  (cadr result))
+
+(define (status-success? status)
+  (catch #t
+    (lambda ()
+      (let ((exit-value (status:exit-val status)))
+        (and (integer? exit-value) (zero? exit-value))))
+    (lambda _ #f)))
+
+(define (close-quietly port)
+  (when port
+    (catch #t
+      (lambda () (close-port port))
+      (lambda _ #f))))
+
+(define (wait-quietly pid)
+  (catch #t
+    (lambda () (cdr (waitpid pid 0)))
+    (lambda _ #f)))
+
+(define (run-command program arguments)
+  "Run PROGRAM with direct ARGUMENTS and return a normalized result.
+The fixed timeout bounds every probe.  Child stdin and stderr are discarded;
+only bounded stdout is retained for allowlisted parsing."
+  (if (or (not (file-exists? program))
+          (not (access? program X_OK))
+          (not (file-exists? %timeout)))
+      (command-result 'unavailable "")
+      (catch #t
+        (lambda ()
+          (let ((read-port #f)
+                (write-port #f)
+                (pid #f)
+                (reaped? #f))
+            (dynamic-wind
+              (lambda () #t)
+              (lambda ()
+                (let ((ports (pipe)))
+                  (set! read-port (car ports))
+                  (set! write-port (cdr ports)))
+                (set! pid (primitive-fork))
+                (if (zero? pid)
+                    (catch #t
+                      (lambda ()
+                        (close-port read-port)
+                        (dup2 (port->fdes write-port) 1)
+                        (close-port write-port)
+                        (let ((null-fd (open-fdes "/dev/null" O_RDWR)))
+                          (dup2 null-fd 0)
+                          (dup2 null-fd 2)
+                          (close-fdes null-fd))
+                        (setenv "LC_ALL" "C")
+                        (apply execl %timeout %timeout
+                               (append '("--kill-after=1" "3")
+                                       (list program)
+                                       arguments)))
+                      (lambda _ (primitive-exit 127)))
+                    (begin
+                      (close-port write-port)
+                      (set! write-port #f)
+                      (set-port-encoding! read-port "UTF-8")
+                      (let* ((output (get-string-all read-port))
+                             (status (wait-quietly pid)))
+                        (set! reaped? #t)
+                        (cond
+                         ((> (string-length output) %maximum-output)
+                          (command-result 'oversize ""))
+                         ((status-success? status)
+                          (command-result 'ok output))
+                         (else
+                          (command-result 'failed "")))))))
+              (lambda ()
+                (close-quietly read-port)
+                (close-quietly write-port)
+                (when (and pid (> pid 0) (not reaped?))
+                  (catch #t
+                    (lambda () (kill pid SIGKILL))
+                    (lambda _ #f))
+                  (wait-quietly pid))))))
+        (lambda _ (command-result 'unavailable "")))))
+
+(define sk:command-runner run-command)
+
+(define (invoke program . arguments)
+  (sk:command-runner program arguments))
+
+(define (system-command name)
+  (string-append %system-bin "/" name))
+
+(define (home-command name)
+  (let ((home (or (getenv "HOME") "")))
+    (string-append home "/.guix-home/profile/bin/" name)))
+
+(define (field record key)
+  (let ((entry (assq key record)))
+    (and entry (pair? (cdr entry)) (cadr entry))))
+
+(define (section record key)
+  (let ((entry (assq key record)))
+    (and entry (cdr entry))))
+
+(define (proper-record . fields)
+  fields)
+
+(define (safe-canonicalize path)
+  (catch #t
+    (lambda () (canonicalize-path path))
+    (lambda _ #f)))
+
+(define (safe-target path root)
+  (let ((target (safe-canonicalize path)))
+    (and target (string-prefix? root target) target)))
+
+(define (symlink? path)
+  (let ((entry (false-if-exception (lstat path))))
+    (and entry (eq? (stat:type entry) 'symlink))))
+
+(define (generation-number profile prefix)
+  (catch #t
+    (lambda ()
+      (and (symlink? profile)
+           (let* ((target (basename (readlink profile)))
+                  (match (string-match
+                          (string-append "^" prefix "-([0-9]+)-link$")
+                          target)))
+             (and match
+                  (string->number (match:substring match 1))))))
+    (lambda _ #f)))
+
+(define (match-state left right)
+  (if (and left right)
+      (if (string=? left right) 'yes 'no)
+      'unknown))
+
+(define* (observe-generation profile active
+                             #:optional booted (target-root "/gnu/store/"))
+  (let* ((prefix (basename profile))
+         (number (generation-number profile prefix))
+         (profile-target (safe-target profile target-root))
+         (active-target (safe-target active target-root))
+         (active-current (match-state profile-target active-target))
+         (booted-current
+          (and booted
+               (match-state profile-target
+                            (safe-target booted target-root))))
+         (state
+          (cond
+           ((or (not number) (eq? active-current 'unknown)) 'unknown)
+           ((eq? active-current 'no) 'degraded)
+           (else 'ok))))
+    (if booted
+        (proper-record
+         (list 'state state)
+         (list 'current (or number 'unknown))
+         (list 'active-current active-current)
+         (list 'booted-current booted-current))
+        (proper-record
+         (list 'state state)
+         (list 'current (or number 'unknown))
+         (list 'active-current active-current)))))
+
+(define (read-one-form text)
+  (catch #t
+    (lambda ()
+      (call-with-input-string text
+        (lambda (port)
+          (let ((form (read port))
+                (tail (read port)))
+            (and (not (eof-object? form))
+                 (eof-object? tail)
+                 form)))))
+    (lambda _ #f)))
+
+(define (observe-desktop)
+  (let* ((expression
+          "(list (emacs-pid) emacs-version (if (featurep 'exwm) 'yes 'no) (if (boundp 'exwm-workspace-number) exwm-workspace-number 'unknown))")
+         (result
+          (invoke (home-command "emacsclient")
+                  "--socket-name=server"
+                  "--alternate-editor=false"
+                  "--eval"
+                  expression))
+         (form (and (eq? (result-kind result) 'ok)
+                    (read-one-form (result-output result))))
+         (valid?
+          (and (list? form)
+               (= (length form) 4)
+               (integer? (list-ref form 0))
+               (positive? (list-ref form 0))
+               (string? (list-ref form 1))
+               (memq (list-ref form 2) '(yes no))
+               (or (eq? (list-ref form 3) 'unknown)
+                   (and (integer? (list-ref form 3))
+                        (not (negative? (list-ref form 3))))))))
+    (if valid?
+        (let ((loaded (list-ref form 2))
+              (workspaces (list-ref form 3)))
+          (list
+           (list 'emacs
+                 (list 'state 'ok)
+                 (list 'pid (list-ref form 0))
+                 (list 'version (list-ref form 1)))
+           (list 'exwm
+                 (list 'state
+                       (cond
+                        ((eq? loaded 'no) 'unavailable)
+                        ((not (equal? workspaces 5)) 'degraded)
+                        (else 'ok)))
+                 (list 'loaded loaded)
+                 (list 'workspaces workspaces))))
+        '((emacs (state unavailable) (pid unknown) (version unknown))
+          (exwm (state unavailable) (loaded unknown) (workspaces unknown))))))
+
+(define (service-state name)
+  (let ((result (invoke (home-command "herd") "status" "-n" "0" name)))
+    (cond
+     ((not (eq? (result-kind result) 'ok))
+      (if (eq? (result-kind result) 'failed) 'unavailable 'unknown))
+     ((string-contains (result-output result) "Replacement pending")
+      'degraded)
+     ((string-contains (result-output result) "It is running") 'ok)
+     (else 'unavailable))))
+
+(define (observe-session)
+  (let* ((uid (getuid))
+         (runtime (string-append "/run/user/" (number->string uid)))
+         (bus (string-append "unix:path=" runtime "/bus"))
+         (shepherd (service-state "root"))
+         (dbus-service (service-state "dbus"))
+         (_ (setenv "XDG_RUNTIME_DIR" runtime))
+         (_ (setenv "DBUS_SESSION_BUS_ADDRESS" bus))
+         (reply
+          (invoke (system-command "dbus-send")
+                  "--session"
+                  "--type=method_call"
+                  "--print-reply"
+                  "--dest=org.freedesktop.DBus"
+                  "/org/freedesktop/DBus"
+                  "org.freedesktop.DBus.ListNames"))
+         (dbus
+          (cond
+           ((or (eq? shepherd 'unavailable)
+                (eq? dbus-service 'unavailable)
+                (eq? (result-kind reply) 'failed))
+            'unavailable)
+           ((and (eq? shepherd 'ok)
+                 (eq? dbus-service 'ok)
+                 (eq? (result-kind reply) 'ok))
+            'ok)
+           (else 'unknown))))
+    (proper-record
+     (list 'shepherd (list 'state shepherd))
+     (list 'dbus (list 'state dbus)))))
+
+(define (observe-audio)
+  (let* ((pipewire-service (service-state "pipewire"))
+         (wireplumber (service-state "wireplumber"))
+         (pulse (service-state "pipewire-pulseaudio"))
+         (graph (invoke (home-command "wpctl") "status"))
+         (pipewire
+          (cond
+           ((eq? pipewire-service 'unavailable) 'unavailable)
+           ((or (eq? pipewire-service 'unknown)
+                (memq (result-kind graph) '(unavailable oversize)))
+            'unknown)
+           ((and (eq? pipewire-service 'ok)
+                 (eq? (result-kind graph) 'ok))
+            'ok)
+           (else 'degraded))))
+    (proper-record
+     (list 'pipewire (list 'state pipewire))
+     (list 'wireplumber (list 'state wireplumber))
+     (list 'pulse-compat (list 'state pulse)))))
+
+(define (count-lines-with-prefix text prefix)
+  (count (lambda (line) (string-prefix? prefix line))
+         (string-split text #\newline)))
+
+(define (line-field text prefix)
+  (let ((line (find (lambda (candidate)
+                      (string-prefix? prefix (string-trim candidate)))
+                    (string-split text #\newline))))
+    (and line
+         (string-trim
+          (substring (string-trim line) (string-length prefix))))))
+
+(define (observe-bluetooth)
+  (let* ((show (invoke (system-command "bluetoothctl") "show"))
+         (connected
+          (invoke (system-command "bluetoothctl") "devices" "Connected"))
+         (show-ok? (eq? (result-kind show) 'ok))
+         (controllers
+          (and show-ok?
+               (count-lines-with-prefix (result-output show) "Controller ")))
+         (powered
+          (and show-ok? (line-field (result-output show) "Powered:")))
+         (controller
+          (cond
+           ((not show-ok?) 'unknown)
+           ((zero? controllers) 'absent)
+           ((not (= controllers 1)) 'unknown)
+           ((and powered (string=? powered "yes")) 'powered)
+           ((and powered (string=? powered "no")) 'off)
+           (else 'unknown)))
+         (connected-count
+          (if (eq? (result-kind connected) 'ok)
+              (count-lines-with-prefix (result-output connected) "Device ")
+              'unknown))
+         (state
+          (case controller
+            ((powered) 'ok)
+            ((off) 'degraded)
+            ((absent) 'unavailable)
+            (else 'unknown))))
+    (proper-record
+     (list 'state state)
+     (list 'controller controller)
+     (list 'connected-devices connected-count))))
+
+(define (observe-network)
+  (let* ((result
+          (invoke (system-command "nmcli")
+                  "-t" "-f" "RUNNING,STATE,CONNECTIVITY" "general"))
+         (parts
+          (and (eq? (result-kind result) 'ok)
+               (string-split (string-trim-both (result-output result)) #\:)))
+         (valid? (and (list? parts) (= (length parts) 3)))
+         (manager
+          (if valid?
+              (cond
+               ((string=? (list-ref parts 0) "running") 'running)
+               ((string=? (list-ref parts 0) "stopped") 'stopped)
+               (else 'unknown))
+              'unknown))
+         (connection
+          (if valid?
+              (cond
+               ((string=? (list-ref parts 1) "connected") 'connected)
+               ((string=? (list-ref parts 1) "disconnected") 'disconnected)
+               (else 'unknown))
+              'unknown))
+         (connectivity
+          (if valid?
+              (let ((value (string->symbol (list-ref parts 2))))
+                (if (memq value '(full limited portal none))
+                    value
+                    'unknown))
+              'unknown))
+         (state
+          (cond
+           ((eq? manager 'stopped) 'unavailable)
+           ((or (eq? manager 'unknown)
+                (eq? connection 'unknown)
+                (eq? connectivity 'unknown))
+            'unknown)
+           ((and (eq? manager 'running)
+                 (eq? connection 'connected)
+                 (eq? connectivity 'full))
+            'ok)
+           (else 'degraded))))
+    (proper-record
+     (list 'state state)
+     (list 'manager manager)
+     (list 'connection connection)
+     (list 'connectivity connectivity))))
+
+(define (make-finding severity code summary hint)
+  (proper-record
+   (list 'severity severity)
+   (list 'code code)
+   (list 'summary summary)
+   (list 'hint hint)))
+
+(define (snapshot-findings generations desktop session audio bluetooth network)
+  (let ((findings '()))
+    (define (add! severity code summary hint)
+      (set! findings
+            (cons (make-finding severity code summary hint) findings)))
+    (let ((system (section generations 'system))
+          (home (section generations 'home))
+          (pull (section generations 'pull))
+          (emacs (section desktop 'emacs))
+          (exwm (section desktop 'exwm)))
+      (for-each
+       (lambda (entry)
+         (let ((label (car entry))
+               (record (cadr entry))
+               (code (caddr entry)))
+           (when (eq? (field record 'state) 'unknown)
+             (add! 'critical code
+                   (string-append label " generation is unavailable.")
+                   "Inspect the exact current profile link; do not run garbage collection."))
+           (when (eq? (field record 'active-current) 'no)
+             (add! 'warning
+                   (string->symbol
+                    (string-append
+                     (string-downcase label) "-active-generation-mismatch"))
+                   (string-append label " active state differs from its current generation.")
+                   "Review the current and active links before choosing any activation."))))
+       (list (list "System" system 'system-generation-unavailable)
+             (list "Home" home 'home-generation-unavailable)
+             (list "Pull" pull 'pull-generation-unavailable)))
+      (when (eq? (field system 'booted-current) 'no)
+        (add! 'info 'system-reboot-pending
+              "The booted System differs from the current System generation."
+              "Review the current generation and reboot only when convenient."))
+      (when (not (eq? (field emacs 'state) 'ok))
+        (add! 'critical 'emacs-unavailable
+              "The canonical Emacs server is unavailable."
+              "Inspect the EXWM session log before deciding on recovery."))
+      (cond
+       ((eq? (field exwm 'state) 'unavailable)
+        (add! 'critical 'exwm-unavailable
+              "EXWM is not active in the canonical Emacs server."
+              "Inspect the existing EXWM session before restarting anything."))
+       ((eq? (field exwm 'state) 'degraded)
+        (add! 'warning 'exwm-workspace-mismatch
+              "EXWM does not report the accepted five workspaces."
+              "Review the live workspace state and the declared EXWM setting."))))
+    (for-each
+     (lambda (entry)
+       (let ((state (field (cadr entry) 'state)))
+         (unless (eq? state 'ok)
+           (add! (caddr entry) (cadddr entry)
+                 (list-ref entry 4) (list-ref entry 5)))))
+     (list
+      (list "Shepherd" (section session 'shepherd) 'critical
+            'home-shepherd-unavailable
+            "Home Shepherd is not healthy."
+            "Inspect the named user services before choosing a restart.")
+      (list "D-Bus" (section session 'dbus) 'critical
+            'session-dbus-unavailable
+            "The canonical user D-Bus is not healthy."
+            "Inspect the runtime bus and Home Shepherd D-Bus service.")
+      (list "PipeWire" (section audio 'pipewire) 'warning
+            'pipewire-unavailable
+            "PipeWire or its graph is not healthy."
+            "Inspect the PipeWire user service; this view will not play audio.")
+      (list "WirePlumber" (section audio 'wireplumber) 'warning
+            'wireplumber-unavailable
+            "WirePlumber is not healthy."
+            "Inspect the WirePlumber user service before choosing a restart.")
+      (list "Pulse" (section audio 'pulse-compat) 'warning
+            'pulse-compat-unavailable
+            "PipeWire Pulse compatibility is not healthy."
+            "Inspect the compatibility user service before choosing a restart.")
+      (list "Bluetooth" bluetooth 'warning
+            'bluetooth-unavailable
+            "The Bluetooth controller is not powered and healthy."
+            "Use the existing Bluetooth manager if you want to change its state.")
+      (list "Network" network 'warning
+            'network-connectivity-degraded
+            "NetworkManager does not report full connectivity."
+            "Inspect NetworkManager state without exposing connection identifiers.")))
+    (reverse findings)))
+
+(define (overall-status findings)
+  (cond
+   ((any (lambda (finding)
+           (eq? (field finding 'severity) 'critical))
+         findings)
+    'critical)
+   ((any (lambda (finding)
+           (eq? (field finding 'severity) 'warning))
+         findings)
+    'degraded)
+   (else 'ok)))
+
+(define (build-snapshot)
+  (let* ((home (or (getenv "HOME") ""))
+         (user (or (getenv "USER") ""))
+         (profile-root
+          (string-append "/var/guix/profiles/per-user/" user))
+         (generations
+          (proper-record
+           (cons 'system
+                 (observe-generation "/var/guix/profiles/system"
+                                     "/run/current-system"
+                                     "/run/booted-system"))
+           (cons 'home
+                 (observe-generation
+                  (string-append profile-root "/guix-home")
+                  (string-append home "/.guix-home")))
+           (cons 'pull
+                 (observe-generation
+                  (string-append profile-root "/current-guix")
+                  (string-append home "/.config/guix/current")))))
+         (desktop (observe-desktop))
+         (session (observe-session))
+         (audio (observe-audio))
+         (bluetooth (observe-bluetooth))
+         (network (observe-network))
+         (findings
+          (snapshot-findings generations desktop session audio
+                             bluetooth network)))
+    (list
+     'sk-status/v1
+     (list 'observed-at (car (gettimeofday)))
+     (list 'overall (overall-status findings))
+     (cons 'generations generations)
+     (cons 'desktop desktop)
+     (cons 'session session)
+     (cons 'audio audio)
+     (cons 'bluetooth bluetooth)
+     (cons 'network network)
+     (cons 'findings findings))))
+
+(define (usage port)
+  (format port "usage: ~a [--help]~%" %program))
+
+(define (main arguments)
+  (cond
+   ((null? arguments)
+    (catch #t
+      (lambda ()
+        (write (build-snapshot))
+        (newline)
+        0)
+      (lambda _
+        (format (current-error-port)
+                "~a: unable to produce a valid snapshot~%" %program)
+        1)))
+   ((equal? arguments '("--help"))
+    (usage (current-output-port))
+    0)
+   (else
+    (usage (current-error-port))
+    2)))
+
+(when (string=? (basename (car (command-line))) %program)
+  (exit (main (cdr (command-line)))))

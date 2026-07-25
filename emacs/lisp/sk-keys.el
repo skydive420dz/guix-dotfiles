@@ -116,6 +116,7 @@
     "o"  '(:ignore t :which-key "open")
     "od" '(sk/window-open-dired :which-key "dired")
     "oe" '(sk/window-open-eshell :which-key "eshell")
+    "os" '(sk/status :which-key "status")
     "ot" '(sk/window-open-treemacs :which-key "treemacs")
     "ov" '(sk/window-open-vterm :which-key "vterm")
 

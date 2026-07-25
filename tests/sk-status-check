@@ -1,0 +1,33 @@
+#!/bin/sh
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+guile=${GUILE:-guile}
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/sk-status-check.XXXXXX")
+log=$tmp/check.log
+
+cleanup() {
+    rm -rf "$tmp"
+}
+trap cleanup EXIT HUP INT TERM
+
+if ! command -v "$guile" >/dev/null 2>&1; then
+    printf '%s\n' 'sk-status-check: Guile is unavailable' >&2
+    exit 2
+fi
+
+if grep -En \
+    'find-roots|guix[[:space:]]+gc|journalctl|dmesg|pw-cat|herd[[:space:]]+(start|restart|stop)|nmcli[[:space:]].*(up|down|connect)|bluetoothctl[[:space:]]+(power|connect|disconnect|pair|trust)' \
+    "$repo/scripts/sk-status" >"$log"; then
+    cat "$log" >&2
+    printf '%s\n' 'sk-status-check: forbidden operation found' >&2
+    exit 1
+fi
+
+if ! GUILE_AUTO_COMPILE=0 "$guile" --no-auto-compile \
+    -s "$repo/tests/sk-status-check.scm" "$repo" "$tmp" >"$log" 2>&1; then
+    cat "$log" >&2
+    exit 1
+fi
+
+printf '%s\n' 'sk-status-check: PASS'

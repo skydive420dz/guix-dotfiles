@@ -19,6 +19,9 @@
 
 (add-to-list 'load-path sk/lisp-directory)
 
+(autoload 'sk/status "sk-status"
+  "Open the system status view and collect one fresh snapshot." t)
+
 (require 'sk-core)
 (require 'sk-ui)
 (require 'sk-windows)

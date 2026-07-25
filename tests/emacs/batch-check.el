@@ -35,6 +35,30 @@
 (defvar fennel-proto-repl--message-buf)
 (defvar sk/check-generated-theme-load-count nil)
 
+(defconst sk/check-status-expression
+  (concat
+   "(sk-status/v1\n"
+   " (observed-at 1784995200) (overall degraded)\n"
+   " (generations\n"
+   "  (system (state ok) (current 42) (active-current yes)"
+   " (booted-current yes))\n"
+   "  (home (state degraded) (current 17) (active-current no))\n"
+   "  (pull (state ok) (current 9) (active-current yes)))\n"
+   " (desktop\n"
+   "  (emacs (state ok) (pid 480) (version \"30.2\"))\n"
+   "  (exwm (state ok) (loaded yes) (workspaces 5)))\n"
+   " (session (shepherd (state ok)) (dbus (state ok)))\n"
+   " (audio (pipewire (state ok)) (wireplumber (state ok))"
+   " (pulse-compat (state ok)))\n"
+   " (bluetooth (state degraded) (controller off)"
+   " (connected-devices 0))\n"
+   " (network (state ok) (manager running) (connection connected)"
+   " (connectivity full))\n"
+   " (findings ((severity warning) (code home-generation-drift)"
+   " (summary \"Home generation differs\")"
+   " (hint \"Review the active Home generation.\"))))\n")
+  "Valid fixed sk-status/v1 fixture with one finding.")
+
 (defun sk/check-fixture-path (relative)
   "Return the copied fixture path for RELATIVE."
   (expand-file-name (concat "fixtures/" relative) sk/check-source-root))
@@ -1852,6 +1876,7 @@
   (dolist (binding '(("SPC c f" . sk/format-buffer)
                      ("SPC ," . counsel-switch-buffer)
                      ("SPC b b" . counsel-ibuffer)
+                     ("SPC o s" . sk/status)
                      ("SPC l r" . sk/lisp-repl)
                      ("SPC l b" . sk/lisp-eval-buffer)
                      ("SPC l d" . sk/lisp-eval-defun)
@@ -1874,6 +1899,80 @@
                      ("SPC l t" . puni-transpose)))
     (should (eq (lookup-key evil-normal-state-map (kbd (car binding)))
                 (cdr binding)))))
+
+(ert-deftest sk/check-status-expression-is-complete-and-fixed ()
+  (require 'sk-status)
+  (let ((form (sk/status--parse sk/check-status-expression)))
+    (should (eq (car form) 'sk-status/v1))
+    (should (eq (sk/status--value (cdr form) 'overall) 'degraded)))
+  (dolist
+      (invalid
+       (list
+        (concat sk/check-status-expression "(second-form)\n")
+        (string-replace
+         "(overall degraded)"
+         "(overall degraded) (unexpected value)"
+         sk/check-status-expression)
+        (string-replace
+         "(connectivity full)"
+         "(connectivity impossible)"
+         sk/check-status-expression)))
+    (should-error (sk/status--parse invalid)
+                  :type 'sk/status-invalid-output)))
+
+(ert-deftest sk/check-status-uses-one-fake-async-snapshot ()
+  (require 'sk-status)
+  (when-let ((old (get-buffer sk/status-buffer-name)))
+    (kill-buffer old))
+  (let (invocation displayed selected
+        (fake-process 'sk/check-status-process))
+    (unwind-protect
+        (cl-letf
+            (((symbol-function 'make-process)
+              (lambda (&rest arguments)
+                (setq invocation arguments)
+                fake-process))
+             ((symbol-function 'sk/window-display-right)
+              (lambda (buffer &rest _)
+                (setq displayed buffer)
+                'sk/check-status-window))
+             ((symbol-function 'select-window)
+              (lambda (window &rest _)
+                (setq selected window)
+                window)))
+          (let ((buffer (sk/status)))
+            (should (eq buffer displayed))
+            (should (eq selected 'sk/check-status-window))
+            (should
+             (equal (plist-get invocation :command)
+                    (list sk/status-program)))
+            (should (eq (plist-get invocation :connection-type) 'pipe))
+            (should (eq (plist-get invocation :noquery) t))
+            (with-current-buffer (plist-get invocation :buffer)
+              (insert sk/check-status-expression))
+            (cl-letf (((symbol-function 'process-status)
+                       (lambda (_process) 'exit))
+                      ((symbol-function 'process-exit-status)
+                       (lambda (_process) 0)))
+              (funcall (plist-get invocation :sentinel)
+                       fake-process "finished\n"))
+            (with-current-buffer buffer
+              (should (derived-mode-p 'sk/status-mode))
+              (should-not sk/status--process)
+              (should (eq (lookup-key sk/status-mode-map (kbd "g"))
+                          #'sk/status-refresh))
+              (should (eq (lookup-key sk/status-mode-map (kbd "q"))
+                          #'quit-window))
+              (should (string-match-p "Overall: degraded" (buffer-string)))
+              (should (string-match-p "current=42" (buffer-string)))
+              (should (string-match-p
+                       "Home generation differs" (buffer-string))))))
+      (when-let ((buffer (get-buffer sk/status-buffer-name)))
+        (kill-buffer buffer))
+      (dolist (key '(:buffer :stderr))
+        (when-let ((buffer (and invocation (plist-get invocation key))))
+          (when (buffer-live-p buffer)
+            (kill-buffer buffer)))))))
 
 (ert-deftest sk/check-code-action-delegates-interactively ()
   (with-temp-buffer
