@@ -593,6 +593,30 @@ Every later slice remains unauthorized.
   TRIM, and recovery guidance are visible through the health surface.
 - Boundary: the second SSD remains unmounted and undeclared.  No repartition,
   migration, hardware purchase, or backup project is implied.
+- State: source candidate validated on 2026-07-26, pending System activation
+  and live acceptance.  Rafael selected Sunday 18:00 America/New_York as the
+  normally-on weekly opportunity.  The explicit Guix
+  =fstrim-service-type= configuration reads only =/etc/fstab=, whose EFI entry
+  is marked =X-fstrim.notrim=; only the ext4 =/= and =/home= entries remain
+  intended targets.  =sk-status/v2= adds root/store
+  capacity, the existing cached-only SMART classification, and the active
+  System's declared TRIM schedule/filesystem scope to the Scheme and Emacs
+  views.  Capacity warns at the already accepted 75-percent-used or
+  25-GiB-available threshold and asks for a second passive reading before
+  action.  Before activation, root/store was 46 percent used with 38 GiB
+  available, SMART was favorable, and an unprivileged root-only =fstrim=
+  dry-run passed.  Focused Scheme checks, all 102 isolated Emacs tests,
+  connected backend checks, and a non-realizing pinned System dry-run passed.
+  The System dry-run reported 318.6 MB of substitutes for a future
+  realization; none were downloaded by this check.  A first ext4
+  target-selection dry-run exposed and rejected the earlier contract's
+  incompatible =--types= plus =--listed-in= suggestion: it exited zero but
+  selected nothing.  Aggregate =--fstab=/=--all= dry-runs also exited zero
+  without listing targets on the installed util-linux, while direct
+  non-discarding checks of =/= and =/home= both passed.  The equivalent
+  privileged direct-mount gates then passed, each reporting =0 B (dry run)
+  trimmed=.  No FITRIM, realization, activation, reconfiguration, or reboot
+  occurred; the source candidate is ready for its checkpoint.
 
 ** C12 — Build a focused Scheme learning studio
 

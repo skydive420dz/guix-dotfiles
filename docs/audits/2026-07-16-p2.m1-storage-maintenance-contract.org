@@ -28,7 +28,9 @@ The design makes these decisions:
 P2.M1a now has an implemented, fixture-verified, and pushed source checkpoint.
 Its separately authorized cached-only runtime gate passed, and Rafael
 explicitly accepted completion at that boundary.  Ordinary UDisks D-Bus
-activation remains unselected.  P2.M1b through P2.M1d remain unpromoted.
+activation remains unselected.  C11 completed P2.M1b on 2026-07-26; P2.M1c
+has an uncommitted source candidate pending checkpoint and activation, while
+P2.M1d remains parked.
 
 Related records:
 
@@ -343,41 +345,62 @@ the next future match.  “Sunday-midnight trim opportunity” is accurate;
 “guaranteed once every seven days” is not.  The schedule must use a time the
 user normally leaves GuixPC awake.
 
-Current =/etc/fstab= is nonempty, so =/proc/self/mountinfo= is only a fallback.
-The listed candidates are =/=, =/home=, and the EFI mount.  The first design
-should add =--types ext4= so unsupported EFI behavior is not silently treated
-as accepted coverage.  =--quiet-unsupported= can suppress unsupported-ioctl
-errors and clean their exit status; timer success alone cannot prove every
-intended target was trimmed.
+Current =/etc/fstab= is nonempty and lists =/=, =/home=, and the EFI mount.
 
-Recommended future declaration after schedule review:
+The 2026-07-26 C11 dry-run corrected this design's original target-filter
+recommendation.  Installed =fstrim= documents =--types= only with =--all= or
+=--fstab=; combining it with the Guix service's =--listed-in= option exited
+zero while selecting no filesystems.  The corrected candidate reads only
+=/etc/fstab= and marks the EFI entry =X-fstrim.notrim=, a native fstab
+exclusion understood by =fstrim=.  This leaves the ext4 =/= and =/home=
+entries as the intended targets without a custom target file.
+
+Accepted C11 declaration after schedule review:
 
 #+begin_src scheme
 (service fstrim-service-type
          (fstrim-configuration
-          (schedule "USER-SELECTED-NORMALLY-ON-WEEKLY-TIME")
-          (listed-in '("/etc/fstab" "/proc/self/mountinfo"))
+          (schedule "0 18 * * 0")
+          (listed-in '("/etc/fstab"))
           (verbose? #t)
-          (quiet-unsupported? #t)
-          (extra-arguments '("--types" "ext4"))))
+          (quiet-unsupported? #t)))
+
+;; The existing /boot/efi file-system record additionally contains:
+(options "X-fstrim.notrim")
 #+end_src
 
 The explicit fields pin intent against default drift.
 
 ** Dry-run and activation gates
 
-P2.M1b may request one privileged dry-run:
+P2.M1b may request privileged direct-mount dry-runs:
 
 #+begin_src sh
 /run/setuid-programs/sudo \
   /run/current-system/profile/sbin/fstrim \
-  --dry-run --verbose --types ext4 \
-  --listed-in /etc/fstab:/proc/self/mountinfo
+  --dry-run --verbose /
+
+/run/setuid-programs/sudo \
+  /run/current-system/profile/sbin/fstrim \
+  --dry-run --verbose /home
 #+end_src
 
-=--dry-run= skips the FITRIM ioctl.  It checks parsing and target selection but
-does not prove permission, filesystem FITRIM support, actual discard, schedule
-delivery, or future success.
+=--dry-run= skips the FITRIM ioctl.  On the installed util-linux, aggregate
+=--fstab=/=--all= dry-runs exit zero without listing targets; they are not
+accepted target evidence.  The two direct checks confirm that each intended
+mount is accepted without issuing FITRIM, while the declarative
+=X-fstrim.notrim= EFI marker owns aggregate exclusion.  They do not prove
+actual discard, schedule delivery, or future success.
+
+The separately approved privileged direct checks passed on 2026-07-26:
+
+#+begin_example
+/: 0 B (dry run) trimmed
+/home: 0 B (dry run) trimmed
+#+end_example
+
+No FITRIM ioctl, System realization, activation, reconfiguration, service
+restart, or reboot occurred.
 
 P2.M1c may then add and build the explicit service.  Reconfigure normally loads
 and starts the new timer without reboot; starting the timer waits for the next
@@ -414,13 +437,15 @@ CLOSED: [2026-07-16 Thu]
 - Ordinary on-demand UDisks D-Bus activation remains an unselected, optional
   hand test and was not required by the accepted scope.
 
-** BACKLOG P2.M1b -- TRIM policy and dry-run
+** COMPLETE P2.M1b -- TRIM policy and dry-run
+CLOSED: [2026-07-26 Sun]
 
-- User selects a normally-on weekly schedule.
-- Confirm only ext4 targets =/= and =/home=.
-- One explicitly approved privileged dry-run; no FITRIM.
-- Stop on unexpected target, authentication problem, parse error, or missing
-  expected target.
+- Rafael selected Sunday 18:00 America/New_York as the normally-on weekly
+  opportunity.
+- The rejected aggregate dry-runs and their zero-target false-success behavior
+  are retained; the candidate uses the native EFI fstab exclusion instead.
+- Explicitly approved privileged direct dry-runs for the ext4 =/= and =/home=
+  mounts passed with no FITRIM.
 
 ** BACKLOG P2.M1c -- Declarative periodic TRIM
 
@@ -476,3 +501,5 @@ P2.M1 design does not authorize:
 - [X] Ordinary UDisks D-Bus activation remains unselected and was not required
   by the accepted P2.M1a scope.
 - [X] P2.M1a completion is accepted.
+- [X] P2.M1b schedule, corrected target policy, and privileged no-FITRIM
+  direct-mount gates are accepted.

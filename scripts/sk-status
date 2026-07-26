@@ -5,12 +5,19 @@
 
 (use-modules (ice-9 regex)
              (ice-9 textual-ports)
-             (srfi srfi-1))
+             (srfi srfi-1)
+             (srfi srfi-13))
 
 (define %program "sk-status")
 (define %timeout "/run/current-system/profile/bin/timeout")
 (define %system-bin "/run/current-system/profile/bin")
+(define %system-configuration "/run/current-system/configuration.scm")
 (define %maximum-output 8192)
+(define %capacity-watch-used-percent 75)
+(define %capacity-watch-available-bytes (* 25 1024 1024 1024))
+(define %disk-health
+  (string-append (dirname (canonicalize-path (current-filename)))
+                 "/guix-disk-health"))
 
 (define (command-result kind output)
   (list kind output))
@@ -305,6 +312,110 @@ only bounded stdout is retained for allowlisted parsing."
          (string-trim
           (substring (string-trim line) (string-length prefix))))))
 
+(define (parse-root-capacity text)
+  (let* ((lines
+          (filter (lambda (line)
+                    (not (string-null? (string-trim-both line))))
+                  (string-split text #\newline)))
+         (values (and (>= (length lines) 2)
+                      (string-tokenize (last lines))))
+         (percent-text (and values (= (length values) 2) (car values)))
+         (percent
+          (and percent-text
+               (string-suffix? "%" percent-text)
+               (string->number (string-drop-right percent-text 1))))
+         (available
+          (and values (= (length values) 2)
+               (string->number (cadr values)))))
+    (and (integer? percent) (<= 0 percent 100)
+         (integer? available) (not (negative? available))
+         (list percent available))))
+
+(define (observe-capacity)
+  (let* ((result
+          (invoke (system-command "df")
+                  "--output=pcent,avail" "-B1" "/"))
+         (values
+          (and (eq? (result-kind result) 'ok)
+               (parse-root-capacity (result-output result)))))
+    (if values
+        (let ((percent (car values))
+              (available (cadr values)))
+          (proper-record
+           (list 'state
+                 (if (or (>= percent %capacity-watch-used-percent)
+                         (<= available %capacity-watch-available-bytes))
+                     'degraded
+                     'ok))
+           (list 'used-percent percent)
+           (list 'available-gib
+                 (quotient available (* 1024 1024 1024)))))
+        (proper-record
+         (list 'state
+               (if (eq? (result-kind result) 'unavailable)
+                   'unavailable
+                   'unknown))
+         (list 'used-percent 'unknown)
+         (list 'available-gib 'unknown)))))
+
+(define (observe-smart)
+  (let* ((result
+          (invoke %disk-health "--summary" "--cached-only"))
+         (value
+          (and (eq? (result-kind result) 'ok)
+               (line-field (result-output result) "classification:")))
+         (classification
+          (cond
+           ((and value (string=? value "favorable")) 'favorable)
+           ((and value (string=? value "failing-indicator"))
+            'failing-indicator)
+           ((and value (string=? value "unknown")) 'unknown)
+           (else 'unavailable)))
+         (state
+          (case classification
+            ((favorable) 'ok)
+            ((failing-indicator) 'degraded)
+            ((unknown) 'unknown)
+            (else
+             (if (memq (result-kind result) '(failed unavailable))
+                 'unavailable
+                 'unknown)))))
+    (proper-record
+     (list 'state state)
+     (list 'classification classification))))
+
+(define (observe-trim)
+  (let* ((source
+          (catch #t
+            (lambda ()
+              (call-with-input-file %system-configuration get-string-all))
+            (lambda _ #f)))
+         (declared?
+          (and source (string-contains source "fstrim-service-type")))
+         (schedule?
+          (and source
+               (string-contains source "(schedule \"0 18 * * 0\")")))
+         (ext4-only?
+          (and source
+               (string-contains source "(listed-in '(\"/etc/fstab\"))")
+               (string-contains
+                source
+                "(options \"X-fstrim.notrim\")"))))
+    (proper-record
+     (list 'state
+           (cond
+            ((and declared? schedule? ext4-only?) 'ok)
+            (declared? 'degraded)
+            (else 'unavailable)))
+     (list 'schedule (if schedule? 'sunday-1800 'unknown))
+     (list 'filesystems (if ext4-only? 'ext4 'unknown)))))
+
+(define (observe-storage)
+  (proper-record
+   (cons 'capacity (observe-capacity))
+   (cons 'smart (observe-smart))
+   (cons 'trim (observe-trim))))
+
 (define (observe-bluetooth)
   (let* ((show (invoke (system-command "bluetoothctl") "show"))
          (connected
@@ -392,7 +503,8 @@ only bounded stdout is retained for allowlisted parsing."
    (list 'summary summary)
    (list 'hint hint)))
 
-(define (snapshot-findings generations desktop session audio bluetooth network)
+(define (snapshot-findings generations desktop session audio bluetooth network
+                           storage)
   (let ((findings '()))
     (define (add! severity code summary hint)
       (set! findings
@@ -473,6 +585,31 @@ only bounded stdout is retained for allowlisted parsing."
             'network-connectivity-degraded
             "NetworkManager does not report full connectivity."
             "Inspect NetworkManager state without exposing connection identifiers.")))
+    (let ((capacity (section storage 'capacity))
+          (smart (section storage 'smart))
+          (trim (section storage 'trim)))
+      (cond
+       ((eq? (field capacity 'state) 'degraded)
+        (add! 'warning 'root-capacity-threshold
+              "Root/store capacity reached the accepted review threshold."
+              "Confirm a second passive reading, then use the supported C10 workflow if space is still constrained."))
+       ((not (eq? (field capacity 'state) 'ok))
+        (add! 'warning 'root-capacity-unavailable
+              "Root/store capacity could not be observed."
+              "Inspect one read-only df result before considering storage work.")))
+      (cond
+       ((eq? (field smart 'state) 'degraded)
+        (add! 'critical 'root-smart-failing
+              "The root SSD reports a SMART failure indicator."
+              "Stop avoidable writes and inspect guix-disk-health before choosing recovery."))
+       ((not (eq? (field smart 'state) 'ok))
+        (add! 'warning 'root-smart-unavailable
+              "A favorable cached SMART classification is unavailable."
+              "Inspect guix-disk-health --summary --cached-only for the bounded reason.")))
+      (unless (eq? (field trim 'state) 'ok)
+        (add! 'warning 'fstrim-not-scheduled
+              "The active System does not expose the weekly TRIM timer."
+              "Review the current System generation before any ad-hoc trim.")))
     (reverse findings)))
 
 (define (overall-status findings)
@@ -511,11 +648,12 @@ only bounded stdout is retained for allowlisted parsing."
          (audio (observe-audio))
          (bluetooth (observe-bluetooth))
          (network (observe-network))
+         (storage (observe-storage))
          (findings
           (snapshot-findings generations desktop session audio
-                             bluetooth network)))
+                             bluetooth network storage)))
     (list
-     'sk-status/v1
+     'sk-status/v2
      (list 'observed-at (car (gettimeofday)))
      (list 'overall (overall-status findings))
      (cons 'generations generations)
@@ -524,6 +662,7 @@ only bounded stdout is retained for allowlisted parsing."
      (cons 'audio audio)
      (cons 'bluetooth bluetooth)
      (cons 'network network)
+     (cons 'storage storage)
      (cons 'findings findings))))
 
 (define (usage port)

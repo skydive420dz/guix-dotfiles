@@ -89,6 +89,10 @@
          "Device AA:BB:CC:DD:EE:FF Private Speaker\n"))
        ((string=? name "nmcli")
         (command-result 'ok "running:connected:full\n"))
+       ((string=? name "df")
+        (command-result 'ok "Use%       Avail\n 46% 41316802560\n"))
+       ((string=? name "guix-disk-health")
+        (command-result 'ok "classification: favorable\n"))
        (else (command-result 'unavailable ""))))))
 
 (set! sk:command-runner healthy-runner)
@@ -98,6 +102,12 @@
 (define audio (observe-audio))
 (define bluetooth (observe-bluetooth))
 (define network (observe-network))
+(define capacity (observe-capacity))
+(define smart (observe-smart))
+(define healthy-storage
+  `((capacity ,@capacity)
+    (smart ,@smart)
+    (trim (state ok) (schedule sunday-1800) (filesystems ext4))))
 
 (check-equal (field (section desktop 'exwm) 'workspaces) 5
              "EXWM workspace count is normalized")
@@ -112,6 +122,14 @@
              '((state ok) (manager running)
                (connection connected) (connectivity full))
              "Network identifiers are absent from normalized state")
+(check-equal (parse-root-capacity "Use% Avail\n 75% 26843545600\n")
+             '(75 26843545600)
+             "capacity parser accepts the fixed df shape")
+(check-equal (field capacity 'state) 'ok
+             "root capacity below both thresholds is healthy")
+(check-equal smart
+             '((state ok) (classification favorable))
+             "existing SMART summary is normalized")
 
 (let ((rendered
        (call-with-output-string
@@ -130,7 +148,7 @@
 
 (check-equal
  (snapshot-findings healthy-generations desktop session audio
-                    bluetooth network)
+                    bluetooth network healthy-storage)
  '()
  "healthy fixture has no findings")
 
@@ -139,12 +157,23 @@
     (connection connected) (connectivity limited)))
 (let ((findings
        (snapshot-findings healthy-generations desktop session audio
-                          bluetooth degraded-network)))
+                          bluetooth degraded-network healthy-storage)))
   (check-equal (overall-status findings) 'degraded
                "warning finding degrades overall status")
   (check-equal (field (car findings) 'code)
                'network-connectivity-degraded
                "network warning uses stable code"))
+
+(define constrained-storage
+  '((capacity (state degraded) (used-percent 75) (available-gib 25))
+    (smart (state ok) (classification favorable))
+    (trim (state ok) (schedule sunday-1800) (filesystems ext4))))
+(let ((findings
+       (snapshot-findings healthy-generations desktop session audio
+                          bluetooth network constrained-storage)))
+  (check-equal (field (car findings) 'code)
+               'root-capacity-threshold
+               "accepted capacity threshold emits recovery guidance"))
 
 (check (> checks 10) "focused suite executed")
 

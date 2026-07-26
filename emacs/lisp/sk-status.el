@@ -52,6 +52,19 @@
      (record (state component-state) (manager (enum running stopped unknown))
              (connection (enum connected disconnected unknown))
              (connectivity (enum full limited portal none unknown))))
+    (storage
+     (record
+      (capacity
+       (record (state component-state) (used-percent natural-or-unknown)
+               (available-gib natural-or-unknown)))
+      (smart
+       (record (state component-state)
+               (classification
+                (enum favorable failing-indicator unknown unavailable))))
+      (trim
+       (record (state component-state)
+               (schedule (enum sunday-1800 unknown))
+               (filesystems (enum ext4 unknown))))))
     (findings (list (record (severity (enum info warning critical)) (code symbol)
                             (summary string) (hint string))))))
 (defconst sk/status-render-sections
@@ -68,7 +81,11 @@
       ("Pulse compat" pulse-compat (state))))
     ("Bluetooth" bluetooth (("Controller" nil (state controller connected-devices))))
     ("Network" network
-     (("NetworkManager" nil (state manager connection connectivity))))))
+     (("NetworkManager" nil (state manager connection connectivity))))
+    ("Storage" storage
+     (("Root capacity" capacity (state used-percent available-gib))
+      ("Root SMART" smart (state classification))
+      ("Weekly TRIM" trim (state schedule filesystems))))))
 (defvar-local sk/status--process nil)
 (defun sk/status--invalid (detail)
   "Signal invalid output with DETAIL."
@@ -138,7 +155,7 @@
       (skip-chars-forward " \t\r\n")
       (unless (eobp)
         (sk/status--invalid "collector output has trailing data"))
-      (unless (and (proper-list-p form) (eq (car form) 'sk-status/v1))
+      (unless (and (proper-list-p form) (eq (car form) 'sk-status/v2))
         (sk/status--invalid "unknown top-level schema"))
       (sk/status--validate-node (cdr form) sk/status-schema)
       form)))

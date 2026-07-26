@@ -37,7 +37,7 @@
 
 (defconst sk/check-status-expression
   (concat
-   "(sk-status/v1\n"
+   "(sk-status/v2\n"
    " (observed-at 1784995200) (overall degraded)\n"
    " (generations\n"
    "  (system (state ok) (current 42) (active-current yes)"
@@ -54,10 +54,14 @@
    " (connected-devices 0))\n"
    " (network (state ok) (manager running) (connection connected)"
    " (connectivity full))\n"
+   " (storage\n"
+   "  (capacity (state ok) (used-percent 46) (available-gib 38))\n"
+   "  (smart (state ok) (classification favorable))\n"
+   "  (trim (state ok) (schedule sunday-1800) (filesystems ext4)))\n"
    " (findings ((severity warning) (code home-generation-drift)"
    " (summary \"Home generation differs\")"
    " (hint \"Review the active Home generation.\"))))\n")
-  "Valid fixed sk-status/v1 fixture with one finding.")
+  "Valid fixed sk-status/v2 fixture with one finding.")
 
 (defun sk/check-fixture-path (relative)
   "Return the copied fixture path for RELATIVE."
@@ -1903,7 +1907,7 @@
 (ert-deftest sk/check-status-expression-is-complete-and-fixed ()
   (require 'sk-status)
   (let ((form (sk/status--parse sk/check-status-expression)))
-    (should (eq (car form) 'sk-status/v1))
+    (should (eq (car form) 'sk-status/v2))
     (should (eq (sk/status--value (cdr form) 'overall) 'degraded)))
   (dolist
       (invalid
@@ -1965,6 +1969,7 @@
                           #'quit-window))
               (should (string-match-p "Overall: degraded" (buffer-string)))
               (should (string-match-p "current=42" (buffer-string)))
+              (should (string-match-p "available-gib=38" (buffer-string)))
               (should (string-match-p
                        "Home generation differs" (buffer-string))))))
       (when-let ((buffer (get-buffer sk/status-buffer-name)))

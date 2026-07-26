@@ -9,7 +9,7 @@
              (nonguix transformations)
              (sk emacs)
              (sk packages terminals))
-(use-service-modules cups dbus desktop networking ssh sound xorg)
+(use-service-modules cups dbus desktop linux networking ssh sound xorg)
 
 (load (string-append (dirname (current-filename))
                      "/../package-ownership.scm"))
@@ -121,6 +121,14 @@ table inet filter {
         (service nftables-service-type
                  (nftables-configuration
                   (ruleset %guixpc-firewall-ruleset)))
+        ;; Sunday 18:00 is a normally-on weekly opportunity.  Limit the
+        ;; fstab candidates to the two ext4 filesystems.
+        (service fstrim-service-type
+                 (fstrim-configuration
+                  (schedule "0 18 * * 0")
+                  (listed-in '("/etc/fstab"))
+                  (verbose? #t)
+                  (quiet-unsupported? #t)))
         ;; Keep the controller available before a paired speaker powers on.
         ;; Guix defaults this to false, so the adapter can still be off during
         ;; the Bose's startup reconnect attempt.
@@ -185,7 +193,9 @@ table inet filter {
      (cons* (file-system
               (mount-point "/boot/efi")
               (device (uuid "F476-0B09" 'fat16))
-              (type "vfat"))
+              (type "vfat")
+              ;; Keep the weekly fstrim fstab scan on / and /home.
+              (options "X-fstrim.notrim"))
             (file-system
               (mount-point "/")
               (device (uuid "e4279482-6b04-4f8b-8dab-3f70ae3daa65" 'ext4))
