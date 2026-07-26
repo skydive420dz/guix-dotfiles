@@ -552,7 +552,12 @@ Every later slice remains unauthorized.
   SSH, DHCP replies, local mDNS, ICMP, established traffic, and outbound
   traffic while rejecting other inbound connections.  Cold-boot key/password
   probes, an otherwise-listening blocked-port probe, network, NTP, and the
-  complete desktop status passed.  Channel cadence and the isolated update
+  complete desktop status passed.  C9b's controlled channel update was
+  accepted live on 2026-07-26 at published checkpoint =0681cd7=, following
+  graft-safe Emacs correction =f78e654=.  Authenticated isolated candidates,
+  Pull generation 6, Home generation 55, System generation 89, live
+  activation, reboot, and desktop acceptance passed at Guix =47b41dc=,
+  Nonguix =73baab3=, and sk-guix =b84ff24=.  Channel cadence and the rollback
   rehearsal remain.
 
 ** C10 — Promote only supported Guix garbage collection

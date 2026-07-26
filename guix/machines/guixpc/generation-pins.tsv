@@ -1,14 +1,14 @@
 # kind	generation	canonical-store-target	role	reason
-system	88	/gnu/store/1yrzralz3yjq3r6yd2pm48zg72afgrfp-system	promotion-rollback	Accepted C9a key-only SSH and LAN firewall
-system	87	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	preferred-rollback	Immediate pre-C9a accepted P1.1 terminal baseline
+system	89	/gnu/store/zcs000y2r28xys864145zs6wvgav4hjc-system	promotion-rollback	Accepted C9b pinned-channel update
+system	88	/gnu/store/1yrzralz3yjq3r6yd2pm48zg72afgrfp-system	preferred-rollback	Immediate pre-C9b accepted C9a security baseline
 system	85	/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system	last-known-good	Pre-Bluetooth reduced System fallback
 system	84	/gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system	last-known-good	Accepted authenticated Slice 12 System fallback
 system	83	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	last-known-good	Accepted Slice 11 System fallback
 system	81	/gnu/store/6f67kj6ix8n8wf10b3ic78r73c7r26v7-system	last-known-good	Distinct accepted elogind 255.24 System before Slice 10
 system	80	/gnu/store/jk1793wbqbn68y2s8ccpnpqicibrf8nz-system	emergency-rollback	Pre-elogind-upgrade recovery only; contains the known 255.17 SSH session defect
 system	75	/gnu/store/8zvbahq7s52fm1f27rc3qhbp02kj0zxh-system	last-known-good	Last observed working pre-slice boot target
-home	47	/gnu/store/84pm5bd8kpm6gylx0378dcgdsazh6a49-home	promotion-rollback	Accepted P3.4 generated visual environment and mapped-opacity startup gate
-home	46	/gnu/store/mf9jzhpvck10x9na6zsx1syc4zjbfwak-home	preferred-rollback	Immediate pre-mapped-opacity P3.4 visual correction
+home	55	/gnu/store/f261bfbzjb2pf04mjq7wnjy7s74d6yg4-home	promotion-rollback	Accepted C9b pinned-channel update
+home	54	/gnu/store/125wb8nm95wajjxvxk60kpfixwjx3dh4-home	preferred-rollback	Immediate pre-C9b accepted Git and SSH Home baseline
 home	42	/gnu/store/54fjca4j6z34xmvlvali08awjgyhfxyw-home	last-known-good	Accepted pre-theme Slice 19 profile-scoped native compilation cache
 home	41	/gnu/store/ci9szqljcz4jjvwcrp76865j8q8ihl3d-home	last-known-good	Pre-Slice-19 Guix-only Fennel fallback
 home	40	/gnu/store/by5c2mcdhmxf456q7imb6j56kv2y9s4w-home	last-known-good	Accepted Slice 17 Guix-only Racket fallback
@@ -21,7 +21,7 @@ home	34	/gnu/store/xzhsfha3cbbzgs3gddi47iq1fk89fmiq-home	last-known-good	Immedia
 home	33	/gnu/store/dbmnwmi0jypvpi5kb0xn29wjpdhnjr6z-home	last-known-good	Accepted Slice 11 Home fallback
 home	32	/gnu/store/5l5rn2alj38qclkj93cybla70jhyx6ls-home	last-known-good	Generated Home fallback for Slice 11
 home	29	/gnu/store/p3ghj0dmikmiwhvrkjblpacddjmhdycx-home	last-known-good	Pre-sk-guix historical Home fallback
-pull	5	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile	promotion-rollback	Accepted authenticated Slice 12 Guix frontend for the next promotion
-pull	4	/gnu/store/irs2nbihzakvv0jjs0vzvjyxz2lkiym7-profile	preferred-rollback	Immediate pre-Slice-12 Guix frontend
+pull	6	/gnu/store/6fxz9lgi6d84ry73mcndwabpyvb23a9i-profile	promotion-rollback	Accepted C9b pinned-channel update
+pull	5	/gnu/store/mm52g4iy2hx36vn27h7y13cgc8zqzv5c-profile	preferred-rollback	Immediate pre-C9b authenticated Guix frontend
 pull	3	/gnu/store/x9mc2silb9pdszck8yfbvh4plysxkmw2-profile	last-known-good	Earlier Guix frontend rollback with sk-guix present
 pull	2	/gnu/store/fyjqkz8rl6q459pshbn2r9nihfw9x3xw-profile	last-known-good	Pre-sk-guix channel recovery baseline
