@@ -647,22 +647,29 @@ unauthorized.
   reconnect, and the observed adapter/device power-order case.
 - Boundary: retain Blueman until repeated real-device parity, recovery, and
   error handling pass.  Do not replace BlueZ.
-- State: source candidate validated on 2026-07-26, pending checkpoint, reload,
-  and live hardware acceptance.  =scripts/sk-bluetooth= uses the existing
-  =busctl= and =bluetoothctl= BlueZ clients with direct arguments and bounded
-  calls; =SPC o b= opens the asynchronous Emacs panel.  No package, daemon,
-  Home/System reconfiguration, or reboot belongs to this slice.
+- State: closed and accepted live on 2026-07-26 at published implementation
+  checkpoint =2bd4ffc= and outside-native-buffer correction checkpoint
+  =2aab37a=.  =scripts/sk-bluetooth= uses the existing =busctl= and
+  =bluetoothctl= BlueZ clients with direct arguments and bounded calls;
+  =SPC o b= opens the asynchronous Emacs panel and =C-c o b= mirrors it from
+  EXWM application buffers in line mode.  No package, daemon, Home/System
+  reconfiguration, or reboot belonged to this slice.
 - Use: =g= refreshes; =P= toggles adapter power with confirmation before off;
   =s= scans; =p= pairs; =t= toggles trust; =c= connects; =d= disconnects;
   =a= requests the remote Audio Sink profile; =r= powers on if needed and
   reconnects one trusted paired device; =b= opens the retained Blueman
   fallback.
-- Validation and stop: the mocked Guile action suite, the live read-only BlueZ
-  snapshot, warning-fatal Emacs checks, all 104 isolated editor checks, and
-  both connected Lisp backends pass.  After a signed checkpoint, reload Emacs
-  and hand-test the panel, bounded scan, GS3/Bose actions, adapter-off/on
-  reconnect order, actionable failure, and Blueman recovery.  Do not unpair a
-  working device merely to prove pairing and do not remove Blueman.
+- Open-key reservations: =SPC o a= and =C-c o a= remain unbound for C14
+  audio; =SPC o n= and =C-c o n= remain unbound for C15 network.
+- Validation and stop: the mocked Guile action/error suite, live read-only
+  BlueZ snapshot, warning-fatal Emacs checks, all 104 isolated editor checks,
+  and both connected Lisp backends passed.  Paired acceptance confirmed panel
+  rendering and refresh, bounded scan, the dark Blueman fallback, GS3 trust
+  removal and restoration, Bose disconnect/reconnect, Audio Sink profile
+  reconnection, and adapter off/on followed by reconnect while the Bose
+  remained physically powered.  =C-c o b= also opened the panel from
+  Chromium.  Pairing was not forced against a working device; keep Blueman
+  until a future real-device pairing and recovery event demonstrates parity.
 
 ** C14 — Add a Lisp-native sound control surface
 
