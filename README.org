@@ -215,8 +215,11 @@ deliberately relevant; otherwise run the focused checks for the change.
 
 The repository lock contains =guix=, =nonguix=, and =sk-guix=.  A channel
 update is its own reviewed operation, not an incidental part of unrelated
-configuration work.  After explicitly changing and reviewing the pinned
-commits, the live pull command is:
+configuration work.  Review available changes manually once per month, but
+promote nothing automatically.  Review sooner for a relevant security advisory
+or required fix; when a candidate needs unexpected local builds or fails its
+checks, keep the current pins and retry later.  After explicitly changing and
+reviewing the pinned commits, the live pull command is:
 
 #+begin_src sh
 ~/.config/guix/current/bin/guix pull -C ~/.config/guix/channels.scm
@@ -557,8 +560,11 @@ Every later slice remains unauthorized.
   graft-safe Emacs correction =f78e654=.  Authenticated isolated candidates,
   Pull generation 6, Home generation 55, System generation 89, live
   activation, reboot, and desktop acceptance passed at Guix =47b41dc=,
-  Nonguix =73baab3=, and sk-guix =b84ff24=.  Channel cadence and the rollback
-  rehearsal remain.
+  Nonguix =73baab3=, and sk-guix =b84ff24=.  The accepted cadence is one
+  manual review per month, with earlier review only for a relevant security
+  advisory or required fix.  The supported read-only rollback drill passed on
+  2026-07-26 for System 89, Home 55, and Pull 6, with older recovery tier
+  88/54/5; no generation was switched.  C9 is closed and accepted.
 
 ** C10 — Promote only supported Guix garbage collection
 
