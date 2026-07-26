@@ -547,6 +547,13 @@ Every later slice remains unauthorized.
 - Boundary: every listener has an owner and the update rehearsal succeeds.
   The accepted trusted-residence/no-lock policy remains unless Rafael changes
   it.
+- State: C9a was accepted live on 2026-07-25 at published checkpoint
+  =d368f5a= and System generation 88.  SSH is key-only; nftables permits LAN
+  SSH, DHCP replies, local mDNS, ICMP, established traffic, and outbound
+  traffic while rejecting other inbound connections.  Cold-boot key/password
+  probes, an otherwise-listening blocked-port probe, network, NTP, and the
+  complete desktop status passed.  Channel cadence and the isolated update
+  rehearsal remain.
 
 ** C10 — Promote only supported Guix garbage collection
 

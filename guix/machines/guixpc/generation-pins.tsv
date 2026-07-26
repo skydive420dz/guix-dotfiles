@@ -1,6 +1,6 @@
 # kind	generation	canonical-store-target	role	reason
-system	87	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	promotion-rollback	Accepted Phase 1 P1.1 Kitty terminfo and SSH terminal contract
-system	86	/gnu/store/qwy0gwwfbaw6x187hh4jh0sk1vr0lry7-system	preferred-rollback	Immediate pre-P1.1 accepted Slice 19 desktop baseline
+system	88	/gnu/store/1yrzralz3yjq3r6yd2pm48zg72afgrfp-system	promotion-rollback	Accepted C9a key-only SSH and LAN firewall
+system	87	/gnu/store/gz53dagd09rr97k0ffhkx40rz0am4c88-system	preferred-rollback	Immediate pre-C9a accepted P1.1 terminal baseline
 system	85	/gnu/store/m5znrpyizvkkz77nn5nc7swl1jfhp7mf-system	last-known-good	Pre-Bluetooth reduced System fallback
 system	84	/gnu/store/jl9k89bivsjrw41lm9j7xq6v2d61s7p4-system	last-known-good	Accepted authenticated Slice 12 System fallback
 system	83	/gnu/store/y9ybn9c3yq3g2nqr38ag5kli2hc819xb-system	last-known-good	Accepted Slice 11 System fallback
