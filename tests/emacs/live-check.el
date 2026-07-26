@@ -449,6 +449,7 @@
          (cons "tracked core modules"
                (and (featurep 'sk-core)
                     (featurep 'sk-lisp)
+                    (featurep 'sk-scheme-studio)
                     (featurep 'sk-clojure)
                     (featurep 'sk-racket)
                     (featurep 'sk-fennel)
