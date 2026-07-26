@@ -380,6 +380,14 @@ passed before the correction checkpoint.  No FITRIM, System realization,
 activation, reconfiguration, service restart, or reboot occurred during those
 source gates.
 
+Repair checkpoint =fe9ef6f= was signed and published.  Reconfiguration created
+generation 91 with an EFI =defaults= entry and the corrected fstrim arguments.
+GRUB made 91 the default and retained known-bad generation 90 only under old
+configurations.  Generation 91 then booted successfully as both current and
+booted; EFI, networking, EXWM, PipeWire, and the declared ext4 trim policy
+were healthy.  Generation 88 remains the safe fallback instead of 90.  No
+manual FITRIM was issued during the repair.
+
 ** Dry-run and activation gates
 
 P2.M1b may request privileged direct-mount dry-runs:
@@ -457,12 +465,15 @@ CLOSED: [2026-07-26 Sun]
 - Explicitly approved privileged direct dry-runs for the ext4 =/= and =/home=
   mounts passed with no FITRIM.
 
-** BACKLOG P2.M1c -- Declarative periodic TRIM
+** COMPLETE P2.M1c -- Declarative periodic TRIM
+CLOSED: [2026-07-26 Sun]
 
-- Add the explicit =fstrim-service-type= configuration.
-- Source validation and System build precede checkpoint/push.
-- Activation, privileged root-timer inspection, real FITRIM trigger, and reboot
-  persistence are separate gates.
+- Published checkpoint =0469d45= added the service; repair checkpoint
+  =fe9ef6f= removed the boot-unsafe EFI marker.
+- System generation 91 is current and booted with =--fstab --types ext4= and
+  an option-free EFI mount.
+- Reboot persistence passed.  No manual FITRIM was issued during the repair;
+  the weekly timer owns future scheduled execution.
 
 ** PARKED P2.M1d -- Durable SMART alerting or deep diagnostics
 
@@ -513,3 +524,5 @@ P2.M1 design does not authorize:
 - [X] P2.M1a completion is accepted.
 - [X] P2.M1b schedule, corrected target policy, and privileged no-FITRIM
   direct-mount gates are accepted.
+- [X] Generation 90's boot failure and generation 88 recovery are documented.
+- [X] The corrected generation 91 is current, booted, and accepted.

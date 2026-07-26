@@ -595,17 +595,17 @@ unauthorized.
   TRIM, and recovery guidance are visible through the health surface.
 - Boundary: the second SSD remains unmounted and undeclared.  No repartition,
   migration, hardware purchase, or backup project is implied.
-- State: reopened on 2026-07-26 after generation 90's first reboot stopped
-  before networking: Guix passed the fstrim-only =X-fstrim.notrim= marker to
-  the VFAT kernel driver as a boot mount option.  Generation 88 provided the
-  clean recovery path.  The correction removes that EFI option, unsets the
-  service's incompatible =--listed-in= form, and serializes =--fstab --types
-  ext4= instead.  The Sunday 18:00 America/New_York opportunity, capacity and
-  cached SMART visibility, and untouched second SSD remain unchanged.  The
-  focused status check, all 105 Emacs checks, both connected Lisp backends,
-  exact installed-Guix argument serialization, and a non-realizing System
-  build passed.  A signed checkpoint, System activation, and one successful
-  reboot are required before C11 is closed again.
+- State: closed again and accepted live on 2026-07-26 at repair checkpoint
+  =fe9ef6f= and System generation 91.  Generation 90's first reboot had
+  stopped before networking because Guix passed the fstrim-only
+  =X-fstrim.notrim= marker to the VFAT kernel driver; generation 88 provided
+  the clean recovery path and remains the safe fallback instead of 90.  The
+  repair leaves EFI at plain =defaults=, unsets =--listed-in=, and serializes
+  =--fstab --types ext4=.  Generation 91 then booted as both current and
+  booted, with EFI, networking, EXWM, PipeWire, and the declared Sunday 18:00
+  trim policy healthy.  The second SSD remains untouched.  Cached SMART data
+  was unavailable after reboot and correctly remains a warning rather than a
+  fabricated health result.
 
 ** C12 — Build a focused Scheme learning studio
 
@@ -681,28 +681,29 @@ unauthorized.
 - Boundary: retain the current mixer until parity passes.  HDMI audio is not a
   required acceptance device because Rafael does not use it; do not replace
   PipeWire or WirePlumber.
-- State: published implementation checkpoint =287de45= loaded successfully,
-  including automatically after the corrected generation 91 boot.  The open
-  key and endpoint panel passed.  The first active Chromium test exposed that
-  WirePlumber 0.5.15 omits streams from =wpctl list audio=; the bounded
-  correction reads only the Audio =Streams:= rows from =wpctl status --name=
-  and prefers each stream's =node.name=.  Its focused Scheme check, Guile
-  compiler check, live read-only Chromium snapshot, all 105 Emacs checks, and
-  both connected Lisp backends pass.  It is pending a signed correction
-  checkpoint and remaining live actions.  =pipemixer= remains the fallback.
-  No package, service, Home/System reconfiguration, or reboot belongs to C14;
-  the intervening reboot repaired the separately documented C11 mount bug.
+- State: closed and accepted live on 2026-07-26 at implementation checkpoint
+  =287de45= and stream-discovery correction =d6c7b9d=.  The configuration
+  loaded automatically after generation 91 boot.  WirePlumber 0.5.15 omits
+  streams from =wpctl list audio=, so the bounded correction reads only the
+  Audio =Streams:= rows from =wpctl status --name= and prefers each stream's
+  =node.name=.  =pipemixer= remains the fallback.  No package, service,
+  Home/System reconfiguration, or reboot belongs to C14; the intervening
+  reboot repaired the separately documented C11 mount bug.
 - Use: =SPC o a= and =C-c o a= open the panel; =g= refreshes; =+= and =-=
   adjust the default output by five percent; =m= chooses an endpoint or stream
   and toggles mute; =v= chooses a target and sets 0--100 percent volume; =d=
   chooses a default output or input; =b= opens Bluetooth control; =p= opens
   =pipemixer=; =q= closes the panel.  Existing physical volume keys remain.
-- Validation and stop: mock the list, inspect, volume, default, and mute paths;
-  reject malformed output and stale or injected object IDs; run warning-fatal
-  Emacs checks and both connected Lisp backends.  After a signed checkpoint,
-  reload and hand-test the Bose, the GS3 when available, an active Chromium
-  stream, physical volume keys, Bluetooth handoff, and =pipemixer=.  Do not
-  change WirePlumber policy or require audible HDMI.
+- Validation and stop: the focused Scheme and Guile compiler checks, live
+  read-only Chromium snapshot, all 105 Emacs checks, and both connected Lisp
+  backends passed.  Remote live acceptance covered both open keys, endpoint
+  and Chromium-stream rendering, refresh, default-output plus/minus, stream
+  mute and restoration, exact stream volume and restoration, Bose default
+  selection, Bluetooth handoff, =pipemixer= fallback, and clean panel close.
+  Existing physical volume keys were unchanged and retained their earlier
+  acceptance.  The GS3 was not connected during the final pass; discovery is
+  generic rather than hard-coded, so its next powered connection is an
+  observation rather than a blocker.  HDMI need not be audible.
 
 ** C15 — Add a safe Lisp-native network control surface
 
