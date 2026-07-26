@@ -242,9 +242,12 @@ scripts/guix-generation-retention estimate
 scripts/guix-generation-retention rollback-drill
 #+end_src
 
-Its reports do not authorize deletion and its byte counts are not guaranteed
-reclaim.  System-generation deletion, bootloader reconstruction, and Guix
-store garbage collection require a new, bounded plan and explicit approval.
+=estimate= is non-collecting: it deletes no generation or store item.  Its
+native Guix =find-roots= query may prune already-dangling automatic GC-root
+symlinks while taking the snapshot.  Reports do not authorize deletion and
+their byte counts are not guaranteed reclaim.  System-generation deletion,
+bootloader reconstruction, and Guix store garbage collection require a new,
+bounded plan and explicit approval.
 
 The source checkpoint branch is not a backup of mutable documents, secrets,
 keys, browser data, or other local state.  Backup and storage policy remains a
@@ -574,6 +577,15 @@ Every later slice remains unauthorized.
 - Boundary: perform a second independent rehearsal before considering a
   schedule.  No System-generation deletion, custom GRUB repair, P5.2b
   dependency, or claim that estimated bytes equal reclaimed bytes.
+- State: closed and accepted live on 2026-07-26.  The independent
+  =verify=/=plan=/=estimate=/=rollback-drill= rehearsal passed from checkpoint
+  =c085c09=; =find-roots= pruned seven dangling automatic-root symlinks but no
+  generation or store item.  After exact authorization, one unprivileged
+  =guix gc= reduced dead paths from 5,368 to zero.  Guix reported 25 GiB
+  freed, while filesystem availability increased by 14,792,376,320 bytes
+  (13.78 GiB) and occupancy fell from 66% to 46%.  Entry points, retention,
+  rollback artifacts, Guix, EXWM, PipeWire, and WirePlumber passed postflight.
+  No generation deletion, schedule, reconfiguration, or reboot occurred.
 
 ** C11 — Make storage health, capacity, and TRIM visible
 

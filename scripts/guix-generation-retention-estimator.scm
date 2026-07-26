@@ -1,4 +1,4 @@
-;;; Read-only closure accounting for guix-generation-retention.
+;;; Non-collecting closure accounting for guix-generation-retention.
 
 (use-modules ((guix store)
               #:select (find-roots

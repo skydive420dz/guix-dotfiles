@@ -610,7 +610,7 @@ run_estimator_helper() {
         "$estimator_guix" repl -q -- "$estimator_scheme" \
             "$candidate_targets" "$retained_targets" "$ignored_roots" \
             >"$helper_output" ||
-            fail "read-only Guix store estimator failed"
+            fail "non-collecting Guix store estimator failed"
     fi
     validate_helper_output "$helper_output"
 }
@@ -634,7 +634,7 @@ policy_link_count() {
 
 print_estimate() {
     printf 'schema\tp5.1-estimate/v1\n'
-    printf 'mode\tread-only\n'
+    printf 'mode\tnon-collecting\n'
     printf 'policy\tadditional-distinct-closures\t5\n'
     for pe_kind in system home pull; do
         pe_links=$(count_kind "$inventory" "$pe_kind")

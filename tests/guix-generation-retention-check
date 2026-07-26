@@ -294,6 +294,8 @@ store_count_after_estimate=$(find "$store" -mindepth 1 -maxdepth 1 -type d |
 printf '%s\n' "$estimate_output" |
     grep -q '^schema	p5.1-estimate/v1$'
 printf '%s\n' "$estimate_output" |
+    grep -q '^mode	non-collecting$'
+printf '%s\n' "$estimate_output" |
     grep -q "^profile	system	12	10	11	/gnu/store/$system_j\$"
 printf '%s\n' "$estimate_output" |
     grep -q "^profile	home	13	10	12	/gnu/store/$home_j\$"
