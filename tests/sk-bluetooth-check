@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+
+repo=$(CDPATH='' cd "$(dirname "$0")/.." && pwd -P)
+guile=${GUILE:-guile}
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/sk-bluetooth-check.XXXXXX")
+log=$tmp/check.log
+
+cleanup() {
+    rm -rf "$tmp"
+}
+trap cleanup EXIT HUP INT TERM
+
+if ! command -v "$guile" >/dev/null 2>&1; then
+    printf '%s\n' 'sk-bluetooth-check: Guile is unavailable' >&2
+    exit 2
+fi
+
+if ! GUILE_AUTO_COMPILE=0 "$guile" --no-auto-compile \
+    -s "$repo/tests/sk-bluetooth-check.scm" "$repo" >"$log" 2>&1; then
+    cat "$log" >&2
+    exit 1
+fi
+
+printf '%s\n' 'sk-bluetooth-check: PASS'

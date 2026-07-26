@@ -647,6 +647,22 @@ unauthorized.
   reconnect, and the observed adapter/device power-order case.
 - Boundary: retain Blueman until repeated real-device parity, recovery, and
   error handling pass.  Do not replace BlueZ.
+- State: source candidate validated on 2026-07-26, pending checkpoint, reload,
+  and live hardware acceptance.  =scripts/sk-bluetooth= uses the existing
+  =busctl= and =bluetoothctl= BlueZ clients with direct arguments and bounded
+  calls; =SPC o b= opens the asynchronous Emacs panel.  No package, daemon,
+  Home/System reconfiguration, or reboot belongs to this slice.
+- Use: =g= refreshes; =P= toggles adapter power with confirmation before off;
+  =s= scans; =p= pairs; =t= toggles trust; =c= connects; =d= disconnects;
+  =a= requests the remote Audio Sink profile; =r= powers on if needed and
+  reconnects one trusted paired device; =b= opens the retained Blueman
+  fallback.
+- Validation and stop: the mocked Guile action suite, the live read-only BlueZ
+  snapshot, warning-fatal Emacs checks, all 104 isolated editor checks, and
+  both connected Lisp backends pass.  After a signed checkpoint, reload Emacs
+  and hand-test the panel, bounded scan, GS3/Bose actions, adapter-off/on
+  reconnect order, actionable failure, and Blueman recovery.  Do not unpair a
+  working device merely to prove pairing and do not remove Blueman.
 
 ** C14 — Add a Lisp-native sound control surface
 

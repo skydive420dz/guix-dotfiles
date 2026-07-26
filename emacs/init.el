@@ -27,6 +27,7 @@
 (require 'sk-windows)
 (require 'sk-dired)
 (require 'sk-terminal)
+(require 'sk-bluetooth)
 (require 'sk-dashboard)
 (require 'sk-completion)
 (require 'sk-evil)

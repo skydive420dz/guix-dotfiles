@@ -82,6 +82,7 @@ batch_bootstrap="$repo/tests/emacs/batch-bootstrap.el"
 batch_checks="$repo/tests/emacs/batch-check.el"
 backend_checks="$repo/tests/emacs/backend-check.el"
 guix_lisp_shell="$repo/scripts/guix-lisp-shell"
+bluetooth_client="$repo/scripts/sk-bluetooth"
 clojure_project="$repo/scripts/clojure-project"
 racket_project="$repo/scripts/racket-project"
 fennel_project="$repo/scripts/fennel-project"
@@ -89,7 +90,7 @@ fennel_project="$repo/scripts/fennel-project"
 for file in "$live_expression_file" "$early_init" "$early_visual_checks" \
     "$early_watchdog_failure_checks" "$batch_bootstrap" "$batch_checks" \
     "$backend_checks" "$guix_lisp_shell" "$clojure_project" \
-    "$racket_project" "$fennel_project"; do
+    "$racket_project" "$fennel_project" "$bluetooth_client"; do
     if [ ! -r "$file" ]; then
         printf 'preflight: unreadable %s\n' "$file" >&2
         exit 2
@@ -161,6 +162,7 @@ run_batch_checks() (
     cp -R "$repo/emacs" "$source_root/emacs"
     cp -R "$repo/fixtures" "$source_root/fixtures"
     cp "$guix_lisp_shell" "$source_root/scripts/guix-lisp-shell"
+    cp "$bluetooth_client" "$source_root/scripts/sk-bluetooth"
     cp "$clojure_project" "$source_root/scripts/clojure-project"
     cp "$racket_project" "$source_root/scripts/racket-project"
     cp "$fennel_project" "$source_root/scripts/fennel-project"

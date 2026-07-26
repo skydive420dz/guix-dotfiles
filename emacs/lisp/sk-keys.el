@@ -121,6 +121,7 @@
     "wL" '(sk/window-resize-right :which-key "resize right")
 
     "o"  '(:ignore t :which-key "open")
+    "ob" '(sk/bluetooth :which-key "bluetooth")
     "od" '(sk/window-open-dired :which-key "dired")
     "oe" '(sk/window-open-eshell :which-key "eshell")
     "os" '(sk/status :which-key "status")

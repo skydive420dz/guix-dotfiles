@@ -448,6 +448,7 @@
                           xref-after-update-hook)))
          (cons "tracked core modules"
                (and (featurep 'sk-core)
+                    (featurep 'sk-bluetooth)
                     (featurep 'sk-lisp)
                     (featurep 'sk-scheme-studio)
                     (featurep 'sk-clojure)
@@ -461,6 +462,15 @@
                     (advice-member-p
                      #'org--protocol-detect-protocol-server
                      'server-visit-files)))
+         (cons "Bluetooth control surface"
+               (and (file-executable-p sk/bluetooth-program)
+                    (eq (lookup-key evil-normal-state-map
+                                    (kbd "SPC o b"))
+                        #'sk/bluetooth)
+                    (eq (lookup-key sk/bluetooth-mode-map (kbd "g"))
+                        #'sk/bluetooth-refresh)
+                    (eq (lookup-key sk/bluetooth-mode-map (kbd "b"))
+                        #'sk/bluetooth-blueman)))
          (cons "global Company frontend"
                (bound-and-true-p global-company-mode))
          (cons "global Flycheck diagnostics"

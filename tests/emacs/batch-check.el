@@ -63,6 +63,18 @@
    " (hint \"Review the active Home generation.\"))))\n")
   "Valid fixed sk-status/v2 fixture with one finding.")
 
+(defconst sk/check-bluetooth-expression
+  (concat
+   "(sk-bluetooth/v1\n"
+   " (adapter (state present) (path \"/org/bluez/hci0\")"
+   " (alias \"Test Adapter\") (powered yes) (discovering no))\n"
+   " (devices\n"
+   "  ((path \"/org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF\")"
+   " (address \"AA:BB:CC:DD:EE:FF\") (alias \"Test Speaker\")"
+   " (paired yes) (trusted yes) (connected no)"
+   " (audio yes) (battery 77))))\n")
+  "Valid fixed sk-bluetooth/v1 fixture.")
+
 (defun sk/check-fixture-path (relative)
   "Return the copied fixture path for RELATIVE."
   (expand-file-name (concat "fixtures/" relative) sk/check-source-root))
@@ -1958,6 +1970,7 @@
   (dolist (binding '(("SPC c f" . sk/format-buffer)
                      ("SPC ," . counsel-switch-buffer)
                      ("SPC b b" . counsel-ibuffer)
+                     ("SPC o b" . sk/bluetooth)
                      ("SPC o s" . sk/status)
                      ("SPC l r" . sk/lisp-repl)
                      ("SPC l b" . sk/lisp-eval-buffer)
@@ -2062,6 +2075,70 @@
         (when-let ((buffer (and invocation (plist-get invocation key))))
           (when (buffer-live-p buffer)
             (kill-buffer buffer)))))))
+
+(ert-deftest sk/check-bluetooth-expression-and-actions ()
+  (require 'sk-bluetooth)
+  (let ((terminal-position
+         (seq-position sk/reload-module-files "sk-terminal"))
+        (bluetooth-position
+         (seq-position sk/reload-module-files "sk-bluetooth"))
+        (dashboard-position
+         (seq-position sk/reload-module-files "sk-dashboard")))
+    (should terminal-position)
+    (should bluetooth-position)
+    (should dashboard-position)
+    (should (< terminal-position bluetooth-position dashboard-position)))
+  (let ((form (sk/bluetooth--parse sk/check-bluetooth-expression)))
+    (should (eq (car form) 'sk-bluetooth/v1))
+    (should
+     (equal (sk/bluetooth--value (cdr (cadr form)) 'powered) 'yes)))
+  (dolist
+      (invalid
+       (list
+        (concat sk/check-bluetooth-expression "(second-form)\n")
+        (string-replace "(battery 77)" "(battery 101)"
+                        sk/check-bluetooth-expression)
+        (string-replace "(trusted yes)" "(trusted yes) (trusted no)"
+                        sk/check-bluetooth-expression)))
+    (should-error (sk/bluetooth--parse invalid)
+                  :type 'sk/bluetooth-invalid-output))
+  (let (arguments heading)
+    (with-temp-buffer
+      (sk/bluetooth-mode)
+      (setq sk/bluetooth--snapshot
+            (sk/bluetooth--parse sk/check-bluetooth-expression))
+      (cl-letf (((symbol-function 'completing-read)
+                 (lambda (_prompt collection &rest _)
+                   (caar collection)))
+                ((symbol-function 'sk/bluetooth--run)
+                 (lambda (new-arguments new-heading)
+                   (setq arguments new-arguments
+                         heading new-heading))))
+        (sk/bluetooth-connect)
+        (should (equal arguments
+                       '("connect" "AA:BB:CC:DD:EE:FF")))
+        (should (string= heading "Connecting..."))
+        (sk/bluetooth-audio-profile)
+        (should (equal arguments
+                       '("profile" "AA:BB:CC:DD:EE:FF" "audio")))
+        (sk/bluetooth-reconnect)
+        (should (equal arguments
+                       '("reconnect" "AA:BB:CC:DD:EE:FF"))))
+      (dolist (binding
+               '(("g" . sk/bluetooth-refresh)
+                 ("P" . sk/bluetooth-power)
+                 ("s" . sk/bluetooth-scan)
+                 ("p" . sk/bluetooth-pair)
+                 ("t" . sk/bluetooth-trust)
+                 ("c" . sk/bluetooth-connect)
+                 ("d" . sk/bluetooth-disconnect)
+                 ("a" . sk/bluetooth-audio-profile)
+                 ("r" . sk/bluetooth-reconnect)
+                 ("b" . sk/bluetooth-blueman)
+                 ("q" . quit-window)))
+        (should (eq (lookup-key sk/bluetooth-mode-map
+                                (kbd (car binding)))
+                    (cdr binding)))))))
 
 (ert-deftest sk/check-code-action-delegates-interactively ()
   (with-temp-buffer
