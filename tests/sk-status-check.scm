@@ -104,10 +104,26 @@
 (define network (observe-network))
 (define capacity (observe-capacity))
 (define smart (observe-smart))
+(define system-source
+  (call-with-input-file
+      (string-append repo "/guix/systems/guixpc.scm")
+    get-string-all))
+(define trim-source (string-append tmp "/trim-configuration.scm"))
+(call-with-output-file trim-source
+  (lambda (port)
+    (display
+     "(service fstrim-service-type
+  (fstrim-configuration
+    (schedule \"0 18 * * 0\")
+    (listed-in %unset-value)
+    (extra-arguments '(\"--fstab\" \"--types\" \"ext4\"))))\n"
+     port)))
+(set! %system-configuration trim-source)
+(define trim (observe-trim))
 (define healthy-storage
   `((capacity ,@capacity)
     (smart ,@smart)
-    (trim (state ok) (schedule sunday-1800) (filesystems ext4))))
+    (trim ,@trim)))
 
 (check-equal (field (section desktop 'exwm) 'workspaces) 5
              "EXWM workspace count is normalized")
@@ -130,6 +146,11 @@
 (check-equal smart
              '((state ok) (classification favorable))
              "existing SMART summary is normalized")
+(check-equal trim
+             '((state ok) (schedule sunday-1800) (filesystems ext4))
+             "explicit fstab-plus-type TRIM policy is normalized")
+(check (not (string-contains system-source "X-fstrim.notrim"))
+       "EFI mount has no fstrim-only boot option")
 
 (let ((rendered
        (call-with-output-string

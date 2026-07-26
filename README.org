@@ -595,15 +595,17 @@ unauthorized.
   TRIM, and recovery guidance are visible through the health surface.
 - Boundary: the second SSD remains unmounted and undeclared.  No repartition,
   migration, hardware purchase, or backup project is implied.
-- State: closed and accepted live on 2026-07-26 at published checkpoint
-  =0469d45=.  System generation 90 activated the Sunday 18:00
-  America/New_York =fstrim-service-type= opportunity.  =/etc/fstab= is its
-  only source: the EFI entry has =X-fstrim.notrim=, leaving only ext4 =/= and
-  =/home=.  Both privileged direct-mount dry-runs passed without issuing
-  FITRIM.  The rejected =--types= plus =--listed-in= form had exited zero while
-  selecting nothing and is not used.  The accepted =sk-status/v2= observation
-  reported 51 percent used, 34 GiB available, favorable cached SMART health,
-  and the declared weekly ext4 scope.  The second SSD remains untouched.
+- State: reopened on 2026-07-26 after generation 90's first reboot stopped
+  before networking: Guix passed the fstrim-only =X-fstrim.notrim= marker to
+  the VFAT kernel driver as a boot mount option.  Generation 88 provided the
+  clean recovery path.  The correction removes that EFI option, unsets the
+  service's incompatible =--listed-in= form, and serializes =--fstab --types
+  ext4= instead.  The Sunday 18:00 America/New_York opportunity, capacity and
+  cached SMART visibility, and untouched second SSD remain unchanged.  The
+  focused status check, all 105 Emacs checks, both connected Lisp backends,
+  exact installed-Guix argument serialization, and a non-realizing System
+  build passed.  A signed checkpoint, System activation, and one successful
+  reboot are required before C11 is closed again.
 
 ** C12 — Build a focused Scheme learning studio
 

@@ -397,10 +397,10 @@ only bounded stdout is retained for allowlisted parsing."
                (string-contains source "(schedule \"0 18 * * 0\")")))
          (ext4-only?
           (and source
-               (string-contains source "(listed-in '(\"/etc/fstab\"))")
+               (string-contains source "(listed-in %unset-value)")
                (string-contains
                 source
-                "(options \"X-fstrim.notrim\")"))))
+                "(extra-arguments '(\"--fstab\" \"--types\" \"ext4\"))"))))
     (proper-record
      (list 'state
            (cond

@@ -3,6 +3,7 @@
 
 (use-modules (gnu)
              (gnu packages freedesktop)
+             (gnu services configuration)
              (guix gexp)
              (guix git-download)
              (guix packages)
@@ -121,14 +122,15 @@ table inet filter {
         (service nftables-service-type
                  (nftables-configuration
                   (ruleset %guixpc-firewall-ruleset)))
-        ;; Sunday 18:00 is a normally-on weekly opportunity.  Limit the
-        ;; fstab candidates to the two ext4 filesystems.
+        ;; Sunday 18:00 is a normally-on weekly opportunity.  Trim declared
+        ;; ext4 filesystems without changing their boot-time mount options.
         (service fstrim-service-type
                  (fstrim-configuration
                   (schedule "0 18 * * 0")
-                  (listed-in '("/etc/fstab"))
+                  (listed-in %unset-value)
                   (verbose? #t)
-                  (quiet-unsupported? #t)))
+                  (quiet-unsupported? #t)
+                  (extra-arguments '("--fstab" "--types" "ext4"))))
         ;; Keep the controller available before a paired speaker powers on.
         ;; Guix defaults this to false, so the adapter can still be off during
         ;; the Bose's startup reconnect attempt.
@@ -193,9 +195,7 @@ table inet filter {
      (cons* (file-system
               (mount-point "/boot/efi")
               (device (uuid "F476-0B09" 'fat16))
-              (type "vfat")
-              ;; Keep the weekly fstrim fstab scan on / and /home.
-              (options "X-fstrim.notrim"))
+              (type "vfat"))
             (file-system
               (mount-point "/")
               (device (uuid "e4279482-6b04-4f8b-8dab-3f70ae3daa65" 'ext4))

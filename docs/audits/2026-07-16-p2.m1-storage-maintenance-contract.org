@@ -347,29 +347,38 @@ user normally leaves GuixPC awake.
 
 Current =/etc/fstab= is nonempty and lists =/=, =/home=, and the EFI mount.
 
-The 2026-07-26 C11 dry-run corrected this design's original target-filter
-recommendation.  Installed =fstrim= documents =--types= only with =--all= or
-=--fstab=; combining it with the Guix service's =--listed-in= option exited
-zero while selecting no filesystems.  The corrected candidate reads only
-=/etc/fstab= and marks the EFI entry =X-fstrim.notrim=, a native fstab
-exclusion understood by =fstrim=.  This leaves the ext4 =/= and =/home=
-entries as the intended targets without a custom target file.
+The first C11 candidate combined =--listed-in /etc/fstab= with
+=X-fstrim.notrim= on the EFI =file-system= declaration.  Although the marker
+is documented by installed =fstrim=, generation 90's first reboot showed that
+Guix also passed it to the VFAT kernel driver as a mount option.  Boot stopped
+before networking with =vfat: Unknown parameter 'X-fstrim.notrim'=; generation
+88 was the clean recovery path.
 
-Accepted C11 declaration after schedule review:
+The corrected declaration leaves EFI mount options untouched and uses the
+supported =--fstab --types ext4= pair.  =%unset-value= removes the service's
+default =--listed-in= argument, avoiding the already-rejected combination of
+=--types= with =--listed-in=.
+
+Corrected C11 declaration:
 
 #+begin_src scheme
 (service fstrim-service-type
          (fstrim-configuration
           (schedule "0 18 * * 0")
-          (listed-in '("/etc/fstab"))
+          (listed-in %unset-value)
           (verbose? #t)
-          (quiet-unsupported? #t)))
-
-;; The existing /boot/efi file-system record additionally contains:
-(options "X-fstrim.notrim")
+          (quiet-unsupported? #t)
+          (extra-arguments '("--fstab" "--types" "ext4"))))
 #+end_src
 
 The explicit fields pin intent against default drift.
+
+The installed Guix serializer produced exactly =--verbose
+--quiet-unsupported --fstab --types ext4=.  The focused status check, all 105
+Emacs checks, both connected Lisp backends, and a non-realizing System build
+passed before the correction checkpoint.  No FITRIM, System realization,
+activation, reconfiguration, service restart, or reboot occurred during those
+source gates.
 
 ** Dry-run and activation gates
 
@@ -388,9 +397,9 @@ P2.M1b may request privileged direct-mount dry-runs:
 =--dry-run= skips the FITRIM ioctl.  On the installed util-linux, aggregate
 =--fstab=/=--all= dry-runs exit zero without listing targets; they are not
 accepted target evidence.  The two direct checks confirm that each intended
-mount is accepted without issuing FITRIM, while the declarative
-=X-fstrim.notrim= EFI marker owns aggregate exclusion.  They do not prove
-actual discard, schedule delivery, or future success.
+mount is accepted without issuing FITRIM.  The corrected service command's
+=--types ext4= filter owns EFI exclusion.  These checks do not prove actual
+discard, schedule delivery, or future success.
 
 The separately approved privileged direct checks passed on 2026-07-26:
 
@@ -443,7 +452,8 @@ CLOSED: [2026-07-26 Sun]
 - Rafael selected Sunday 18:00 America/New_York as the normally-on weekly
   opportunity.
 - The rejected aggregate dry-runs and their zero-target false-success behavior
-  are retained; the candidate uses the native EFI fstab exclusion instead.
+  are retained.  The boot-unsafe EFI marker is rejected; the correction uses
+  =--fstab --types ext4= without changing mount options.
 - Explicitly approved privileged direct dry-runs for the ext4 =/= and =/home=
   mounts passed with no FITRIM.
 
