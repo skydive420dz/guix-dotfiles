@@ -614,8 +614,8 @@ unauthorized.
 - Boundary: Emacs and the test runner are the terminal interface; project or
   XDG state is explicit.  Start with Geiser and add Ares/AREI only for a
   demonstrated need.
-- State: source candidate validated on 2026-07-26, pending checkpoint, reload,
-  and live acceptance.  It is limited to the existing Geiser,
+- State: closed and accepted live on 2026-07-26.  It is limited to the existing
+  Geiser,
   =guix-lisp-shell core=, EXWM window policy, one Emacs Lisp workflow, and
   three small Guile exercises.  Editable solutions and =progress.org= live
   visibly in =~/Projects/scheme-studio=; curriculum and tests remain immutable
@@ -625,12 +625,13 @@ unauthorized.
 - Use: =SPC l S o= (or =M-x sk/scheme-studio=) opens or creates the studio.
   The =SPC l S= which-key group exposes hint, next, progress, reset, and test;
   ordinary =SPC l e/d/b/r= remains the evaluation and REPL vocabulary.
-- Validation and stop: warning-fatal byte compilation and Checkdoc, all
+  Testing saves the visiting solution before the runner reads it.
+- Validation: warning-fatal byte compilation and Checkdoc, all
   103 isolated Emacs checks, both connected Lisp backends, the exact pinned
   Geiser start/evaluate path, and positive/negative execution of all three
-  Scheme tests passed.  Reload the Emacs configuration and hand-test open,
-  normal Geiser evaluation, test, reset, hint, next, and progress.  Stop after
-  that first curriculum is accepted.
+  Scheme tests passed.  Live acceptance confirmed the three-pane open,
+  expected starter failure, hint focus, reset, passing test, advance, and
+  explicit progress state.
 
 ** C12-E — Optional Emacs Lisp and EXWM literacy companion
 

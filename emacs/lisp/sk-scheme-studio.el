@@ -291,8 +291,11 @@ When ADVANCE is non-nil, open the next exercise after a passing test."
     (when (and existing (process-live-p existing))
       (user-error "A Scheme Studio test is already running")))
   (let* ((exercise (sk/scheme-studio--initialize))
+         (solution (sk/scheme-studio--solution exercise))
          (command (sk/scheme-studio--test-command exercise))
          (buffer (get-buffer-create "*Scheme Studio Test*")))
+    (save-some-buffers
+     t (lambda () (equal buffer-file-name solution)))
     (unless (file-executable-p sk/lisp-guix-shell)
       (user-error "Pinned Lisp shell is not executable: %s"
                   sk/lisp-guix-shell))
