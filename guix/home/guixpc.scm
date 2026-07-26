@@ -84,7 +84,7 @@
 (home-environment
  (packages
  (append
-   (map specification->package %guixpc-home-package-specifications)
+   (map sk:package-for-specification %guixpc-home-package-specifications)
    (specifications->packages
     %guixpc-home-output-package-specifications)
    %guixpc-home-explicit-packages))
@@ -122,5 +122,5 @@
              (enable-pulseaudio? #t))))
    (sk:git-gpg-home-services)
    (sk:desktop-integration-home-services
-    (specification->package "emacs")
+    emacs/graft-safe
     (specification->package "polkit-gnome")))))

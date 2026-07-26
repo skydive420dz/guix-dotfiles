@@ -101,8 +101,10 @@
 
 (assert
  (string-contains system-source
-                  "(map specification->package %guixpc-recovery-package-specifications)")
+                  "(map sk:package-for-specification")
  "System declaration lacks the reviewed recovery-list wiring")
+(assert (string-contains system-source "(sk emacs)")
+        "System declaration lacks the graft-safe Emacs resolver")
 (assert
  (string-contains
   system-source
@@ -112,7 +114,7 @@
  "System declaration must retain Kitty's default output and add terminfo")
 (assert
  (string-contains home-source
-                  "(map specification->package %guixpc-home-package-specifications)")
+                  "(map sk:package-for-specification %guixpc-home-package-specifications)")
  "Home declaration lacks the reviewed Home-list wiring")
 (assert (string-contains home-source "(sk emacs)")
         "Home declaration lacks the local Emacs package module")
@@ -127,7 +129,7 @@
   home-source
  (string-append
    "(append\n"
-   "   (map specification->package %guixpc-home-package-specifications)\n"
+   "   (map sk:package-for-specification %guixpc-home-package-specifications)\n"
    "   (specifications->packages\n"
    "    %guixpc-home-output-package-specifications)\n"
    "   %guixpc-home-explicit-packages)"))
@@ -146,6 +148,14 @@
   "'((\"GUIX_GTK2_PATH\" . \"$HOME/.guix-home/profile/lib/gtk-2.0\"))")
  "theme Home module lacks the stable GTK 2 engine search path")
 
+(assert
+ (string-contains emacs-module-source
+                  "(add-after 'restore-emacs-pdmp 'preserve-grafted-exec-directory")
+ "Emacs variant no longer repairs its grafted invocation directory")
+(assert
+ (string-contains emacs-module-source
+                  "(\"exec -a \\\"\\\\$\\\\{0##\\\\*/\\\\}\\\"\")")
+ "Emacs variant no longer matches Guix's generated wrapper")
 (assert
  (string-contains emacs-module-source
                   "(package/inherit emacs-racket-mode")
@@ -202,7 +212,7 @@
   home-source
   (string-append
    "(sk:desktop-integration-home-services\n"
-   "    (specification->package \"emacs\")\n"
+   "    emacs/graft-safe\n"
    "    (specification->package \"polkit-gnome\"))"))
  "Home declaration does not pass exact Emacs and Polkit package objects")
 

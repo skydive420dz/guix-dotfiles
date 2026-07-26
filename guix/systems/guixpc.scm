@@ -7,6 +7,7 @@
              (guix git-download)
              (guix packages)
              (nonguix transformations)
+             (sk emacs)
              (sk packages terminals))
 (use-service-modules cups dbus desktop networking ssh sound xorg)
 
@@ -105,7 +106,8 @@ table inet filter {
       ;; launcher requires it.  Home owns normal applications and tooling.
       (list kitty-latest
             (list kitty-latest "terminfo"))
-      (map specification->package %guixpc-recovery-package-specifications)
+      (map sk:package-for-specification
+           %guixpc-recovery-package-specifications)
 
       %base-packages))
 
