@@ -7,13 +7,14 @@
 
 (define-prefix-command 'sk/open-command-map)
 (global-set-key (kbd "C-c o") #'sk/open-command-map)
+(global-set-key (kbd "C-c o a") #'sk/audio)
 (global-set-key (kbd "C-c o b") #'sk/bluetooth)
 (global-set-key (kbd "C-c o d") #'sk/window-open-dired)
 (global-set-key (kbd "C-c o e") #'sk/window-open-eshell)
 (global-set-key (kbd "C-c o s") #'sk/status)
 (global-set-key (kbd "C-c o t") #'sk/window-open-treemacs)
 (global-set-key (kbd "C-c o v") #'sk/window-open-vterm)
-;; SPC/C-c o a and SPC/C-c o n are reserved for C14 audio and C15 network.
+;; SPC/C-c o n remains reserved for C15 network.
 
 (use-package general
   :config
@@ -131,6 +132,7 @@
     "wL" '(sk/window-resize-right :which-key "resize right")
 
     "o"  '(:ignore t :which-key "open")
+    "oa" '(sk/audio :which-key "audio")
     "ob" '(sk/bluetooth :which-key "bluetooth")
     "od" '(sk/window-open-dired :which-key "dired")
     "oe" '(sk/window-open-eshell :which-key "eshell")

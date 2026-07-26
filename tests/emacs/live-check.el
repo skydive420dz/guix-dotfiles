@@ -449,6 +449,7 @@
          (cons "tracked core modules"
                (and (featurep 'sk-core)
                     (featurep 'sk-bluetooth)
+                    (featurep 'sk-audio)
                     (featurep 'sk-lisp)
                     (featurep 'sk-scheme-studio)
                     (featurep 'sk-clojure)
@@ -471,6 +472,17 @@
                         #'sk/bluetooth-refresh)
                     (eq (lookup-key sk/bluetooth-mode-map (kbd "b"))
                         #'sk/bluetooth-blueman)))
+         (cons "Audio control surface"
+               (and (file-executable-p sk/audio-program)
+                    (eq (lookup-key evil-normal-state-map
+                                    (kbd "SPC o a"))
+                        #'sk/audio)
+                    (eq (lookup-key global-map (kbd "C-c o a"))
+                        #'sk/audio)
+                    (eq (lookup-key sk/audio-mode-map (kbd "g"))
+                        #'sk/audio-refresh)
+                    (eq (lookup-key sk/audio-mode-map (kbd "p"))
+                        #'sk/audio-pipemixer)))
          (cons "global Company frontend"
                (bound-and-true-p global-company-mode))
          (cons "global Flycheck diagnostics"

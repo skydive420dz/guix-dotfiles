@@ -1,0 +1,284 @@
+#!/usr/bin/env -S guile --no-auto-compile -s
+!#
+
+;;; Bounded WirePlumber control for the GuixPC Emacs surface.
+
+(use-modules (ice-9 match)
+             (ice-9 popen)
+             (ice-9 textual-ports)
+             (srfi srfi-1)
+             (srfi srfi-13))
+
+(define %program "sk-audio")
+(define %system-bin "/run/current-system/profile/bin")
+(define %timeout (string-append %system-bin "/timeout"))
+(define %maximum-output 262144)
+
+(define (home-command name)
+  (string-append (or (getenv "HOME") "")
+                 "/.guix-home/profile/bin/" name))
+
+(define %wpctl (home-command "wpctl"))
+
+(define (command-result kind output)
+  (list kind output))
+
+(define (result-kind result)
+  (car result))
+
+(define (result-output result)
+  (cadr result))
+
+(define (status-success? status)
+  (catch #t
+    (lambda ()
+      (let ((exit-value (status:exit-val status)))
+        (and (integer? exit-value) (zero? exit-value))))
+    (lambda _ #f)))
+
+(define (run-command program arguments seconds)
+  "Run PROGRAM with direct ARGUMENTS for at most SECONDS."
+  (if (or (not (file-exists? program))
+          (not (access? program X_OK))
+          (not (file-exists? %timeout)))
+      (command-result 'unavailable "")
+      (catch #t
+        (lambda ()
+          (let* ((port
+                  (apply open-pipe* OPEN_READ %timeout
+                         "--kill-after=1" (number->string (+ seconds 1))
+                         program arguments))
+                 (_ (set-port-encoding! port "UTF-8"))
+                 (output (get-string-n port (+ %maximum-output 1)))
+                 (status (close-pipe port))
+                 (text (if (eof-object? output) "" output)))
+            (cond
+             ((> (string-length text) %maximum-output)
+              (command-result 'oversize ""))
+             ((status-success? status)
+              (command-result 'ok text))
+             (else
+              (command-result 'failed "")))))
+        (lambda _ (command-result 'unavailable "")))))
+
+(define sk:audio-command-runner run-command)
+
+(define (invoke seconds . arguments)
+  (sk:audio-command-runner %wpctl arguments seconds))
+
+(define (fail message)
+  (throw 'sk-audio-error message))
+
+(define (require-ok result action)
+  (unless (eq? (result-kind result) 'ok)
+    (fail (string-append action " failed")))
+  (result-output result))
+
+(define (natural-text? text)
+  (and (string? text)
+       (not (string-null? text))
+       (every char-numeric? (string->list text))))
+
+(define (parse-natural text)
+  (and (natural-text? text)
+       (let ((value (string->number text)))
+         (and (integer? value) (>= value 0) value))))
+
+(define (media-kind text)
+  (let ((normalized (string-downcase text)))
+    (cond
+     ((string-suffix? "/sink" normalized) 'sink)
+     ((string-suffix? "/source" normalized) 'source)
+     ((string-contains normalized "stream") 'stream)
+     (else #f))))
+
+(define (parse-list-line line)
+  (let ((fields (string-split line #\tab)))
+    (and (>= (length fields) 3)
+         (let* ((id (parse-natural (list-ref fields 0)))
+                (name (string-trim-both (list-ref fields 1)))
+                (media (string-trim-both (list-ref fields 2)))
+                (kind (media-kind media))
+                (default?
+                  (any (lambda (field)
+                         (string=? (string-trim-both field) "*"))
+                       (drop fields 3))))
+           (and id
+                (not (string-null? name))
+                (if kind
+                    (list
+                     (list 'id id)
+                     (list 'name name)
+                     (list 'kind kind)
+                     (list 'default (if default? 'yes 'no)))
+                    'ignored))))))
+
+(define (listed-objects)
+  (let* ((text (require-ok (invoke 5 "list" "audio")
+                           "listing audio objects"))
+         (lines (filter (lambda (line)
+                          (not (string-null? (string-trim-both line))))
+                        (string-split text #\newline)))
+         (parsed (map parse-list-line lines)))
+    (unless (every (lambda (value) value) parsed)
+      (fail "wpctl returned invalid list data"))
+    (filter (lambda (record) (not (eq? record 'ignored))) parsed)))
+
+(define (read-string text)
+  (catch #t
+    (lambda ()
+      (call-with-input-string text
+        (lambda (port)
+          (let ((value (read port)))
+            (and (string? value) value)))))
+    (lambda _ #f)))
+
+(define (line-property line key)
+  (let* ((trimmed (string-trim-both line))
+         (body (if (string-prefix? "* " trimmed)
+                   (string-drop trimmed 2)
+                   trimmed))
+         (prefix (string-append key " = ")))
+    (and (string-prefix? prefix body)
+         (read-string (string-drop body (string-length prefix))))))
+
+(define (description-for id fallback)
+  (let ((result (invoke 5 "inspect" (number->string id))))
+    (if (eq? (result-kind result) 'ok)
+        (let ((lines (string-split (result-output result) #\newline)))
+          (or (any (lambda (key)
+                     (any (lambda (line) (line-property line key)) lines))
+                   '("node.description" "media.name"
+                     "device.description" "node.nick"))
+              fallback))
+        fallback)))
+
+(define (volume-state id)
+  (let ((result (invoke 5 "get-volume" (number->string id))))
+    (if (eq? (result-kind result) 'ok)
+        (let* ((text (result-output result))
+               (line
+                (find (lambda (candidate)
+                        (string-prefix?
+                         "Volume:" (string-trim-both candidate)))
+                      (string-split text #\newline)))
+               (tokens (and line
+                            (string-tokenize (string-trim-both line))))
+               (number (and tokens
+                            (>= (length tokens) 2)
+                            (string->number (list-ref tokens 1)))))
+          (if (and (real? number) (>= number 0) (<= number 10))
+              (list
+               (inexact->exact (round (* 100 (exact->inexact number))))
+               (if (string-contains text "[MUTED]") 'yes 'no))
+              '(unknown unknown)))
+        '(unknown unknown))))
+
+(define (field record key)
+  (let ((entry (assq key record)))
+    (and entry (= (length entry) 2) (cadr entry))))
+
+(define (object-record header)
+  (let* ((id (field header 'id))
+         (volume (volume-state id)))
+    (list
+     (list 'id id)
+     (list 'name (field header 'name))
+     (list 'description (description-for id (field header 'name)))
+     (list 'kind (field header 'kind))
+     (list 'default (field header 'default))
+     (list 'volume (car volume))
+     (list 'muted (cadr volume)))))
+
+(define (build-snapshot)
+  (list 'sk-audio/v1
+        (cons 'objects (map object-record (listed-objects)))))
+
+(define (emit-snapshot)
+  (write (build-snapshot))
+  (newline))
+
+(define (require-object text allowed-kinds)
+  (let* ((id (parse-natural text))
+         (record
+          (and id
+               (find (lambda (candidate)
+                       (= id (field candidate 'id)))
+                     (listed-objects)))))
+    (unless (and record (memq (field record 'kind) allowed-kinds))
+      (fail "audio object is unavailable or has the wrong type"))
+    id))
+
+(define (parse-percent text)
+  (let ((value (parse-natural text)))
+    (and value (<= value 100) value)))
+
+(define (set-default text)
+  (let ((id (require-object text '(sink source))))
+    (require-ok (invoke 5 "set-default" (number->string id))
+                "setting the default endpoint")))
+
+(define (set-volume text percent-text)
+  (let ((percent (parse-percent percent-text)))
+    (unless percent
+      (fail "volume must be an integer between 0 and 100"))
+    (let ((id (require-object text '(sink source stream))))
+      (require-ok
+       (invoke 5 "set-volume" (number->string id)
+               (string-append (number->string percent) "%"))
+       "setting volume"))))
+
+(define (step-volume direction)
+  (require-ok
+   (if (eq? direction 'up)
+       (invoke 5 "set-volume" "-l" "1.0"
+               "@DEFAULT_AUDIO_SINK@" "5%+")
+       (invoke 5 "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"))
+   "adjusting default volume"))
+
+(define (toggle-mute text)
+  (let ((id (require-object text '(sink source stream))))
+    (require-ok
+     (invoke 5 "set-mute" (number->string id) "toggle")
+     "toggling mute")))
+
+(define (usage port)
+  (format port
+          "usage: ~a status|default ID|volume ID 0..100|step up|down|mute ID~%"
+          %program))
+
+(define (dispatch arguments)
+  (match arguments
+    (("status") #t)
+    (("default" id) (set-default id))
+    (("volume" id percent) (set-volume id percent))
+    (("step" "up") (step-volume 'up))
+    (("step" "down") (step-volume 'down))
+    (("mute" id) (toggle-mute id))
+    (_ (fail "invalid arguments")))
+  (emit-snapshot))
+
+(define (main arguments)
+  (cond
+   ((equal? arguments '("--help"))
+    (usage (current-output-port))
+    0)
+   (else
+    (catch #t
+      (lambda ()
+        (dispatch arguments)
+        0)
+      (lambda (key . payload)
+        (if (and (eq? key 'sk-audio-error)
+                 (= (length payload) 1)
+                 (string? (car payload)))
+            (format (current-error-port) "~a: ~a~%"
+                    %program (car payload))
+            (format (current-error-port) "~a: unexpected failure~%"
+                    %program))
+        (when (null? arguments)
+          (usage (current-error-port)))
+        1)))))
+
+(when (string=? (basename (car (command-line))) %program)
+  (exit (main (cdr (command-line)))))

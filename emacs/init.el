@@ -28,6 +28,7 @@
 (require 'sk-dired)
 (require 'sk-terminal)
 (require 'sk-bluetooth)
+(require 'sk-audio)
 (require 'sk-dashboard)
 (require 'sk-completion)
 (require 'sk-evil)

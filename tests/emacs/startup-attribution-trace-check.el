@@ -16,7 +16,8 @@
 
 (defconst sk/startup-trace-test-expected-init-features
   '(use-package
-    sk-core sk-ui sk-windows sk-dired sk-terminal sk-bluetooth sk-dashboard
+    sk-core sk-ui sk-windows sk-dired sk-terminal sk-bluetooth sk-audio
+    sk-dashboard
     sk-completion sk-evil sk-project sk-lsp sk-lisp sk-clojure sk-racket
     sk-fennel sk-lua sk-python sk-shell sk-json sk-c sk-format sk-keys
     sk-org sk-notes))

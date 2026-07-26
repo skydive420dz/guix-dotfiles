@@ -75,6 +75,18 @@
    " (audio yes) (battery 77))))\n")
   "Valid fixed sk-bluetooth/v1 fixture.")
 
+(defconst sk/check-audio-expression
+  (concat
+   "(sk-audio/v1\n"
+   " (objects\n"
+   "  ((id 71) (name \"bluez_output.test\")"
+   " (description \"Test Speaker\") (kind sink) (default yes)"
+   " (volume 45) (muted no))\n"
+   "  ((id 88) (name \"chromium-output\")"
+   " (description \"Chromium\") (kind stream) (default no)"
+   " (volume 80) (muted yes))))\n")
+  "Valid fixed sk-audio/v1 fixture.")
+
 (defun sk/check-fixture-path (relative)
   "Return the copied fixture path for RELATIVE."
   (expand-file-name (concat "fixtures/" relative) sk/check-source-root))
@@ -1970,6 +1982,7 @@
   (dolist (binding '(("SPC c f" . sk/format-buffer)
                      ("SPC ," . counsel-switch-buffer)
                      ("SPC b b" . counsel-ibuffer)
+                     ("SPC o a" . sk/audio)
                      ("SPC o b" . sk/bluetooth)
                      ("SPC o d" . sk/window-open-dired)
                      ("SPC o e" . sk/window-open-eshell)
@@ -2005,7 +2018,8 @@
     (should (eq (lookup-key evil-normal-state-map (kbd (car binding)))
                 (cdr binding))))
 
-  (dolist (binding '(("C-c o b" . sk/bluetooth)
+  (dolist (binding '(("C-c o a" . sk/audio)
+                     ("C-c o b" . sk/bluetooth)
                      ("C-c o d" . sk/window-open-dired)
                      ("C-c o e" . sk/window-open-eshell)
                      ("C-c o s" . sk/status)
@@ -2013,7 +2027,7 @@
                      ("C-c o v" . sk/window-open-vterm)))
     (should (eq (lookup-key global-map (kbd (car binding)))
                 (cdr binding))))
-  (dolist (suffix '("a" "n"))
+  (dolist (suffix '("n"))
     (should-not (lookup-key global-map
                             (kbd (format "C-c o %s" suffix))))
     (should-not (lookup-key evil-normal-state-map
@@ -2155,6 +2169,89 @@
                  ("b" . sk/bluetooth-blueman)
                  ("q" . quit-window)))
         (should (eq (lookup-key sk/bluetooth-mode-map
+                                (kbd (car binding)))
+                    (cdr binding)))))))
+
+(ert-deftest sk/check-audio-expression-and-actions ()
+  (require 'sk-audio)
+  (let ((bluetooth-position
+         (seq-position sk/reload-module-files "sk-bluetooth"))
+        (audio-position
+         (seq-position sk/reload-module-files "sk-audio"))
+        (dashboard-position
+         (seq-position sk/reload-module-files "sk-dashboard")))
+    (should bluetooth-position)
+    (should audio-position)
+    (should dashboard-position)
+    (should (< bluetooth-position audio-position dashboard-position)))
+  (let ((form (sk/audio--parse sk/check-audio-expression)))
+    (should (eq (car form) 'sk-audio/v1))
+    (should (= (length (cdr (cadr form))) 2))
+    (should (= (sk/audio--value (car (cdr (cadr form))) 'volume) 45)))
+  (dolist
+      (invalid
+       (list
+        (concat sk/check-audio-expression "(second-form)\n")
+        (string-replace "(volume 80)" "(volume 1001)"
+                        sk/check-audio-expression)
+        (string-replace "(id 88)" "(id 71)"
+                        sk/check-audio-expression)))
+    (should-error (sk/audio--parse invalid)
+                  :type 'sk/audio-invalid-output))
+  (with-temp-buffer
+    (sk/audio-mode)
+    (cl-letf (((symbol-function 'call-process)
+               (lambda (&rest _)
+                 (insert sk/check-audio-expression)
+                 0)))
+      (sk/audio-refresh)
+      (should (eq (car sk/audio--snapshot) 'sk-audio/v1))
+      (should (string-match-p "Test Speaker" (buffer-string)))))
+  (let (arguments heading)
+    (with-temp-buffer
+      (sk/audio-mode)
+      (setq sk/audio--snapshot
+            (sk/audio--parse sk/check-audio-expression))
+      (cl-letf (((symbol-function 'completing-read)
+                 (lambda (_prompt collection &rest _)
+                   (caar collection)))
+                ((symbol-function 'read-number)
+                 (lambda (&rest _) 37))
+                ((symbol-function 'sk/audio--run)
+                 (lambda (new-arguments new-heading)
+                   (setq arguments new-arguments
+                         heading new-heading))))
+        (sk/audio-set-default)
+        (should (equal arguments '("default" "71")))
+        (should (string= heading "Setting default endpoint..."))
+        (sk/audio-toggle-mute)
+        (should (equal arguments '("mute" "71")))
+        (sk/audio-set-volume)
+        (should (equal arguments '("volume" "71" "37")))
+        (sk/audio-volume-up)
+        (should (equal arguments '("step" "up")))
+        (sk/audio-volume-down)
+        (should (equal arguments '("step" "down"))))
+      (let (fallback-program)
+        (cl-letf (((symbol-function 'file-executable-p)
+                   (lambda (_) t))
+                  ((symbol-function 'sk/window-open-term)
+                   (lambda ()
+                     (setq fallback-program explicit-shell-file-name))))
+          (sk/audio-pipemixer)
+          (should (equal fallback-program
+                         sk/audio-pipemixer-program))))
+      (dolist (binding
+               '(("g" . sk/audio-refresh)
+                 ("+" . sk/audio-volume-up)
+                 ("-" . sk/audio-volume-down)
+                 ("m" . sk/audio-toggle-mute)
+                 ("v" . sk/audio-set-volume)
+                 ("d" . sk/audio-set-default)
+                 ("b" . sk/bluetooth)
+                 ("p" . sk/audio-pipemixer)
+                 ("q" . quit-window)))
+        (should (eq (lookup-key sk/audio-mode-map
                                 (kbd (car binding)))
                     (cdr binding)))))))
 
