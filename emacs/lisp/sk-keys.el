@@ -5,6 +5,16 @@
 (global-set-key (kbd "C-c e") #'sk/window-open-eshell)
 (global-set-key (kbd "C-c t") #'sk/window-open-term)
 
+(define-prefix-command 'sk/open-command-map)
+(global-set-key (kbd "C-c o") #'sk/open-command-map)
+(global-set-key (kbd "C-c o b") #'sk/bluetooth)
+(global-set-key (kbd "C-c o d") #'sk/window-open-dired)
+(global-set-key (kbd "C-c o e") #'sk/window-open-eshell)
+(global-set-key (kbd "C-c o s") #'sk/status)
+(global-set-key (kbd "C-c o t") #'sk/window-open-treemacs)
+(global-set-key (kbd "C-c o v") #'sk/window-open-vterm)
+;; SPC/C-c o a and SPC/C-c o n are reserved for C14 audio and C15 network.
+
 (use-package general
   :config
   (general-create-definer rune/leader-keys
