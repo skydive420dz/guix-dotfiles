@@ -681,11 +681,17 @@ unauthorized.
 - Boundary: retain the current mixer until parity passes.  HDMI audio is not a
   required acceptance device because Rafael does not use it; do not replace
   PipeWire or WirePlumber.
-- State: source candidate validated on 2026-07-26, pending a signed checkpoint,
-  reload, and live hardware acceptance.  It uses WirePlumber 0.5.15's
-  machine-readable =wpctl list= output and direct, bounded =wpctl= actions.
-  =pipemixer= remains the fallback.  No package, service, Home/System
-  reconfiguration, or reboot belongs to this slice.
+- State: published implementation checkpoint =287de45= loaded successfully,
+  including automatically after the corrected generation 91 boot.  The open
+  key and endpoint panel passed.  The first active Chromium test exposed that
+  WirePlumber 0.5.15 omits streams from =wpctl list audio=; the bounded
+  correction reads only the Audio =Streams:= rows from =wpctl status --name=
+  and prefers each stream's =node.name=.  Its focused Scheme check, Guile
+  compiler check, live read-only Chromium snapshot, all 105 Emacs checks, and
+  both connected Lisp backends pass.  It is pending a signed correction
+  checkpoint and remaining live actions.  =pipemixer= remains the fallback.
+  No package, service, Home/System reconfiguration, or reboot belongs to C14;
+  the intervening reboot repaired the separately documented C11 mount bug.
 - Use: =SPC o a= and =C-c o a= open the panel; =g= refreshes; =+= and =-=
   adjust the default output by five percent; =m= chooses an endpoint or stream
   and toggles mute; =v= chooses a target and sets 0--100 percent volume; =d=

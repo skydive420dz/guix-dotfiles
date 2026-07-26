@@ -5,6 +5,7 @@
 
 (use-modules (ice-9 match)
              (ice-9 popen)
+             (ice-9 regex)
              (ice-9 textual-ports)
              (srfi srfi-1)
              (srfi srfi-13))
@@ -113,6 +114,62 @@
                      (list 'default (if default? 'yes 'no)))
                     'ignored))))))
 
+(define %status-stream-line
+  (make-regexp "^        ([0-9]+)\\. (.*)$"))
+
+(define (status-stream-row? line)
+  (and (> (string-length line) 8)
+       (string-prefix? "        " line)
+       (not (char-whitespace? (string-ref line 8)))))
+
+(define (parse-status-stream-line line)
+  (let ((match (regexp-exec %status-stream-line line)))
+    (and match
+         (let ((id (parse-natural (match:substring match 1)))
+               (name (string-trim-both (match:substring match 2))))
+           (and id
+                (not (string-null? name))
+                (list
+                 (list 'id id)
+                 (list 'name name)
+                 (list 'kind 'stream)
+                 (list 'default 'no)))))))
+
+(define (listed-streams)
+  (let ((lines
+         (string-split
+          (require-ok (invoke 5 "status" "--name")
+                      "listing audio streams")
+          #\newline)))
+    (let loop ((remaining lines)
+               (audio? #f)
+               (streams? #f)
+               (found? #f)
+               (records '()))
+      (match remaining
+        (()
+         (if found?
+             (reverse records)
+             (fail "wpctl returned no audio streams section")))
+        ((line . rest)
+         (let ((trimmed (string-trim-both line)))
+           (cond
+            ((string=? trimmed "Audio")
+             (loop rest #t #f found? records))
+            ((and audio? (string=? trimmed "Video"))
+             (if found?
+                 (reverse records)
+                 (fail "wpctl returned no audio streams section")))
+            ((and audio? (string-suffix? "Streams:" trimmed))
+             (loop rest #t #t #t records))
+            ((and streams? (status-stream-row? line))
+             (let ((record (parse-status-stream-line line)))
+               (unless record
+                 (fail "wpctl returned invalid stream data"))
+               (loop rest audio? streams? found? (cons record records))))
+            (else
+             (loop rest audio? streams? found? records)))))))))
+
 (define (listed-objects)
   (let* ((text (require-ok (invoke 5 "list" "audio")
                            "listing audio objects"))
@@ -122,7 +179,9 @@
          (parsed (map parse-list-line lines)))
     (unless (every (lambda (value) value) parsed)
       (fail "wpctl returned invalid list data"))
-    (filter (lambda (record) (not (eq? record 'ignored))) parsed)))
+    (append
+     (filter (lambda (record) (not (eq? record 'ignored))) parsed)
+     (listed-streams))))
 
 (define (read-string text)
   (catch #t
@@ -148,7 +207,7 @@
         (let ((lines (string-split (result-output result) #\newline)))
           (or (any (lambda (key)
                      (any (lambda (line) (line-property line key)) lines))
-                   '("node.description" "media.name"
+                   '("node.description" "node.name" "media.name"
                      "device.description" "node.nick"))
               fallback))
         fallback)))

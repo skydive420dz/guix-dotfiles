@@ -27,8 +27,17 @@
    "49\talsa_card.test\taudio/device\t \n"
    "57\talsa_output.hdmi\taudio/sink\t \n"
    "71\tbluez_output.test\taudio/sink\t*\n"
-   "60\talsa_input.test\taudio/source\t \n"
-   "88\tchromium-output\taudio/stream\t \n"))
+   "60\talsa_input.test\taudio/source\t \n"))
+
+(define status-output
+  (string-append
+   "Audio\n"
+   " └─ Streams:\n"
+   "        88. Chromium\n"
+   "             89. output_FL > Test Speaker:playback_FL [active]\n"
+   "\n"
+   "Video\n"
+   " └─ Streams:\n"))
 
 (define (inspect-output id)
   (cond
@@ -39,7 +48,9 @@
    ((string=? id "60")
     "  * node.description = \"Test Microphone\"\n")
    ((string=? id "88")
-    "    media.name = \"Chromium\"\n")
+    (string-append
+     "    media.name = \"Playback\"\n"
+     "  * node.name = \"Chromium\"\n"))
    (else "")))
 
 (define (volume-output id)
@@ -55,6 +66,7 @@
         (cons (list (basename program) command-arguments seconds) calls))
   (match command-arguments
     (("list" "audio") (command-result 'ok list-output))
+    (("status" "--name") (command-result 'ok status-output))
     (("inspect" id) (command-result 'ok (inspect-output id)))
     (("get-volume" id) (command-result 'ok (volume-output id)))
     ((or ("set-default" _)
@@ -84,7 +96,7 @@
                           objects)
                     'kind)
              'stream
-             "stream kind parses")
+             "stream comes from the Audio status tree")
 
 (define snapshot (build-snapshot))
 (define records (cdr (assq 'objects (cdr snapshot))))
@@ -98,7 +110,7 @@
              "sink description comes from inspect")
 (check-equal (field bose 'volume) 45 "sink volume normalizes to percent")
 (check-equal (field chromium 'description) "Chromium"
-             "stream media name is used")
+             "stream node name wins over generic media name")
 (check-equal (field chromium 'muted) 'yes "stream mute state parses")
 
 (define (called? arguments)
@@ -177,6 +189,22 @@
      #f)
    (lambda _ #t))
  "malformed list output fails closed")
+
+(set! sk:audio-command-runner
+      (lambda (_program command-arguments _seconds)
+        (cond
+         ((equal? command-arguments '("list" "audio"))
+          (command-result 'ok list-output))
+         ((equal? command-arguments '("status" "--name"))
+          (command-result 'ok "Audio\nVideo\n"))
+         (else (command-result 'failed "")))))
+(check
+ (catch 'sk-audio-error
+   (lambda ()
+     (listed-objects)
+     #f)
+   (lambda _ #t))
+ "missing audio streams section fails closed")
 
 (check (> checks 15) "focused suite executed")
 
