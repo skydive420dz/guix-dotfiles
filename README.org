@@ -272,7 +272,9 @@ and was accepted live on 2026-07-24.  C4 is closed at published implementation
 checkpoint =27053c8= and was accepted live on 2026-07-25.  Its separate
 personal-note cleanup gate remains parked.  C5 is closed at published
 ownership-audit checkpoint =97b9242= and was accepted live on 2026-07-25.
-Every later slice remains unauthorized.
+C6 through C11 are likewise closed at the checkpoints recorded in their
+sections.  C12 was authorized on 2026-07-26; every later slice remains
+unauthorized.
 
 ** C0 — Establish the human roadmap
 
@@ -593,30 +595,15 @@ Every later slice remains unauthorized.
   TRIM, and recovery guidance are visible through the health surface.
 - Boundary: the second SSD remains unmounted and undeclared.  No repartition,
   migration, hardware purchase, or backup project is implied.
-- State: source candidate validated on 2026-07-26, pending System activation
-  and live acceptance.  Rafael selected Sunday 18:00 America/New_York as the
-  normally-on weekly opportunity.  The explicit Guix
-  =fstrim-service-type= configuration reads only =/etc/fstab=, whose EFI entry
-  is marked =X-fstrim.notrim=; only the ext4 =/= and =/home= entries remain
-  intended targets.  =sk-status/v2= adds root/store
-  capacity, the existing cached-only SMART classification, and the active
-  System's declared TRIM schedule/filesystem scope to the Scheme and Emacs
-  views.  Capacity warns at the already accepted 75-percent-used or
-  25-GiB-available threshold and asks for a second passive reading before
-  action.  Before activation, root/store was 46 percent used with 38 GiB
-  available, SMART was favorable, and an unprivileged root-only =fstrim=
-  dry-run passed.  Focused Scheme checks, all 102 isolated Emacs tests,
-  connected backend checks, and a non-realizing pinned System dry-run passed.
-  The System dry-run reported 318.6 MB of substitutes for a future
-  realization; none were downloaded by this check.  A first ext4
-  target-selection dry-run exposed and rejected the earlier contract's
-  incompatible =--types= plus =--listed-in= suggestion: it exited zero but
-  selected nothing.  Aggregate =--fstab=/=--all= dry-runs also exited zero
-  without listing targets on the installed util-linux, while direct
-  non-discarding checks of =/= and =/home= both passed.  The equivalent
-  privileged direct-mount gates then passed, each reporting =0 B (dry run)
-  trimmed=.  No FITRIM, realization, activation, reconfiguration, or reboot
-  occurred; the source candidate is ready for its checkpoint.
+- State: closed and accepted live on 2026-07-26 at published checkpoint
+  =0469d45=.  System generation 90 activated the Sunday 18:00
+  America/New_York =fstrim-service-type= opportunity.  =/etc/fstab= is its
+  only source: the EFI entry has =X-fstrim.notrim=, leaving only ext4 =/= and
+  =/home=.  Both privileged direct-mount dry-runs passed without issuing
+  FITRIM.  The rejected =--types= plus =--listed-in= form had exited zero while
+  selecting nothing and is not used.  The accepted =sk-status/v2= observation
+  reported 51 percent used, 34 GiB available, favorable cached SMART health,
+  and the declared weekly ext4 scope.  The second SSD remains untouched.
 
 ** C12 — Build a focused Scheme learning studio
 
@@ -627,6 +614,23 @@ Every later slice remains unauthorized.
 - Boundary: Emacs and the test runner are the terminal interface; project or
   XDG state is explicit.  Start with Geiser and add Ares/AREI only for a
   demonstrated need.
+- State: source candidate validated on 2026-07-26, pending checkpoint, reload,
+  and live acceptance.  It is limited to the existing Geiser,
+  =guix-lisp-shell core=, EXWM window policy, one Emacs Lisp workflow, and
+  three small Guile exercises.  Editable solutions and =progress.org= live
+  visibly in =~/Projects/scheme-studio=; curriculum and tests remain immutable
+  in this checkout.  No package, service, daemon, database, Ares/AREI
+  dependency, Home reconfiguration, System reconfiguration, or reboot belongs
+  to this pass.
+- Use: =SPC l S o= (or =M-x sk/scheme-studio=) opens or creates the studio.
+  The =SPC l S= which-key group exposes hint, next, progress, reset, and test;
+  ordinary =SPC l e/d/b/r= remains the evaluation and REPL vocabulary.
+- Validation and stop: warning-fatal byte compilation and Checkdoc, all
+  103 isolated Emacs checks, both connected Lisp backends, the exact pinned
+  Geiser start/evaluate path, and positive/negative execution of all three
+  Scheme tests passed.  Reload the Emacs configuration and hand-test open,
+  normal Geiser evaluation, test, reset, hint, next, and progress.  Stop after
+  that first curriculum is accepted.
 
 ** C12-E — Optional Emacs Lisp and EXWM literacy companion
 

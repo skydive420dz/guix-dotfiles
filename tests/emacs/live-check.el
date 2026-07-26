@@ -766,11 +766,15 @@
                    ("SPC l g" . sk/lisp-definition)
                    ("SPC l m" . sk/lisp-macroexpand)
                    ("SPC l p" . sk/lisp-project-check)
+                   ("SPC l S o" . sk/scheme-studio)
+                   ("SPC l S t" . sk/scheme-studio-test)
                    ("SPC l x" . sk/lisp-references)))
                 (eq geiser-repl-current-project-function
                     #'sk/lisp--project-root)
                 geiser-repl-per-project-p
                 (equal geiser-repl-add-project-paths '("." "src"))
+                (equal geiser-guile-binary
+                       (list sk/lisp-guix-shell "core" "--" "guile"))
                 (string= inferior-lisp-program "sbcl")
                 (fboundp 'sk/lisp--start-common-lisp-project)
                 (fboundp 'sk/window-geiser-result-buffer-p)

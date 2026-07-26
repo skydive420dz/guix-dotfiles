@@ -1,0 +1,15 @@
+#+title: 02 — List recursion
+
+* Goal
+
+Define =sum-list= and =squares=.  Use the empty list as the base case and
+=car=/=cdr= to reduce the remaining work one element at a time.
+
+Evaluate each definition with =SPC l d=, experiment in the Geiser REPL, then
+run =SPC l S t=.  Use =SPC l S r= whenever you want the original starter back.
+
+* Hint
+
+For =sum-list=, the empty list contributes zero.  For =squares=, build the
+answer with =cons= and reuse the =square= procedure already present in the
+starter.

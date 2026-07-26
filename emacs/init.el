@@ -33,6 +33,7 @@
 (require 'sk-project)
 (require 'sk-lsp)
 (require 'sk-lisp)
+(require 'sk-scheme-studio)
 (require 'sk-clojure)
 (require 'sk-racket)
 (require 'sk-fennel)

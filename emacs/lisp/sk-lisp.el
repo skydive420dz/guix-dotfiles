@@ -2,6 +2,18 @@
 
 (require 'seq)
 
+(defvar sk/user-directory)
+
+(defconst sk/lisp-repository-directory
+  (file-name-as-directory
+   (file-truename (expand-file-name ".." sk/user-directory)))
+  "Absolute root of the checkout that owns the Lisp environment.")
+
+(defconst sk/lisp-guix-shell
+  (expand-file-name "scripts/guix-lisp-shell"
+                    sk/lisp-repository-directory)
+  "Pinned Guix development-shell wrapper used by Lisp processes.")
+
 (declare-function sk/clojure-debug "sk-clojure")
 (declare-function sk/clojure-definition "sk-clojure")
 (declare-function sk/clojure-docs "sk-clojure")
@@ -82,8 +94,9 @@
 (use-package geiser-guile
   :if (locate-library "geiser-guile")
   :after geiser
-  :custom
-  (geiser-guile-binary "guile"))
+  :init
+  (setq geiser-guile-binary
+        (list sk/lisp-guix-shell "core" "--" "guile")))
 
 (defun sk/scheme-mode-setup ()
   "Configure Scheme buffers for Guile/Geiser editing."

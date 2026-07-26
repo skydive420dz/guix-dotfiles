@@ -1,0 +1,19 @@
+#+title: 01 — Values and procedures
+
+* Goal
+
+Define =square= and =sum-of-squares=.  Keep each procedure small and evaluate
+it with the normal Geiser commands:
+
+- =SPC l e= evaluates the preceding expression;
+- =SPC l d= evaluates the current definition;
+- =SPC l b= evaluates the buffer;
+- =SPC l r= returns to the REPL;
+- =SPC l S t= runs the exercise tests.
+
+Try positive, negative, and zero values in the REPL before running the tests.
+
+* Hint
+
+=sum-of-squares= can call =square= twice.  Scheme procedure application keeps
+the operator first: =(+ (square left) (square right))=.

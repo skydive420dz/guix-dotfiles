@@ -1,0 +1,16 @@
+#+title: 03 — Higher-order procedures
+
+* Goal
+
+Define =keep= and =compose=.  A procedure is an ordinary Scheme value: it can
+be received as an argument, called, and returned from another procedure.
+
+Use named predicates such as =even?= and short lambdas in the REPL.  Run
+=SPC l S t= when both definitions behave as expected, then =SPC l S n= to
+record completion.
+
+* Hint
+
+=keep= has the same recursive shape as the previous list exercise, with one
+branch that =cons=es the current item and one that skips it.  =compose= returns
+a lambda that applies =inner= first and =outer= second.

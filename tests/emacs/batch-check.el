@@ -607,6 +607,12 @@
                  #'sk/lisp--project-root))
      (should geiser-repl-per-project-p)
      (should (equal geiser-repl-add-project-paths '("." "src")))
+     (should
+      (equal geiser-guile-binary
+             (list
+              (expand-file-name "scripts/guix-lisp-shell"
+                                sk/check-source-root)
+              "core" "--" "guile")))
      (should (eq (sk/lisp--dialect) 'scheme))))
   (sk/check-with-eldoc-fixture
    "common-lisp/sample.lisp"
@@ -1026,6 +1032,74 @@
                      (file-name-as-directory root))))
           (should-error (sk/lisp-project-check) :type 'user-error))
       (delete-directory root t))))
+
+(ert-deftest sk/check-scheme-studio-lifecycle ()
+  (let* ((workspace
+          (file-name-as-directory
+           (expand-file-name "scheme-studio" sk/check-sandbox-root)))
+         (sk/scheme-studio-workspace-directory workspace)
+         (sk/scheme-studio-curriculum-directory
+          (expand-file-name "scheme-studio/exercises"
+                            sk/check-original-repo))
+         (exercises
+          '("01-values-and-procedures"
+            "02-list-recursion"
+            "03-higher-order-procedures"))
+         (first (car exercises))
+         (solution (expand-file-name
+                    (format "exercises/%s/solution.scm" first)
+                    workspace))
+         (starter
+          (expand-file-name
+           (format "%s/starter.scm" first)
+           sk/scheme-studio-curriculum-directory)))
+    (unwind-protect
+        (progn
+          (should (equal (sk/scheme-studio--exercises) exercises))
+          (should (equal (sk/scheme-studio--initialize) first))
+          (should (file-exists-p (expand-file-name ".projectile" workspace)))
+          (should (file-readable-p solution))
+          (should
+           (file-readable-p (expand-file-name "progress.org" workspace)))
+          (should-not (sk/scheme-studio--completed-p first))
+          (sk/scheme-studio--set-complete first t)
+          (should (sk/scheme-studio--completed-p first))
+          (should (equal (sk/scheme-studio--progress-summary)
+                         "1/3 complete"))
+          (should
+           (equal
+            (sk/scheme-studio--test-command first)
+            (list
+             (expand-file-name "scripts/guix-lisp-shell"
+                               sk/check-source-root)
+             "core" "--" "guile" "--no-auto-compile" "-s"
+             (expand-file-name
+              (format "%s/test.scm" first)
+              sk/scheme-studio-curriculum-directory)
+             solution)))
+          (with-temp-file solution
+            (insert "(define changed #t)\n"))
+          (cl-letf (((symbol-function 'yes-or-no-p) (lambda (&rest _) t)))
+            (sk/scheme-studio-reset))
+          (should-not (sk/scheme-studio--completed-p first))
+          (should
+           (equal
+            (with-temp-buffer
+              (insert-file-contents solution)
+              (buffer-string))
+            (with-temp-buffer
+              (insert-file-contents starter)
+              (buffer-string))))
+          (sk/scheme-studio--set-complete first t)
+          (let (opened)
+            (cl-letf
+                (((symbol-function 'sk/scheme-studio--open-exercise)
+                  (lambda (exercise &optional _repl)
+                    (setq opened exercise))))
+              (sk/scheme-studio--open-next first))
+            (should (equal opened "02-list-recursion"))))
+      (when (file-directory-p workspace)
+        (delete-directory workspace t)))))
 
 (ert-deftest sk/check-clojure-wrapper-and-project-check-command ()
   (let ((base
@@ -1893,6 +1967,12 @@
                      ("SPC l p" . sk/lisp-project-check)
                      ("SPC l q" . sk/lisp-stop)
                      ("SPC l x" . sk/lisp-references)
+                     ("SPC l S h" . sk/scheme-studio-hint)
+                     ("SPC l S n" . sk/scheme-studio-next)
+                     ("SPC l S o" . sk/scheme-studio)
+                     ("SPC l S p" . sk/scheme-studio-progress)
+                     ("SPC l S r" . sk/scheme-studio-reset)
+                     ("SPC l S t" . sk/scheme-studio-test)
                      ("SPC l [" . puni-slurp-backward)
                      ("SPC l ]" . puni-slurp-forward)
                      ("SPC l {" . puni-barf-backward)
