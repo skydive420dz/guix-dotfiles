@@ -1,0 +1,351 @@
+#!/usr/bin/env -S guile --no-auto-compile -s
+!#
+
+;;; Bounded NetworkManager control for the GuixPC Emacs surface.
+
+(use-modules (ice-9 match)
+             (ice-9 popen)
+             (ice-9 regex)
+             (ice-9 textual-ports)
+             (srfi srfi-1)
+             (srfi srfi-13))
+
+(define %program "sk-network")
+(define %system-bin "/run/current-system/profile/bin")
+(define %timeout (string-append %system-bin "/timeout"))
+(define %nmcli (string-append %system-bin "/nmcli"))
+(define %maximum-output 262144)
+(define %uuid
+  (make-regexp
+   "^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$"))
+
+(setenv "LC_ALL" "C")
+
+(define (command-result kind output)
+  (list kind output))
+
+(define (result-kind result)
+  (car result))
+
+(define (result-output result)
+  (cadr result))
+
+(define (status-success? status)
+  (catch #t
+    (lambda ()
+      (let ((exit-value (status:exit-val status)))
+        (and (integer? exit-value) (zero? exit-value))))
+    (lambda _ #f)))
+
+(define (run-command program arguments seconds)
+  "Run PROGRAM with direct ARGUMENTS for at most SECONDS."
+  (if (or (not (file-exists? program))
+          (not (access? program X_OK))
+          (not (file-exists? %timeout)))
+      (command-result 'unavailable "")
+      (catch #t
+        (lambda ()
+          ;; Do not let nmcli diagnostics expose internal action identifiers.
+          (call-with-output-file "/dev/null"
+            (lambda (null-port)
+              (parameterize ((current-error-port null-port))
+                (let* ((port
+                        (apply open-pipe* OPEN_READ %timeout
+                               "--kill-after=1"
+                               (number->string (+ seconds 1))
+                               program arguments))
+                       (_ (set-port-encoding! port "UTF-8"))
+                       (output
+                        (get-string-n port (+ %maximum-output 1)))
+                       (status (close-pipe port))
+                       (text (if (eof-object? output) "" output)))
+                  (cond
+                   ((> (string-length text) %maximum-output)
+                    (command-result 'oversize ""))
+                   ((status-success? status)
+                    (command-result 'ok text))
+                   (else
+                    (command-result 'failed ""))))))))
+        (lambda _ (command-result 'unavailable "")))))
+
+(define sk:network-command-runner run-command)
+
+(define (invoke seconds . arguments)
+  (sk:network-command-runner %nmcli arguments seconds))
+
+(define (fail message)
+  (throw 'sk-network-error message))
+
+(define (require-ok result action)
+  (unless (eq? (result-kind result) 'ok)
+    (fail (string-append action " failed")))
+  (result-output result))
+
+(define (safe-text? text)
+  (and (string? text)
+       (<= (string-length text) 256)
+       (every
+        (lambda (character)
+          (let ((code (char->integer character)))
+            (not (or (< code 32) (<= 127 code 159)))))
+        (string->list text))))
+
+(define (require-text text label)
+  (unless (and (safe-text? text) (not (string-null? text)))
+    (fail (string-append "invalid " label)))
+  text)
+
+(define (split-row line count label)
+  "Decode one nmcli escaped colon row and require COUNT fields."
+  (let loop ((characters (string->list line))
+             (field '())
+             (fields '())
+             (escaped? #f))
+    (match characters
+      (()
+       (when escaped? (fail (string-append "invalid " label)))
+       (let ((result
+              (reverse
+               (cons (list->string (reverse field)) fields))))
+         (unless (= (length result) count)
+           (fail (string-append "invalid " label)))
+         result))
+      ((character . rest)
+       (cond
+        (escaped?
+         (unless (memv character '(#\: #\\))
+           (fail (string-append "invalid " label)))
+         (loop rest (cons character field) fields #f))
+        ((char=? character #\\)
+         (loop rest field fields #t))
+        ((char=? character #\:)
+         (loop rest '()
+               (cons (list->string (reverse field)) fields) #f))
+        (else
+         (loop rest (cons character field) fields #f)))))))
+
+(define (nonempty-lines text)
+  (filter (lambda (line) (not (string-null? line)))
+          (string-split text #\newline)))
+
+(define (query fields count label . arguments)
+  (map
+   (lambda (line) (split-row line count label))
+   (nonempty-lines
+    (require-ok
+     (apply invoke 5
+            (append
+             (list "--colors" "no" "--terse" "--escape" "yes"
+                   "--fields" fields)
+             arguments))
+     (string-append "reading " label)))))
+
+(define (one-row fields count label . arguments)
+  (let ((rows (apply query fields count label arguments)))
+    (unless (= (length rows) 1)
+      (fail (string-append "invalid " label)))
+    (car rows)))
+
+(define (yes-no text positive negative)
+  (cond
+   ((string-ci=? text positive) 'yes)
+   ((string-ci=? text negative) 'no)
+   (else 'unknown)))
+
+(define (enabled-state text)
+  (cond
+   ((string-ci=? text "enabled") 'enabled)
+   ((string-ci=? text "disabled") 'disabled)
+   (else 'unknown)))
+
+(define (connection-kind text)
+  (cond
+   ((member text '("wifi" "wireless" "802-11-wireless")) 'wifi)
+   ((member text '("ethernet" "802-3-ethernet")) 'ethernet)
+   ((string=? text "loopback") 'loopback)
+   (else 'other)))
+
+(define (present-field? text)
+  (not (or (string-null? text) (string=? text "--"))))
+
+(define (field record key)
+  (let ((entry (assq key record)))
+    (and entry (= (length entry) 2) (cadr entry))))
+
+(define (manager-record)
+  (match (one-row "RUNNING,STATE,CONNECTIVITY" 3 "manager state"
+                  "general")
+    ((running state connectivity)
+     (list
+      (list 'running (yes-no running "running" "not running"))
+      (list 'state (require-text state "manager state"))
+      (list 'connectivity
+            (require-text connectivity "manager connectivity"))))))
+
+(define (wifi-record)
+  (match (one-row "WIFI-HW,WIFI" 2 "Wi-Fi radio" "radio")
+    ((hardware radio)
+     (list
+      (list 'hardware (enabled-state hardware))
+      (list 'radio (enabled-state radio))))))
+
+(define (device-record row)
+  (match row
+    ((name type state connection)
+     (list
+      (list 'name (require-text name "device name"))
+      (list 'kind (connection-kind type))
+      (list 'state (require-text state "device state"))
+      (list 'connection
+            (if (present-field? connection)
+                (require-text connection "device connection")
+                'none))))))
+
+(define (device-records)
+  (map device-record
+       (query "DEVICE,TYPE,STATE,CONNECTION" 4 "device state"
+              "device" "status")))
+
+(define (valid-uuid? text)
+  (and (string? text) (regexp-exec %uuid text)))
+
+(define (connection-record row)
+  (match row
+    ((name uuid type device)
+     (let ((kind (connection-kind type)))
+       (and
+        (memq kind '(wifi ethernet))
+        (begin
+          (unless (valid-uuid? uuid)
+            (fail "invalid saved connection identifier"))
+          (list
+           (list 'uuid uuid)
+           (list 'name (require-text name "saved connection name"))
+           (list 'kind kind)
+           (list 'active (if (present-field? device) 'yes 'no)))))))))
+
+(define (connection-records)
+  (let* ((records
+          (filter-map
+           connection-record
+           (query "NAME,UUID,TYPE,DEVICE" 4 "saved connections"
+                  "connection" "show")))
+         (ids (map (lambda (record) (field record 'uuid)) records)))
+    (unless (= (length ids) (length (delete-duplicates ids)))
+      (fail "duplicate saved connection identifier"))
+    records))
+
+(define (parse-signal text)
+  (let ((value (string->number text)))
+    (and (integer? value) (<= 0 value 100) value)))
+
+(define (access-point-record row)
+  (match row
+    ((in-use ssid signal security)
+     (let ((strength (parse-signal signal)))
+       (unless strength (fail "invalid access point signal"))
+       (list
+        (list 'ssid
+              (if (present-field? ssid)
+                  (require-text ssid "access point name")
+                  "<hidden>"))
+        (list 'signal strength)
+        (list 'security
+              (if (present-field? security)
+                  (require-text security "access point security")
+                  "open"))
+        (list 'active (if (string=? in-use "*") 'yes 'no)))))))
+
+(define (access-point-records)
+  (map access-point-record
+       (query "IN-USE,SSID,SIGNAL,SECURITY" 4 "access points"
+              "device" "wifi" "list" "--rescan" "no")))
+
+(define (build-snapshot)
+  (list 'sk-network/v1
+        (cons 'manager (manager-record))
+        (cons 'wifi (wifi-record))
+        (cons 'devices (device-records))
+        (cons 'connections (connection-records))
+        (cons 'access-points (access-point-records))))
+
+(define (emit-snapshot)
+  (write (build-snapshot))
+  (newline))
+
+(define (require-connection uuid active?)
+  (unless (valid-uuid? uuid)
+    (fail "invalid saved connection identifier"))
+  (let ((record
+         (find (lambda (candidate)
+                 (string=? uuid (field candidate 'uuid)))
+               (connection-records))))
+    (unless (and record
+                 (or (eq? active? 'either)
+                     (eq? (field record 'active) active?)))
+      (fail "saved connection is unavailable"))
+    record))
+
+(define (scan)
+  (require-ok
+   (invoke 15 "--wait" "15" "device" "wifi" "rescan")
+   "Wi-Fi scan"))
+
+(define (set-wifi enabled?)
+  (require-ok
+   (invoke 15 "--wait" "15" "radio" "wifi"
+           (if enabled? "on" "off"))
+   "changing Wi-Fi radio"))
+
+(define (connect uuid)
+  (require-connection uuid 'either)
+  (require-ok
+   (invoke 20 "--wait" "20" "connection" "up" "uuid" uuid)
+   "activating saved connection"))
+
+(define (disconnect uuid)
+  (require-connection uuid 'yes)
+  (require-ok
+   (invoke 20 "--wait" "20" "connection" "down" "uuid" uuid)
+   "disconnecting saved connection"))
+
+(define (usage port)
+  (format port
+          "usage: ~a status|scan|wifi on|off|connect UUID|disconnect UUID~%"
+          %program))
+
+(define (dispatch arguments)
+  (match arguments
+    (("status") #t)
+    (("scan") (scan))
+    (("wifi" "on") (set-wifi #t))
+    (("wifi" "off") (set-wifi #f))
+    (("connect" uuid) (connect uuid))
+    (("disconnect" uuid) (disconnect uuid))
+    (_ (fail "invalid arguments")))
+  (emit-snapshot))
+
+(define (main arguments)
+  (cond
+   ((equal? arguments '("--help"))
+    (usage (current-output-port))
+    0)
+   (else
+    (catch #t
+      (lambda ()
+        (dispatch arguments)
+        0)
+      (lambda (key . payload)
+        (if (and (eq? key 'sk-network-error)
+                 (= (length payload) 1)
+                 (string? (car payload)))
+            (format (current-error-port) "~a: ~a~%"
+                    %program (car payload))
+            (format (current-error-port) "~a: unexpected failure~%"
+                    %program))
+        (when (null? arguments)
+          (usage (current-error-port)))
+        1)))))
+
+(when (string=? (basename (car (command-line))) %program)
+  (exit (main (cdr (command-line)))))

@@ -450,6 +450,7 @@
                (and (featurep 'sk-core)
                     (featurep 'sk-bluetooth)
                     (featurep 'sk-audio)
+                    (featurep 'sk-network)
                     (featurep 'sk-lisp)
                     (featurep 'sk-scheme-studio)
                     (featurep 'sk-clojure)
@@ -483,6 +484,18 @@
                         #'sk/audio-refresh)
                     (eq (lookup-key sk/audio-mode-map (kbd "p"))
                         #'sk/audio-pipemixer)))
+         (cons "Network control surface"
+               (and (file-executable-p sk/network-program)
+                    (file-executable-p sk/network-editor-program)
+                    (eq (lookup-key evil-normal-state-map
+                                    (kbd "SPC o n"))
+                        #'sk/network)
+                    (eq (lookup-key global-map (kbd "C-c o n"))
+                        #'sk/network)
+                    (eq (lookup-key sk/network-mode-map (kbd "g"))
+                        #'sk/network-refresh)
+                    (eq (lookup-key sk/network-mode-map (kbd "e"))
+                        #'sk/network-editor)))
          (cons "global Company frontend"
                (bound-and-true-p global-company-mode))
          (cons "global Flycheck diagnostics"

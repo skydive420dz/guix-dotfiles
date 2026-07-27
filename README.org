@@ -707,12 +707,33 @@ unauthorized.
 
 ** C15 — Add a safe Lisp-native network control surface
 
-- Result: a Guile NetworkManager D-Bus layer plus Emacs UI covers ordinary
-  status and connection actions, with credentials delegated to an appropriate
-  secret agent and with useful failure and recovery messages.
-- Boundary: no secret appears in arguments, logs, or history.  Keep
-  NetworkManager and the existing UI until local connectivity and recovery
-  tests pass; do not replace NetworkManager.
+- Result: a small Guile facade over NetworkManager's already-installed
+  first-party =nmcli= plus an asynchronous Emacs panel covers ordinary status
+  and saved-connection actions.  NetworkManager continues to own D-Bus,
+  permissions, saved profiles, and secrets; =nm-connection-editor= remains the
+  path for new networks and credentials.
+- Boundary: no password, BSSID, or MAC address is requested or shown.  Raw
+  connection UUIDs are held only inside the validated snapshot/action path and
+  never rendered.  Direct arguments, bounded calls, strict escaped-field
+  parsing, fresh saved-profile validation, and generic action failures keep
+  shell text and internal identifiers out of the UI.  Do not replace
+  NetworkManager, add a service/package, or implement a second secret agent.
+- State: the isolated source candidate passed on 2026-07-26 and awaits a
+  signed checkpoint plus local acceptance.  No live network-changing action,
+  Home/System reconfiguration, or reboot has run.
+- Use: =SPC o n= and =C-c o n= open the panel; =g= refreshes; =s= requests a
+  Wi-Fi rescan; =c= confirms and activates a saved inactive profile; =d=
+  confirms and disconnects an active profile; =w= toggles Wi-Fi and confirms
+  before off; =e= opens =nm-connection-editor=; =q= closes the panel.
+- Validation and stop: 19 fake-runner Scheme checks cover escaped names,
+  fixed fields, secret/hardware-identifier exclusion, UUID validation, and
+  exact bounded action arguments.  Guile compilation, a sanitized live
+  read-only snapshot, warning-fatal Emacs compilation and Checkdoc, all 106
+  isolated editor checks, and both connected Lisp backends passed.  After the
+  source checkpoint is published, panel rendering, refresh, rescan, editor
+  fallback, and both open keys may be accepted remotely.  Connection,
+  disconnection, and Wi-Fi-off acceptance wait until Rafael is physically at
+  the machine because they may sever SSH.
 
 ** C16 — Close with a usable operator manual and bootstrap rehearsal
 

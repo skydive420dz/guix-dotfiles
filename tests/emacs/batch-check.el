@@ -87,6 +87,29 @@
    " (volume 80) (muted yes))))\n")
   "Valid fixed sk-audio/v1 fixture.")
 
+(defconst sk/check-network-expression
+  (concat
+   "(sk-network/v1\n"
+   " (manager (running yes) (state \"connected\")"
+   " (connectivity \"full\"))\n"
+   " (wifi (hardware enabled) (radio enabled))\n"
+   " (devices\n"
+   "  ((name \"wlp4s0\") (kind wifi) (state \"connected\")"
+   " (connection \"Home Net\"))\n"
+   "  ((name \"enp2s0\") (kind ethernet) (state \"unavailable\")"
+   " (connection none)))\n"
+   " (connections\n"
+   "  ((uuid \"aaaaaaaa-1111-4222-8333-aaaaaaaaaaaa\")"
+   " (name \"Home Net\") (kind wifi) (active yes))\n"
+   "  ((uuid \"bbbbbbbb-1111-4222-8333-bbbbbbbbbbbb\")"
+   " (name \"Office\") (kind ethernet) (active no)))\n"
+   " (access-points\n"
+   "  ((ssid \"Home Net\") (signal 73) (security \"WPA2\")"
+   " (active yes))\n"
+   "  ((ssid \"Cafe\") (signal 52) (security \"open\")"
+   " (active no))))\n")
+  "Valid fixed sk-network/v1 fixture.")
+
 (defun sk/check-fixture-path (relative)
   "Return the copied fixture path for RELATIVE."
   (expand-file-name (concat "fixtures/" relative) sk/check-source-root))
@@ -1986,6 +2009,7 @@
                      ("SPC o b" . sk/bluetooth)
                      ("SPC o d" . sk/window-open-dired)
                      ("SPC o e" . sk/window-open-eshell)
+                     ("SPC o n" . sk/network)
                      ("SPC o s" . sk/status)
                      ("SPC o t" . sk/window-open-treemacs)
                      ("SPC o v" . sk/window-open-vterm)
@@ -2022,16 +2046,12 @@
                      ("C-c o b" . sk/bluetooth)
                      ("C-c o d" . sk/window-open-dired)
                      ("C-c o e" . sk/window-open-eshell)
+                     ("C-c o n" . sk/network)
                      ("C-c o s" . sk/status)
                      ("C-c o t" . sk/window-open-treemacs)
                      ("C-c o v" . sk/window-open-vterm)))
     (should (eq (lookup-key global-map (kbd (car binding)))
-                (cdr binding))))
-  (dolist (suffix '("n"))
-    (should-not (lookup-key global-map
-                            (kbd (format "C-c o %s" suffix))))
-    (should-not (lookup-key evil-normal-state-map
-                            (kbd (format "SPC o %s" suffix))))))
+                (cdr binding)))))
 
 (ert-deftest sk/check-status-expression-is-complete-and-fixed ()
   (require 'sk-status)
@@ -2252,6 +2272,106 @@
                  ("p" . sk/audio-pipemixer)
                  ("q" . quit-window)))
         (should (eq (lookup-key sk/audio-mode-map
+                                (kbd (car binding)))
+                    (cdr binding)))))))
+
+(ert-deftest sk/check-network-expression-and-actions ()
+  (require 'sk-network)
+  (let ((audio-position
+         (seq-position sk/reload-module-files "sk-audio"))
+        (network-position
+         (seq-position sk/reload-module-files "sk-network"))
+        (dashboard-position
+         (seq-position sk/reload-module-files "sk-dashboard")))
+    (should audio-position)
+    (should network-position)
+    (should dashboard-position)
+    (should (< audio-position network-position dashboard-position)))
+  (let ((form (sk/network--parse sk/check-network-expression)))
+    (should (eq (car form) 'sk-network/v1))
+    (should (eq (sk/network--value (cdr (nth 2 form)) 'radio)
+                'enabled)))
+  (dolist
+      (invalid
+       (list
+        (concat sk/check-network-expression "(second-form)\n")
+        (string-replace "(signal 52)" "(signal 101)"
+                        sk/check-network-expression)
+        (string-replace
+         "bbbbbbbb-1111-4222-8333-bbbbbbbbbbbb"
+         "aaaaaaaa-1111-4222-8333-aaaaaaaaaaaa"
+         sk/check-network-expression)))
+    (should-error (sk/network--parse invalid)
+                  :type 'sk/network-invalid-output))
+  (with-temp-buffer
+    (sk/network-mode)
+    (sk/network--render
+     (sk/network--parse sk/check-network-expression))
+    (should (string-match-p "Home Net" (buffer-string)))
+    (should (string-match-p "Nearby Wi-Fi" (buffer-string)))
+    (should-not
+     (string-match-p "aaaaaaaa-1111-4222-8333-aaaaaaaaaaaa"
+                     (buffer-string))))
+  (let (arguments heading)
+    (with-temp-buffer
+      (sk/network-mode)
+      (setq sk/network--snapshot
+            (sk/network--parse sk/check-network-expression))
+      (cl-letf (((symbol-function 'completing-read)
+                 (lambda (_prompt collection &rest _)
+                   (caar collection)))
+                ((symbol-function 'yes-or-no-p)
+                 (lambda (&rest _) t))
+                ((symbol-function 'sk/network--run)
+                 (lambda (new-arguments new-heading)
+                   (setq arguments new-arguments
+                         heading new-heading))))
+        (sk/network-connect)
+        (should
+         (equal arguments
+                '("connect"
+                  "bbbbbbbb-1111-4222-8333-bbbbbbbbbbbb")))
+        (should (string= heading "Activating saved connection..."))
+        (sk/network-disconnect)
+        (should
+         (equal arguments
+                '("disconnect"
+                  "aaaaaaaa-1111-4222-8333-aaaaaaaaaaaa")))
+        (sk/network-toggle-wifi)
+        (should (equal arguments '("wifi" "off")))
+        (sk/network-scan)
+        (should (equal arguments '("scan"))))
+      (setq arguments nil)
+      (cl-letf (((symbol-function 'completing-read)
+                 (lambda (_prompt collection &rest _)
+                   (caar collection)))
+                ((symbol-function 'yes-or-no-p)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'sk/network--run)
+                 (lambda (&rest new-arguments)
+                   (setq arguments new-arguments))))
+        (should-error (sk/network-disconnect) :type 'user-error)
+        (should-not arguments))
+      (let (editor-command)
+        (cl-letf (((symbol-function 'file-executable-p)
+                   (lambda (_) t))
+                  ((symbol-function 'start-process)
+                   (lambda (&rest command)
+                     (setq editor-command command))))
+          (sk/network-editor)
+          (should
+           (equal editor-command
+                  (list "nm-connection-editor" nil
+                        sk/network-editor-program)))))
+      (dolist (binding
+               '(("g" . sk/network-refresh)
+                 ("s" . sk/network-scan)
+                 ("c" . sk/network-connect)
+                 ("d" . sk/network-disconnect)
+                 ("w" . sk/network-toggle-wifi)
+                 ("e" . sk/network-editor)
+                 ("q" . quit-window)))
+        (should (eq (lookup-key sk/network-mode-map
                                 (kbd (car binding)))
                     (cdr binding)))))))
 

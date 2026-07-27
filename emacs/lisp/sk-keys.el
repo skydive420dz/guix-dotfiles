@@ -11,10 +11,10 @@
 (global-set-key (kbd "C-c o b") #'sk/bluetooth)
 (global-set-key (kbd "C-c o d") #'sk/window-open-dired)
 (global-set-key (kbd "C-c o e") #'sk/window-open-eshell)
+(global-set-key (kbd "C-c o n") #'sk/network)
 (global-set-key (kbd "C-c o s") #'sk/status)
 (global-set-key (kbd "C-c o t") #'sk/window-open-treemacs)
 (global-set-key (kbd "C-c o v") #'sk/window-open-vterm)
-;; SPC/C-c o n remains reserved for C15 network.
 
 (use-package general
   :config
@@ -136,6 +136,7 @@
     "ob" '(sk/bluetooth :which-key "bluetooth")
     "od" '(sk/window-open-dired :which-key "dired")
     "oe" '(sk/window-open-eshell :which-key "eshell")
+    "on" '(sk/network :which-key "network")
     "os" '(sk/status :which-key "status")
     "ot" '(sk/window-open-treemacs :which-key "treemacs")
     "ov" '(sk/window-open-vterm :which-key "vterm")
