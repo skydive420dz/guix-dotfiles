@@ -718,9 +718,10 @@ unauthorized.
   parsing, fresh saved-profile validation, and generic action failures keep
   shell text and internal identifiers out of the UI.  Do not replace
   NetworkManager, add a service/package, or implement a second secret agent.
-- State: the isolated source candidate passed on 2026-07-26 and awaits a
-  signed checkpoint plus local acceptance.  No live network-changing action,
-  Home/System reconfiguration, or reboot has run.
+- State: closed and accepted live on 2026-07-26 at signed, published
+  checkpoint =6815330=.  The source loaded into the existing Emacs session;
+  no package, service, Home/System reconfiguration, or reboot belonged to
+  C15.
 - Use: =SPC o n= and =C-c o n= open the panel; =g= refreshes; =s= requests a
   Wi-Fi rescan; =c= confirms and activates a saved inactive profile; =d=
   confirms and disconnects an active profile; =w= toggles Wi-Fi and confirms
@@ -729,11 +730,11 @@ unauthorized.
   fixed fields, secret/hardware-identifier exclusion, UUID validation, and
   exact bounded action arguments.  Guile compilation, a sanitized live
   read-only snapshot, warning-fatal Emacs compilation and Checkdoc, all 106
-  isolated editor checks, and both connected Lisp backends passed.  After the
-  source checkpoint is published, panel rendering, refresh, rescan, editor
-  fallback, and both open keys may be accepted remotely.  Connection,
-  disconnection, and Wi-Fi-off acceptance wait until Rafael is physically at
-  the machine because they may sever SSH.
+  isolated editor checks, both connected Lisp backends, and the post-load live
+  gate passed.  Local acceptance confirmed right-panel rendering with no
+  confidential fields, refresh, Wi-Fi rescan, the dark connection-editor
+  fallback, clean close, both open keys, saved-profile disconnect/reconnect,
+  Wi-Fi radio off/on, and automatic reconnection to full connectivity.
 
 ** C16 — Close with a usable operator manual and bootstrap rehearsal
 
