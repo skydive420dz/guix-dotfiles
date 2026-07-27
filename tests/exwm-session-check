@@ -36,6 +36,30 @@ printf '%s\n' '#!/bin/sh' 'printf "%s\n" FASTFETCH_FIXTURE' \
     >"$fake_bin/fastfetch"
 chmod +x "$fake_bin/fastfetch"
 
+help_state=$sandbox/help-state
+help_output=$(HOME="$home" XDG_STATE_HOME="$help_state" \
+    PATH="$fake_bin:$PATH" "$repo/scripts/exwm-session" --help)
+if [ "$help_output" != 'usage: exwm-session [--help]' ]; then
+    printf 'EXWM help output is unexpected: %s\n' "$help_output" >&2
+    exit 1
+fi
+if [ -e "$help_state" ]; then
+    printf '%s\n' 'EXWM help created session state' >&2
+    exit 1
+fi
+if HOME="$home" XDG_STATE_HOME="$help_state" PATH="$fake_bin:$PATH" \
+    "$repo/scripts/exwm-session" unexpected >/dev/null 2>&1; then
+    printf '%s\n' 'EXWM unexpected argument started a session' >&2
+    exit 1
+else
+    status=$?
+fi
+if [ "$status" -ne 64 ] || [ -e "$help_state" ]; then
+    printf 'EXWM unexpected argument returned %s or created state\n' \
+        "$status" >&2
+    exit 1
+fi
+
 printf '%s\n' 'legacy startx evidence' >"$home/.cache/sk-exwm-startx.log"
 
 run_expected_failure() {

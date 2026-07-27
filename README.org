@@ -112,6 +112,7 @@ change.
 | Emacs and EXWM               | =emacs/=                                    |
 | Shell and application config | =shell/=, =kitty/=, =ranger/=, =gdb/=, =x11/= |
 | Supported operator commands  | =scripts/=                                  |
+| Operator and recovery manual | =docs/operator-manual.org=                  |
 | Validation and fixtures      | =tests/= and =fixtures/=                    |
 | Machine record               | =guix/machines/guixpc/=                    |
 | Audit evidence               | =docs/audits/=                              |
@@ -742,7 +743,21 @@ unauthorized.
   network, channel, and rollback recovery; every custom tool exposes source or
   help; a daily-use hand test and an installed-machine fresh-checkout/bootstrap
   rehearsal pass; uncovered mutable data is stated honestly.
+- State: the isolated source candidate passed on 2026-07-26 and awaits a
+  signed checkpoint before the clean temporary-checkout rehearsal and paired
+  daily-use acceptance.  During inventory the old =exwm-session --help=
+  behavior attempted =startx= from SSH and failed immediately without a VT;
+  the existing EXWM session remained healthy.  The candidate makes help and
+  invalid arguments non-starting operations.
+- Use: [[file:docs/operator-manual.org][the GuixPC operator manual]] is the
+  short daily and recovery entry point.  The README remains the configuration
+  contract and implementation record; audits remain historical evidence.
 - Boundary: documentation and proof only.  C16 introduces no new feature.
+- Candidate validation: ShellCheck, the focused EXWM-session/Fish recovery
+  check, Org lint for the README and manual, and every local manual link
+  target passed.  No EXWM restart, Guix bootstrap, profile activation,
+  reconfiguration, reboot, retention change, or garbage collection belongs to
+  the source pass.
 
 ** Implementation discipline
 
@@ -846,6 +861,8 @@ expansion an active goal.
 
 * Documentation
 
+- [[file:docs/operator-manual.org][GuixPC operator manual]]: indexed daily
+  workflow, recovery, bootstrap, command, and mutable-data boundaries.
 - [[file:docs/audits/2026-07-12-full-configuration-audit.org][Full configuration audit]]: original source and live-state findings.
 - [[file:docs/audits/2026-07-15-phase-0-baseline.org][Phase 0 baseline]]: later system baseline evidence.
 - [[file:docs/audits/2026-07-16-p3.1-visual-ownership-and-token-contract.org][Visual ownership and token contract]]: theme ownership and vocabulary.

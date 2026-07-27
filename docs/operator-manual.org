@@ -1,0 +1,308 @@
+#+title: GuixPC operator manual
+#+startup: overview
+#+options: toc:2 num:nil
+
+* Purpose
+
+This is the short operating and recovery manual for =guixpc=.  The repository
+[[file:../README.org][README]] remains the configuration contract and accepted
+implementation record; the audit directory remains historical evidence.
+
+Commands assume =~/Projects/guix-dotfiles= unless stated otherwise.  Stop
+before a command that changes a generation, profile, service, network
+connection, or boot state unless that change is the explicit task.
+
+* Index
+
+- [[*Daily use][Daily use]]
+- [[*Configuration changes][Configuration changes]]
+- [[*EXWM and tty1 recovery][EXWM and tty1 recovery]]
+- [[*Service and desktop recovery][Service and desktop recovery]]
+- [[*Network, Bluetooth, and audio][Network, Bluetooth, and audio]]
+- [[*Channels][Channels]]
+- [[*Generations and rollback][Generations and rollback]]
+- [[*Fresh-checkout rehearsal][Fresh-checkout rehearsal]]
+- [[*Operator command index][Operator command index]]
+- [[*Mutable data and backup truth][Mutable data and backup truth]]
+- [[*Acceptance checklist][Acceptance checklist]]
+
+* Daily use
+
+The normal path is tty1 autologin, Fish, =scripts/exwm-session=, =startx=, and
+one Emacs/EXWM process.  Do not start a second EXWM session from SSH or from an
+existing graphical session.
+
+Core desktop controls:
+
+| Action | Key |
+|--------+-----|
+| application launcher | =Super-SPC= |
+| input/key help | =Super-/= |
+| terminal | =Super-Return= |
+| browser | =Super-w= |
+| workspace | =Super-1= through =Super-5= |
+| move window to workspace | =Super-!= through =Super-%= |
+| close current X window | =Super-q= |
+| normalize layout | =Super-M= |
+| reload EXWM policy | =Super-r= |
+
+The native control panels open on the right:
+
+| Surface | Native-buffer key | Global key usable from X applications |
+|---------+-------------------+---------------------------------------|
+| system status | =SPC o s= | =C-c o s= |
+| audio | =SPC o a= | =C-c o a= |
+| Bluetooth | =SPC o b= | =C-c o b= |
+| network | =SPC o n= | =C-c o n= |
+
+Use =g= to refresh a panel and =q= to close it.  Network disconnect, Wi-Fi
+off, Bluetooth power off, and default-audio changes are deliberate actions,
+not status probes.
+
+* Configuration changes
+
+Before editing:
+
+#+begin_src sh
+git status --short --branch
+scripts/guix-entrypoints check
+#+end_src
+
+Choose the owner before choosing a build:
+
+| Changed surface | Smallest activation |
+|-----------------+---------------------|
+| Emacs/EXWM source | =M-x sk/reload-config= or a deliberate Emacs restart |
+| Home package, user service, generated theme, Fish, managed link | =ghr --print=, then accepted =ghr= |
+| kernel, boot, filesystem, recovery package, system service | =gsr --print=, then accepted =gsr= and usually reboot |
+
+Do not update channels as a side effect of an unrelated change.  A test or
+build does not prove activation or hand acceptance.
+
+After an accepted change, require a signed commit and published clean
+=origin/main= before activation.  Validate the changed surface first; use the
+broad gates only when their full historical scope is relevant.
+
+* EXWM and tty1 recovery
+
+If EXWM returns to tty1 or fails to start:
+
+1. stay at the local tty1 prompt;
+2. inspect the bounded current and previous logs:
+
+   #+begin_src sh
+   tail -100 ~/.local/state/sk-exwm/startx-current.log
+   tail -100 ~/.local/state/sk-exwm/startx-previous.log
+   #+end_src
+
+3. correct the named source/runtime problem;
+4. run =sk-start-exwm= locally.
+
+=scripts/exwm-session --help= is informational and must not rotate logs or
+start X.  Running the session launcher itself is a local-tty action.
+
+Inside a responsive Emacs, start with =C-g=.  Use =Super-M= for a damaged
+layout and =Super-r= only when EXWM policy source has already been reviewed.
+To end the whole Emacs/EXWM process deliberately, use =SPC q a=; unsaved
+buffers may prompt before tty1 returns.
+
+If a new System generation cannot reach tty1 or networking, reboot and select
+an earlier accepted generation from GRUB.  Generation 90 is a known-bad
+GuixPC generation and must not be selected.  The current recovery pins are in
+[[file:../guix/machines/guixpc/generation-pins.tsv][generation-pins.tsv]].
+
+* Service and desktop recovery
+
+Start with the read-only views:
+
+#+begin_src sh
+scripts/sk-status
+herd status
+scripts/desktop-session-check
+#+end_src
+
+The status surface covers EXWM/Emacs, the Home Shepherd, session D-Bus,
+PipeWire, WirePlumber, Bluetooth, NetworkManager, generations, storage, and
+recovery hints.  =scripts/desktop-session-check= requires the local graphical
+session; do not describe an SSH-only failure as an EXWM failure.
+
+Restart only the named user service after its failure is understood:
+
+#+begin_src sh
+herd restart SERVICE
+#+end_src
+
+Do not restart the session D-Bus casually: the running EXWM, PipeWire, and
+desktop clients share it.  A System service, boot, kernel, or filesystem
+failure belongs to System recovery, not a Home service restart.
+
+* Network, Bluetooth, and audio
+
+** Network
+
+Use =C-c o n= or =SPC o n=.  The panel shows NetworkManager state, devices,
+saved connections, and nearby SSIDs without rendering secrets, MAC addresses,
+BSSIDs, or raw UUIDs.
+
+- =g=: refresh;
+- =s=: Wi-Fi rescan;
+- =c=: confirm and activate a saved connection;
+- =d=: confirm and disconnect an active connection;
+- =w=: toggle Wi-Fi, confirming before off;
+- =e=: open NetworkManager's connection editor for new networks or secrets.
+
+Perform disconnect and Wi-Fi-off recovery locally because SSH may vanish.
+NetworkManager remains the owner; do not replace it or store credentials in a
+wrapper.
+
+** Bluetooth
+
+Use =C-c o b= or =SPC o b=.  Blueman remains the recovery UI under =b=.
+Power, trust, pairing, and profile changes are explicit.  If a powered device
+does not reconnect, refresh, then use =r= for the trusted paired device.
+
+** Audio
+
+Use =C-c o a= or =SPC o a=.  =+= and =-= change default volume, =m= toggles
+mute for a selected target, =v= sets exact volume, and =d= selects the default
+endpoint.  =b= opens Bluetooth control and =p= retains =pipemixer= as the
+fallback.
+
+* Channels
+
+The authenticated pinned channel lock is
+[[file:../guix/channels.scm][guix/channels.scm]].  Review available updates
+about monthly, or sooner for a relevant security advisory.  Promote each pin
+deliberately; do not auto-update.
+
+After reviewing an edited lock:
+
+#+begin_src sh
+~/.config/guix/current/bin/guix pull -C ~/.config/guix/channels.scm
+~/.config/guix/current/bin/guix describe
+#+end_src
+
+Unexpected source builds or failed checks mean keep the current pins.  The
+reconfiguration wrapper refuses a Pull profile that disagrees with the
+repository lock.
+
+* Generations and rollback
+
+Read-only inventory and recovery proof:
+
+#+begin_src sh
+scripts/guix-generation-retention inventory
+scripts/guix-generation-retention verify
+scripts/guix-generation-retention plan
+scripts/guix-generation-retention estimate
+scripts/guix-generation-retention rollback-drill
+#+end_src
+
+These commands do not authorize deletion or garbage collection.  The
+supported first response to a boot failure is selecting a prior accepted GRUB
+generation.
+
+When an explicit local rollback is required, inspect generations before
+switching:
+
+#+begin_src sh
+~/.config/guix/current/bin/guix system list-generations
+~/.config/guix/current/bin/guix home list-generations
+~/.config/guix/current/bin/guix pull --list-generations
+#+end_src
+
+The installed Guix supports =system/home switch-generation= and =roll-back=,
+plus =guix pull --switch-generation= and =--roll-back=.  Switching System
+state is privileged and normally followed by reboot acceptance.  Never guess
+a generation number: use the inventory, machine pins, and the last signed
+accepted checkpoint.
+
+No automatic System-generation deletion, custom GRUB reconstruction, or store
+GC job is approved.  The frozen P5.2b/D1--D5 sources are not recovery tools.
+
+* Fresh-checkout rehearsal
+
+On an already installed GuixPC, a new checkout can prove its inputs without
+activation:
+
+#+begin_src sh
+git clone git@github.com:skydive420dz/guix-dotfiles.git \
+  /tmp/guix-dotfiles-rehearsal
+cd /tmp/guix-dotfiles-rehearsal
+scripts/guix-bootstrap --plan
+#+end_src
+
+=--plan= validates authenticated pins, entrypoint intent, Home links, the
+available immutable Guix frontend, and non-activating System/Home plans.  It
+must leave the checkout and live profiles unchanged.
+
+=scripts/guix-bootstrap prepare= is a separate authorized operation.  It may
+repair declaration links and create or reuse the Pull profile, but it still
+does not activate System/Home, reboot, prune generations, or collect the
+store.  Do not run =prepare= merely to rehearse documentation.
+
+* Operator command index
+
+The complete executable source is visible in [[file:../scripts/][scripts/]].
+The supported daily/recovery entry points are:
+
+| Purpose | Command or source |
+|---------+-------------------|
+| declaration links | [[file:../scripts/guix-entrypoints][guix-entrypoints]] =check/plan/bootstrap= |
+| installed-machine bootstrap | [[file:../scripts/guix-bootstrap][guix-bootstrap]] =--plan/prepare= |
+| Home/System plan and activation | [[file:../scripts/guix-reconfigure][guix-reconfigure]] through =ghr/gsr= |
+| generation reports | [[file:../scripts/guix-generation-retention][guix-generation-retention]] |
+| system status | [[file:../scripts/sk-status][sk-status]] or =C-c o s= |
+| desktop health | [[file:../scripts/desktop-session-check][desktop-session-check]] |
+| Emacs health | [[file:../scripts/emacs-check][emacs-check]] |
+| EXWM local launcher | [[file:../scripts/exwm-session][exwm-session]] |
+| network control | [[file:../scripts/sk-network][sk-network]] through =C-c o n= |
+| Bluetooth control | [[file:../scripts/sk-bluetooth][sk-bluetooth]] through =C-c o b= |
+| audio control | [[file:../scripts/sk-audio][sk-audio]] through =C-c o a= |
+| disk health | [[file:../scripts/guix-disk-health][guix-disk-health]] |
+| Git hygiene | [[file:../scripts/sk-git-audit][sk-git-audit]] |
+
+Language-project wrappers and checks are invoked by their Emacs workflows.
+The System-pruning transaction/orchestrator scripts are frozen historical
+material and are not supported operator commands.
+
+* Mutable data and backup truth
+
+Remote Git history covers only committed and pushed content:
+
+- this configuration repository;
+- reviewed Org notes in =~/Documents/OrgFiles= via the private =sk-org=
+  remote.
+
+It does not cover uncommitted work.  Guix generations provide same-machine
+configuration rollback, not user-data backup.  The second internal SSD is not
+assigned as a backup device.
+
+There is currently no accepted backup for SSH/GPG private material,
+credentials, Chromium profile/history, Downloads, Scheme Studio progress,
+application state, personal files outside the tracked Org tree, or other
+mutable Home data.  This is the consciously accepted storage decision, not a
+claim that the data is safe.  See
+[[file:audits/2026-07-18-p4.2-recovery-storage-deferral.org][the recovery/storage decision]].
+
+Revisit backup when Rafael explicitly promotes it, capacity/prices improve,
+or destructive maintenance would reduce the current recovery floor.
+
+* Acceptance checklist
+
+After a meaningful desktop change, the smallest daily-use hand pass is:
+
+1. EXWM appears at the expected 3440x1440 desktop and accepts input.
+2. =Super-SPC= opens and cancels the launcher.
+3. =Super-1= through =Super-5= switch the five workspaces.
+4. =Super-Return= opens Kitty; terminal text and volume keys work.
+5. system, audio, Bluetooth, and network panels open on the right and close.
+6. the browser opens and the current network reaches its ordinary destination.
+7. an Org note opens, saves, and remains in the private Org repository.
+8. =scripts/desktop-session-check= and
+   =scripts/guix-generation-retention rollback-drill= pass.
+
+Record what was actually observed.  Do not turn an unavailable optional
+device, such as HDMI audio or a powered-off Bluetooth device, into a false
+failure.  A checklist pass proves the current installed machine; it is not a
+backup or a fresh-install proof.
