@@ -743,21 +743,24 @@ unauthorized.
   network, channel, and rollback recovery; every custom tool exposes source or
   help; a daily-use hand test and an installed-machine fresh-checkout/bootstrap
   rehearsal pass; uncovered mutable data is stated honestly.
-- State: the isolated source candidate passed on 2026-07-26 and awaits a
-  signed checkpoint before the clean temporary-checkout rehearsal and paired
-  daily-use acceptance.  During inventory the old =exwm-session --help=
+- State: closed and accepted on 2026-07-26 at signed, published source
+  checkpoint =cd4baf3=.  A clean GitHub checkout at that exact commit passed
+  the installed-machine bootstrap plan and remained clean; the daily-use
+  checklist was accepted.  During inventory the old =exwm-session --help=
   behavior attempted =startx= from SSH and failed immediately without a VT;
-  the existing EXWM session remained healthy.  The candidate makes help and
-  invalid arguments non-starting operations.
+  the existing EXWM session remained healthy.  The published correction makes
+  help and invalid arguments non-starting operations.
 - Use: [[file:docs/operator-manual.org][the GuixPC operator manual]] is the
   short daily and recovery entry point.  The README remains the configuration
   contract and implementation record; audits remain historical evidence.
 - Boundary: documentation and proof only.  C16 introduces no new feature.
-- Candidate validation: ShellCheck, the focused EXWM-session/Fish recovery
-  check, Org lint for the README and manual, and every local manual link
-  target passed.  No EXWM restart, Guix bootstrap, profile activation,
-  reconfiguration, reboot, retention change, or garbage collection belongs to
-  the source pass.
+- Validation: ShellCheck, the focused EXWM-session/Fish recovery check, Org
+  lint for the README and manual, every local manual link target, authoritative
+  entrypoint ownership, desktop health, and the read-only rollback drill
+  passed.  The fresh-checkout =guix-bootstrap --plan= queried substitute
+  availability but downloaded or built no package and created no result or GC
+  root.  No EXWM restart, profile activation, reconfiguration, reboot,
+  retention change, or garbage collection was performed.
 
 ** Implementation discipline
 
