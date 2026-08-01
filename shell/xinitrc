@@ -66,6 +66,11 @@ dbus-update-activation-environment \
     XDG_RUNTIME_DIR XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE \
     DESKTOP_SESSION
 
+if command -v xrdb >/dev/null 2>&1 && [ -r "$HOME/.Xdefaults" ]; then
+    xrdb -merge "$HOME/.Xdefaults" ||
+        printf '%s\n' 'EXWM: failed to load X resources' >&2
+fi
+
 # This desktop never auto-suspends, but X blanks and powers down the monitor
 # after ten minutes of X input inactivity.  This is display protection, not a
 # screen lock; tty1 autologin is accepted for this trusted physical single-user

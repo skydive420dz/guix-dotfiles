@@ -383,7 +383,8 @@ write_fake_fish
 for command in bat btop chafa chromium clang cljfmt clj-kondo emacs fastfetch \
     fzf gcc gdb gpg gpg-agent gpg-connect-agent gpgconf \
     gtk4-widget-factory guile jq lua lua-language-server make \
-    mediainfo pamixer pipemixer pylsp ranger ruff sbcl shellcheck shfmt; do
+    mediainfo pamixer pipemixer pylsp ranger ruff sbcl shellcheck shfmt \
+    xrdb; do
     printf '%s\n' '#!/bin/sh' 'exit 0' >"$fake_home/profile/bin/$command"
     chmod +x "$fake_home/profile/bin/$command"
 done
@@ -533,7 +534,7 @@ printf '%s\n' fish-foreign-env emacs emacs-geiser \
     emacs-package-lint emacs-spacious-padding \
     emacs-clojure-mode emacs-fennel-mode \
     emacs-racket-mode cljfmt clj-kondo \
-    dunst polkit-gnome maim xclip \
+    dunst polkit-gnome maim xclip xrdb \
     font-awesome font-google-material-design-icons gnome-themes-extra \
     papirus-icon-theme bibata-cursor-theme hicolor-icon-theme gst-plugins-base \
     gst-plugins-good gtk gnupg \
@@ -566,7 +567,7 @@ reset_fake_home_manifest() {
         emacs-clojure-mode emacs-fennel-mode emacs-racket-mode fish \
         emacs-package-lint emacs-spacious-padding \
         fish-foreign-env cljfmt clj-kondo gnupg guile \
-        dunst polkit-gnome maim xclip \
+        dunst polkit-gnome maim xclip xrdb \
         lua-language-server python-lsp-server ranger nsxiv python-pillow \
         sbcl shellcheck \
         ungoogled-chromium

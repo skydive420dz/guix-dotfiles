@@ -1,2 +1,10 @@
 XTerm*utf8: always
 XTerm*metaSendsEscape: true
+
+! Native Xlib projection of the accepted Modus theme roles.
+Nsxiv.window.background: #0d0e1c
+Nsxiv.window.foreground: #ffffff
+Nsxiv.bar.background: #1d2235
+Nsxiv.bar.foreground: #ffffff
+Nsxiv.mark.foreground: #79a8ff
+Nsxiv.bar.font: JetBrainsMono Nerd Font:size=11

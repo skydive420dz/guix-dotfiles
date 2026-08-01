@@ -38,7 +38,7 @@ live checkout, Home directory, profile, display, or network."
     (computed-file
      "sk-theme-home-bundle"
      #~(begin
-         (use-modules (guix build utils)
+         (use-modules ((guix build utils) #:select (mkdir-p))
                       (ice-9 match)
                       (sk theme))
 

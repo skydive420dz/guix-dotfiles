@@ -49,21 +49,21 @@
            "ripgrep" "vim" "xset" "xwallpaper" "picom" "xrandr"))
  "reviewed 13-package recovery floor changed")
 
-(assert (= (length home-specifications) 97)
-        "reviewed Home specification list must contain exactly 97 packages")
+(assert (= (length home-specifications) 98)
+        "reviewed Home specification list must contain exactly 98 packages")
 (assert (equal? home-output-specifications '("gtk:out" "gtk:bin"))
         "reviewed Home output specifications changed")
 (assert (equal? home-output-names '("gtk"))
         "reviewed Home output package names changed")
 (assert (equal? home-explicit '("emacs-racket-mode"))
         "reviewed explicit Home package names changed")
-(assert (= (length home) 99)
-        "reviewed Home ownership must contain exactly 99 unique package names")
+(assert (= (length home) 100)
+        "reviewed Home ownership must contain exactly 100 unique package names")
 (assert (= (+ (length home-specifications)
               (length home-output-specifications)
               (length home-explicit))
-           100)
-        "reviewed Home declaration must contain exactly 100 selections")
+           101)
+        "reviewed Home declaration must contain exactly 101 selections")
 (assert
  (equal? home
          (append home-specifications home-output-names home-explicit))
@@ -81,7 +81,7 @@
    "guile" "sbcl" "python-lsp-server" "lua-language-server"
    "ungoogled-chromium" "ranger" "nsxiv" "python-pillow" "shellcheck"
    "dunst" "polkit-gnome"
-   "maim" "xclip"
+   "maim" "xclip" "xrdb"
    "gnupg"
    "font-awesome" "font-google-material-design-icons"
    "gnome-themes-extra"
@@ -226,7 +226,7 @@
                    specification)))
  '("ungoogled-chromium" "ranger" "nsxiv" "python-pillow"
    "emacs-use-package" "emacs-geiser"
-   "dunst" "polkit-gnome" "maim" "xclip"
+   "dunst" "polkit-gnome" "maim" "xclip" "xrdb"
    "emacs-sly" "emacs-puni" "emacs-eshell-syntax-highlighting"
    "emacs-package-lint" "emacs-spacious-padding"
    "emacs-clojure-mode" "cljfmt" "clj-kondo"

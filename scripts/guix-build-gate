@@ -564,7 +564,8 @@ validate_home_profile_artifacts() {
     for command in bat btop chafa chromium clang cljfmt clj-kondo emacs \
         fastfetch fzf gcc gdb gpg gpg-agent gpg-connect-agent gpgconf \
         guile jq lua lua-language-server make \
-        mediainfo pamixer pipemixer pylsp ranger ruff sbcl shellcheck shfmt; do
+        mediainfo pamixer pipemixer pylsp ranger ruff sbcl shellcheck shfmt \
+        xrdb; do
         if [ ! -x "$profile/bin/$command" ]; then
             printf 'guix-build-gate: Home profile lacks %s\n' "$command" >&2
             exit 1

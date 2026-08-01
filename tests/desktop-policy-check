@@ -100,4 +100,28 @@ if [ "$session_cmdline_count:$session_exact_arguments_count:$session_argv0_case_
     exit 1
 fi
 
+for resource in \
+    'Nsxiv.window.background: #0d0e1c' \
+    'Nsxiv.window.foreground: #ffffff' \
+    'Nsxiv.bar.background: #1d2235' \
+    'Nsxiv.bar.foreground: #ffffff' \
+    'Nsxiv.mark.foreground: #79a8ff' \
+    'Nsxiv.bar.font: JetBrainsMono Nerd Font:size=11'; do
+    count=$(grep -Fxc "$resource" "$repo/x11/Xdefaults" || true)
+    if [ "$count" -ne 1 ]; then
+        printf 'desktop-policy-check: expected one X resource: %s\n' \
+            "$resource" >&2
+        exit 1
+    fi
+done
+
+xrdb_load_count=$(grep -Fxc \
+    '    xrdb -merge "$HOME/.Xdefaults" ||' \
+    "$repo/shell/xinitrc" || true)
+if [ "$xrdb_load_count" -ne 1 ]; then
+    printf 'desktop-policy-check: Xinit xrdb load count is %s; expected 1\n' \
+        "$xrdb_load_count" >&2
+    exit 1
+fi
+
 printf '%s\n' 'desktop-policy-check: PASS'
