@@ -49,21 +49,21 @@
            "ripgrep" "vim" "xset" "xwallpaper" "picom" "xrandr"))
  "reviewed 13-package recovery floor changed")
 
-(assert (= (length home-specifications) 95)
-        "reviewed Home specification list must contain exactly 95 packages")
+(assert (= (length home-specifications) 97)
+        "reviewed Home specification list must contain exactly 97 packages")
 (assert (equal? home-output-specifications '("gtk:out" "gtk:bin"))
         "reviewed Home output specifications changed")
 (assert (equal? home-output-names '("gtk"))
         "reviewed Home output package names changed")
 (assert (equal? home-explicit '("emacs-racket-mode"))
         "reviewed explicit Home package names changed")
-(assert (= (length home) 97)
-        "reviewed Home ownership must contain exactly 97 unique package names")
+(assert (= (length home) 99)
+        "reviewed Home ownership must contain exactly 99 unique package names")
 (assert (= (+ (length home-specifications)
               (length home-output-specifications)
               (length home-explicit))
-           98)
-        "reviewed Home declaration must contain exactly 98 selections")
+           100)
+        "reviewed Home declaration must contain exactly 100 selections")
 (assert
  (equal? home
          (append home-specifications home-output-names home-explicit))
@@ -79,7 +79,8 @@
    "emacs-clojure-mode" "cljfmt" "clj-kondo"
    "emacs-racket-mode" "emacs-fennel-mode"
    "guile" "sbcl" "python-lsp-server" "lua-language-server"
-   "ungoogled-chromium" "ranger" "shellcheck" "dunst" "polkit-gnome"
+   "ungoogled-chromium" "ranger" "nsxiv" "python-pillow" "shellcheck"
+   "dunst" "polkit-gnome"
    "maim" "xclip"
    "gnupg"
    "font-awesome" "font-google-material-design-icons"
@@ -223,7 +224,8 @@
                           (string-append "\"" specification "\"")))
     (string-append "non-System package leaked into System source: "
                    specification)))
- '("ungoogled-chromium" "ranger" "emacs-use-package" "emacs-geiser"
+ '("ungoogled-chromium" "ranger" "nsxiv" "python-pillow"
+   "emacs-use-package" "emacs-geiser"
    "dunst" "polkit-gnome" "maim" "xclip"
    "emacs-sly" "emacs-puni" "emacs-eshell-syntax-highlighting"
    "emacs-package-lint" "emacs-spacious-padding"

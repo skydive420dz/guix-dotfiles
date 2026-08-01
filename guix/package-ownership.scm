@@ -1,7 +1,7 @@
 ;; Package ownership shared by the guixpc System and Home declarations.
 ;;
-;; C7 extends the reviewed Home user/editor base to 98 package/output
-;; selections with 97 unique package names.  The desktop integration packages
+;; C7 extends the reviewed Home user/editor base to 100 package/output
+;; selections with 99 unique package names.  The desktop integration packages
 ;; explicitly own notifications, graphical authorization, and selected-area
 ;; screenshot-to-clipboard behavior.  The visual/runtime selections
 ;; explicitly own the accepted global dependencies instead of relying on
@@ -51,6 +51,8 @@
     "maim"
     "xclip"
     "ranger"
+    "nsxiv"
+    "python-pillow"
     "ungoogled-chromium"
     "xdg-utils"
     "file"

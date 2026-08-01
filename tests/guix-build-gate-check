@@ -538,7 +538,7 @@ printf '%s\n' fish-foreign-env emacs emacs-geiser \
     papirus-icon-theme bibata-cursor-theme hicolor-icon-theme gst-plugins-base \
     gst-plugins-good gtk gnupg \
     guile sbcl lua-language-server python-lsp-server \
-    ungoogled-chromium ranger shellcheck >"$fake_home_names"
+    ungoogled-chromium ranger nsxiv python-pillow shellcheck >"$fake_home_names"
 
 write_fake_manifest() {
     output=$1
@@ -567,7 +567,8 @@ reset_fake_home_manifest() {
         emacs-package-lint emacs-spacious-padding \
         fish-foreign-env cljfmt clj-kondo gnupg guile \
         dunst polkit-gnome maim xclip \
-        lua-language-server python-lsp-server ranger sbcl shellcheck \
+        lua-language-server python-lsp-server ranger nsxiv python-pillow \
+        sbcl shellcheck \
         ungoogled-chromium
     printf '%s\n' \
         'font-awesome	4.7.0	out	/gnu/store/fake-font-awesome' \
