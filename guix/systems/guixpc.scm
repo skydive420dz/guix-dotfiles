@@ -40,6 +40,11 @@ Section \"Monitor\"
   Option \"PreferredMode\" \"3440x1440_100\"
 EndSection")
 
+;; XKB stores repeat speed as an integer interval: 1000 / 67 = 14 ms.
+(define %guixpc-xorg-server-arguments
+  (append '("-ardelay" "210" "-arinterval" "14")
+          %default-xorg-server-arguments))
+
 (define %guixpc-firewall-ruleset
   (plain-file
    "guixpc-nftables.conf"
@@ -143,11 +148,13 @@ table inet filter {
         (service xorg-server-service-type
                  (xorg-configuration
                   (keyboard-layout keyboard-layout)
-                  (extra-config (list %guixpc-monitor-config))))
+                  (extra-config (list %guixpc-monitor-config))
+                  (server-arguments %guixpc-xorg-server-arguments)))
         (service startx-command-service-type
                  (xorg-configuration
                   (keyboard-layout keyboard-layout)
-                  (extra-config (list %guixpc-monitor-config)))))
+                  (extra-config (list %guixpc-monitor-config))
+                  (server-arguments %guixpc-xorg-server-arguments))))
        %desktop-services)
 
       (delete gdm-service-type)

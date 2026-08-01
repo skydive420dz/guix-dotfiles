@@ -579,12 +579,6 @@ applications whose new window belongs to an existing process."
 (defun sk/exwm-move-window-to-workspace-4 () (interactive) (sk/exwm-move-window-to-workspace 4))
 (defun sk/exwm-move-window-to-workspace-5 () (interactive) (sk/exwm-move-window-to-workspace 5))
 
-(defun sk/set-keyboard-repeat ()
-  (interactive)
-  (when (executable-find "xset")
-    (start-process "xset-repeat" nil
-                   "xset" "r" "rate" "210" "67")))
-
 (defconst sk/picom-emacs-opacity-percent
   (or sk/startup-frame-final-opacity-percent 85)
   "Final Emacs frame opacity shared with the managed Picom policy.")
@@ -1001,7 +995,6 @@ workspace geometry instead of the X client's requested size."
   (add-hook 'exwm-update-class-hook #'sk/exwm-update-title)
   (add-hook 'exwm-update-title-hook #'sk/exwm-update-title)
   (sk/exwm-bind-keys)
-  (sk/set-keyboard-repeat)
   (if (and sk/startup-frame-gate-active-p
            (not sk/startup-frame-gate-release-complete-p)
            (fboundp 'sk/startup-frame-schedule-release))
