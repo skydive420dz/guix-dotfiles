@@ -121,13 +121,6 @@ Create a master/stack layout when the workspace has only one regular window."
             (sk/window-clear-side-state target)
             target)))))))
 
-(defun sk/window-display-in-stack (buffer)
-  "Display BUFFER in the regular right-side stack."
-  (let ((window (sk/window-new-stack-window)))
-    (set-window-buffer window buffer)
-    (select-window window)
-    window))
-
 (defun sk/window-main-window ()
   "Return the main editing window."
   (or (sk/window-master)

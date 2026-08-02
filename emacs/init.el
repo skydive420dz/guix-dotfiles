@@ -1,8 +1,6 @@
 ;;; Package setup
 
 ;; Emacs packages are installed by Guix. This file only wires behavior.
-(when (fboundp 'sk/startup-trace-mark)
-  (sk/startup-trace-mark "init-enter"))
 
 (require 'subr-x)
 
@@ -24,7 +22,7 @@
 
 (require 'sk-core)
 (require 'sk-ui)
-(require 'sk-windows)
+(require 'sk-window-policy)
 (require 'sk-dired)
 (require 'sk-terminal)
 (require 'sk-bluetooth)
@@ -64,6 +62,3 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
-
-(when (fboundp 'sk/startup-trace-mark)
-  (sk/startup-trace-mark "init-exit"))

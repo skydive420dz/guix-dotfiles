@@ -192,10 +192,6 @@
           (member (sk/exwm-normalize-client-name (file-name-base (car command)))
                   '("chromium")))))
 
-(defun sk/exwm-launch-desktop-entry-direct (desktop-id)
-  "Compatibility entrypoint for a validated direct DESKTOP-ID launch."
-  (sk/exwm-launch-spec-in-stack (sk/exwm-desktop-launch-spec desktop-id)))
-
 (defun sk/desktop-entry-fields (desktop-file)
   "Read DESKTOP-FILE once and return its unlocalized Desktop Entry fields."
   (with-temp-buffer
@@ -214,10 +210,6 @@
                       (string-trim (match-string-no-properties 2)))
                 fields))
         (nreverse fields)))))
-
-(defun sk/desktop-entry-value (desktop-file key)
-  "Return unlocalized KEY from DESKTOP-FILE."
-  (cdr (assoc key (sk/desktop-entry-fields desktop-file))))
 
 (defun sk/desktop-entry-clean-exec (exec)
   (let ((clean (replace-regexp-in-string "%%" "__SK_PERCENT__" exec t t)))

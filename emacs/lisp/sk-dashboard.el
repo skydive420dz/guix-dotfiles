@@ -98,13 +98,6 @@
   "Return non-nil when BUFFER is the Sky home buffer."
   (string= (buffer-name (or buffer (current-buffer))) sk/dashboard-buffer-name))
 
-(defun sk/user-buffer-p (buffer)
-  "Return non-nil when BUFFER is a user-facing buffer."
-  (let ((name (buffer-name buffer)))
-    (and name
-         (not (string-prefix-p " " name))
-         (not (sk/dashboard-buffer-p buffer)))))
-
 (defun sk/ordinary-buffer-p (buffer)
   "Return non-nil when BUFFER should keep the home buffer hidden."
   (let ((name (buffer-name buffer)))
