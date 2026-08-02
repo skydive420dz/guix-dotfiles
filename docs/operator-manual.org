@@ -218,7 +218,8 @@ a generation number: use the inventory, machine pins, and the last signed
 accepted checkpoint.
 
 No automatic System-generation deletion, custom GRUB reconstruction, or store
-GC job is approved.  The frozen P5.2b/D1--D5 sources are not recovery tools.
+GC job is approved.  The archived P5.2b/D1--D5 experiment is not a recovery
+tool.
 
 * Fresh-checkout rehearsal
 
@@ -263,8 +264,8 @@ The supported daily/recovery entry points are:
 | Git hygiene | [[file:../scripts/sk-git-audit][sk-git-audit]] |
 
 Language-project wrappers and checks are invoked by their Emacs workflows.
-The System-pruning transaction/orchestrator scripts are frozen historical
-material and are not supported operator commands.
+The removed System-pruning experiment remains historical material on the
+immutable =sol-ultra-delirious-experiment= branch, not an operator command.
 
 * Mutable data and backup truth
 

@@ -207,10 +207,10 @@ scripts/guix-generation-retention rollback-drill
 for that acceptance pass.
 
 The broad legacy gates, including =scripts/shell-check --strict= and
-=scripts/guix-build-gate=, currently cover optional dialect fixtures and the
-frozen System-pruning experiment.  They are not the default definition of
-success for new work.  Use them only when their complete existing scope is
-deliberately relevant; otherwise run the focused checks for the change.
+=scripts/guix-build-gate=, still cover optional dialect and startup-attribution
+suites.  They are not the default definition of success for new work.  Use
+them only when their complete existing scope is deliberately relevant;
+otherwise run the focused checks for the change.
 
 ** Update channels separately
 
@@ -273,9 +273,10 @@ and was accepted live on 2026-07-24.  C4 is closed at published implementation
 checkpoint =27053c8= and was accepted live on 2026-07-25.  Its separate
 personal-note cleanup gate remains parked.  C5 is closed at published
 ownership-audit checkpoint =97b9242= and was accepted live on 2026-07-25.
-C6 through C11 are likewise closed at the checkpoints recorded in their
-sections.  C12 was authorized on 2026-07-26; every later slice remains
-unauthorized.
+The required C6 through C16 slices are likewise closed at the checkpoints and
+acceptance states recorded in their sections; C12-E remains optional.  The
+C17--C20 cleanup sequence was accepted as roadmap scope on 2026-08-01, but no
+implementation slice is authorized merely by that acceptance.
 
 ** C0 — Establish the human roadmap
 
@@ -762,6 +763,60 @@ unauthorized.
   root.  No EXWM restart, profile activation, reconfiguration, reboot,
   retention change, or garbage collection was performed.
 
+** C17 — Remove the frozen System-pruning experiment from main
+
+- Result: the P5.2b/D1--D5 modules, drivers, fixtures, tests, audit data, and
+  executable gate references are absent from =main=.  Git history and the
+  immutable =sol-ultra-delirious-experiment= branch remain the recovery copy.
+- Boundary: deletion and reference cleanup only.  Do not modify the frozen
+  branch, Emacs, language tooling, themes, package selections, active Home or
+  System declarations, or live state.
+- Validation: all 86 removed files (32,356 lines) are byte-identical on frozen
+  commit =d703717=; no executable import or gate reference remains.  POSIX
+  syntax, focused ShellCheck, the mocked build-gate test, whitespace checks,
+  and Org lint pass.  No Guix build or live action ran; C20 owns those builds.
+- State: implementation candidate completed on 2026-08-02 after explicit
+  authorization; awaiting checkpoint and acceptance.
+
+** C18 — Keep optional suites out of the default gates
+
+- Result: preserved Clojure, Racket, Fennel, and startup-attribution suites run
+  only when invoked explicitly, not as part of the default aggregate gates.
+- Boundary: retain every language package, manifest, module, fixture, test, and
+  startup diagnostic.  Do not modify =emacs/=, package selections, themes, or
+  live state.
+- Validation: prove each optional suite remains directly invokable and run the
+  focused checks for the changed gate dispatch only.
+- State: deferred without modification on 2026-08-02.  A narrow dispatch-only
+  deletion would leave an already-stale startup-attribution contract while the
+  explicit build gate retains its broader language validation.  Revisit only
+  with a separately accepted validation tradeoff.
+
+** C19 — Remove duplicated legacy build-gate ceremony
+
+- Result: the build gate and its tests retain authenticated channel,
+  entrypoint, and real Guix build boundaries without duplicating deleted or
+  already-native proof.
+- Boundary: scripts and tests only.  Preserve bootstrap and reconfiguration
+  behavior, optional suites, active declarations, and all runtime behavior.
+  Add no replacement framework; stop if simplification requires one.
+- Validation: run focused tests for the surviving gate behavior.  Defer the
+  authoritative non-activating Home and System builds to C20.
+- State: scope accepted on 2026-08-01; not started.  Implementation requires
+  separate authorization.
+
+** C20 — Verify and checkpoint the cleanup
+
+- Result: the C17--C19 source state passes authenticated, non-activating Home
+  and System builds and is recorded in the human documentation and a published
+  checkpoint.
+- Boundary: verification and documentation only.  Do not reconfigure, activate,
+  reboot, collect garbage, change generations, or expand the cleanup scope.
+- Validation: verify the host, checkout, declaration links, frozen-branch
+  identity, focused checks, both builds, final diff, and clean checkpoint.
+- State: scope accepted on 2026-08-01; not started.  Execution requires separate
+  authorization after C17--C19 are individually accepted.
+
 ** Implementation discipline
 
 Before a slice starts, record its objective, observable result, affected files
@@ -808,7 +863,7 @@ historical record.  It is not an active queue and cannot expand this roadmap.
 * Outside the accepted roadmap
 
 The following work is deliberately parked.  It is not a dependency for
-C0--C16 and may not be used as a blocker.  The signal beside each item is what
+C0--C20 and may not be used as a blocker.  The signal beside each item is what
 to look for before discussing it again.
 
 - *Leaving EXWM or adopting RDE/Sway as the desktop:* revisit only if an
@@ -831,8 +886,9 @@ to look for before discussing it again.
   for a repeatable disruptive symptom such as crashes, data loss, material
   latency, or device failure, with evidence that points to that layer.
 - *P5.2b, D1--D5 descendants, custom GRUB work, and direct System-generation
-  deletion:* remain frozen.  Revisit only if disk pressure remains after the
-  supported C10 path and a simpler supported recovery route is unavailable.
+  deletion:* are archived on the immutable experiment branch.  Revisit only if
+  disk pressure remains after the supported C10 path and a simpler supported
+  recovery route is unavailable.
 - *Backup implementation, repartitioning, migration, or assigning the second
   SSD:* revisit when important local-only data grows, affordable storage
   becomes available, or Rafael's accepted risk changes.
@@ -852,11 +908,11 @@ The branch =sol-ultra-delirious-experiment= is an immutable backup of commit
 development, move it, rebase it, merge into it, delete it, or otherwise change
 its contents.  Development happens on =main=.
 
-The custom P5.2b System-pruning work from D1 through D5 is frozen as irrelevant
-to the current objective.  Its modules, scripts, tests, fixtures, audit data,
-and historical status text may still exist on =main= while documentation and
-source are reviewed.  Do not execute, extend, refactor, validate, or use that
-work as a prerequisite or blocker without a new explicit decision from Rafael.
+The custom P5.2b System-pruning work from D1 through D5 is irrelevant to the
+current objective.  C17 removes its modules, scripts, tests, fixtures, and audit
+data from =main=; the immutable branch above remains its complete source and
+evidence record.  Do not revive or use it as a prerequisite or blocker without
+a new explicit decision from Rafael.
 
 The repository also contains earlier Clojure, Racket, and Fennel environments
 and fixtures.  Their existence records prior work; it does not make dialect

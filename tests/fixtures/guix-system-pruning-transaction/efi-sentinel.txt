@@ -1,1 +1,0 @@
-synthetic EFI surface; D3a must not mutate this file
