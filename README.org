@@ -793,9 +793,8 @@ implementation.
 - Validation: no executable retired reference remains; edited Lisp parses;
   focused shell, EXWM, reconfiguration, and isolated Emacs checks pass before
   checkpointing.  Restart Emacs/EXWM only after the checkpoint is published.
-- State: scope and loss of the custom measurement capability accepted on
-  2026-08-02; implementation candidate awaiting checkpoint and runtime
-  acceptance.
+- State: accepted after cold-start visual and automated runtime checks and
+  published as checkpoint =16a547f= on 2026-08-02.
 
 ** C19 — Closed without implementation
 
