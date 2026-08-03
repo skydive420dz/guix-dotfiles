@@ -5,8 +5,9 @@
 * Purpose
 
 This is the short operating and recovery manual for =guixpc=.  The repository
-[[file:../README.org][README]] remains the configuration contract and accepted
-implementation record; the audit directory remains historical evidence.
+[[file:../README.org][README]] is the current configuration overview;
+[[file:project-history.org][the project history]] preserves the accepted
+implementation record, and the audit directory retains detailed evidence.
 
 Commands assume =~/Projects/guix-dotfiles= unless stated otherwise.  Stop
 before a command that changes a generation, profile, service, network
@@ -19,6 +20,7 @@ connection, or boot state unless that change is the explicit task.
 - [[*EXWM and tty1 recovery][EXWM and tty1 recovery]]
 - [[*Service and desktop recovery][Service and desktop recovery]]
 - [[*Network, Bluetooth, and audio][Network, Bluetooth, and audio]]
+- [[*Org workflow and Scheme Studio][Org workflow and Scheme Studio]]
 - [[*Channels][Channels]]
 - [[*Generations and rollback][Generations and rollback]]
 - [[*Fresh-checkout rehearsal][Fresh-checkout rehearsal]]
@@ -167,6 +169,31 @@ Use =C-c o a= or =SPC o a=.  =+= and =-= change default volume, =m= toggles
 mute for a selected target, =v= sets exact volume, and =d= selects the default
 endpoint.  =b= opens Bluetooth control and =p= retains =pipemixer= as the
 fallback.
+
+* Org workflow and Scheme Studio
+
+** Org workflow
+
+In Emacs buffers, =SPC n c/i/a/d/w/h= opens capture, Inbox clarification,
+agenda, daily review, weekly review, and workflow help.  From an EXWM
+application in line mode, =C-c j= retains capture and =C-c n= exposes the
+non-leader routes; =C-c n d/w= open raw daily/weekly notes, =C-c n r= opens
+daily review, and =C-c n W/h= open weekly review and help.
+
+In an Org buffer, =SPC m r= refiles directly.  Marking an item =DONE= or
+=COMPLETED= leaves it in place; archiving is manual and moves the subtree into
+central =Archive.org=.  Daily and weekly review place the matching note beside
+its agenda dashboard.
+
+** Scheme Studio
+
+Use =SPC l S o= or =M-x sk/scheme-studio= to open or create the studio.  The
+=SPC l S= group exposes hint, next, progress, reset, and test; ordinary
+=SPC l e/d/b/r= remains the Scheme evaluation and REPL vocabulary.  Testing
+saves the current solution before running it.
+
+Editable solutions and =progress.org= live in =~/Projects/scheme-studio=;
+curriculum and tests remain immutable in this checkout.
 
 * Channels
 
