@@ -1,105 +1,54 @@
 #+title: GuixPC configuration
 #+startup: overview
 
-* Purpose
+* Overview
 
-This repository is the human-edited source of truth for Rafael Oliveira's
-=guixpc=.  It defines a Guix System, a Guix Home environment, and the EXWM
-desktop used on the machine every day.
+This repository is the human-edited source of truth for =guixpc=.  It defines
+the Guix System, Guix Home environment, and Emacs/EXWM desktop used on the
+machine every day.
 
 The goal is a coherent, reliable, responsive, and maintainable workstation
-built around Guix, EXWM, Guile Scheme, and Emacs Lisp.  It is not a showcase
-for collecting language dialects, a research platform, or permission to build
-infrastructure without a practical benefit to the running system.
+built around Guix, EXWM, Guile Scheme, and Emacs Lisp.  It is not a language
+collection, research project, or authorization to build infrastructure without
+a practical benefit to the running system.
 
-* Project contract
+The supported target is the Lenovo ideacentre 510A-15ARR named =guixpc=.  Its
+hardware and original configuration findings are recorded in the
+[[file:docs/audits/2026-07-12-full-configuration-audit.org][full configuration audit]].
 
-** Work from explicit outcomes
-
-Every implementation slice must identify:
-
-- the user objective it serves;
-- the observable result Rafael should receive;
-- the files and live surfaces it may affect;
-- the smallest relevant validation;
-- its stopping point.
-
-Adjacent features, packages, languages, abstractions, and experiments are out
-of scope until Rafael explicitly accepts them.  A =TODO=, =BACKLOG=, test, or
-existing source file does not authorize work by itself.
-
-If a slice expands materially, stops producing practical progress, or Rafael
-questions its value, stop and reassess.  Report what changed, what has reached
-the live machine, what remains, and the realistic cost before continuing.  Do
-not answer a scope or value concern by persuading Rafael to endure more work.
-
-** Use native Lisp for custom behavior
-
-Custom behavior belongs in the native Lisp for its layer:
-
-- Guile Scheme for Guix declarations, services, system utilities, and
-  standalone tools;
-- Emacs Lisp for Emacs and EXWM behavior.
-
-Existing upstream software may use other languages.  Shell is acceptable only
-as small boundary glue when the operating-system interface requires it; the
-feature logic should remain in Scheme or Emacs Lisp.  Do not add another Lisp
-dialect merely for breadth.  Any new dialect or non-Lisp implementation needs
-a concrete requirement and Rafael's approval.
-
-** Prove the layer that changed
-
-Keep these claims separate:
-
-1. source is valid;
-2. a candidate builds;
-3. a configuration was activated;
-4. the expected runtime owns the new state;
-5. Rafael completed any necessary hand test.
-
-A build, test suite, document, or generated artifact is not a live system
-improvement.  Call work complete only at the boundary Rafael requested.
-
-* Current machine
-
-** Host summary
-
-| Role       | Current hardware or policy                            |
-|------------+-------------------------------------------------------|
-| Host       | Lenovo ideacentre 510A-15ARR, host name =guixpc=      |
-| Processor  | AMD Ryzen 3 2200G with integrated Radeon Vega         |
-| Memory     | 32 GB DDR4                                            |
-| Display    | 3440x1440 at 100 Hz                                   |
-| Network    | Realtek Ethernet and Intel AX200 Wi-Fi/Bluetooth       |
-| Storage    | Two Samsung 860 EVO 250 GB SATA SSDs                  |
-| Boot       | UEFI GRUB; Secure Boot is intentionally disabled      |
-
-The first SSD carries the active System and Home filesystems.  The second SSD
-is installed but has no declared GuixPC role.  Detailed discovery evidence is
-in [[file:docs/audits/2026-07-12-full-configuration-audit.org][the full configuration audit]].
-
-** Accepted operating baseline
+Current operating model:
 
 - Guix System owns hardware, boot, filesystems, system services, and a small
   tty recovery floor.
-- Guix Home owns the normal user package set, Fish, Emacs, session D-Bus,
-  PipeWire/WirePlumber, fonts, themes, and repository-backed dotfile links.
-- EXWM is the desktop session; tty1 remains the local recovery entry point.
-- Kitty and its terminfo are available in the System recovery floor.
-- Interactive SSH carries the truthful =xterm-kitty= terminal type without a
-  manual =TERM= override.
+- Guix Home owns the normal package set, Fish, Emacs, session D-Bus,
+  PipeWire/WirePlumber, fonts, themes, and managed dotfile links.
+- EXWM is the desktop; tty1 remains the local recovery entry point.
 - GTK 3/4, Emacs, Kitty, Fish, wallpaper, fonts, icons, and cursor share the
-  accepted dark visual policy.  Qt normalization has not yet been designed.
-- Bluetooth is enabled early enough for a paired device to reconnect, while
-  the user audio stack remains owned by Guix Home.
-- Channel inputs are authenticated and pinned in =guix/channels.scm=.
-- Generation retention inspection is read-only.  There is no approved
-  automatic System-generation deletion or store garbage-collection job.
+  accepted dark visual policy.  Qt normalization is not yet implemented.
+- Channel inputs are authenticated and pinned.
+- Generation retention is inspection-only.  No automatic System-generation
+  deletion or store-garbage-collection job is approved.
 
-This is a concise baseline, not a substitute for live verification after a
-change.
+* Safe first look
 
-* Configuration ownership
+Run these non-activating checks from =~/Projects/guix-dotfiles= on =guixpc=:
+
+#+begin_src sh
+git status --short --branch
+scripts/guix-entrypoints check
+scripts/sk-status
+ghr --print
+gsr --print
+#+end_src
+
+They verify the declaration links, report current system state, and print the
+Home and System reconfiguration plans.  =ghr= and =gsr= are Fish aliases.
+These commands do not activate a configuration.
+
+For daily use, activation, channel updates, recovery, and rollback, use the
+[[file:docs/operator-manual.org][GuixPC operator manual]].
+
+* Configuration map
 
 | Area                         | Source                                      |
 |------------------------------+---------------------------------------------|
@@ -111,190 +60,86 @@ change.
 | Theme tokens and renderers   | =theme/= and =guix/modules/sk/theme*.scm=  |
 | Emacs and EXWM               | =emacs/=                                    |
 | Shell and application config | =shell/=, =kitty/=, =ranger/=, =gdb/=, =x11/= |
-| Supported operator commands  | =scripts/=                                  |
-| Operator and recovery manual | =docs/operator-manual.org=                  |
-| Validation and fixtures      | =tests/= and =fixtures/=                    |
+| Operator commands            | =scripts/=                                  |
+| Tests and fixtures           | =tests/= and =fixtures/=                    |
 | Machine record               | =guix/machines/guixpc/=                    |
-| Audit evidence               | =docs/audits/=                              |
+| Documentation                | =docs/=                                     |
+
+The supported Guix entry points under =~/.config/guix= link into the channel,
+Home, and System files above.  =scripts/guix-entrypoints check= verifies them
+without changing them.  Bootstrap and repair procedures belong in the operator
+manual.
 
 The repository owns human-edited configuration.  Guix store outputs,
 generations, caches, application history, and other generated state are not
-source files and should not be edited as if they were configuration.
+source files and must not be edited as configuration.
 
-** Live declaration links
+* Project contract
 
-The supported Guix entry points are links into this checkout:
+** Work from explicit outcomes
 
-#+begin_src text
-~/.config/guix/channels.scm       -> guix/channels.scm
-~/.config/guix/home.scm           -> guix/home/guixpc.scm
-~/.config/guix/systems/guixpc.scm -> guix/systems/guixpc.scm
-#+end_src
+Before implementation, define:
 
-Inspect them without mutation:
+- the user objective and observable result;
+- affected files and live surfaces;
+- non-goals;
+- the smallest relevant checks;
+- build, activation, reboot, and hand-test requirements;
+- rollback and stopping point.
 
-#+begin_src sh
-scripts/guix-entrypoints check
-#+end_src
+Adjacent features, packages, languages, abstractions, and experiments remain
+out of scope until explicitly accepted.  A =TODO=, =BACKLOG=, test, or existing
+source file does not authorize work by itself.
 
-=scripts/guix-entrypoints bootstrap= may create or repair those three links,
-but it must be used only for an explicit bootstrap task.  It refuses to
-overwrite conflicting regular files or directories.
+If a slice expands materially, stops producing practical progress, or its
+value is questioned, stop and reassess.  Report what changed, what reached the
+live machine, what remains, and the realistic cost.  A scope or value concern
+is not answered by arguing for more work.
 
-* Normal workflow
+** Use native Lisp for custom behavior
 
-Run commands from =~/Projects/guix-dotfiles= on =guixpc=.
+- Guile Scheme owns Guix declarations, services, system utilities, and
+  standalone tools.
+- Emacs Lisp owns Emacs and EXWM behavior.
+- Shell is limited to small operating-system boundary glue; feature logic
+  remains in Scheme or Emacs Lisp.
 
-** Establish the boundary
+Existing upstream software may use other languages.  A new dialect or
+non-Lisp implementation needs a concrete requirement and explicit approval.
 
-Before editing:
+** Prove the changed layer
 
-#+begin_src sh
-git status --short --branch
-scripts/guix-entrypoints check
-#+end_src
+Keep these claims separate:
 
-Confirm which owner is changing:
+1. source is valid;
+2. a candidate builds;
+3. a configuration was activated;
+4. the expected runtime owns the new state;
+5. any required hand test passed.
 
-- application or Emacs configuration may need only a reload;
-- Home packages, services, generated themes, Fish, or managed links require a
-  Home reconfiguration;
-- kernel, boot, filesystems, recovery packages, or system services require a
-  System reconfiguration and usually a reboot.
+A build, test suite, document, or generated artifact is not a live system
+improvement.  Claim completion only at the requested boundary.
 
-Do not turn a local application change into a System or Home rebuild without a
-real ownership reason.
+** Stop at the accepted boundary
 
-** Preview reconfiguration
+Use the smallest source change and focused validation that prove the requested
+outcome.  Publish a signed, clean checkpoint before activation.  Build and
+activate only the Guix layer that changed, then perform the required runtime
+and human acceptance.
 
-Fish exposes two aliases backed by =scripts/guix-reconfigure=:
-
-#+begin_src sh
-ghr --print                       # Guix Home plan
-gsr --print                       # Guix System plan
-#+end_src
-
-The wrapper checks the declaration links, channel lock, source path, Guix
-frontend, and relevant preflight before invoking Guix.  Direct =guix home
-reconfigure= bypasses the repository's early Home-link preflight and is not
-the supported path.
-
-** Apply an accepted change
-
-#+begin_src sh
-ghr                               # Home-owned change
-gsr                               # System-owned change
-#+end_src
-
-When both layers truly change, apply and verify the System boundary first,
-including a reboot when required, then apply and verify Home.  A successful
-command is activation evidence, not automatic runtime acceptance.
-
-** Validate proportionally
-
-Use the smallest checks that prove the edited surface.  Common live checks
-include:
-
-#+begin_src sh
-scripts/emacs-check
-scripts/desktop-session-check
-scripts/guix-generation-retention verify
-scripts/guix-generation-retention rollback-drill
-#+end_src
-
-=scripts/desktop-session-check= requires a running local EXWM session.  Add
-=--require-bluetooth= only when the Bluetooth endpoint is actually available
-for that acceptance pass.
-
-The broad legacy gates, including =scripts/shell-check --strict= and
-=scripts/guix-build-gate=, still cover optional dialect suites.  They are not
-the default definition of success for new work.  Use them only when their
-complete existing scope is deliberately relevant; otherwise run the focused
-checks for the change.  Historical P2.1/P2.2 reports remain under
-=docs/audits=; their retired collectors are recoverable from checkpoint
-=da6b68c=.
-
-** Update channels separately
-
-The repository lock contains =guix=, =nonguix=, and =sk-guix=.  A channel
-update is its own reviewed operation, not an incidental part of unrelated
-configuration work.  Review available changes manually once per month, but
-promote nothing automatically.  Review sooner for a relevant security advisory
-or required fix; when a candidate needs unexpected local builds or fails its
-checks, keep the current pins and retry later.  After explicitly changing and
-reviewing the pinned commits, the live pull command is:
-
-#+begin_src sh
-~/.config/guix/current/bin/guix pull -C ~/.config/guix/channels.scm
-#+end_src
-
-=scripts/guix-reconfigure= refuses activation when the active Pull profile and
-repository lock disagree.
-
-* Recovery and maintenance
-
-=guix/machines/guixpc/generation-pins.tsv= records machine-specific accepted
-System, Home, and Pull recovery targets.  The supported retention reporter has
-no apply action:
-
-#+begin_src sh
-scripts/guix-generation-retention inventory
-scripts/guix-generation-retention verify
-scripts/guix-generation-retention plan
-scripts/guix-generation-retention estimate
-scripts/guix-generation-retention rollback-drill
-#+end_src
-
-=estimate= is non-collecting: it deletes no generation or store item.  Its
-native Guix =find-roots= query may prune already-dangling automatic GC-root
-symlinks while taking the snapshot.  Reports do not authorize deletion and
-their byte counts are not guaranteed reclaim.  System-generation deletion,
-bootloader reconstruction, and Guix store garbage collection require a new,
-bounded plan and explicit approval.
-
-The source checkpoint branch is not a backup of mutable documents, secrets,
-keys, browser data, or other local state.  Backup and storage policy remains a
-separate parked decision.
-
-* Project history
-
-The completed implementation record, parked decisions, external references,
-and frozen material live in
-[[file:docs/project-history.org][the GuixPC project history]].
-
-* Development discipline
-
-Before a slice starts, record its objective, observable result, affected files
-and live surfaces, non-goals, focused checks, build/activation/reboot and hand
-test requirements, rollback, and stopping point.  Then:
-
-1. verify the live host, checkout, declaration links, and relevant runtime;
-2. make the smallest source change on =main=;
-3. run focused tests for the changed surface;
-4. create a bounded checkpoint for Rafael to review and publish;
-5. build only the Guix layer that changed;
-6. activate only after the source checkpoint is published;
-7. complete runtime and human acceptance where required;
-8. record the result and stop.
-
-Stop and reassess before continuing when a second unexpected prerequisite
-appears, the promised user outcome changes, or more than one correction
-checkpoint is needed.  Tests and evidence support a slice; they may not become
-a separate project.
+Stop and reassess when a second unexpected prerequisite appears, the promised
+outcome changes, or more than one correction checkpoint is needed.  Tests and
+evidence support a slice; they may not become a separate project.
 
 * Documentation
 
-- [[file:docs/operator-manual.org][GuixPC operator manual]]: indexed daily
-  workflow, recovery, bootstrap, command, and mutable-data boundaries.
-- [[file:docs/project-history.org][Project history and references]]: completed
-  implementation slices, parked decisions, source references, and frozen
-  material.
-- [[file:docs/audits/2026-07-12-full-configuration-audit.org][Full configuration audit]]: original source and live-state findings.
-- [[file:docs/audits/2026-07-15-phase-0-baseline.org][Phase 0 baseline]]: later system baseline evidence.
-- [[file:docs/audits/2026-07-16-p3.1-visual-ownership-and-token-contract.org][Visual ownership and token contract]]: theme ownership and vocabulary.
-- [[file:docs/audits/2026-07-18-p4.2-recovery-storage-deferral.org][Recovery and storage deferral]]: accepted backup/storage decision.
-- [[file:docs/audits/2026-07-18-p5.1-read-only-retention-estimator.org][Retention estimator audit]]: limits of the read-only maintenance report.
-- [[file:docs/handoffs/2026-07-12-sk-guix-kitty.org][sk-guix Kitty handoff]]: authenticated channel/package history.
+- [[file:docs/operator-manual.org][Operator manual]]: daily use, configuration changes, recovery,
+  channels, generations, bootstrap, command index, and acceptance checks.
+- [[file:docs/project-history.org][Project history and references]]: completed implementation
+  slices, parked decisions, source references, and frozen material.
+- [[file:docs/audits/][Audit evidence]]: detailed source, build, activation, and
+  acceptance records.
+- [[file:docs/handoffs/][Handoffs]]: bounded transfer records for related repositories
+  and packages.
 
-Audit and history files preserve evidence; they are not an automatic roadmap.
-This README describes the current configuration and development boundaries.
+History and audit files preserve evidence; they are not an automatic roadmap.

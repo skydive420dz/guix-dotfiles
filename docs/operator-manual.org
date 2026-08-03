@@ -78,12 +78,23 @@ Choose the owner before choosing a build:
 | Home package, user service, generated theme, Fish, managed link | =ghr --print=, then accepted =ghr= |
 | kernel, boot, filesystem, recovery package, system service | =gsr --print=, then accepted =gsr= and usually reboot |
 
+=ghr= and =gsr= use =scripts/guix-reconfigure=.  Direct =guix home
+reconfigure= bypasses the repository's early Home-link preflight and is not
+the supported path.
+
 Do not update channels as a side effect of an unrelated change.  A test or
 build does not prove activation or hand acceptance.
+
+When both layers truly change, apply and verify the System boundary first,
+including a reboot when required, then apply and verify Home.
 
 After an accepted change, require a signed commit and published clean
 =origin/main= before activation.  Validate the changed surface first; use the
 broad gates only when their full historical scope is relevant.
+
+Focused checks are the default.  =scripts/shell-check --strict= and
+=scripts/guix-build-gate= also cover optional language suites; run them only
+when that complete scope is deliberately relevant.
 
 * EXWM and tty1 recovery
 
@@ -126,7 +137,9 @@ scripts/desktop-session-check
 The status surface covers EXWM/Emacs, the Home Shepherd, session D-Bus,
 PipeWire, WirePlumber, Bluetooth, NetworkManager, generations, storage, and
 recovery hints.  =scripts/desktop-session-check= requires the local graphical
-session; do not describe an SSH-only failure as an EXWM failure.
+session; do not describe an SSH-only failure as an EXWM failure.  Add
+=--require-bluetooth= only when the Bluetooth endpoint is available for that
+acceptance pass.
 
 Restart only the named user service after its failure is understood:
 
@@ -227,7 +240,9 @@ scripts/guix-generation-retention rollback-drill
 
 These commands do not authorize deletion or garbage collection.  The
 supported first response to a boot failure is selecting a prior accepted GRUB
-generation.
+generation.  =estimate= does not collect the store, but its native Guix
+=find-roots= query may remove already-dangling automatic GC-root symlinks while
+taking the snapshot; reported bytes are not guaranteed reclaim.
 
 When an explicit local rollback is required, inspect generations before
 switching:
@@ -268,6 +283,10 @@ must leave the checkout and live profiles unchanged.
 repair declaration links and create or reuse the Pull profile, but it still
 does not activate System/Home, reboot, prune generations, or collect the
 store.  Do not run =prepare= merely to rehearse documentation.
+
+For entrypoint repair alone, =scripts/guix-entrypoints bootstrap= may create or
+repair the three supported links.  Use it only for an explicit bootstrap task;
+it refuses to overwrite a conflicting regular file or directory.
 
 * Operator command index
 
@@ -313,8 +332,8 @@ mutable Home data.  This is the consciously accepted storage decision, not a
 claim that the data is safe.  See
 [[file:audits/2026-07-18-p4.2-recovery-storage-deferral.org][the recovery/storage decision]].
 
-Revisit backup when Rafael explicitly promotes it, capacity/prices improve,
-or destructive maintenance would reduce the current recovery floor.
+Revisit backup when it is explicitly promoted, capacity/prices improve, or
+destructive maintenance would reduce the current recovery floor.
 
 * Acceptance checklist
 

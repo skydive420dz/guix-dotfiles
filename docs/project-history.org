@@ -250,8 +250,8 @@ and C20 proposals were closed without implementation.
 - Accepted live batch: after exact inode, owner, type, mode, and size checks,
   two reviewed zero-byte artifacts named ~=~ and =%l= followed by a newline
   were deleted.  The unchanged 61-byte Geiser history inode was tightened from
-  mode =0644= to =0600=.  Rafael then removed the timestamped Kitty migration
-  backup after its sole 318-byte file was proven byte-identical to the retained
+  mode =0644= to =0600=.  The timestamped Kitty migration backup was then
+  removed after its sole 318-byte file was proven byte-identical to the retained
   repository source.  The final audit reports =105 pass=, =7 review=,
   =0 fail=, and =3 absent=.
 - Parked reviews: =~/.clojure=, =~/.dbus=, mixed =~/.emacs.d=,
@@ -310,8 +310,8 @@ and C20 proposals were closed without implementation.
   permission metadata, Polkit, and channel cadence are understood.  Candidate
   build, activation, reboot, and rollback are rehearsed as separate stages.
 - Boundary: every listener has an owner and the update rehearsal succeeds.
-  The accepted trusted-residence/no-lock policy remains unless Rafael changes
-  it.
+  The accepted trusted-residence/no-lock policy remains unless explicitly
+  changed.
 - State: C9a was accepted live on 2026-07-25 at published checkpoint
   =d368f5a= and System generation 88.  SSH is key-only; nftables permits LAN
   SSH, DHCP replies, local mDNS, ICMP, established traffic, and outbound
@@ -395,7 +395,7 @@ and C20 proposals were closed without implementation.
 ** C12-E — Optional Emacs Lisp and EXWM literacy companion
 
 - Result: a small offline path uses Emacs Lisp Elements, fixtures, and selected
-  =sk-*= examples to explain the configuration Rafael already operates.
+  =sk-*= examples to explain the configuration already in use.
 - Boundary: optional and non-blocking; it follows C12 and is not a prerequisite
   for any operational slice.
 
@@ -435,9 +435,9 @@ and C20 proposals were closed without implementation.
 - Result: a Guile interface to WirePlumber/PipeWire, or narrowly to =wpctl=,
   and an Emacs UI expose endpoints, streams, media keys, the Creative GS3, and
   Bluetooth audio coherently.
-- Boundary: retain the current mixer until parity passes.  HDMI audio is not a
-  required acceptance device because Rafael does not use it; do not replace
-  PipeWire or WirePlumber.
+- Boundary: retain the current mixer until parity passes.  HDMI audio was not
+  in use and was not a required acceptance device; do not replace PipeWire or
+  WirePlumber.
 - State: closed and accepted live on 2026-07-26 at implementation checkpoint
   =287de45= and stream-discovery correction =d6c7b9d=.  The configuration
   loaded automatically after generation 91 boot.  WirePlumber 0.5.15 omits
@@ -617,7 +617,7 @@ to look for before discussing it again.
   recovery route is unavailable.
 - *Backup implementation, repartitioning, migration, or assigning the second
   SSD:* revisit when important local-only data grows, affordable storage
-  becomes available, or Rafael's accepted risk changes.
+  becomes available, or the accepted risk posture changes.
 - *RSS, mail, Ledger, Calibre, and Studium-style environment expansion:*
   revisit one application at a time when a recurring real workflow appears.
 - *Replacing BlueZ, PipeWire, WirePlumber, or NetworkManager:* revisit only if
@@ -638,7 +638,7 @@ The custom P5.2b System-pruning work from D1 through D5 is outside the
 supported configuration.  C17 removed its modules, scripts, tests, fixtures,
 and audit data from =main=; the immutable branch above remains its complete
 source and evidence record.  Do not revive or use it as a prerequisite or
-blocker without a new explicit decision from Rafael.
+blocker without a new explicit decision.
 
 The repository also contains earlier Clojure, Racket, and Fennel environments
 and fixtures.  Their existence records prior work; it does not make dialect
