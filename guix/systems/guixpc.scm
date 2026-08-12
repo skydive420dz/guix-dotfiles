@@ -174,7 +174,7 @@ table inet filter {
        config => (guix-configuration
                   (inherit config)
                   (extra-options '("--cores=4"
-                                   "--max-jobs=1"))))
+                                   "--max-jobs=2"))))
 
       (elogind-service-type
        config => (elogind-configuration

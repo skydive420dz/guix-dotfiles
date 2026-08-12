@@ -245,7 +245,7 @@ profile=$(
         -C "$channel_snapshot" \
         --allow-untrusted-channels=no \
         --substitute-urls="$substitute_urls" \
-        --max-jobs=1 \
+        --max-jobs=2 \
         --cores=4
 )
 pinned_guix=$profile/bin/guix
@@ -299,14 +299,14 @@ run_promoted_packages() {
             --dry-run \
             --no-grafts \
             --substitute-urls="$substitute_urls" \
-            --max-jobs=1 \
+            --max-jobs=2 \
             --cores=4 \
             --expression="$promoted_expression"
     else
         "$pinned_guix" build \
             --no-grafts \
             --substitute-urls="$substitute_urls" \
-            --max-jobs=1 \
+            --max-jobs=2 \
             --cores=4 \
             --expression="$promoted_expression"
     fi
@@ -318,13 +318,13 @@ run_manifest() {
         "$pinned_guix" build -L "$module_dir" \
             --dry-run \
             --substitute-urls="$substitute_urls" \
-            --max-jobs=1 \
+            --max-jobs=2 \
             --cores=4 \
             --manifest="$manifest"
     else
         "$pinned_guix" build -L "$module_dir" \
             --substitute-urls="$substitute_urls" \
-            --max-jobs=1 \
+            --max-jobs=2 \
             --cores=4 \
             --manifest="$manifest"
     fi
@@ -340,7 +340,7 @@ run_manifest_command() {
             XDG_CONFIG_HOME="$isolated_config" \
             "$pinned_guix" shell -L "$module_dir" --pure \
             --substitute-urls="$substitute_urls" \
-            --max-jobs=1 \
+            --max-jobs=2 \
             --cores=4 \
             -m "$manifest" -- "$@"
     )
@@ -371,13 +371,13 @@ run_home() {
         "$pinned_guix" home -L "$module_dir" \
             --dry-run \
             --substitute-urls="$substitute_urls" \
-            --max-jobs=1 \
+            --max-jobs=2 \
             --cores=4 \
             build "$home_config"
     else
         "$pinned_guix" home -L "$module_dir" \
             --substitute-urls="$substitute_urls" \
-            --max-jobs=1 \
+            --max-jobs=2 \
             --cores=4 \
             build "$home_config"
     fi
@@ -388,13 +388,13 @@ run_system() {
         "$pinned_guix" system -L "$module_dir" \
             --dry-run \
             --substitute-urls="$substitute_urls" \
-            --max-jobs=1 \
+            --max-jobs=2 \
             --cores=4 \
             build "$system_config"
     else
         "$pinned_guix" system -L "$module_dir" \
             --substitute-urls="$substitute_urls" \
-            --max-jobs=1 \
+            --max-jobs=2 \
             --cores=4 \
             build "$system_config"
     fi
@@ -1397,7 +1397,7 @@ printf '%s\n' '== quarantined sk-guix package evaluation =='
     --dry-run \
     --no-grafts \
     --substitute-urls="$substitute_urls" \
-    --max-jobs=1 \
+    --max-jobs=2 \
     --cores=4 \
     --expression="$quarantined_expression"
 

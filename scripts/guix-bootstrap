@@ -399,7 +399,7 @@ if [ "$pull_action" = pull ]; then
         --allow-untrusted-channels=no \
         --profile="$pull_profile" \
         --substitute-urls="$substitute_urls" \
-        --max-jobs=1 \
+        --max-jobs=2 \
         --cores=4
 else
     printf '%s\n' '== exact authenticated pull: reuse =='

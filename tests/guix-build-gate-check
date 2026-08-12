@@ -960,7 +960,7 @@ log=$(cat "$fake_log")
 contains "$log" 'time-machine'
 contains "$log" '-q'
 contains "$log" '--allow-untrusted-channels=no'
-contains "$log" '--max-jobs=1'
+contains "$log" '--max-jobs=2'
 contains "$log" '--cores=4'
 contains "$log" 'show'
 contains "$log" 'emacs-exwm'
