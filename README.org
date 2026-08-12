@@ -13,8 +13,8 @@ collection, research project, or authorization to build infrastructure without
 a practical benefit to the running system.
 
 The supported target is the Lenovo ideacentre 510A-15ARR named =guixpc=.  Its
-hardware and original configuration findings are recorded in the
-[[file:docs/audits/2026-07-12-full-configuration-audit.org][full configuration audit]].
+[[file:docs/audits/2026-08-12-hardware-baseline-refresh.org][current hardware baseline]] reflects the Ryzen 5 2400G and BIOS update; the
+[[file:docs/audits/2026-07-12-full-configuration-audit.org][full configuration audit]] preserves the original configuration findings.
 
 Current operating model:
 

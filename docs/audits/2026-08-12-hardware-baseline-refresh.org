@@ -1,0 +1,137 @@
+#+title: GuixPC hardware baseline refresh
+#+date: 2026-08-12
+#+status: complete
+
+* Outcome and boundary
+
+This record supersedes the hardware identity in the July baselines after the
+CPU and firmware changes.  It does not rewrite those dated captures.
+
+The refresh was observational.  It changed no Guix declaration, generation,
+profile, service, boot option, clocksource, or firmware.  The repository was
+clean and synchronized before and after collection.
+
+* Current identity
+
+| Item | Observed value |
+|------+----------------|
+| Host | Lenovo ideacentre 510A-15ARR =90J0000PUS=; =guixpc= |
+| Mainboard | Lenovo =36EE= |
+| Firmware | =O3TKT50A= dated 2020-09-01 |
+| Processor | AMD Ryzen 5 2400G with Radeon Vega Graphics |
+| Topology | 1 socket; 4 physical cores; 8 logical CPUs; 1 NUMA node |
+| Frequency policy | =acpi-cpufreq=; =schedutil=; 1.6--3.9 GHz; boost enabled |
+| Microcode | =0x810100b= |
+| Memory | 30 GiB usable; 26 GiB available at capture; 3.7 GiB swap unused |
+| Graphics | Raven Ridge =1002:15dd=; =amdgpu= |
+| Display | =HDMI-A-0=; 3440x1440 at 100 Hz |
+| Storage | Two Samsung 860 EVO 250 GB SATA SSDs; second SSD remains unmounted |
+| Kernel | Linux =7.1.4= |
+| Clocksource | =hpet=; available =hpet acpi_pm= |
+
+Current, booted, and profile-selected System all resolved to generation 92:
+
+#+begin_example
+/gnu/store/8znkr3c44jll8b3b24ndpf9q7z01c5b4-system
+#+end_example
+
+Home generation 60 and pull generation 6 were current.  The repository was
+=main= at =3ef2eea68c7964bc5cfb60f04dc419c961e89b28=, equal to =origin/main=.
+The live entrypoint checks passed.
+
+Pinned channel revisions were:
+
+| Channel | Revision |
+|---------+----------|
+| Guix | =47b41dced835020f803dc56f52e949c94d2f7061= |
+| Nonguix | =73baab37361b3a81f326aa3fdec78840f5acc577= |
+| sk-guix | =b84ff24a515b2b6d0db85c0da30960c96e20ad22= |
+
+* Change from the July hardware capture
+
+| Surface | July capture | Current capture | Result |
+|---------+--------------+-----------------+--------|
+| CPU | Ryzen 3 2200G; 4 cores/4 threads | Ryzen 5 2400G; 4 cores/8 threads | SMT and 3.9 GHz boost are now available |
+| BIOS | =O3TKT34A= | =O3TKT50A= | Vendor firmware update accepted |
+| Microcode | =0x8101007= | =0x810100b= | New revision active |
+| GPU/display | Raven Ridge; 3440x1440 at 100 Hz | Same | Accepted display path preserved |
+| Build policy | =--max-jobs=1 --cores=4= | Same | Re-measure; do not infer tuning from topology |
+| Clocksource | TSC rejected; HPET selected | Same | Firmware update did not remove the fallback |
+| IRQ 7/pinctrl | 100,000 interrupts, then disabled | Not present in this boot log or =/proc/interrupts= | Symptom absent on this post-flash boot; permanence unknown |
+
+The root/store filesystem was 54 percent used with 33 GiB available.  Home was
+3 percent used with 138 GiB available.  Point temperatures were 37--39 C for
+CPU/GPU, 36--37 C for Wi-Fi, and 28--30 C for the two drive sensors.  These are
+natural-state samples, not sustained-load measurements.
+
+* Boot-edge findings
+
+The privileged capture supplied for the current boot and the later unprivileged
+runtime checks establish:
+
+- TSC was again rejected for frequency skew and Linux switched to HPET.
+- The TPM CRB ACPI resource mismatch and probe error =-16= remain; no
+  =/dev/tpm*= device exists and =/sys/class/tpm= is empty.
+- The AMD platform-security device is bound to =ccp=, but the boot log still
+  reports that PSP access failed.  No SEV device is present.
+- The exact early =init[1]= Guile address-boundary probe remains the previously
+  attributed handled BDWGC probe.  Shepherd is healthy as PID 1.
+- The former IRQ 7 =pinctrl_amd= storm is absent from both the filtered boot
+  capture and the live interrupt table after more than one day of uptime.
+- No hardware-error or machine-check event appeared in the filtered capture;
+  the live interrupt table showed zero machine-check exceptions.
+
+The IRQ result is one-boot evidence, not proof that firmware permanently fixed
+the route.  TSC, TPM, and PSP remain platform/firmware findings; this refresh
+does not select kernel parameters or local workarounds.
+
+* Build-concurrency measurement
+
+The CPU now exposes eight logical CPUs while Guix still permits one build job
+with up to four reported cores.  A bounded comparison rebuilt the same upstream
+Zstd 1.5.7 and SQLite 3.53.1 derivations with:
+
+#+begin_example
+guix build --check --no-substitutes --no-offload --no-grafts \
+  --max-jobs=M --cores=C ZSTD_DRV SQLITE_DRV
+#+end_example
+
+Both outputs and their inputs were already present.  Each scored run therefore
+rebuilt exactly those two independent derivations and checked reproducibility.
+
+| Case | Jobs x cores | Wall time | Change from current | Peak builders | Peak temperature | Emacs RPC median / p95 / max |
+|------+--------------+-----------+---------------------+---------------+------------------+------------------------------|
+| Current | 1 x 4 | 144.14 s | baseline | 1 | 60.0 C | 7.14 / 8.73 / 9.30 ms |
+| Wider job | 1 x 8 | 140.94 s | 2.2 percent faster | 1 | 65.4 C | 8.40 / 15.66 / 19.46 ms |
+| Parallel jobs | 2 x 4 | 94.96 s | 34.1 percent faster | 2 | 63.9 C | 6.60 / 8.91 / 9.80 ms |
+
+All three checks passed.  Swap remained unused, Emacs answered every probe, and
+at least 24.7 GiB remained available.  The =2 x 4= run's sampled builder RSS
+peaked at 1.46 GiB, compared with about 0.90 GiB for either one-job run.
+
+The measured candidate is =--max-jobs=2 --cores=4=.  Giving one build eight
+cores produced only a 2.2 percent change; allowing two four-core builds produced
+a clear 34.1 percent reduction for this two-derivation workload.  This record
+does not change or activate the daemon policy.
+
+The complete logs are retained outside the repository under:
+
+#+begin_example
+~/.local/state/sk-guix-build-concurrency/2026-08-12-2400g/
+#+end_example
+
+The initial custom =kitty-latest= candidate was excluded after its =--check=
+rebuild differed from the existing output.  Pinned upstream Guix provides Kitty
+0.46.2 while =sk-guix= provides 0.47.4; replacing the custom package with the
+older upstream package is a separate package decision, not a concurrency test.
+
+* Evidence limits
+
+- Root-only kernel logs were not re-read during the 2026-08-12 SSH collection;
+  the boot-edge text above comes from the supplied privileged capture for this
+  same post-flash boot and is qualified by current runtime state.
+- DIMM model/speed and fan RPM were unavailable.
+- Point temperatures, free memory, and load are not stress-test results.
+- The concurrency result is one scored run per case on two fixed native builds.
+  Emacs RPC latency is not a physical keyboard-to-frame acceptance test.
+- Historical July audits retain their original 2200G and =O3TKT34A= facts.
