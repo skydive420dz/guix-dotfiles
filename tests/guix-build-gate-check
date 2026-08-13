@@ -552,10 +552,10 @@ write_fake_manifest() {
 reset_fake_system_manifest() {
     write_fake_manifest "$fake_system_manifest" \
         bluez curl emacs emacs-exwm fish git guile guile-colorized \
-        guile-readline kitty-latest ncurses picom ripgrep vim xrandr xset \
+        guile-readline kitty ncurses picom ripgrep vim xrandr xset \
         xwallpaper
-    printf '%s\t1\tterminfo\t/gnu/store/fake-kitty-latest-terminfo\n' \
-        kitty-latest >>"$fake_system_manifest"
+    printf '%s\t1\tterminfo\t/gnu/store/fake-kitty-terminfo\n' \
+        kitty >>"$fake_system_manifest"
 }
 
 reset_fake_home_manifest() {
@@ -645,14 +645,7 @@ write_channels() {
   (introduction
    (make-channel-introduction
     "2222222222222222222222222222222222222222"
-    (openpgp-fingerprint "BBBB"))))
- (channel
-  (name 'sk-guix)
-  (commit "cccccccccccccccccccccccccccccccccccccccc")
-  (introduction
-   (make-channel-introduction
-    "3333333333333333333333333333333333333333"
-    (openpgp-fingerprint "CCCC")))))
+    (openpgp-fingerprint "BBBB")))))
 EOF
 }
 
@@ -714,9 +707,6 @@ commit: $guix_commit
 
 name: nonguix
 commit: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-
-name: sk-guix
-commit: cccccccccccccccccccccccccccccccccccccccc
 EOF_DESCRIBE
         ;;
     show)
@@ -729,8 +719,6 @@ EOF_DESCRIBE
         ;;
     build)
         case $* in
-            *kitty-latest*) stage=promoted ;;
-            *fish-latest*) stage=fish ;;
             *core-lisp.scm*) stage=core-manifest ;;
             *jvm-lisp.scm*) stage=jvm-manifest ;;
             *racket.scm*) stage=racket-manifest ;;
@@ -964,10 +952,6 @@ contains "$log" '--max-jobs=2'
 contains "$log" '--cores=4'
 contains "$log" 'show'
 contains "$log" 'emacs-exwm'
-contains "$log" 'kitty-latest'
-contains "$log" 'go-github-com-emmansun-base64'
-contains "$log" 'go-github-com-sgtdi-fswatcher'
-contains "$log" 'fish-latest'
 contains "$log" "$sandbox_repo/guix/manifests/core-lisp.scm"
 contains "$log" "$sandbox_repo/guix/manifests/jvm-lisp.scm"
 contains "$log" "$sandbox_repo/guix/manifests/racket.scm"
@@ -1196,12 +1180,12 @@ done
 
 for package_output in out terminfo; do
     remove_fake_manifest_package_output "$fake_system_manifest" \
-        kitty-latest "$package_output"
+        kitty "$package_output"
     if output=$(run_gate 2>&1); then
-        fail "System manifest missing kitty-latest:$package_output passed the gate"
+        fail "System manifest missing kitty:$package_output passed the gate"
     fi
     contains "$output" \
-        "System profile lacks declared package output: kitty-latest:$package_output"
+        "System profile lacks declared package output: kitty:$package_output"
     reset_fake_system_manifest
 done
 
@@ -1529,8 +1513,8 @@ dry_run_count=$(printf '%s\n' "$plan_log" | awk '
     }
     END { print count + 0 }
 ')
-[ "$dry_run_count" -eq 8 ] || \
-    fail "plan used --dry-run $dry_run_count times; expected 8"
+[ "$dry_run_count" -eq 6 ] || \
+    fail "plan used --dry-run $dry_run_count times; expected 6"
 
 mv "$sandbox_repo/fixtures/racket/negative/broken-doc.scrbl" \
     "$sandbox_repo/fixtures/racket/negative/broken-doc.scrbl.missing"
@@ -1573,7 +1557,7 @@ for required in \
     chmod +x "$required"
 done
 
-for stage in channels provenance exwm promoted fish core-manifest jvm-manifest \
+for stage in channels provenance exwm core-manifest jvm-manifest \
     racket-manifest fennel-manifest core-runtime guile-fixture \
     common-lisp-fixture jvm-runtime clojure-fixture racket-runtime \
     racket-fixture fennel-runtime fennel-fixture home system theme-home \
@@ -1583,7 +1567,7 @@ for stage in channels provenance exwm promoted fish core-manifest jvm-manifest \
         fail "$stage failure passed the gate"
     fi
     case $stage in
-        channels|provenance|exwm|promoted|fish|core-manifest|jvm-manifest|racket-manifest|fennel-manifest|core-runtime|guile-fixture|common-lisp-fixture|jvm-runtime|clojure-fixture|racket-runtime|racket-fixture|fennel-runtime|fennel-fixture)
+        channels|provenance|exwm|core-manifest|jvm-manifest|racket-manifest|fennel-manifest|core-runtime|guile-fixture|common-lisp-fixture|jvm-runtime|clojure-fixture|racket-runtime|racket-fixture|fennel-runtime|fennel-fixture)
             if logged_command home; then
                 fail "$stage failure continued into Home"
             fi
@@ -1633,7 +1617,7 @@ write_channels moving
 if output=$(run_gate 2>&1); then
     fail 'malformed channel commit passed the gate'
 fi
-contains "$output" 'must pin guix, nonguix, and sk-guix'
+contains "$output" 'must pin guix and nonguix'
 if [ -s "$fake_log" ]; then
     fail 'invalid channel pins invoked Guix'
 fi

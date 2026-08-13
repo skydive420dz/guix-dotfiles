@@ -69,17 +69,7 @@ cat >"$channels" <<'EOF'
    (make-channel-introduction
     "2222222222222222222222222222222222222222"
     (openpgp-fingerprint
-     "BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB"))))
- (channel
-  (name 'sk-guix)
-  (url "https://example.org/sk-guix.git")
-  (branch "main")
-  (commit "cccccccccccccccccccccccccccccccccccccccc")
-  (introduction
-   (make-channel-introduction
-    "3333333333333333333333333333333333333333"
-    (openpgp-fingerprint
-     "CCCC CCCC CCCC CCCC CCCC CCCC CCCC CCCC CCCC CCCC")))))
+     "BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB")))))
 EOF
 cp "$channels" "$tmp/locked-channels.scm"
 cp "$system_config" "$tmp/locked-system.scm"
@@ -185,13 +175,6 @@ branch: master
 commit: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 introductioncommit: 2222222222222222222222222222222222222222
 introductionsigner: BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB BBBB
-
-name: sk-guix
-url: https://example.org/sk-guix.git
-branch: main
-commit: cccccccccccccccccccccccccccccccccccccccc
-introductioncommit: 3333333333333333333333333333333333333333
-introductionsigner: CCCC CCCC CCCC CCCC CCCC CCCC CCCC CCCC CCCC CCCC
 EOF_DESCRIBE
         ;;
     pull)

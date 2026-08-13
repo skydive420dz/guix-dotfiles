@@ -44,8 +44,6 @@ lisp_shell=$repo/scripts/guix-lisp-shell
 guile_init=$repo/guile/guile
 frontend_input=${SK_GUIX_FRONTEND_PROFILE:-$home/.config/guix/current}
 substitute_urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
-promoted_expression='(list (@ (sk packages terminals) kitty-latest) (@ (sk packages golang) go-github-com-emmansun-base64) (@ (sk packages golang) go-github-com-sgtdi-fswatcher))'
-quarantined_expression='(@ (sk packages shells) fish-latest)'
 
 for file in "$channels" "$home_config" "$system_config" \
     "$module_dir/sk/development-tiers.scm" \
@@ -206,13 +204,12 @@ if ! awk '
     NF != 2 || length($2) != 40 || $2 ~ /[^0-9a-f]/ { bad = 1 }
     $1 == "guix" { guix += 1 }
     $1 == "nonguix" { nonguix += 1 }
-    $1 == "sk-guix" { sk_guix += 1 }
     END {
-        exit !(!bad && NR == 3 && guix == 1 && nonguix == 1 && sk_guix == 1)
+        exit !(!bad && NR == 2 && guix == 1 && nonguix == 1)
     }
 ' "$expected_channels"; then
     printf '%s\n' \
-        'guix-build-gate: channels.scm must pin guix, nonguix, and sk-guix to unique 40-hex commits' >&2
+        'guix-build-gate: channels.scm must pin guix and nonguix to unique 40-hex commits' >&2
     exit 2
 fi
 
@@ -220,7 +217,7 @@ introduction_count=$(awk '
     /^[[:space:]]*\(introduction([[:space:]]|$)/ { count += 1 }
     END { print count + 0 }
 ' "$channel_snapshot")
-if [ "$introduction_count" -ne 3 ]; then
+if [ "$introduction_count" -ne 2 ]; then
     printf '%s\n' \
         'guix-build-gate: every pinned channel must carry an introduction' >&2
     exit 2
@@ -265,7 +262,7 @@ awk '
 
 if ! awk '
     NF != 2 || length($2) != 40 || $2 ~ /[^0-9a-f]/ { bad = 1 }
-    END { exit !(NR == 3 && !bad) }
+    END { exit !(NR == 2 && !bad) }
 ' "$actual_channels"; then
     printf '%s\n' 'guix-build-gate: pinned Guix returned invalid channel provenance' >&2
     exit 1
@@ -292,25 +289,6 @@ if [ "$exwm_version" != 0.35 ]; then
     exit 1
 fi
 printf 'Reviewed EXWM version: %s\n' "$exwm_version"
-
-run_promoted_packages() {
-    if [ "$plan" -eq 1 ]; then
-        "$pinned_guix" build \
-            --dry-run \
-            --no-grafts \
-            --substitute-urls="$substitute_urls" \
-            --max-jobs=2 \
-            --cores=4 \
-            --expression="$promoted_expression"
-    else
-        "$pinned_guix" build \
-            --no-grafts \
-            --substitute-urls="$substitute_urls" \
-            --max-jobs=2 \
-            --cores=4 \
-            --expression="$promoted_expression"
-    fi
-}
 
 run_manifest() {
     manifest=$1
@@ -865,9 +843,9 @@ validate_realized_package_ownership() {
     require_profile_packages "$system_records" System "$declared_recovery"
     require_profile_packages "$home_records" Home "$declared_home"
     for package_output in out terminfo; do
-        if ! profile_has_package_output "$system_records" kitty-latest \
+        if ! profile_has_package_output "$system_records" kitty \
             "$package_output"; then
-            printf 'guix-build-gate: System profile lacks declared package output: kitty-latest:%s\n' \
+            printf 'guix-build-gate: System profile lacks declared package output: kitty:%s\n' \
                 "$package_output" >&2
             exit 1
         fi
@@ -1388,18 +1366,6 @@ validate_candidate_emacs_fennel() {
     printf '%s\n' 'Candidate Emacs Fennel backend: PASS'
     printf '%s\n' 'Candidate Emacs Fennel deliberate-failure cleanup: PASS'
 }
-
-printf '%s\n' '== promoted sk-guix packages =='
-run_promoted_packages
-
-printf '%s\n' '== quarantined sk-guix package evaluation =='
-"$pinned_guix" build \
-    --dry-run \
-    --no-grafts \
-    --substitute-urls="$substitute_urls" \
-    --max-jobs=2 \
-    --cores=4 \
-    --expression="$quarantined_expression"
 
 for manifest in core-lisp jvm-lisp racket fennel; do
     printf '== %s development manifest ==\n' "$manifest"

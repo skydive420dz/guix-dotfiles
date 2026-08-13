@@ -79,8 +79,10 @@ sk-guix  b006225faf6835f858128690e35a60475f620639
 At handoff time, =sk-guix= had no channel introduction or signing setup.  That
 observation was later superseded: authenticated history was established at
 introductory commit =eaade3680892ce74ebae68f4922cd0eb4a463a17= with signer
-=6B094D15B02E54B0F6B5E9E86F83FC62D232E5EC=.  Current trust state is defined
-by =guix/channels.scm= and verified in the full configuration audit.
+=6B094D15B02E54B0F6B5E9E86F83FC62D232E5EC=.  That trust state was verified
+in the full configuration audit.  On 2026-08-12, the source configuration
+retired =sk-guix= from its active channel lock while preserving this repository,
+remote, and authenticated history for possible future use.
 
 * Package scope at handoff time
 
@@ -240,9 +242,15 @@ kitty 0.47.4 created by Kovid Goyal
    - do not add Brave to =sk-guix= unless explicitly deciding to maintain a
      browser package.
 
-* Current package-ownership policy
+* Superseded package-ownership policy
 
-The current maintained and promoted scope of =sk-guix= is =kitty-latest= only.
-Other packages remain on upstream Guix/Nonguix unless explicitly accepted for
-maintenance.  The =fish-latest= recipe is a quarantined evaluation, not a
-promoted or owned package in the current channel scope.
+Until 2026-08-12, the maintained and promoted scope of =sk-guix= was
+=kitty-latest= only.  The source configuration now uses upstream Guix Kitty and
+keeps =sk-guix= available but inactive.  The =fish-latest= recipe remains
+preserved in that repository; it is no longer evaluated by the active build
+gate.  This deliberately accepts the older Kitty 0.46.2 security baseline:
+later fixes for CVE-2026-33633, CVE-2026-33642, CVE-2026-42850,
+CVE-2026-42851, CVE-2026-54055, and CVE-2026-54057 are absent.  CVE-2026-54056
+applies to the newer drag-and-drop feature, which 0.46.2 does not contain.
+Revisit when upstream Guix carries equivalent fixes or reactivate =sk-guix= if
+the accepted risk becomes unacceptable first.

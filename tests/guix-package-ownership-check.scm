@@ -110,8 +110,8 @@
  (string-contains
   system-source
   (string-append
-   "(list kitty-latest\n"
-   "            (list kitty-latest \"terminfo\"))"))
+   "(list kitty\n"
+   "            (list kitty \"terminfo\"))"))
  "System declaration must retain Kitty's default output and add terminfo")
 (assert
  (string-contains home-source

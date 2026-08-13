@@ -209,12 +209,11 @@ if ! printf '%s\n' "$expected_channels" | awk '
     $2 == "<missing>" || $3 == "<missing>" { bad = 1 }
     $1 == "guix" { guix += 1 }
     $1 == "nonguix" { nonguix += 1 }
-    $1 == "sk-guix" { sk_guix += 1 }
     END {
-        exit !(!bad && NR == 3 && guix == 1 && nonguix == 1 && sk_guix == 1)
+        exit !(!bad && NR == 2 && guix == 1 && nonguix == 1)
     }
 '; then
-    fail 'channels.scm must fully authenticate and pin guix, nonguix, and sk-guix'
+    fail 'channels.scm must fully authenticate and pin guix and nonguix'
 fi
 
 if [ -r "$acl" ] && grep -q "$nonguix_key_q" "$acl"; then

@@ -83,7 +83,7 @@ emacs_version=$(LC_ALL=C emacs --version | sed -n '1p')
         "$fish_version" >&2
     exit 1
 }
-[ "$kitty_version" = 'kitty 0.47.4 created by Kovid Goyal' ] || {
+[ "$kitty_version" = 'kitty 0.46.2 created by Kovid Goyal' ] || {
     printf 'theme-check: Kitty parser version drift: %s\n' \
         "$kitty_version" >&2
     exit 1

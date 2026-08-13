@@ -18,14 +18,4 @@
    (make-channel-introduction
     "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
     (openpgp-fingerprint
-     "2A39 3FFF 68F4 EF7A 3D29 12AF 6F51 20A0 22FB B2D5"))))
- (channel
-  (name 'sk-guix)
-  (url "https://github.com/skydive420dz/sk-guix.git")
-  (branch "main")
-  (commit "b84ff24a515b2b6d0db85c0da30960c96e20ad22")
-  (introduction
-   (make-channel-introduction
-    "eaade3680892ce74ebae68f4922cd0eb4a463a17"
-    (openpgp-fingerprint
-     "6B09 4D15 B02E 54B0 F6B5  E9E8 6F83 FC62 D232 E5EC")))))
+     "2A39 3FFF 68F4 EF7A 3D29 12AF 6F51 20A0 22FB B2D5")))))

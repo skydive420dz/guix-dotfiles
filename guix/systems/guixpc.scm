@@ -9,7 +9,7 @@
              (guix packages)
              (nonguix transformations)
              (sk emacs)
-             (sk packages terminals))
+             (gnu packages terminals))
 (use-service-modules cups dbus desktop linux networking ssh sound xorg)
 
 (load (string-append (dirname (current-filename))
@@ -110,8 +110,8 @@ table inet filter {
      (append
       ;; Kitty stays in the System recovery floor because EXWM's terminal
       ;; launcher requires it.  Home owns normal applications and tooling.
-      (list kitty-latest
-            (list kitty-latest "terminfo"))
+      (list kitty
+            (list kitty "terminfo"))
       (map sk:package-for-specification
            %guixpc-recovery-package-specifications)
 

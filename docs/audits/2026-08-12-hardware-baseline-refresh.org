@@ -124,6 +124,15 @@ The initial custom =kitty-latest= candidate was excluded after its =--check=
 rebuild differed from the existing output.  Pinned upstream Guix provides Kitty
 0.46.2 while =sk-guix= provides 0.47.4; replacing the custom package with the
 older upstream package is a separate package decision, not a concurrency test.
+That separate source decision was accepted later on 2026-08-12: =sk-guix= is
+preserved but removed from the active channel and build-gate policy.  No System
+build, activation, or runtime acceptance is claimed by that decision.  The
+accepted tradeoff is an older Kitty security baseline: 0.46.2 lacks later fixes
+for CVE-2026-33633, CVE-2026-33642, CVE-2026-42850, CVE-2026-42851,
+CVE-2026-54055, and CVE-2026-54057; CVE-2026-54056 affects the newer
+drag-and-drop feature absent from 0.46.2.  Revisit when upstream Guix carries
+equivalent fixes or reactivate =sk-guix= if the accepted risk becomes
+unacceptable first.
 
 * Evidence limits
 
