@@ -24,7 +24,8 @@
   ;; discovery prefix-only.  M-x should find commands containing the text typed.
   (setq ivy-initial-inputs-alist
         (assq-delete-all 'counsel-M-x ivy-initial-inputs-alist))
-  (setq ivy-re-builders-alist
+  (setq ivy-use-virtual-buffers t
+        ivy-re-builders-alist
         '((counsel-M-x . ivy--regex-ignore-order)
           (counsel-switch-buffer . ivy--regex-ignore-order)
           (counsel-ibuffer . ivy--regex-ignore-order)
@@ -86,6 +87,10 @@
      (ivy-rich-counsel-variable-docstring (:face font-lock-doc-face))))
   (ivy-rich-mode 1))
 
+(defun sk/counsel-m-x-history ()
+  "Return recently used commands for `counsel-M-x'."
+  counsel-M-x-history)
+
 ;; Counsel supplies Ivy-backed replacements for common Emacs commands.
 (use-package counsel
   :bind (("M-x" . counsel-M-x)
@@ -98,6 +103,9 @@
   ;; M-x remains contains/ignore-order search instead of prefix-only search.
   (setq ivy-initial-inputs-alist
         (assq-delete-all 'counsel-M-x ivy-initial-inputs-alist))
+  (ivy-set-sources 'counsel-M-x
+                   '((sk/counsel-m-x-history)
+                     (original-source)))
   ;; Desktop launchers should show application names and descriptions, not
   ;; Guix store paths reconstructed from their Exec lines.
   (setq counsel-linux-app-format-function
