@@ -16,10 +16,11 @@
 ;; invocation name, but pass its full graftable path so the dump finds the
 ;; matching native-lisp tree.
 (define-public emacs/graft-safe
-  (package/inherit emacs
+  (package/inherit emacs-next
+    (name "emacs")
     (arguments
      (substitute-keyword-arguments
-         (package-arguments emacs)
+         (package-arguments emacs-next)
        ((#:phases phases)
         #~(modify-phases #$phases
             (add-after 'restore-emacs-pdmp 'preserve-grafted-exec-directory

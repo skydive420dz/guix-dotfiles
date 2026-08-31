@@ -243,7 +243,7 @@ When START-REPL is non-nil, start or switch to its pinned Geiser REPL."
     (when (yes-or-no-p (format "Reset %s? " exercise))
       (copy-file starter solution t)
       (sk/scheme-studio--set-complete exercise nil)
-      (when-let ((buffer (find-buffer-visiting solution)))
+      (when-let* ((buffer (find-buffer-visiting solution)))
         (with-current-buffer buffer
           (revert-buffer :ignore-auto :noconfirm)))
       (message "Scheme Studio reset: %s" exercise))))

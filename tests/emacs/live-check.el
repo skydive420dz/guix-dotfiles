@@ -50,7 +50,7 @@
               (file-name-nondirectory
                (directory-file-name org-package)))))
        (org-version-mismatch-warning
-        (when-let ((warnings-buffer (get-buffer "*Warnings*")))
+        (when-let* ((warnings-buffer (get-buffer "*Warnings*")))
           (with-current-buffer warnings-buffer
             (save-excursion
               (goto-char (point-min))
@@ -201,7 +201,7 @@
                 (with-current-buffer buffer
                   (and (derived-mode-p 'fennel-proto-repl-mode)
                        (fboundp 'fennel-proto-repl--process-buffer)
-                       (when-let ((process-buffer
+                       (when-let* ((process-buffer
                                    (fennel-proto-repl--process-buffer)))
                          (process-live-p
                           (get-buffer-process process-buffer)))))))

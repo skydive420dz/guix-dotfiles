@@ -4,7 +4,7 @@
 (require 'subr-x)
 (require 'xref)
 
-(defconst sk/window-reviewed-emacs-major-version 30
+(defconst sk/window-reviewed-emacs-major-version 31
   "Emacs major release reviewed for the Xref result adapter.")
 
 (defvar sk/window-xref-compatible-p
@@ -312,7 +312,7 @@ Dired, Help, Eshell, and diagnostic panels."
           (delq nil
                 (mapcar (lambda (window)
                           (unless (eq window selected)
-                            (when-let ((rank (sk/window-direction-rank
+                            (when-let* ((rank (sk/window-direction-rank
                                                direction selected window)))
                               (cons rank window))))
                         (window-list nil 'no-minibuf)))))
@@ -435,7 +435,7 @@ With PROMPT, ask for a directory."
         treemacs-width 35
         treemacs-is-never-other-window t
         treemacs-width-is-initially-locked t)
-  (if-let ((window (and (fboundp 'treemacs-get-local-window)
+  (if-let* ((window (and (fboundp 'treemacs-get-local-window)
                         (treemacs-get-local-window))))
       (select-window window)
     (treemacs)))

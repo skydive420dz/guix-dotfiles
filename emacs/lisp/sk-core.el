@@ -129,7 +129,7 @@ receive a literal global key through the explicit EXWM send-next command."
 
 (defun sk/log--compilation-start (process)
   "Add a timestamped header to compilation buffer PROCESS."
-  (when-let ((buffer (process-buffer process)))
+  (when-let* ((buffer (process-buffer process)))
     (with-current-buffer buffer
       (let ((inhibit-read-only t))
         (save-excursion
@@ -190,7 +190,7 @@ receive a literal global key through the explicit EXWM send-next command."
   (let ((file (sk/current-file)))
     (if (not relative)
         file
-      (if-let ((project (project-current nil)))
+      (if-let* ((project (project-current nil)))
           (file-relative-name file (project-root project))
         (file-name-nondirectory file)))))
 

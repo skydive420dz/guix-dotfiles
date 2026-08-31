@@ -165,7 +165,7 @@
       (lsp)))
   (sk/fennel-check-wait-for
    (lambda ()
-     (when-let ((workspace (sk/fennel-check-workspace buffer)))
+     (when-let* ((workspace (sk/fennel-check-workspace buffer)))
        (and (eq (lsp--workspace-status workspace) 'initialized)
             workspace)))
    (format "initialized fennel-ls for %s" root) 90))

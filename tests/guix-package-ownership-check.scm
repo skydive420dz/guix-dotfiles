@@ -155,6 +155,18 @@
  "Emacs variant no longer repairs its grafted invocation directory")
 (assert
  (string-contains emacs-module-source
+                  "(package/inherit emacs-next")
+ "Emacs variant no longer inherits the reviewed Emacs Next package")
+(assert
+ (string-contains emacs-module-source
+                  "(name \"emacs\")")
+ "Emacs variant no longer preserves the shared package name")
+(assert
+ (string-contains emacs-module-source
+                  "(package-arguments emacs-next)")
+ "Emacs variant no longer reuses the Emacs Next build arguments")
+(assert
+ (string-contains emacs-module-source
                   "(\"exec -a \\\"\\\\$\\\\{0##\\\\*/\\\\}\\\"\")")
  "Emacs variant no longer matches Guix's generated wrapper")
 (assert

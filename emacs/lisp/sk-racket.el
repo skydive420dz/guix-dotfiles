@@ -235,7 +235,7 @@ configuration callback would then select the fallback slash back end."
                   company-files
                   company-keywords
                   company-dabbrev-code)))
-  (when-let ((root (sk/lisp--project-root)))
+  (when-let* ((root (sk/lisp--project-root)))
     (setq-local sk/racket-project-root root
                 racket-repl-buffer-name
                 (sk/racket--repl-buffer-name root))
@@ -286,7 +286,7 @@ configuration callback would then select the fallback slash back end."
         ;; Racket Mode creates the logical REPL buffer synchronously even though
         ;; its run request completes asynchronously.  Tag it immediately so no
         ;; other project's command can claim it during startup.
-        (when-let ((buffer (get-buffer (sk/racket--repl-buffer-name root))))
+        (when-let* ((buffer (get-buffer (sk/racket--repl-buffer-name root))))
           (with-current-buffer buffer
             (setq-local sk/racket-project-root root)))))))
 

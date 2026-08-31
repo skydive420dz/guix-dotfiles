@@ -129,7 +129,7 @@
 
 (setq initial-buffer-choice #'sk/dashboard-buffer)
 
-(when-let ((buffer (get-buffer sk/dashboard-buffer-name)))
+(when-let* ((buffer (get-buffer sk/dashboard-buffer-name)))
   (with-current-buffer buffer
     (sk/dashboard--quiet-buffer)))
 

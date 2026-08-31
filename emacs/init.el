@@ -1,3 +1,5 @@
+;;; init.el --- GuixPC Emacs configuration -*- lexical-binding: nil; -*-
+
 ;;; Package setup
 
 ;; Emacs packages are installed by Guix. This file only wires behavior.

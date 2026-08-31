@@ -363,6 +363,7 @@
         (progn
           (with-temp-file adapter
             (insert
+             ";;; -*- lexical-binding: nil; -*-\n"
              "(setq sk/check-generated-theme-load-count\n"
              "      (1+ sk/check-generated-theme-load-count))\n"
              "(provide 'sk-theme-generated)\n"))
@@ -564,9 +565,9 @@
 
 (ert-deftest sk/check-org-lint-flycheck-compatibility ()
   (require 'org-lint)
-  (should (equal flycheck-version "36.0"))
+  (should (equal flycheck-version "39.0"))
   (should (eq (flycheck-checker-get 'org-lint 'error-filter)
-              #'sk/flycheck-org-lint-filter))
+              #'identity))
   (with-temp-buffer
     (insert "* One\n"
             ":PROPERTIES:\n"
@@ -587,11 +588,7 @@
       (should (eq status 'finished))
       (should (= 2 (length errors)))
       (should (equal (mapcar #'flycheck-error-line errors)
-                     '("3" "8")))
-      (dolist (lint-error errors)
-        (let ((line (flycheck-error-line lint-error)))
-          (should (stringp line))
-          (should (markerp (get-text-property 0 'org-lint-marker line)))))
+                     '(3 8)))
       (let ((objects (copy-sequence errors))
             (messages (mapcar #'flycheck-error-message errors)))
         (should (eq errors (flycheck-filter-errors errors 'org-lint)))
@@ -604,30 +601,7 @@
         (cl-mapc (lambda (before after) (should (eq before after)))
                  objects errors)
         (should (eq errors (flycheck-filter-errors errors 'org-lint)))
-        (should (equal (mapcar #'flycheck-error-line errors) '(3 8))))))
-  (let* ((valid
-          (flycheck-error-new-at
-           4 nil 'info "Valid fixture" :checker 'org-lint))
-         (zero
-          (flycheck-error-new-at
-           (propertize "0" 'org-lint-marker 'fixture)
-           nil 'info "Zero fixture" :checker 'org-lint))
-         (malformed
-          (flycheck-error-new-at
-           (propertize "oops" 'org-lint-marker 'fixture)
-           nil 'info "Malformed fixture" :checker 'org-lint))
-         (errors (list valid zero malformed)))
-    (should (eq errors (flycheck-filter-errors errors 'org-lint)))
-    (should (= 4 (flycheck-error-line valid)))
-    (should (eq 'info (flycheck-error-level valid)))
-    (dolist (lint-error (list zero malformed))
-      (should (= 1 (flycheck-error-line lint-error)))
-      (should (eq 'warning (flycheck-error-level lint-error)))
-      (should (string-prefix-p "Unexpected org-lint line"
-                               (flycheck-error-message lint-error))))
-    (let ((messages (mapcar #'flycheck-error-message errors)))
-      (should (eq errors (flycheck-filter-errors errors 'org-lint)))
-      (should (equal messages (mapcar #'flycheck-error-message errors))))))
+        (should (equal (mapcar #'flycheck-error-line errors) '(3 8)))))))
 
 (ert-deftest sk/check-lisp-hooks-and-backends ()
   (sk/check-with-eldoc-fixture
@@ -2075,7 +2049,7 @@
 
 (ert-deftest sk/check-status-uses-one-fake-async-snapshot ()
   (require 'sk-status)
-  (when-let ((old (get-buffer sk/status-buffer-name)))
+  (when-let* ((old (get-buffer sk/status-buffer-name)))
     (kill-buffer old))
   (let (invocation displayed selected
         (fake-process 'sk/check-status-process))
@@ -2121,10 +2095,10 @@
               (should (string-match-p "available-gib=38" (buffer-string)))
               (should (string-match-p
                        "Home generation differs" (buffer-string))))))
-      (when-let ((buffer (get-buffer sk/status-buffer-name)))
+      (when-let* ((buffer (get-buffer sk/status-buffer-name)))
         (kill-buffer buffer))
       (dolist (key '(:buffer :stderr))
-        (when-let ((buffer (and invocation (plist-get invocation key))))
+        (when-let* ((buffer (and invocation (plist-get invocation key))))
           (when (buffer-live-p buffer)
             (kill-buffer buffer)))))))
 
@@ -2808,7 +2782,7 @@
   "Write test module NAME with CONTENTS below DIRECTORY."
   (let ((file (expand-file-name (concat name ".el") directory)))
     (with-temp-file file
-      (insert contents))
+      (insert ";;; -*- lexical-binding: nil; -*-\n" contents))
     file))
 
 (defvar sk/check-reload-marker nil

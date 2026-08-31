@@ -17,8 +17,8 @@
 (defun sk/startup-frame--opacity-from-environment ()
   "Return the validated startup opacity percentage, or nil.
 The X-session owner exports the variable only after Picom is ready."
-  (when-let ((raw
-              (getenv sk/startup-frame-opacity-environment-variable)))
+  (when-let* ((raw
+               (getenv sk/startup-frame-opacity-environment-variable)))
     (if (string-match-p "\\`[0-9]+\\'" raw)
         (let ((percent (string-to-number raw)))
           (when (<= 1 percent 100)
@@ -149,7 +149,7 @@ frames can paint during the startup reveal."
   "Best-effort last-resort stop of this user's Picom compositor.
 When Emacs cannot change an alpha-zero X property, removing the compositor
 makes raw X ignore that property and restores a visible desktop."
-  (when-let ((pkill (executable-find "pkill")))
+  (when-let* ((pkill (executable-find "pkill")))
     (condition-case error-data
         (let ((status
                (call-process

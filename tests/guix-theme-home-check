@@ -339,7 +339,7 @@ chmod +x "$commands"/*
 write_package_records() {
     mode=${1:-both}
     cat >"$records" <<EOF
-papirus-icon-theme 20250501 out
+papirus-icon-theme 20260801 out
 bibata-cursor-theme 2.0.3 out
 hicolor-icon-theme 0.18 out
 font-awesome 4.7.0 out

@@ -306,7 +306,7 @@ require_record gst-plugins-good 1.28.1 out
 require_record gnome-themes-extra 3.28 out
 require_record font-awesome 4.7.0 out
 require_record font-google-material-design-icons 4.0.0 out
-require_record papirus-icon-theme 20250501 out
+require_record papirus-icon-theme 20260801 out
 require_record bibata-cursor-theme 2.0.3 out
 require_record hicolor-icon-theme 0.18 out
 
@@ -573,7 +573,7 @@ reset_fake_home_manifest() {
         'font-awesome	4.7.0	out	/gnu/store/fake-font-awesome' \
         'font-google-material-design-icons	4.0.0	out	/gnu/store/fake-font-google-material-design-icons' \
         'gnome-themes-extra	3.28	out	/gnu/store/fake-gnome-themes-extra' \
-        'papirus-icon-theme	20250501	out	/gnu/store/fake-papirus-icon-theme' \
+        'papirus-icon-theme	20260801	out	/gnu/store/fake-papirus-icon-theme' \
         'bibata-cursor-theme	2.0.3	out	/gnu/store/fake-bibata-cursor-theme' \
         'hicolor-icon-theme	0.18	out	/gnu/store/fake-hicolor-icon-theme' \
         'gst-plugins-base	1.28.1	out	/gnu/store/fake-gst-plugins-base' \

@@ -257,7 +257,7 @@ require_record gtk 4.22.1 bin
 require_record gst-plugins-base 1.28.1 out
 require_record gst-plugins-good 1.28.1 out
 require_record gnome-themes-extra 3.28 out
-require_record papirus-icon-theme 20250501 out
+require_record papirus-icon-theme 20260801 out
 require_record bibata-cursor-theme 2.0.3 out
 require_record hicolor-icon-theme 0.18 out
 require_record font-awesome 4.7.0 out

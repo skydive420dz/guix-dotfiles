@@ -170,7 +170,7 @@
   ;; autoload boundary does not load `lsp-lens--enable' in isolated -Q runs.
   ;; Lenses are outside this slice; disable only this buffer's optional hook.
   (setq-local lsp-lens-enable nil)
-  (when-let ((root (sk/lisp--project-root)))
+  (when-let* ((root (sk/lisp--project-root)))
     (setq-local sk/fennel-project-root root
                 fennel-program (sk/fennel--command-string root "repl")
                 inferior-lisp-program fennel-program)))

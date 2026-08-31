@@ -190,7 +190,7 @@
 
 (defun sk/clojure--eval-form (source)
   "Return a REPL expression that evaluates Clojure SOURCE in its namespace."
-  (if-let ((namespace (sk/clojure--namespace)))
+  (if-let* ((namespace (sk/clojure--namespace)))
       (format
        (concat "(binding [*ns* (or (find-ns '%s) (create-ns '%s))] "
                "(clojure.core/refer 'clojure.core) "

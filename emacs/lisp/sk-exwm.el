@@ -29,7 +29,7 @@
 
 (defun sk/exwm-installed-version ()
   "Return the EXWM version encoded in the installed library path."
-  (when-let ((library (locate-library "exwm")))
+  (when-let* ((library (locate-library "exwm")))
     (when (string-match "/exwm-\\([0-9][^/]*\\)/" library)
       (match-string 1 library))))
 
@@ -105,7 +105,7 @@
               :require-match t
               :action
               (lambda (desktop-shortcut)
-                (if-let ((spec (gethash (cdr desktop-shortcut) specs)))
+                (if-let* ((spec (gethash (cdr desktop-shortcut) specs)))
                     (sk/exwm-launch-spec-in-stack spec)
                   (user-error "Launcher cache is stale; reopen the launcher")))
               :caller 'sk/exwm-launch-app)))
@@ -309,8 +309,8 @@
 (defun sk/exwm-remove-launch-intent (token &optional reason)
   "Remove launch intent TOKEN, canceling its timer.
 When REASON is non-nil, report why the client was not placed."
-  (when-let ((intent (sk/exwm-find-launch-intent token)))
-    (when-let ((timer (plist-get intent :timer)))
+  (when-let* ((intent (sk/exwm-find-launch-intent token)))
+    (when-let* ((timer (plist-get intent :timer)))
       (when (timerp timer)
         (cancel-timer timer)))
     (setq sk/exwm-launch-intents (delq intent sk/exwm-launch-intents))
@@ -330,7 +330,7 @@ When REASON is non-nil, report why the client was not placed."
   (when (memq (process-status process) '(exit signal failed))
     (unless (and (eq (process-status process) 'exit)
                  (zerop (process-exit-status process)))
-      (when-let ((token (process-get process 'sk/exwm-launch-token)))
+      (when-let* ((token (process-get process 'sk/exwm-launch-token)))
         (sk/exwm-remove-launch-intent
          token
          (format "process failed with status %s"
@@ -832,7 +832,7 @@ M-x sk/exwm-input-help or Super+/.
 (defun sk/exwm-launch-code ()
   "Launch Code or VSCodium when either executable is installed."
   (interactive)
-  (if-let ((program (seq-find #'executable-find '("code" "codium"))))
+  (if-let* ((program (seq-find #'executable-find '("code" "codium"))))
       (sk/exwm-launch-command-in-stack
        program program nil '("code" "visualstudiocode" "vscodium" "codium"))
     (user-error "Neither code nor codium is installed; use the app launcher")))
