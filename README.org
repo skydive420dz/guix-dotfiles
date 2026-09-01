@@ -22,12 +22,29 @@ Current operating model:
   tty recovery floor.
 - Guix Home owns the normal package set, Fish, Emacs, session D-Bus,
   PipeWire/WirePlumber, fonts, themes, and managed dotfile links.
-- EXWM is the desktop; tty1 remains the local recovery entry point.
+- Emacs 31 runs EXWM as the desktop; tty1 remains the local recovery entry
+  point.
 - GTK 3/4, Emacs, Kitty, Fish, wallpaper, fonts, icons, and cursor share the
   accepted dark visual policy.  Qt normalization is not yet implemented.
 - Channel inputs are authenticated and pinned.
 - Generation retention is inspection-only.  No automatic System-generation
   deletion or store-garbage-collection job is approved.
+
+* Current work
+
+The original C0--C18 roadmap is complete; C19 and C20 were closed without
+implementation.  Current work is deliberately narrow:
+
+- Next: revalidate the accepted C2 EXWM window, helper, dialog, and recovery
+  behavior after the Guix and Emacs 31 update.  This is an audit; any correction
+  requires a separate accepted slice.
+- Then: remove actionable local Emacs 31 warnings without changing accepted
+  behavior.  Harmless upstream-package warnings are classified, not patched
+  locally merely to silence them.
+- Paused: Qt normalization until a real daily-use Qt application exists;
+  further garbage-collection work because the reviewed C10 workflow already
+  exists; host-specific kernel work pending review; and the optional C12-E
+  Emacs Lisp/EXWM learning companion pending review.
 
 * Safe first look
 

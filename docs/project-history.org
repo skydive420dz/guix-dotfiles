@@ -563,6 +563,29 @@ and C20 proposals were closed without implementation.
   reboot.  Its focused checks and Git checkpoint are owned by C18.
 - State: the earlier separate verification slice was withdrawn on 2026-08-02.
 
+* Accepted post-roadmap maintenance
+
+After C18 closed, the following bounded maintenance was accepted without
+reopening the C-series roadmap:
+
+- The Ryzen 5 2400G hardware baseline and measured two-job Guix build policy
+  were published at =3442b8e= and =d0aa63b=.
+- The unused =sk-guix= channel dependency was retired at =5b93336= while the
+  repository remained available for future work.
+- Emacs recent-file and recent-command persistence was added at =a9792e0=.
+- GuixPC moved to =emacs-next= at =4d72c4c= and then to one coherent Emacs 31
+  package closure at =52cc53e=.  Home generation 62, a fresh EXWM boot,
+  =emacsclient -t=, the connected Lisp backends, and all 106 isolated checks
+  passed; the earlier Org-version and window-policy compatibility warnings were
+  absent.
+- The custom elogind override was replaced by upstream elogind 257.14 and tty1
+  autologin was ordered after PAM at =fa89273=.  The accepted live system kept
+  EXWM, SSH, and the tty recovery path working.
+
+These checkpoints describe accepted maintenance, not authorization for a new
+implementation slice.  The current sequence and paused candidates are recorded
+in the README and the editable Org agenda.
+
 * Reference policy
 
 - [[https://github.com/abcdw/rde][RDE]] contributes principles: explicit state,
