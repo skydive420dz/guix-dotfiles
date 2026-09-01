@@ -2,10 +2,8 @@
 ;; installer and then refined for the guixpc EXWM machine.
 
 (use-modules (gnu)
-             (gnu packages freedesktop)
              (gnu services configuration)
              (guix gexp)
-             (guix git-download)
              (guix packages)
              (nonguix transformations)
              (sk emacs)
@@ -14,23 +12,6 @@
 
 (load (string-append (dirname (current-filename))
                      "/../package-ownership.scm"))
-
-;; Elogind 255.17 can leave completed SSH sessions leaderless and stuck in
-;; "closing".  255.24 contains the upstream session-GC fixes for FIFO EOF,
-;; leader exit, and release timeout handling.
-(define elogind-255.24
-  (package
-    (inherit elogind)
-    (version "255.24")
-    (source
-     (origin
-       (method git-fetch)
-       (uri (git-reference
-             (url "https://github.com/elogind/elogind")
-             (commit (string-append "v" version))))
-       (file-name (git-file-name (package-name elogind) version))
-       (sha256
-        (base32 "0id4gjwjxcb860ibpr5irc3birgr89m650q4alrkpqdnd81nfyvk"))))))
 
 (define %guixpc-monitor-config
   "
@@ -165,6 +146,12 @@ table inet filter {
                      (mingetty-configuration
                       (inherit config)
                       (auto-login "skydive420dz")
+                      ;; Autologin invokes PAM immediately, so wait for its
+                      ;; elogind dependency.
+                      (shepherd-requirement
+                       (cons 'pam
+                             (mingetty-configuration-shepherd-requirement
+                              config)))
                       (clear-on-logout? #t)
                       (print-issue #f)
                       (print-hostname #f))
@@ -179,7 +166,6 @@ table inet filter {
       (elogind-service-type
        config => (elogind-configuration
                   (inherit config)
-                  (elogind elogind-255.24)
                   (idle-action 'ignore)
                   (handle-lid-switch 'ignore)
                   (handle-lid-switch-external-power 'ignore)

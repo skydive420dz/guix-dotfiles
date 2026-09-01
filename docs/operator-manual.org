@@ -215,6 +215,20 @@ The authenticated pinned channel lock is
 about monthly, or sooner for a relevant security advisory.  Promote each pin
 deliberately; do not auto-update.
 
+** Local package overrides
+
+Treat every locally overridden package as an update compatibility boundary.
+Before promoting channel pins, compare the override with both the updated
+package and the Guix service that consumes it.  Package and service revisions
+must remain compatible; a candidate can build successfully and still fail only
+after boot.
+
+The =elogind= 255.24/257.14 incident is the concrete failure mode: retaining
+the old package after Guix removed its matching D-Bus/Shepherd coordination
+blocked SSH authentication.  Prefer deleting an override once upstream
+contains its fix.  Keep build, activation, reboot, and runtime acceptance
+separate.
+
 After reviewing an edited lock:
 
 #+begin_src sh
