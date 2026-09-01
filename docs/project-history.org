@@ -581,9 +581,16 @@ reopening the C-series roadmap:
 - The custom elogind override was replaced by upstream elogind 257.14 and tty1
   autologin was ordered after PAM at =fa89273=.  The accepted live system kept
   EXWM, SSH, and the tty recovery path working.
+- The post-update C2 revalidation and Emacs 31 warning-hygiene maintenance closed
+  at =5e6ca2d=.  Accepted EXWM window, helper, dialog, and recovery behavior
+  remained intact.  All 106 isolated checks and the connected Geiser/Guile and
+  SLY/SBCL backend checks passed.  The complete Home build succeeded; activation,
+  reboot, and live Agenda keymap checks also passed.  Actionable local warnings
+  were removed; harmless upstream-package native-compiler diagnostics remain
+  classified without local patches.
 
 These checkpoints describe accepted maintenance, not authorization for a new
-implementation slice.  The current sequence and paused candidates are recorded
+implementation slice.  The current maintenance state and paused candidates are
 in the README and the editable Org agenda.
 
 * Reference policy

@@ -30,17 +30,17 @@ Current operating model:
 - Generation retention is inspection-only.  No automatic System-generation
   deletion or store-garbage-collection job is approved.
 
-* Current work
+* Current status
 
 The original C0--C18 roadmap is complete; C19 and C20 were closed without
-implementation.  Current work is deliberately narrow:
+implementation.  Current maintenance state:
 
-- Next: revalidate the accepted C2 EXWM window, helper, dialog, and recovery
-  behavior after the Guix and Emacs 31 update.  This is an audit; any correction
-  requires a separate accepted slice.
-- Then: remove actionable local Emacs 31 warnings without changing accepted
-  behavior.  Harmless upstream-package warnings are classified, not patched
-  locally merely to silence them.
+The post-update C2 revalidation and Emacs 31 warning-hygiene maintenance are
+complete.  Accepted EXWM behavior passed live revalidation; all 106 isolated
+checks passed; after Home activation and reboot, the actionable local warnings
+were absent.  Remaining native-compiler diagnostics are harmless upstream-package
+warnings and are not patched locally merely to silence them.
+
 - Paused: Qt normalization until a real daily-use Qt application exists;
   further garbage-collection work because the reviewed C10 workflow already
   exists; host-specific kernel work pending review; and the optional C12-E
