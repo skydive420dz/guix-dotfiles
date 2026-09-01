@@ -1735,6 +1735,11 @@
     (should (eq (lookup-key evil-normal-state-map (kbd (car binding)))
                 (cdr binding))))
   (should-not (lookup-key evil-normal-state-map (kbd "SPC n r")))
+  (with-temp-buffer
+    (org-agenda-mode)
+    (evil-normal-state)
+    (should (eq (key-binding (kbd "SPC m r")) #'org-agenda-refile))
+    (should (eq (key-binding (kbd "SPC n a")) #'sk/org-agenda)))
   (dolist (binding '(("C-c n i" . sk/org-clarify-inbox)
                      ("C-c n d" . sk/org-open-daily-note)
                      ("C-c n w" . sk/org-open-weekly-note)

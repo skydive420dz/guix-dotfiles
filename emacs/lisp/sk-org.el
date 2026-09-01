@@ -395,7 +395,9 @@
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd "C-SPC") #'org-agenda-show-and-scroll-up)
     (with-eval-after-load 'evil
-      (evil-define-key '(normal motion) org-agenda-mode-map (kbd "SPC m") sk/org-agenda-localleader-map))))
+      (evil-define-key '(normal motion) org-agenda-mode-map
+        (kbd "SPC") nil
+        (kbd "SPC m") sk/org-agenda-localleader-map))))
 
 ;; The Home-owned org-protocol desktop entry targets the already-running
 ;; server.  Load its server-visit advice during normal startup so the first URL

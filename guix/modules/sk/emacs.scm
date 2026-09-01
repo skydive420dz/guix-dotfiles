@@ -122,6 +122,21 @@
                     "(sort (if org? (delete-dups flat-index) flat-index) "
                     "compare-func)")))))))))))
 
+;; SLY ships its autoload declarations without a lexical-binding cookie.
+;; Declare its existing dynamic dialect so Emacs 31 does not warn.
+(define emacs-sly/emacs31-safe-source
+  (package/inherit emacs-sly
+    (arguments
+     (substitute-keyword-arguments
+         (package-arguments emacs-sly)
+       ((#:phases phases)
+        #~(modify-phases #$phases
+            (add-after 'unpack 'declare-autoload-lexical-binding
+              (lambda _
+                (substitute* "sly-autoloads.el"
+                  (("-\\*- no-byte-compile: t -\\*-")
+                   "-*- no-byte-compile: t; lexical-binding: nil -*-"))))))))))
+
 ;; Emacs Lisp bytecode is not forward-compatible across every Emacs macro
 ;; change.  Rewrite both explicit and implicit compiler inputs so the complete
 ;; package closure is built by the same Emacs major as the runtime.
@@ -144,11 +159,15 @@
 (define emacs-treemacs/emacs31-safe
   (%emacs-next-compiler-input-rewriting emacs-treemacs/emacs31-safe-source))
 
+(define emacs-sly/emacs31-safe
+  (%emacs-next-compiler-input-rewriting emacs-sly/emacs31-safe-source))
+
 (define %emacs-next-package-input-rewriting
   (package-input-rewriting
    `((,emacs-evil . ,emacs-evil/emacs31-safe)
      (,emacs-flycheck . ,emacs-flycheck/emacs31-safe)
      (,emacs-treemacs . ,emacs-treemacs/emacs31-safe)
+     (,emacs-sly . ,emacs-sly/emacs31-safe)
      ,@%emacs-next-compiler-replacements)
    #:deep? #t))
 

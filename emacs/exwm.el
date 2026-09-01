@@ -1,3 +1,5 @@
+;;; exwm.el --- Start the GuixPC EXWM session -*- lexical-binding: t; -*-
+
 (add-to-list 'load-path
              (expand-file-name "lisp" (file-name-directory
                                        (file-truename
