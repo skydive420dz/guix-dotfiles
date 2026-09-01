@@ -155,7 +155,7 @@
  "Emacs variant no longer repairs its grafted invocation directory")
 (assert
  (string-contains emacs-module-source
-                  "(package/inherit emacs-next")
+                  "(package/inherit emacs-next/loaddefs-safe")
  "Emacs variant no longer inherits the reviewed Emacs Next package")
 (assert
  (string-contains emacs-module-source
@@ -163,7 +163,7 @@
  "Emacs variant no longer preserves the shared package name")
 (assert
  (string-contains emacs-module-source
-                  "(package-arguments emacs-next)")
+                  "(package-arguments emacs-next/loaddefs-safe)")
  "Emacs variant no longer reuses the Emacs Next build arguments")
 (assert
  (string-contains emacs-module-source
