@@ -90,6 +90,34 @@
                     "                  (when zero-length-match\n"
                     "                    (set-marker-insertion-type match-end t))")))))))))))
 
+;; Backport Swiper 631df3f6: Emacs 31 no longer accepts nil as a sequence
+;; predicate, so Ivy's alist path must skip filtering when completing-read
+;; receives its valid optional nil predicate.
+(define emacs-ivy/emacs31-safe-source
+  (package/inherit emacs-ivy
+    (arguments
+     (substitute-keyword-arguments
+         (package-arguments emacs-ivy)
+       ((#:phases phases #~%standard-phases)
+        #~(modify-phases #$phases
+            (add-after 'unpack 'guard-optional-alist-predicate
+              (lambda _
+                (substitute* "ivy.el"
+                  (("[(]setq collection [(]cl-remove-if-not predicate collection[)][)]")
+                   (string-append
+                    "(when predicate\n"
+                    "               (setq collection "
+                    "(cl-remove-if-not predicate collection)))")))))
+            (add-after 'guard-optional-alist-predicate 'check-alist-completion
+              (lambda _
+                (invoke "emacs" "--batch" "-Q" "-L" "." "-l" "ivy.el"
+                        "--eval"
+                        (string-append
+                         "(let ((ivy-auto-select-single-candidate t)) "
+                         "(unless (equal (ivy-completing-read \"Probe: \" "
+                         "'((\"ok\" . t)) nil t) \"ok\") "
+                         "(error \"Ivy alist completion failed\")))"))))))))))
+
 ;; Interactive Emacs ignores SIGPIPE, but Guix builders restore its default
 ;; action.  Match the runtime policy so Flycheck's truncated-stdin specs can
 ;; exercise EPIPE handling without terminating batch Emacs.
@@ -153,6 +181,9 @@
 (define emacs-evil/emacs31-safe
   (%emacs-next-compiler-input-rewriting emacs-evil/emacs31-safe-source))
 
+(define emacs-ivy/emacs31-safe
+  (%emacs-next-compiler-input-rewriting emacs-ivy/emacs31-safe-source))
+
 (define emacs-flycheck/emacs31-safe
   (%emacs-next-compiler-input-rewriting emacs-flycheck/emacs31-safe-source))
 
@@ -164,7 +195,8 @@
 
 (define %emacs-next-package-input-rewriting
   (package-input-rewriting
-   `((,emacs-evil . ,emacs-evil/emacs31-safe)
+   `((,emacs-ivy . ,emacs-ivy/emacs31-safe)
+     (,emacs-evil . ,emacs-evil/emacs31-safe)
      (,emacs-flycheck . ,emacs-flycheck/emacs31-safe)
      (,emacs-treemacs . ,emacs-treemacs/emacs31-safe)
      (,emacs-sly . ,emacs-sly/emacs31-safe)
