@@ -118,6 +118,21 @@
                          "'((\"ok\" . t)) nil t) \"ok\") "
                          "(error \"Ivy alist completion failed\")))"))))))))))
 
+;; Doom Modeline 4.2.1 assumes every non-string Evil tag is callable.  Evil
+;; can briefly expose nil while switching state; call only actual functions.
+(define emacs-doom-modeline/emacs31-safe-source
+  (package/inherit emacs-doom-modeline
+    (arguments
+     (substitute-keyword-arguments
+         (package-arguments emacs-doom-modeline)
+       ((#:phases phases #~%standard-phases)
+        #~(modify-phases #$phases
+            (add-after 'unpack 'guard-optional-evil-tag
+              (lambda _
+                (substitute* "doom-modeline-segments.el"
+                  (("[(]if [(]stringp tag[)] tag [(]funcall tag[)][)]")
+                   "(if (functionp tag) (funcall tag) tag)"))))))))))
+
 ;; Interactive Emacs ignores SIGPIPE, but Guix builders restore its default
 ;; action.  Match the runtime policy so Flycheck's truncated-stdin specs can
 ;; exercise EPIPE handling without terminating batch Emacs.
@@ -184,6 +199,10 @@
 (define emacs-ivy/emacs31-safe
   (%emacs-next-compiler-input-rewriting emacs-ivy/emacs31-safe-source))
 
+(define emacs-doom-modeline/emacs31-safe
+  (%emacs-next-compiler-input-rewriting
+   emacs-doom-modeline/emacs31-safe-source))
+
 (define emacs-flycheck/emacs31-safe
   (%emacs-next-compiler-input-rewriting emacs-flycheck/emacs31-safe-source))
 
@@ -196,6 +215,7 @@
 (define %emacs-next-package-input-rewriting
   (package-input-rewriting
    `((,emacs-ivy . ,emacs-ivy/emacs31-safe)
+     (,emacs-doom-modeline . ,emacs-doom-modeline/emacs31-safe)
      (,emacs-evil . ,emacs-evil/emacs31-safe)
      (,emacs-flycheck . ,emacs-flycheck/emacs31-safe)
      (,emacs-treemacs . ,emacs-treemacs/emacs31-safe)
